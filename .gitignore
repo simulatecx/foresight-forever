@@ -9,3 +9,6 @@ pipeline/collected/
 
 # Per-machine agent settings
 .claude/settings.local.json
+
+# Browser-automation scratch output
+.playwright-mcp/

@@ -215,7 +215,7 @@ local function createPanel()
 
     toggleButton = _G.CreateFrame("Button", "ForesightToggleButton", parent, "UIPanelButtonTemplate")
     toggleButton:SetSize(36, 18)
-    toggleButton:SetText("HM")
+    toggleButton:SetText("FS")
     toggleButton:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -40, 4)
     toggleButton:SetScript("OnClick", StatsPanel.toggle)
 

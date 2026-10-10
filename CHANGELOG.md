@@ -15,8 +15,12 @@ the ecosystem's one-word pattern: Pawn, Details, Recount).
 - Live install migrated: AddOns folder replaced, WTF SavedVariables carried over
   (HelpMeDB -> ForesightDB) so pilot journals/probes survive.
 - Historical entries below intentionally keep the HelpMe name.
+- Character-frame toggle button relabeled "HM" -> "FS" (missed by the string sweep:
+  it was a literal, not a name reference).
+- HTML/CSS design replica of the full UI added at `mockups/foresight-ui.html`
+  (panel as shipped + S2 tooltip-injection preview; repo-only, packager ignores it).
 
-*Features:* CORE-bootstrap, QA-publish-train
+*Features:* CORE-bootstrap, QA-publish-train, UI-stats-panel
 
 ## 0.3.1 - 2026-10-10
 

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foresight - UI Replica v0.4.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Gudea:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Foresight UI replica - every sizing decision maps to frame
+   code in Foresight/ui/stats_panel.lua. Authored at 1.25x the
+   in-game pixel sizes so the preview reads comfortably;
+   the in-game values are called out in the annotations.
+   Scale map: panel 300px here = 240px in-game, row 19px = 15px,
+   header 25px = 20px, pad 12px = 10px.
+   ============================================================ */
+:root {
+  /* WoW UI color tokens */
+  --gold: #ffd100;            /* GameFontNormal */
+  --white: #ffffff;           /* GameFontHighlight */
+  --grey: #9d9d9d;            /* GameFontDisable */
+  --shaman: #0070DE;          /* RAID_CLASS_COLORS.SHAMAN */
+  --shaman-soft: rgba(0, 112, 222, 0.18);
+  --delta-up: #4ade80;        /* colorizeDeltas + */
+  --delta-down: #f87171;      /* colorizeDeltas - */
+  --card: rgba(18, 18, 23, 0.92);      /* 0.07,0.07,0.09,0.92 */
+  --tooltip-bg: rgba(8, 8, 20, 0.95);
+  --tooltip-border: #4a4a6e;
+  --annot: #7dd3c0;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #07080d;
+  color: var(--white);
+  font-family: 'Gudea', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ---------- page header ---------- */
+.masthead {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 26px 48px 18px;
+  border-bottom: 1px solid rgba(0, 112, 222, 0.25);
+  background: linear-gradient(180deg, rgba(0,112,222,0.07), transparent);
+}
+.brand { display: flex; align-items: center; gap: 16px; }
+.sigil {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 35%, #9ed0ff 0%, #1c86ff 35%, #003a78 75%, #00172f 100%);
+  box-shadow: 0 0 18px rgba(0, 134, 255, 0.55), inset 0 0 6px rgba(255,255,255,0.35);
+  position: relative;
+}
+.sigil::after {
+  content: ""; position: absolute; inset: 13px 8px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #fff 0 18%, #0b2f55 60%, transparent 70%);
+}
+.brand h1 {
+  font-family: 'Cinzel', serif; font-weight: 700; font-size: 30px;
+  letter-spacing: 0.14em;
+  background: linear-gradient(180deg, #bfe0ff 10%, #2d8dee 55%, #0b5cad 95%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.brand .tagline {
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--grey);
+  margin-left: 6px;
+}
+.brand .tagline em { color: var(--gold); font-style: normal; }
+.meta {
+  font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #5b7fa6;
+  text-align: right; line-height: 1.7;
+}
+
+/* ---------- the game-world stage ---------- */
+.stage {
+  position: relative;
+  width: 1460px; height: 790px;
+  margin: 26px auto 18px;
+  border: 1px solid #1a2233;
+  border-radius: 6px;
+  overflow: hidden;
+  background:
+    radial-gradient(1100px 500px at 72% -10%, rgba(32, 68, 120, 0.35), transparent 60%),
+    radial-gradient(900px 600px at 8% 110%, rgba(10, 60, 48, 0.30), transparent 65%),
+    radial-gradient(600px 300px at 45% 55%, rgba(0, 112, 222, 0.08), transparent 70%),
+    linear-gradient(180deg, #0b1020 0%, #0a0e18 45%, #0a1212 100%);
+}
+/* grain so it reads as a screenshot, not a flat web page */
+.stage::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+}
+.stage::before { /* vignette */
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background: radial-gradient(120% 95% at 50% 45%, transparent 55%, rgba(0,0,0,0.55) 100%);
+}
+.stage > * { position: absolute; z-index: 3; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.charframe   { animation: rise .5s ease-out both .05s; }
+.fs-panel    { animation: rise .5s ease-out both .18s; }
+.talentzone  { animation: rise .5s ease-out both .34s; }
+.annot       { animation: rise .4s ease-out both .6s; }
+
+/* ---------- simplified character frame (docking context) ---------- */
+.charframe {
+  left: 56px; top: 128px; width: 318px; height: 470px;
+  background: linear-gradient(180deg, #171a24 0%, #121420 100%);
+  border: 1px solid #2b3042;
+  border-radius: 4px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.6);
+  opacity: 0.92;
+}
+.cf-top { display: flex; align-items: center; gap: 12px; padding: 14px 16px 10px; border-bottom: 1px solid #262b3c; }
+.cf-portrait {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #3b76b8, #15335c 60%, #081425);
+  border: 2px solid #3a4258;
+  display: grid; place-items: center;
+  font-family: 'Cinzel', serif; font-size: 22px; color: #bfe0ff;
+}
+.cf-name { line-height: 1.35; }
+.cf-name b { color: var(--shaman); font-size: 15.5px; letter-spacing: 0.02em; }
+.cf-name span { display: block; color: var(--grey); font-size: 12px; }
+.cf-body { position: relative; height: 330px; }
+.cf-body .slot {
+  position: absolute; width: 38px; height: 38px;
+  background: linear-gradient(135deg, #1d2230, #11141d);
+  border: 1px solid #333a4e; border-radius: 3px;
+}
+.cf-body .watermark {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  color: #39415a; font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.cf-bottom { display: flex; justify-content: flex-end; padding: 10px 12px; gap: 8px; }
+/* the FS toggle button: UIPanelButtonTemplate, 36x18 in-game, BOTTOMRIGHT -40,4 */
+.wow-btn {
+  min-width: 46px; height: 23px; padding: 0 10px;
+  background: linear-gradient(180deg, #8a1f17 0%, #5d120d 55%, #420b08 100%);
+  border: 1px solid #a8433a; border-radius: 3px;
+  color: #ffd9c8; font-family: 'Gudea', sans-serif; font-weight: 700; font-size: 12px;
+  text-shadow: 0 1px 1px #000;
+  box-shadow: inset 0 1px 0 rgba(255,180,150,0.35), 0 1px 3px rgba(0,0,0,0.6);
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+.wow-btn:hover { filter: brightness(1.25); }
+
+/* ---------- THE FORESIGHT PANEL (the replica) ---------- */
+/* in-game: 240px wide, anchored TOPLEFT -> CharacterFrame TOPRIGHT (+2, -12) */
+.fs-panel {
+  left: 377px;            /* charframe right edge + 2px gap (scaled) */
+  top: 143px;             /* charframe top + 12px offset (scaled) */
+  width: 300px;
+  background: var(--card);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.65);
+  padding-bottom: 10px;
+  /* hairline borders: class color 0.5 top/bottom, 0.35 sides */
+  border-top: 1px solid rgba(0,112,222,0.5);
+  border-bottom: 1px solid rgba(0,112,222,0.5);
+  border-left: 1px solid rgba(0,112,222,0.35);
+  border-right: 1px solid rgba(0,112,222,0.35);
+}
+/* class-color top strip, 26px at 0.18 alpha */
+.fs-title {
+  height: 33px;
+  background: var(--shaman-soft);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px;
+}
+.fs-title b { color: var(--shaman); font-size: 15px; letter-spacing: 0.02em; }
+.fs-title span { color: var(--grey); font-size: 11.5px; }
+
+.fs-panel details { margin: 6px 12px 0; }
+.fs-panel summary {
+  list-style: none; cursor: pointer; user-select: none;
+  height: 25px; display: flex; align-items: center; justify-content: space-between;
+  background: rgba(255,255,255,0.06);
+  padding: 0 8px 0 13px;
+  position: relative;
+  color: var(--gold); font-weight: 700; font-size: 13px;
+}
+.fs-panel summary::-webkit-details-marker { display: none; }
+.fs-panel summary::before { /* 3px class-color accent bar */
+  content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px;
+  background: rgba(0,112,222,0.9);
+}
+.fs-panel summary::after { content: "+"; color: var(--grey); font-size: 13px; font-weight: 400; }
+.fs-panel details[open] summary::after { content: "\2212"; }
+
+.fs-row {
+  height: 19px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 8px; font-size: 12.5px;
+  transition: background .12s;
+}
+.fs-row:nth-child(odd) { background: rgba(255,255,255,0.04); } /* zebra */
+.fs-row:hover { background: rgba(255,255,255,0.10); }
+.fs-row .lbl { color: var(--white); }
+.fs-row .val { color: var(--gold); font-weight: 700; }
+.fs-row .p { color: var(--grey); font-weight: 400; }  /* (p) presumed marker */
+/* wide what-if rows: class-colored label, full-width human line */
+.fs-row.wide { justify-content: flex-start; gap: 8px; }
+.fs-row.wide .lbl { color: var(--shaman); font-weight: 700; white-space: nowrap; }
+.fs-row.wide .line { color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.up { color: var(--delta-up); font-weight: 700; }
+.dn { color: var(--delta-down); font-weight: 700; }
+
+/* ---------- S2 preview: talent tooltip injection ---------- */
+.talentzone { left: 782px; top: 128px; width: 600px; }
+.talent-grid {
+  position: absolute; left: 24px; top: 330px;
+  display: grid; grid-template-columns: repeat(4, 46px); gap: 8px;
+}
+.talent-grid .t {
+  width: 46px; height: 46px; border-radius: 4px;
+  background: linear-gradient(135deg, #2a3040, #141824);
+  border: 1px solid #3c4356;
+  position: relative;
+}
+.talent-grid .t.learned { border-color: #2f6e2f; box-shadow: inset 0 0 10px rgba(30,255,0,0.12); }
+.talent-grid .t .rank {
+  position: absolute; right: -4px; bottom: -4px;
+  background: #0d0f16; border: 1px solid #3c4356; border-radius: 3px;
+  font-size: 10px; padding: 0 3px; color: #1eff00; font-weight: 700;
+}
+.talent-grid .t.hovered {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(255, 209, 0, 0.45);
+}
+.cursor {
+  position: absolute; left: 112px; top: 368px; z-index: 5;
+  width: 22px; height: 22px;
+  filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.8));
+}
+.grid-label {
+  position: absolute; left: 24px; top: 392px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #5b7fa6;
+  letter-spacing: 0.08em;
+}
+
+.tooltip {
+  position: absolute; left: 148px; top: 42px; width: 396px;
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
+  border-radius: 5px;
+  padding: 12px 14px 13px;
+  box-shadow: 0 16px 44px rgba(0,0,0,0.7);
+  font-size: 13.5px; line-height: 1.5;
+}
+.tooltip .tname { color: var(--gold); font-size: 16.5px; font-weight: 700; display: flex; justify-content: space-between; }
+.tooltip .tname span { color: var(--white); font-size: 13px; font-weight: 400; }
+.tooltip .tdesc { color: var(--gold); margin-top: 5px; }
+.tooltip .tnext { color: var(--grey); font-size: 12.5px; margin-top: 6px; }
+/* ---- the injected Foresight block ---- */
+.fs-inject {
+  margin-top: 11px; padding-top: 9px;
+  border-top: 1px solid rgba(0,112,222,0.45);
+}
+.fs-inject .head { display: flex; justify-content: space-between; align-items: baseline; }
+.fs-inject .head b { color: var(--shaman); font-size: 13px; letter-spacing: 0.03em; }
+.fs-inject .head span { color: var(--grey); font-size: 11.5px; }
+.fs-inject .affects { margin-top: 4px; }
+.fs-inject .affects i { color: var(--grey); font-style: normal; }
+.fs-inject .affects b { color: var(--white); font-weight: 400; }
+.fs-inject .impact { margin-top: 3px; color: var(--white); }
+.fs-inject .ranknote { margin-top: 3px; color: var(--grey); font-size: 12px; }
+
+/* ---------- annotations (spec-sheet callouts) ---------- */
+.annot {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
+  color: var(--annot); letter-spacing: 0.04em; line-height: 1.55;
+  max-width: 240px;
+}
+.annot::before {
+  content: ""; display: block; width: 26px; height: 1px;
+  background: var(--annot); opacity: 0.6; margin-bottom: 5px;
+}
+.annot .dim { color: #55907f; }
+
+/* ---------- footer legend ---------- */
+.legend {
+  width: 1460px; margin: 0 auto 36px;
+  display: flex; align-items: center; gap: 18px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #5b7fa6;
+  padding: 0 4px;
+}
+.legend .chips { display: flex; gap: 12px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; }
+.chip i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="brand">
+    <div class="sigil"></div>
+    <h1>FORESIGHT</h1>
+    <div class="tagline">the answer to <em>&ldquo;+2 Spirit &mdash; so what?&rdquo;</em></div>
+  </div>
+  <div class="meta">
+    UI replica &middot; addon v0.4.0 &middot; Interface 16001<br>
+    every element maps 1:1 to frame code &middot; pilot: level 9 Shaman
+  </div>
+</header>
+
+<div class="stage">
+
+  <!-- character frame: docking context, game-drawn in reality -->
+  <section class="charframe">
+    <div class="cf-top">
+      <div class="cf-portrait">S</div>
+      <div class="cf-name"><b>Pilot Shaman</b><span>Level 9 &middot; Durotar</span></div>
+    </div>
+    <div class="cf-body">
+      <div class="slot" style="left:12px; top:14px"></div>
+      <div class="slot" style="left:12px; top:60px"></div>
+      <div class="slot" style="left:12px; top:106px"></div>
+      <div class="slot" style="left:12px; top:152px"></div>
+      <div class="slot" style="right:12px; top:14px"></div>
+      <div class="slot" style="right:12px; top:60px"></div>
+      <div class="slot" style="right:12px; top:106px"></div>
+      <div class="watermark">CharacterFrame &middot; game-drawn</div>
+    </div>
+    <div class="cf-bottom"><button class="wow-btn">FS</button></div>
+  </section>
+
+  <!-- ============ THE FORESIGHT PANEL ============ -->
+  <section class="fs-panel">
+    <div class="fs-title"><b>Foresight</b><span>what more would do</span></div>
+
+    <details open>
+      <summary>Dimensions</summary>
+      <div class="fs-row"><span class="lbl">Spellcasting</span><span class="val">52.4</span></div>
+      <div class="fs-row"><span class="lbl">Melee DPS</span><span class="val">38.5</span></div>
+      <div class="fs-row"><span class="lbl">Ranged DPS</span><span class="val">8.2</span></div>
+      <div class="fs-row"><span class="lbl">Healing</span><span class="val">47.1</span></div>
+      <div class="fs-row"><span class="lbl">Tankability</span><span class="val">33.6</span></div>
+      <div class="fs-row"><span class="lbl">Survivability</span><span class="val">41.0</span></div>
+      <div class="fs-row"><span class="lbl">Sustain</span><span class="val">396</span></div>
+    </details>
+
+    <details open>
+      <summary>Regen</summary>
+      <div class="fs-row"><span class="lbl">Mana/tick (no cast 5s+)</span><span class="val">13.2 <span class="p">(p)</span></span></div>
+      <div class="fs-row"><span class="lbl">Mana/min (downtime)</span><span class="val">396 <span class="p">(p)</span></span></div>
+      <div class="fs-row"><span class="lbl">Health/tick (o.o.c.)</span><span class="val">8.5 <span class="p">(p)</span></span></div>
+    </details>
+
+    <details open>
+      <summary>Mechanics</summary>
+      <div class="fs-row"><span class="lbl">Swing time</span><span class="val">2.59s</span></div>
+      <div class="fs-row"><span class="lbl">Armor mitigation</span><span class="val">11.3% <span class="p">(p)</span></span></div>
+      <div class="fs-row"><span class="lbl">Effective HP</span><span class="val">455</span></div>
+      <div class="fs-row"><span class="lbl">Max health</span><span class="val">404</span></div>
+      <div class="fs-row"><span class="lbl">Max mana</span><span class="val">289</span></div>
+    </details>
+
+    <details open>
+      <summary>What-if</summary>
+      <div class="fs-row wide"><span class="lbl">+10 Spirit</span><span class="line"><span class="up">+2.5</span> mana/tick &rarr; <span class="up">+75</span> mana/min downtime</span></div>
+      <div class="fs-row wide"><span class="lbl">+10 Intellect</span><span class="line"><span class="up">+150</span> max mana &rarr; <span class="up">+2</span> Lightning Bolts</span></div>
+      <div class="fs-row wide"><span class="lbl">+10 Stamina</span><span class="line"><span class="up">+100</span> health &rarr; <span class="up">+5.6%</span> tankability</span></div>
+      <div class="fs-row wide"><span class="lbl">+10 Agility</span><span class="line"><span class="up">+0.5%</span> crit &rarr; <span class="up">+1.8%</span> melee DPS</span></div>
+      <div class="fs-row wide"><span class="lbl">+10 Strength</span><span class="line"><span class="up">+20</span> AP &rarr; <span class="up">+6.45%</span> melee DPS</span></div>
+    </details>
+  </section>
+
+  <!-- ============ S2 PREVIEW: talent tooltip injection ============ -->
+  <section class="talentzone">
+    <div class="tooltip">
+      <div class="tname">Concussion <span>Rank 2/5</span></div>
+      <div class="tdesc">Increases the damage done by your Lightning Bolt, Chain Lightning and Shock spells by 2%.</div>
+      <div class="tnext">Next rank: 3% increased damage.</div>
+      <div class="fs-inject">
+        <div class="head"><b>&#9673; Foresight</b><span>(p) rank rule presumed</span></div>
+        <div class="affects"><i>Affects:</i> <b>Lightning Bolt, Chain Lightning, Earth Shock, Flame Shock, Frost Shock</b></div>
+        <div class="impact">This point: <span class="up">+1%</span> spell damage &rarr; <span class="up">+0.5</span> spellcasting score now</div>
+        <div class="ranknote">Max rank: +5% &middot; scaling linearToMax &mdash; verifying in beta</div>
+      </div>
+    </div>
+
+    <div class="talent-grid">
+      <div class="t learned"><span class="rank">2</span></div>
+      <div class="t hovered" style="background: linear-gradient(135deg,#4a3b20,#241c0e)"><span class="rank">2</span></div>
+      <div class="t"></div>
+      <div class="t learned"><span class="rank">1</span></div>
+      <div class="t"></div>
+      <div class="t"></div>
+      <div class="t"></div>
+      <div class="t"></div>
+    </div>
+    <svg class="cursor" viewBox="0 0 24 24"><path d="M5 2 L5 19 L9.5 15.5 L12.5 22 L15.5 20.5 L12.5 14 L19 13.5 Z" fill="#e8e8e8" stroke="#111" stroke-width="1.2"/></svg>
+    <div class="grid-label">ELEMENTAL TREE (FRAGMENT) &middot; S2: HOVER ANY TALENT</div>
+  </section>
+
+  <!-- ============ spec-sheet annotations ============ -->
+  <div class="annot" style="left: 377px; top: 60px;">
+    FORESIGHT PANEL &middot; SHIPPED (S5)<br>
+    <span class="dim">240px, docked TOPRIGHT of CharacterFrame (+2,-12) &middot; code-drawn textures only &middot; class-color = player's class (shown: Shaman)</span>
+  </div>
+  <div class="annot" style="left: 700px; top: 395px;">
+    (p) = CLASSIC-PRESUMED FORMULA<br>
+    <span class="dim">unverified on Forever; the in-game probe (/foresight verify) upgrades or corrects each one</span>
+  </div>
+  <div class="annot" style="left: 700px; top: 540px;">
+    WHAT-IF ROWS &middot; THE DIFFERENTIATOR<br>
+    <span class="dim">live answers in human terms; green/red deltas via colorizeDeltas()</span>
+  </div>
+  <div class="annot" style="left: 56px; top: 625px;">
+    FS TOGGLE &middot; UIPanelButtonTemplate 36x18<br>
+    <span class="dim">BOTTOMRIGHT (-40, +4)</span>
+  </div>
+  <div class="annot" style="left: 930px; top: 52px; max-width: 420px;">
+    NEXT BUILD (S2): TOOLTIP INJECTION<br>
+    <span class="dim">injected under the game's own talent tooltip &middot; honest about confidence until beta settles the rank rule</span>
+  </div>
+</div>
+
+<footer class="legend">
+  <span>COLOR TOKENS</span>
+  <div class="chips">
+    <span class="chip"><i style="background:#ffd100"></i>GameFontNormal</span>
+    <span class="chip"><i style="background:#ffffff"></i>Highlight</span>
+    <span class="chip"><i style="background:#9d9d9d"></i>Disable / presumed</span>
+    <span class="chip"><i style="background:#0070DE"></i>class color (Shaman)</span>
+    <span class="chip"><i style="background:#4ade80"></i>delta +</span>
+    <span class="chip"><i style="background:#f87171"></i>delta &minus;</span>
+  </div>
+  <span style="margin-left:auto">sections collapse on click &middot; rows highlight on hover &middot; values = pilot demo data, build 1.60.1.70338</span>
+</footer>
+
+</body>
+</html>

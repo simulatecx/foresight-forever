@@ -9,6 +9,7 @@ move-folders:
 
 ignore:
     - pipeline
+    - mockups
     - .claude
     - CLAUDE.md
     - DATAFLOW.md
