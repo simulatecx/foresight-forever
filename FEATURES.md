@@ -15,12 +15,14 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## GRAPH - impact engine
 - ☑ `GRAPH-impact-engine` - typed modifier DAG with stacking rules, breakdowns, cycle detection -> `Foresight/graph/graph.lua`
 - ☑ `GRAPH-dimensions` - 7 outcome lenses (spellcasting, melee/ranged DPS, healing, tankability, survivability, sustain), v0 heuristics -> `Foresight/graph/dimensions.lua`
+- ☐ `GRAPH-threat` - threat as the 8th outcome lens + per-ability threat values (classic-presumed; crowd corrections via overrides k-of-n) - triaged 2026-10-10
 
 ## MODEL - character modelling
 - ☑ `MODEL-snapshot` - live character capture, secret-guarded (API indices pending beta verification) -> `Foresight/model/snapshot.lua`
 - ☑ `MODEL-loadout-whatif` - snapshot + delta stack (talents, stat tweaks); immutable what-if copies -> `Foresight/model/loadout.lua`
 - ☑ `MODEL-impact-diff` - evaluate/diff loadouts, "+2 Spirit" human-terms explainer -> `Foresight/model/impact.lua`
 - ☑ `MODEL-talent-summary` - per-talent humanized ops + affected spell names -> `Foresight/model/impact.lua`
+- ☐ `MODEL-stat-advisor` - comparative marginal stat ranking ("for your build: Crit > Haste"), built on explainStatDelta, never a forked value path - triaged 2026-10-10
 
 ## CORE - addon plumbing
 - ☑ `CORE-bootstrap` - namespace, events, slash commands (/foresight talent|stat|selftest) -> `Foresight/core/init.lua`
@@ -31,6 +33,8 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ◐ `UI-stats-panel` - character-frame side panel (Dimensions/Regen/Mechanics/What-if), dark class-colored skin, zebra rows, colored deltas; model selftest-covered; in-game render pending next login -> `Foresight/ui/panel_model.lua`, `Foresight/ui/stats_panel.lua`
 - ☑ `UI-export-window` - copyable scroll EditBox (/foresight export), fixes chat-copy gap -> `Foresight/ui/export.lua`
 - ☐ `UI-talent-tooltip` - talent hover injection (S2)
+- ☐ `UI-spell-tooltip` - ability tooltip layman damage lines; MUST share one injection module with UI-talent-tooltip - triaged 2026-10-10
+- ☐ `UI-playstyle-label` - build-profile line derived from dimension scores, on the stats panel title area - triaged 2026-10-10
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
