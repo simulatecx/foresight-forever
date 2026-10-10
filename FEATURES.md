@@ -40,6 +40,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☑ `QA-verify-command` - /helpme verify: live API checks + all-talents tooltip probe -> `HelpMe/core/collect.lua`
 - ☑ `QA-harvester` - SavedVariables -> JSON archive + rank-rule hypothesis voting -> `pipeline/harvest.py`
 - ☑ `QA-deploy` - gate-then-copy deploy to the live install -> `pipeline/deploy.py`
+- ◐ `QA-publish-train` - release/publishing infrastructure: git repo (root commit 2026-10-10) + `.pkgmeta` (BigWigsMods packager, only HelpMe/ ships) + README official-channels front door + privacy-aware ignores; pending: packager CI action, CurseForge/Wago channels, branch protection (threat-model publish bindings, DATAFLOW.md 4b/4c) -> `.pkgmeta`, `README.md`, `.gitignore`
 - ☐ `QA-probe` - empirical formula verification from live gameplay (regen/swing/tick measurement)
 - ☐ `QA-report-export` - user feedback export strings + decoder (export window exists; report capture pending)
 

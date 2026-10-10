@@ -14,8 +14,13 @@ Tamper/abuse hardening (threat model in DATAFLOW.md 4c; incident-to-gate applied
   tampered/corrupted files degrade to defaults; collect store self-heals.
 - Untrusted-input laws added to CLAUDE.md (data-only imports forever, k-of-n rule for
   crowd-sourced database changes). Selftest grows to 32 checks.
+- Git repo created (root commit) with publishing scaffolding per DATAFLOW.md 4b:
+  `.pkgmeta` (BigWigsMods packager; only HelpMe/ ships), `.gitignore` (DB2 cache and
+  harvested account data stay local), README as the official-channels front door,
+  `.gitattributes` line normalization. HelpMe.toc version stamp synced to the release
+  (was stale at 0.1.0) and redeployed, gate green 32/32.
 
-*Features:* QA-harvester, QA-selftest-harness, CORE-saveddb
+*Features:* QA-harvester, QA-selftest-harness, CORE-saveddb, QA-publish-train
 
 ## 0.3.0 - 2026-10-10
 
