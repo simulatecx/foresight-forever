@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.5.0 - 2026-10-10
+
+S2 build: Talent Impact Map tooltip injection, code-complete (in-game verify folds
+into the S3 beta session - no taint, line rendering, resolver vs live positions).
+
+- New `ui/tooltips.lua`: THE shared tooltip-injection module (triage law: the future
+  UI-spell-tooltip surface reuses this core, never a second hook system). Talent
+  provider ships now: post-hook on `GameTooltip.SetTalent` (this object only - the
+  hidden probe tooltip keeps capturing clean text; inspect skipped) appends the
+  approved mockup block: "Foresight | (p) rank rule presumed" header, "Affects: ..."
+  (capped +N more), per-op "Next point: -0.1s cast time (now -0.2s, max -0.5s)"
+  marginal values, and a "-> for you now: +0.2 Spellcasting" dimension delta computed
+  by diffing rank r vs r+1 (snapshot double-count cancels in the diff). Cast-time/
+  cost/cooldown ops honestly show NO dimension line until GRAPH-rotation-weights.
+- Talent resolver: classic-API position (tab order/tier/column, 1-based) -> generated
+  talent id, with displayed-name arbitration and name fallback; pure + selftest-covered.
+- Needs-curation talents say so in the tooltip; every injection failure path degrades
+  to "no injected lines", never an error (pcall-wrapped, guards law).
+- `Impact.talentSummary` ops now carry `maxValue` (per-rank recompute without a second
+  data walk); `presumedMark` promoted to the formula registry (`F.presumedMark`) so
+  panel and tooltips tag presumed values identically.
+- `/foresight verify` gains a "talent tooltip injection hook (S2)" checklist line.
+- `HM.version` synced to the TOC (was stale at 0.1.0; collect journals this stamp).
+- Selftest grows to 40 checks (resolver position/name/unknown, header tag, marginal
+  values, maxed-rank, dimension fragment presence AND honest absence, curation line).
+
+*Features:* UI-talent-tooltip, MODEL-talent-summary, DATA-formula-registry,
+QA-verify-command, QA-selftest-harness, CORE-bootstrap
+
 ## 0.4.0 - 2026-10-10
 
 Renamed: HelpMe -> **Foresight** (naming research before the public repo: "HelpMe"

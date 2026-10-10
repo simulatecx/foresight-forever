@@ -32,13 +32,13 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## UI - surfaces
 - ◐ `UI-stats-panel` - character-frame side panel (Dimensions/Regen/Mechanics/What-if), dark class-colored skin, zebra rows, colored deltas; model selftest-covered; in-game render pending next login -> `Foresight/ui/panel_model.lua`, `Foresight/ui/stats_panel.lua`
 - ☑ `UI-export-window` - copyable scroll EditBox (/foresight export), fixes chat-copy gap -> `Foresight/ui/export.lua`
-- ☐ `UI-talent-tooltip` - talent hover injection (S2)
-- ☐ `UI-spell-tooltip` - ability tooltip layman damage lines; MUST share one injection module with UI-talent-tooltip - triaged 2026-10-10
+- ◐ `UI-talent-tooltip` - talent hover injection (S2): shared injection module with position+name resolver, next-point marginal values, dimension delta, needs-curation/(p) honesty; in-game verify pending (S3 session) -> `Foresight/ui/tooltips.lua`
+- ☐ `UI-spell-tooltip` - ability tooltip layman damage lines; MUST share one injection module with UI-talent-tooltip (core now exists in `ui/tooltips.lua`) - triaged 2026-10-10
 - ☐ `UI-playstyle-label` - build-profile line derived from dimension scores, on the stats panel title area - triaged 2026-10-10
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 30-check selftest, in-game + headless via lupa -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 40-check selftest, in-game + headless via lupa -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe -> `Foresight/core/collect.lua`

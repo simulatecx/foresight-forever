@@ -92,6 +92,8 @@ function Collect.verify(out)
         _G.C_AssistedCombat and (_G.C_AssistedCombat.GetNextCastSpell and "has GetNextCastSpell" or "no GetNextCastSpell") or nil)
     result("secret values system present", _G.issecretvalue ~= nil or _G.C_Secrets ~= nil)
     result("C_TooltipInfo present", _G.C_TooltipInfo ~= nil)
+    result("talent tooltip injection hook (S2)", HM.Tooltips and HM.Tooltips.installed or false,
+        (HM.Tooltips and HM.Tooltips.installed) and "GameTooltip.SetTalent hooked" or "not installed")
 
     -- Live snapshot sanity.
     local snap = HM.Snapshot.capture()

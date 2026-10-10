@@ -7,7 +7,7 @@ Single source of truth for work. Status glyphs: ☐ todo · ◐ in progress · �
 | Story | Status |
 |---|---|
 | S1 Foundation: data pipeline + impact graph + modelling core | ☑ |
-| S2 Talent Impact Map in-game MVP (tooltip + /foresight talent) | ☐ |
+| S2 Talent Impact Map in-game MVP (tooltip + /foresight talent) | ◐ |
 | S3 Beta verification pass (API shapes, rank rule, snapshot) | ☐ |
 | S4 Report/feedback export strings | ☐ |
 | S5 ECS-style stats panel (code-complete, render pending beta) | ◐ |
@@ -15,13 +15,18 @@ Single source of truth for work. Status glyphs: ☐ todo · ◐ in progress · �
 
 ## Active work
 
-### S2 - Talent Impact Map in-game MVP ☐
+### S2 - Talent Impact Map in-game MVP ◐
 Hover a talent in the talent frame -> injected "Affects: ..." lines + per-rank values;
 `/foresight talent <id>` already works. **Features:** UI-talent-tooltip.
 AC: tooltip lines render on Forever beta client without taint errors; needs-curation
 talents say so honestly; mobile check N/A (game UI).
 Fit & Overlap: enhances MODEL-talent-summary (same data path, new surface). No overlap -
 nothing else renders talent impacts.
+Built 2026-10-10 (v0.5.0): shared injection module `ui/tooltips.lua` (the ONE hook
+system UI-spell-tooltip must reuse), position+name talent resolver, next-point marginal
+values, "for you now" dimension delta, needs-curation + (p) honesty lines; 8 selftest
+checks; /foresight verify now reports hook status. Remaining: in-game verify (no taint,
+lines render, resolver matches live positions) - fold into the S3 beta session, then ☑.
 
 ### S3 - Beta verification pass ☐
 On the Forever beta client, verify: talent API shape (Snapshot.captureTalents),

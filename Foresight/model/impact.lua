@@ -105,7 +105,7 @@ function Impact.talentSummary(talentId, rank)
     for _, op in ipairs(impacts and impacts.ops or {}) do
         local entry = {
             kind = op.kind, property = op.property or op.label or op.stat or op.school,
-            isPct = op.isPct,
+            isPct = op.isPct, maxValue = op.maxValue,
             value = HM.formulas.talentRankValue.fn(op.maxValue or 0, rank, talent.maxRank),
             rankRule = op.rankRule,
             affectedNames = {},

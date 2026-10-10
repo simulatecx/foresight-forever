@@ -148,6 +148,61 @@ function HM.runSelftest(out)
         return #rows == 5 and rows[1].label == "+10 Spirit" and rows[1].value:find("mana/min") ~= nil
     end)())
 
+    -- Tooltip injection module (S2): resolver + line builders are pure, fully testable.
+    local function linesText(lines)
+        local parts = {}
+        for _, L in ipairs(lines or {}) do parts[#parts + 1] = L.text or L.left or "" end
+        return table.concat(parts, "\n")
+    end
+    local impFB = gen and gen.talents and gen.talents[26]
+    local fireTabIndex = 1
+    if impFB then
+        -- Derive the 1-based tab index the classic talent API would report for Fire.
+        local fire = gen.talentTabs[impFB.tab]
+        for _, tab in pairs(gen.talentTabs) do
+            if tab.classMask == fire.classMask and tab.order < fire.order then
+                fireTabIndex = fireTabIndex + 1
+            end
+        end
+    end
+    check("tooltip resolves talent by position", impFB and HM.Tooltips.resolveTalent(
+        "MAGE", fireTabIndex, impFB.tier + 1, impFB.column + 1, "Improved Fireball") == 26)
+    check("tooltip resolve falls back to name, rejects unknowns",
+        impFB and HM.Tooltips.resolveTalent("MAGE", fireTabIndex, impFB.tier + 7, 1, "Improved Fireball") == 26
+        and HM.Tooltips.resolveTalent("MAGE", 1, 1, 1, "No Such Talent") == nil)
+    local tl = HM.Tooltips.talentLines(26, 2)
+    check("tooltip header carries presumed rank-rule tag",
+        tl and tl[1].kind == "double" and (tl[1].right or ""):find("(p)", 1, true) ~= nil)
+    check("tooltip affects + next-point marginal value", (function()
+        local text = linesText(tl)
+        return text:find("Affects:", 1, true) ~= nil and text:find("Fireball", 1, true) ~= nil
+            and text:find("Next point: -0.1s cast time (now -0.2s, max -0.5s)", 1, true) ~= nil
+    end)(), tl and linesText(tl))
+    check("tooltip maxed rank drops next-point line", (function()
+        local text = linesText(HM.Tooltips.talentLines(26, 5))
+        return text:find("Maxed: -0.5s cast time", 1, true) ~= nil
+            and text:find("Next point", 1, true) == nil
+    end)())
+    check("tooltip dim fragment: damage talent moves a dimension", (function()
+        local conc = HM.findTalents("Concussion")
+        if #conc ~= 1 then return false end
+        local text = linesText(HM.Tooltips.talentLines(conc[1].id, 1, base))
+        return text:find("for you now:", 1, true) ~= nil
+            and text:find("Spellcasting", 1, true) ~= nil
+    end)())
+    check("tooltip cast-time talent has no dim fragment yet (honest v0)", (function()
+        local text = linesText(HM.Tooltips.talentLines(26, 2, base))
+        return text:find("for you now:", 1, true) == nil
+    end)())
+    check("tooltip needs-curation honesty line", (function()
+        local anyId
+        for id, imp in pairs(gen.talentImpacts) do
+            if imp.needsCuration then anyId = id; break end
+        end
+        local text = linesText(HM.Tooltips.talentLines(anyId, 0))
+        return text:find("needs curation", 1, true) ~= nil
+    end)())
+
     -- Collector + export plumbing (headless-degraded paths).
     check("serialize renders nested tables", (function()
         local s = HM.serialize({ a = 1, b = { c = "x" } })

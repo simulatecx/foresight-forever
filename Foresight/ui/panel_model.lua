@@ -20,13 +20,6 @@ local function fmt(value, places)
     return tostring(round(value, places or 1))
 end
 
--- Marks values computed from classic-presumed (unverified on Forever) formulas.
-local function presumedMark(formulaEntry)
-    local c = formulaEntry and formulaEntry.confidence or ""
-    if c:find("^verified") then return "" end
-    return " (p)"
-end
-
 local WHATIF_STATS = { "Spirit", "Intellect", "Stamina", "Agility", "Strength" }
 
 -- Build the full panel model for a loadout.
@@ -60,10 +53,10 @@ function PanelModel.build(loadout)
         id = "regen",
         title = "Regen",
         rows = {
-            { label = "Mana/tick (no cast 5s+)", value = fmt(get("mech.manaPerTick")) .. presumedMark(F.manaRegenTick),
+            { label = "Mana/tick (no cast 5s+)", value = fmt(get("mech.manaPerTick")) .. F.presumedMark(F.manaRegenTick),
               tooltip = F.manaRegenTick.unit },
-            { label = "Mana/min (downtime)", value = fmt((get("mech.manaPerTick") or 0) * 30) .. presumedMark(F.manaRegenTick) },
-            { label = "Health/tick (o.o.c.)", value = fmt(get("mech.healthPerTick")) .. presumedMark(F.healthRegenTick),
+            { label = "Mana/min (downtime)", value = fmt((get("mech.manaPerTick") or 0) * 30) .. F.presumedMark(F.manaRegenTick) },
+            { label = "Health/tick (o.o.c.)", value = fmt(get("mech.healthPerTick")) .. F.presumedMark(F.healthRegenTick),
               tooltip = F.healthRegenTick.unit },
         },
     }
@@ -75,7 +68,7 @@ function PanelModel.build(loadout)
         title = "Mechanics",
         rows = {
             { label = "Swing time", value = fmt(get("mech.swingTime"), 2) .. "s" },
-            { label = "Armor mitigation", value = mitigation and (fmt(mitigation * 100) .. "%" .. presumedMark(F.armorMitigation)) or "-",
+            { label = "Armor mitigation", value = mitigation and (fmt(mitigation * 100) .. "%" .. F.presumedMark(F.armorMitigation)) or "-",
               tooltip = "vs level " .. (loadout.snapshot.level or 60) .. " attacker" },
             { label = "Effective HP", value = fmt(get("outcome.effectiveHealth")) },
             { label = "Max health", value = fmt(get("stat.maxHealth")) },

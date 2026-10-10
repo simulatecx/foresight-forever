@@ -118,6 +118,14 @@ F.statConversions = {
 
 -- Registry-wide helpers -------------------------------------------------------
 
+-- The honesty mark: " (p)" for any formula not yet verified on Forever. One definition
+-- so every surface (stats panel, tooltips) tags presumed values identically.
+function F.presumedMark(entry)
+    local c = entry and entry.confidence or ""
+    if c:find("^verified") then return "" end
+    return " (p)"
+end
+
 function F.get(name, classToken)
     local entry = F[name]
     if not entry then return nil end
