@@ -1,4 +1,4 @@
-# HelpMe - WoW: Forever addon
+# Foresight - WoW: Forever addon
 
 The hardcore player's safety net for official WoW: Forever (Interface 16001, Mainline
 12.x API over classic-era mechanics, launches 2026-11-04). Three pillars: Talent Impact
@@ -9,20 +9,20 @@ Map (current priority), Panic Advisor, what-to-press HUD. Design docs: `DATAFLOW
 ## Commands
 
 - `python pipeline/fetch.py [--build X]` - download Forever DB2 CSVs from wago.tools
-- `python pipeline/generate.py [--build X]` - regenerate `HelpMe/data/generated/*.lua`
+- `python pipeline/generate.py [--build X]` - regenerate `Foresight/data/generated/*.lua`
 - `python pipeline/run_tests.py` - headless selftest (lupa Lua VM); THE ship gate for
-  addon-logic changes; also runs in-game via `/helpme selftest`
+  addon-logic changes; also runs in-game via `/foresight selftest`
 
 ## Architecture (one line each)
 
 - `pipeline/` - Python tooling; offline only, never ships
-- `HelpMe/` - the addon. Load order = `HelpMe.toc`
-- `HelpMe/core/guards.lua` - ALL reads of possibly-secret game state go through Guards;
+- `Foresight/` - the addon. Load order = `Foresight.toc`
+- `Foresight/core/guards.lua` - ALL reads of possibly-secret game state go through Guards;
   never call issecretvalue or compare raw unit values elsewhere
-- `HelpMe/graph/` - impact graph engine + outcome dimensions
-- `HelpMe/model/` - snapshot -> loadout (what-if deltas) -> impact evaluation/diff
-- `HelpMe/data/generated/` - GENERATED, DO NOT EDIT; regenerate via pipeline
-- `HelpMe/data/overrides.lua` - hand-curated corrections (edit this, not generated/)
+- `Foresight/graph/` - impact graph engine + outcome dimensions
+- `Foresight/model/` - snapshot -> loadout (what-if deltas) -> impact evaluation/diff
+- `Foresight/data/generated/` - GENERATED, DO NOT EDIT; regenerate via pipeline
+- `Foresight/data/overrides.lua` - hand-curated corrections (edit this, not generated/)
 
 ## Hard invariants
 
@@ -40,7 +40,7 @@ Map (current priority), Panic Advisor, what-to-press HUD. Design docs: `DATAFLOW
 - Untrusted-input laws (threat model: DATAFLOW.md 4c): SavedVariables content is
   user-editable data - the addon type-validates it on load, and ANY tool parsing
   someone else's SavedVariables must use the neutered Lua sandbox in
-  `pipeline/harvest.py` (gated by `sandbox_selfcheck()` in run_tests). HelpMe never
+  `pipeline/harvest.py` (gated by `sandbox_selfcheck()` in run_tests). Foresight never
   executes imported content - future import features are data-only parsing, never
   loadstring. Crowd data changes `overrides.lua` only via k-of-n confirmation plus
   human-reviewed PR.

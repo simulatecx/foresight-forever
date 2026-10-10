@@ -1,4 +1,4 @@
-# HelpMe - Data Flow & Impact Graph Design
+# Foresight - Data Flow & Impact Graph Design
 
 Date: 2026-10-10. Priority #1 deliverable: the **Talent Impact Map**, built on a general
 **Character Impact Graph** that models how everything in WoW affects everything else - so the
@@ -80,7 +80,7 @@ Each measurement either *verifies* a formula (confidence -> `verified@build`) or
 
 Addons have no network access, so the proven pattern is export strings (how WeakAuras shares):
 
-1. Every HelpMe tooltip/panel has a small **"report" affordance** (and `/helpme report`).
+1. Every Foresight tooltip/panel has a small **"report" affordance** (and `/foresight report`).
 2. It captures a structured payload: the disputed entry (talent/formula/mapping id), expected
    vs observed, character class/level/race, talent snapshot, addon version + game build,
    optional free-text reason.
@@ -98,7 +98,7 @@ pre-filled, the user just confirms sending.
 ## 4b. Publishing & infrastructure plan (decided 2026-10-10)
 
 Clarity first: the shipped database (talents/spells/formulas) is BAKED INTO the addon -
-players need no server for HelpMe to work. Infrastructure exists for exactly two jobs:
+players need no server for Foresight to work. Infrastructure exists for exactly two jobs:
 distribution/updates, and the crowd-data return channel.
 
 ### Distribution + automated updates (phase 1 - free, standard ecosystem tooling)
@@ -146,9 +146,9 @@ tampered fork is the tamperer's problem account-wise. What CAN hurt us: our bran
 | Hostile SavedVariables submissions executing code in our harvester | Lua sandbox (os/io/python/load/require neutered, size cap) + `sandbox_selfcheck()` wired into the ship gate | ☑ shipped + gated |
 | Tampered/corrupted SavedVariables breaking the addon on a user's machine | Type-validated defensive load; malformed fields reset to defaults | ☑ shipped + tested |
 | Poisoned crowd data corrupting the shipped database | Phase B rule: aggregation requires k-of-n independent confirmations before any curated change; one submission can never alter `overrides.lua`; human review on the PR | ☐ binds Phase B |
-| Malicious "HelpMe" repackaging / brand abuse | Official channels only (CurseForge + Wago + GitHub Releases), stated in README; source fully visible (policy requires it anyway); login line prints version + data build so users can spot fakes; CurseForge takedown process for impersonations | ☐ binds publish step |
+| Malicious "Foresight" repackaging / brand abuse | Official channels only (CurseForge + Wago + GitHub Releases), stated in README; source fully visible (policy requires it anyway); login line prints version + data build so users can spot fakes; CurseForge takedown process for impersonations | ☐ binds publish step |
 | Supply-chain: compromised repo/CI shipping bad code | Branch protection, CI actions pinned by SHA, upload tokens as repo secrets, compliance gate runs in CI on every push (a malicious PR adding automation calls goes RED) | ☐ binds publish step |
-| Future import strings executing code (the WeakAuras custom-code attack class) | INVARIANT: HelpMe never executes imported content; any future import is data-only parsing with shape validation, never loadstring | law in CLAUDE.md |
+| Future import strings executing code (the WeakAuras custom-code attack class) | INVARIANT: Foresight never executes imported content; any future import is data-only parsing with shape validation, never loadstring | law in CLAUDE.md |
 
 ## 5. Build order (talent map first)
 

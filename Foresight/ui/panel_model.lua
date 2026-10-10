@@ -1,10 +1,10 @@
--- HelpMe stats-panel model: builds the section/row structure the panel renders.
+-- Foresight stats-panel model: builds the section/row structure the panel renders.
 -- Pure Lua (no frames) so the whole thing is selftest-covered headless; the renderer
 -- (ui/stats_panel.lua) just walks this model. ECS-style: sections with label/value
--- rows, plus the HelpMe differentiator - what-if rows showing what MORE stat would do.
+-- rows, plus the Foresight differentiator - what-if rows showing what MORE stat would do.
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local PanelModel = {}
 HM.PanelModel = PanelModel

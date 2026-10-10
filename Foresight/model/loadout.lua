@@ -1,9 +1,9 @@
--- HelpMe loadout: a character snapshot plus a stack of what-if deltas (talents, stat
+-- Foresight loadout: a character snapshot plus a stack of what-if deltas (talents, stat
 -- tweaks, items later). build() produces an impact graph ready for dimension scoring,
 -- so "current self" and "modeled self" are the same machinery with different deltas.
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local Loadout = {}
 Loadout.__index = Loadout

@@ -1,19 +1,19 @@
--- HelpMe data collector: turns every HelpMe user into a database contributor.
--- Everything lands in HelpMeDB.collect (SavedVariables); the offline harvester
+-- Foresight data collector: turns every Foresight user into a database contributor.
+-- Everything lands in ForesightDB.collect (SavedVariables); the offline harvester
 -- (pipeline/harvest.py) reads the file after logout. The addon never networks -
 -- file-based collection is the compliant channel (WowUp/Warcraft Logs pattern).
 --
 -- Collected:
 --   sessions     - char/class/race/level/game build per login (growth DB over time)
 --   levels       - PLAYER_LEVEL_UP journal with full stat snapshots
---   verify       - live API/environment verification results (/helpme verify)
+--   verify       - live API/environment verification results (/foresight verify)
 --   talentProbe  - raw in-game talent tooltip text per rank: the authoritative data
 --                  that settles the disputed rank-scaling rule, for EVERY talent the
 --                  client can render, not just hand-picked ones
---   reports      - user "this is wrong" reports (existing HelpMeDB.reports)
+--   reports      - user "this is wrong" reports (existing ForesightDB.reports)
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local Collect = {}
 HM.Collect = Collect
@@ -120,12 +120,12 @@ end
 function Collect.probeTalentTooltips(out)
     out = out or HM.print
     if not (_G.CreateFrame and _G.GetNumTalentTabs and _G.GetNumTalents) then
-        out("talent tooltip probe needs the classic talent API (run /helpme verify first)")
+        out("talent tooltip probe needs the classic talent API (run /foresight verify first)")
         return nil
     end
-    local tip = _G.HelpMeScanTooltip
+    local tip = _G.ForesightScanTooltip
     if not tip then
-        tip = _G.CreateFrame("GameTooltip", "HelpMeScanTooltip", nil, "GameTooltipTemplate")
+        tip = _G.CreateFrame("GameTooltip", "ForesightScanTooltip", nil, "GameTooltipTemplate")
         tip:SetOwner(_G.UIParent, "ANCHOR_NONE")
     end
     local probe = { at = now(), char = charInfo(), talents = {} }
@@ -137,7 +137,7 @@ function Collect.probeTalentTooltips(out)
                 tip:SetTalent(tab, i)
                 local lines = {}
                 for L = 1, tip:NumLines() do
-                    local fs = _G["HelpMeScanTooltipTextLeft" .. L]
+                    local fs = _G["ForesightScanTooltipTextLeft" .. L]
                     local text = fs and fs:GetText()
                     if text and text ~= "" then lines[#lines + 1] = text end
                 end

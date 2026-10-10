@@ -1,9 +1,9 @@
--- HelpMe export window: copyable text out of the game (WoW chat can't be copied).
+-- Foresight export window: copyable text out of the game (WoW chat can't be copied).
 -- A scrollable EditBox pre-highlighted for CTRL+C - the WeakAuras-export pattern.
 -- In-game only.
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 -- Serialize a Lua table to readable indented text (for export eyes, not re-import).
 -- Defined before the frame guard so the headless harness can test it.
@@ -33,7 +33,7 @@ local frame, editBox
 
 local function ensureFrame()
     if frame then return end
-    frame = _G.CreateFrame("Frame", "HelpMeExportFrame", _G.UIParent, "BackdropTemplate")
+    frame = _G.CreateFrame("Frame", "ForesightExportFrame", _G.UIParent, "BackdropTemplate")
     frame:SetSize(460, 320)
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
@@ -53,7 +53,7 @@ local function ensureFrame()
 
     local title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     title:SetPoint("TOP", 0, -10)
-    title:SetText("HelpMe export - CTRL+C to copy")
+    title:SetText("Foresight export - CTRL+C to copy")
 
     local close = _G.CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", -4, -4)

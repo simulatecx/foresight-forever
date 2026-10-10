@@ -1,10 +1,10 @@
 ---
 name: feature-triage
-description: HelpMe repo bindings for the global feature-triage gate. Use BEFORE building any new feature or sprint story in this repo - categorizes against FEATURES.md, runs the duplication check, and drafts the story for SPRINTS.md.
+description: Foresight repo bindings for the global feature-triage gate. Use BEFORE building any new feature or sprint story in this repo - categorizes against FEATURES.md, runs the duplication check, and drafts the story for SPRINTS.md.
 ---
 
 Follow the global `feature-triage` and `engineering-governance` skills for the method.
-This file adds the HelpMe repo bindings.
+This file adds the Foresight repo bindings.
 
 ## Categories (FEATURES.md)
 

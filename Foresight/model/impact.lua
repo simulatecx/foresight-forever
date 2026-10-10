@@ -1,9 +1,9 @@
--- HelpMe impact evaluation: score a loadout across all dimensions, diff two loadouts,
+-- Foresight impact evaluation: score a loadout across all dimensions, diff two loadouts,
 -- and explain deltas in human terms. This is the engine behind "model this talent" and
 -- "what does +2 Spirit actually do for me".
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local Impact = {}
 HM.Impact = Impact

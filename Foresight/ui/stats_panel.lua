@@ -1,11 +1,11 @@
--- HelpMe stats panel renderer: side panel docked to the character frame.
+-- Foresight stats panel renderer: side panel docked to the character frame.
 -- Skin: dark translucent card, class-color accent, zebra rows, colored what-if
 -- deltas - all code-drawn textures (no art assets), so it blends with both the
 -- default and classic-reskin UIs. Walks the model from ui/panel_model.lua;
 -- all layout here, zero computation. In-game only.
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 if not _G.CreateFrame then return end
 
@@ -177,7 +177,7 @@ local function createPanel()
     if not parent then return end
     local r, g, b = classColor()
 
-    panel = _G.CreateFrame("Frame", "HelpMeStatsPanel", parent)
+    panel = _G.CreateFrame("Frame", "ForesightStatsPanel", parent)
     panel:SetWidth(PANEL_WIDTH)
     panel:SetPoint("TOPLEFT", parent, "TOPRIGHT", 2, -12)
 
@@ -208,12 +208,12 @@ local function createPanel()
 
     local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     title:SetPoint("TOPLEFT", PAD, -7)
-    title:SetText(("|cff%02x%02x%02xHelpMe|r"):format(r * 255, g * 255, b * 255))
+    title:SetText(("|cff%02x%02x%02xForesight|r"):format(r * 255, g * 255, b * 255))
     local subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     subtitle:SetPoint("TOPRIGHT", -PAD, -9)
     subtitle:SetText("what more would do")
 
-    toggleButton = _G.CreateFrame("Button", "HelpMeToggleButton", parent, "UIPanelButtonTemplate")
+    toggleButton = _G.CreateFrame("Button", "ForesightToggleButton", parent, "UIPanelButtonTemplate")
     toggleButton:SetSize(36, 18)
     toggleButton:SetText("HM")
     toggleButton:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -40, 4)

@@ -1,11 +1,11 @@
--- HelpMe formula registry: the conversion math client data doesn't express.
+-- Foresight formula registry: the conversion math client data doesn't express.
 -- Every formula carries source + confidence; the probe module upgrades confidence to
 -- "verified@<build>" when in-game measurement matches, or flags a mismatch report.
 -- Confidence levels: "classic-presumed" (classic-era community formula, unverified on
 -- Forever) | "verified@<build>" | "disputed".
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local F = {}
 HM.formulas = F

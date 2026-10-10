@@ -1,4 +1,4 @@
--- HelpMe character snapshot: captures the live character into the plain-table shape
+-- Foresight character snapshot: captures the live character into the plain-table shape
 -- model/loadout.lua consumes. Every game read goes through Guards; missing/secret
 -- values land as 0 with a note so downstream math never explodes.
 --
@@ -6,7 +6,7 @@
 -- mechanics; exact stat API indices need one beta pass (see QA checklist).
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local Guards = HM.Guards
 local Snapshot = {}

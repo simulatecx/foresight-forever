@@ -6,7 +6,7 @@ try { $payload = $stdin | ConvertFrom-Json } catch { exit 0 }
 if ($null -ne $payload -and $payload.stop_hook_active) { exit 0 }
 
 $root = Split-Path (Split-Path $PSScriptRoot)
-$codeRoots = @((Join-Path $root "HelpMe"), (Join-Path $root "pipeline"))
+$codeRoots = @((Join-Path $root "Foresight"), (Join-Path $root "pipeline"))
 $spine = @("SPRINTS.md", "FEATURES.md", "CHANGELOG.md") | ForEach-Object { Join-Path $root $_ }
 
 $codeNewest = Get-Date "2000-01-01"
@@ -23,7 +23,7 @@ foreach ($s in $spine) {
 
 # 90s grace: spine edits usually land just before the turn ends.
 if ($codeNewest -gt $spineNewest.AddSeconds(90)) {
-    [Console]::Error.WriteLine("Record loop incomplete: code under HelpMe/ or pipeline/ is newer than the doc spine. Sync SPRINTS.md status, FEATURES.md inventory, and CHANGELOG.md (with *Features:* IDs) before ending the turn - or state why no spine change is needed.")
+    [Console]::Error.WriteLine("Record loop incomplete: code under Foresight/ or pipeline/ is newer than the doc spine. Sync SPRINTS.md status, FEATURES.md inventory, and CHANGELOG.md (with *Features:* IDs) before ending the turn - or state why no spine change is needed.")
     exit 2
 }
 exit 0

@@ -1,10 +1,10 @@
--- HelpMe core bootstrap: addon namespace, saved variables, events, slash commands.
+-- Foresight core bootstrap: addon namespace, saved variables, events, slash commands.
 -- WoW-client-only wiring is gated on CreateFrame so every file also loads headless
 -- under the test harness (pipeline/run_tests.py).
 
 local ADDON_NAME, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
-_G.HelpMe = HM
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
+_G.Foresight = HM
 
 HM.version = "0.1.0"
 
@@ -12,14 +12,14 @@ HM.version = "0.1.0"
 -- type-validated and anything malformed is reset, never trusted. A tampered or
 -- corrupted file degrades to defaults instead of erroring the addon.
 function HM.initSavedVariables()
-    if type(HelpMeDB) ~= "table" then HelpMeDB = {} end
-    if type(HelpMeDB.version) ~= "number" then HelpMeDB.version = 1 end
-    if type(HelpMeDB.chars) ~= "table" then HelpMeDB.chars = {} end
-    if type(HelpMeDB.reports) ~= "table" then HelpMeDB.reports = {} end
-    if HelpMeDB.collect ~= nil and type(HelpMeDB.collect) ~= "table" then
-        HelpMeDB.collect = nil
+    if type(ForesightDB) ~= "table" then ForesightDB = {} end
+    if type(ForesightDB.version) ~= "number" then ForesightDB.version = 1 end
+    if type(ForesightDB.chars) ~= "table" then ForesightDB.chars = {} end
+    if type(ForesightDB.reports) ~= "table" then ForesightDB.reports = {} end
+    if ForesightDB.collect ~= nil and type(ForesightDB.collect) ~= "table" then
+        ForesightDB.collect = nil
     end
-    HM.db = HelpMeDB
+    HM.db = ForesightDB
 end
 local initSavedVariables = HM.initSavedVariables
 
@@ -37,9 +37,9 @@ end
 
 local function printMsg(msg)
     if _G.DEFAULT_CHAT_FRAME then
-        _G.DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99HelpMe|r: " .. msg)
+        _G.DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Foresight|r: " .. msg)
     else
-        print("HelpMe: " .. msg)
+        print("Foresight: " .. msg)
     end
 end
 HM.print = printMsg
@@ -79,7 +79,7 @@ local function onSlash(input)
     elseif cmd == "talent" then
         local found = HM.findTalents(rest)
         if #found == 0 then
-            printMsg("no talent matches '" .. rest .. "' (usage: /helpme talent <name or id>)")
+            printMsg("no talent matches '" .. rest .. "' (usage: /foresight talent <name or id>)")
             return
         elseif #found > 1 then
             printMsg(#found .. " matches - be more specific:")
@@ -101,7 +101,7 @@ local function onSlash(input)
     elseif cmd == "stat" then
         local stat, amount = rest:match("^(%S+)%s+(-?%d+%.?%d*)$")
         if not stat then
-            printMsg("usage: /helpme stat <Spirit|Intellect|...> <amount>")
+            printMsg("usage: /foresight stat <Spirit|Intellect|...> <amount>")
             return
         end
         local snapshot = HM.Snapshot and HM.Snapshot.capture()
@@ -124,7 +124,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /helpme talent <name|id> | stat <name> <amount> | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | verify | export | selftest")
     end
 end
 
@@ -147,8 +147,10 @@ if _G.CreateFrame then
         end
     end)
 
-    _G.SLASH_HELPME1 = "/helpme"
-    _G.SlashCmdList["HELPME"] = onSlash
+    _G.SLASH_FORESIGHT1 = "/foresight"
+    _G.SLASH_FORESIGHT2 = "/fore"
+    _G.SLASH_FORESIGHT3 = "/helpme" -- legacy alias from the HelpMe era
+    _G.SlashCmdList["FORESIGHT"] = onSlash
 else
     initSavedVariables()
 end

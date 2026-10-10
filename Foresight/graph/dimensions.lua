@@ -1,9 +1,9 @@
--- HelpMe outcome dimensions: the lenses a loadout is scored through.
+-- Foresight outcome dimensions: the lenses a loadout is scored through.
 -- v0 heuristics - directional scores with honest breakdowns, refined as the probe
 -- verifies formulas. Each dimension reads graph nodes built by model/loadout.lua.
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local D = {}
 HM.dimensions = D

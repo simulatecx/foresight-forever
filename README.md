@@ -1,6 +1,6 @@
-# HelpMe
+# Foresight
 
-The hardcore player's safety net for official **WoW: Forever**. HelpMe answers the
+The hardcore player's safety net for official **WoW: Forever**. Foresight answers the
 question every talent point and every stat on gear raises: *"+2 Spirit - so what?"*
 Answers always end in human terms: extra casts per fight, seconds of regen saved,
 hits you can survive.
@@ -18,7 +18,7 @@ Status: pre-release, built against the Forever beta (Interface 16001, data build
 
 ## Official download channels
 
-When released, HelpMe will be distributed **only** through:
+When released, Foresight will be distributed **only** through:
 
 - CurseForge
 - Wago Addons
@@ -30,7 +30,7 @@ from; if yours does not match a release on this page, you are not running our bu
 
 ## Account safety, by construction
 
-HelpMe is a normal `Interface\AddOns` addon using official APIs only, and it is
+Foresight is a normal `Interface\AddOns` addon using official APIs only, and it is
 **display-and-advice only**: it never casts, targets, moves, uses items, or automates
 any protected action. There is no memory reading, no input injection, no game-file
 modification, and the addon never talks to the network.
@@ -41,14 +41,14 @@ gate, and a red result blocks any release. The full source is public so you can 
 
 ## Installing from source (beta)
 
-Copy the `HelpMe/` folder into `World of Warcraft\_classic_beta_\Interface\AddOns\`
-(or your flavor's `Interface\AddOns\`). Then `/helpme` in-game; `/helpme selftest`
+Copy the `Foresight/` folder into `World of Warcraft\_classic_beta_\Interface\AddOns\`
+(or your flavor's `Interface\AddOns\`). Then `/foresight` in-game; `/foresight selftest`
 runs the built-in checks.
 
 ## Development
 
 - `python pipeline/fetch.py` - download Forever DB2 CSVs from wago.tools
-- `python pipeline/generate.py` - regenerate `HelpMe/data/generated/*.lua`
+- `python pipeline/generate.py` - regenerate `Foresight/data/generated/*.lua`
 - `python pipeline/run_tests.py` - compliance gate + headless selftest; THE ship gate
 - `python pipeline/deploy.py` - gate-then-copy to a live install
 

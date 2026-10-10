@@ -1,7 +1,7 @@
-"""Harvest HelpMe data from live players' SavedVariables files.
+"""Harvest Foresight data from live players' SavedVariables files.
 
 The automated pull in the collection loop: the addon accumulates sessions, level-up
-stat journals, verify results, and talent tooltip probes into HelpMeDB (written by the
+stat journals, verify results, and talent tooltip probes into ForesightDB (written by the
 client on logout/reload); this script finds those files, parses them in a Lua VM,
 archives them as JSON, and runs the rank-rule analysis against generated data.
 
@@ -28,7 +28,7 @@ DEFAULT_ROOTS = [
     Path(r"C:\Program Files (x86)\World of Warcraft"),
 ]
 COLLECTED = Path(__file__).parent / "collected"
-GENERATED = Path(__file__).parent.parent / "HelpMe" / "data" / "generated"
+GENERATED = Path(__file__).parent.parent / "Foresight" / "data" / "generated"
 
 
 def lua_to_py(obj):
@@ -44,7 +44,7 @@ def find_savedvars(roots: list[Path]) -> list[Path]:
     found = []
     for root in roots:
         if root.exists():
-            found.extend(root.glob("*/WTF/Account/*/SavedVariables/HelpMe.lua"))
+            found.extend(root.glob("*/WTF/Account/*/SavedVariables/Foresight.lua"))
     return found
 
 
@@ -65,7 +65,7 @@ def parse_savedvars_text(text: str) -> dict:
     lua = lupa.LuaRuntime(register_eval=False, register_builtins=False)
     lua.execute(SANDBOX_NEUTER)
     lua.execute(text)
-    db = lua.globals().HelpMeDB
+    db = lua.globals().ForesightDB
     return lua_to_py(db) if db is not None else {}
 
 
@@ -76,15 +76,15 @@ def parse_savedvars(path: Path) -> dict:
 def sandbox_selfcheck() -> bool:
     """Prove the sandbox: hostile payloads must fail, benign data must parse.
     Called by run_tests.py - a regression here blocks the ship."""
-    benign = parse_savedvars_text('HelpMeDB = { ["version"] = 1, ["chars"] = {} }')
+    benign = parse_savedvars_text('ForesightDB = { ["version"] = 1, ["chars"] = {} }')
     if benign.get("version") != 1:
         return False
     hostile_payloads = [
-        'HelpMeDB = {} os.remove("x")',
-        'HelpMeDB = {} io.open("x")',
-        'HelpMeDB = {} python.eval("1+1")',
-        'HelpMeDB = {} require("os")',
-        'HelpMeDB = {} load("return 1")()',
+        'ForesightDB = {} os.remove("x")',
+        'ForesightDB = {} io.open("x")',
+        'ForesightDB = {} python.eval("1+1")',
+        'ForesightDB = {} require("os")',
+        'ForesightDB = {} load("return 1")()',
     ]
     for payload in hostile_payloads:
         try:
@@ -101,7 +101,7 @@ def load_generated() -> dict:
     for name in ("build", "talent_tabs", "talents", "talent_impacts", "spells"):
         f = GENERATED / f"{name}.lua"
         load_chunk(f.read_text(encoding="utf-8"), f.name)
-    return lua_to_py(lua.globals().HelpMe.gen)
+    return lua_to_py(lua.globals().Foresight.gen)
 
 
 NUM_RE = re.compile(r"(\d+\.?\d*)")
@@ -160,7 +160,7 @@ def main() -> int:
 
     files = find_savedvars(roots)
     if not files:
-        print("no HelpMe SavedVariables found - log out of the game at least once")
+        print("no Foresight SavedVariables found - log out of the game at least once")
         return 1
 
     COLLECTED.mkdir(exist_ok=True)
@@ -195,7 +195,7 @@ def main() -> int:
             for d in analysis["details"][:10]:
                 print(f"     {d}")
         if not verify and not probe:
-            print("   no verify/probe data yet - run /helpme verify in-game, then log out")
+            print("   no verify/probe data yet - run /foresight verify in-game, then log out")
     return exit_code
 
 

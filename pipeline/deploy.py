@@ -1,6 +1,6 @@
-"""Deploy HelpMe to the local WoW Forever install - gate first, then copy.
+"""Deploy Foresight to the local WoW Forever install - gate first, then copy.
 
-Usage: python deploy.py [--target <AddOns\\HelpMe path>] [--skip-gate]
+Usage: python deploy.py [--target <AddOns\\Foresight path>] [--skip-gate]
 The gate (compliance scan + 28-check selftest) must be green before any copy;
 a red gate blocks the deploy outright (release-train discipline).
 """
@@ -13,9 +13,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-ADDON_SRC = Path(__file__).parent.parent / "HelpMe"
+ADDON_SRC = Path(__file__).parent.parent / "Foresight"
 DEFAULT_TARGETS = [
-    Path(r"D:\Games\World of Warcraft\_classic_beta_\Interface\AddOns\HelpMe"),
+    Path(r"D:\Games\World of Warcraft\_classic_beta_\Interface\AddOns\Foresight"),
 ]
 
 
@@ -39,7 +39,7 @@ def main() -> int:
 
     targets = [args.target] if args.target else [t for t in DEFAULT_TARGETS if t.parent.exists()]
     if not targets:
-        print("no deploy target found - pass --target <...\\Interface\\AddOns\\HelpMe>")
+        print("no deploy target found - pass --target <...\\Interface\\AddOns\\Foresight>")
         return 1
 
     for target in targets:
@@ -48,7 +48,7 @@ def main() -> int:
         shutil.copytree(ADDON_SRC, target, ignore=shutil.ignore_patterns("*.pyc"))
         files = len(list(target.rglob("*.*")))
         print(f"deployed {files} files -> {target}")
-    print("in-game: /reload (or relog), then /helpme verify")
+    print("in-game: /reload (or relog), then /foresight verify")
     return 0
 
 

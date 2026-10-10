@@ -1,4 +1,4 @@
-"""Headless test harness: load the HelpMe addon files in TOC order inside a Lua VM
+"""Headless test harness: load the Foresight addon files in TOC order inside a Lua VM
 (lupa) with the WoW addon vararg convention, then run the in-addon selftest.
 
 Usage: python run_tests.py
@@ -12,11 +12,11 @@ from pathlib import Path
 
 import lupa
 
-ADDON_DIR = Path(__file__).parent.parent / "HelpMe"
+ADDON_DIR = Path(__file__).parent.parent / "Foresight"
 
 
 def toc_files() -> list[Path]:
-    toc = ADDON_DIR / "HelpMe.toc"
+    toc = ADDON_DIR / "Foresight.toc"
     files = []
     for line in toc.read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -47,7 +47,7 @@ def main() -> int:
         function(source, name, ns)
             local chunk, err = load(source, "@" .. name)
             if not chunk then error(err) end
-            return chunk("HelpMe", ns)
+            return chunk("Foresight", ns)
         end
         """
     )
@@ -66,7 +66,7 @@ def main() -> int:
         except lupa.LuaError as exc:
             print(f"LOAD FAILED {path.name}: {exc}")
             return 1
-    print(f"loaded {len(toc_files())} files from HelpMe.toc")
+    print(f"loaded {len(toc_files())} files from Foresight.toc")
 
     lines: list[str] = []
     collect = lambda s: lines.append(str(s))  # noqa: E731

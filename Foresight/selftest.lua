@@ -1,9 +1,9 @@
--- HelpMe selftest: exercises the graph, formulas, loadout modelling and generated
--- data without touching game state. Runs in-game via /helpme selftest and headless
+-- Foresight selftest: exercises the graph, formulas, loadout modelling and generated
+-- data without touching game state. Runs in-game via /foresight selftest and headless
 -- via pipeline/run_tests.py. Every assertion is a named check; output is a scoreboard.
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local function approx(a, b, eps)
     return math.abs(a - b) <= (eps or 1e-6)
@@ -159,11 +159,11 @@ function HM.runSelftest(out)
         return v and #v.results >= 5 and HM.db.collect and HM.db.collect.verify ~= nil
     end)())
     check("tampered SavedVariables degrade to defaults", (function()
-        local saved = _G.HelpMeDB
-        _G.HelpMeDB = "corrupted garbage"
+        local saved = _G.ForesightDB
+        _G.ForesightDB = "corrupted garbage"
         HM.initSavedVariables()
-        local ok = type(_G.HelpMeDB) == "table" and type(_G.HelpMeDB.chars) == "table"
-        _G.HelpMeDB = saved
+        local ok = type(_G.ForesightDB) == "table" and type(_G.ForesightDB.chars) == "table"
+        _G.ForesightDB = saved
         HM.db = saved
         return ok
     end)())

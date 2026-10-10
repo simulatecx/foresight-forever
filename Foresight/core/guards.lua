@@ -1,10 +1,10 @@
--- HelpMe secret-value guard layer. ALL reads of game state that can be secret in
+-- Foresight secret-value guard layer. ALL reads of game state that can be secret in
 -- restricted contexts (instances, PvP) go through here, so the rest of the codebase
 -- never branches on a value that might explode. Headless-safe: issecretvalue does not
 -- exist outside the client, so everything degrades to plain passthrough in tests.
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local Guards = {}
 HM.Guards = Guards

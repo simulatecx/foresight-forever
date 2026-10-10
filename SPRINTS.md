@@ -1,4 +1,4 @@
-# HelpMe - Work Tracker
+# Foresight - Work Tracker
 
 Single source of truth for work. Status glyphs: ☐ todo · ◐ in progress · ☑ done · ⚑ superseded.
 
@@ -7,7 +7,7 @@ Single source of truth for work. Status glyphs: ☐ todo · ◐ in progress · �
 | Story | Status |
 |---|---|
 | S1 Foundation: data pipeline + impact graph + modelling core | ☑ |
-| S2 Talent Impact Map in-game MVP (tooltip + /helpme talent) | ☐ |
+| S2 Talent Impact Map in-game MVP (tooltip + /foresight talent) | ☐ |
 | S3 Beta verification pass (API shapes, rank rule, snapshot) | ☐ |
 | S4 Report/feedback export strings | ☐ |
 | S5 ECS-style stats panel (code-complete, render pending beta) | ◐ |
@@ -17,7 +17,7 @@ Single source of truth for work. Status glyphs: ☐ todo · ◐ in progress · �
 
 ### S2 - Talent Impact Map in-game MVP ☐
 Hover a talent in the talent frame -> injected "Affects: ..." lines + per-rank values;
-`/helpme talent <id>` already works. **Features:** UI-talent-tooltip.
+`/foresight talent <id>` already works. **Features:** UI-talent-tooltip.
 AC: tooltip lines render on Forever beta client without taint errors; needs-curation
 talents say so honestly; mobile check N/A (game UI).
 Fit & Overlap: enhances MODEL-talent-summary (same data path, new surface). No overlap -
@@ -43,7 +43,7 @@ check readability at 1280x720 / 0.65 UI scale during the beta pass.
 ## Shipped (archived)
 
 - ☑ S6 Crowd data-collection loop, pilot scale (2026-10-10): collector (sessions,
-  level journal, /helpme verify + all-talents tooltip probe) -> SavedVariables ->
+  level journal, /foresight verify + all-talents tooltip probe) -> SavedVariables ->
   harvester (JSON archive + rank-rule voting) -> gated deploy script. First in-game
   run passed 28/28 on a level-9 Shaman; SavedVariables persistence CONFIRMED live.
   Scale-up to other users (companion uploader + ingestion) is in the backlog.

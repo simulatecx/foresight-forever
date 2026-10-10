@@ -1,14 +1,14 @@
--- HelpMe impact graph: nodes with base values or formulas, typed modifier edges,
+-- Foresight impact graph: nodes with base values or formulas, typed modifier edges,
 -- deterministic stacking. Pure Lua 5.1, no WoW API - testable headless.
 --
 -- Stacking model (per target node):
 --   value = (base + sum(flat)) * (1 + sum(pctAdd in group)/100 for each group) * prod(1 + pctMult/100)
 --   "override" (highest priority wins) short-circuits the above.
 -- Every value() call can also return a breakdown table explaining each contribution,
--- because HelpMe's contract is human-readable answers, not bare numbers.
+-- because Foresight's contract is human-readable answers, not bare numbers.
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 local Graph = {}
 Graph.__index = Graph

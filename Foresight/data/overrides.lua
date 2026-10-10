@@ -1,11 +1,11 @@
--- HelpMe curated overrides: hand-maintained corrections layered over generated data.
+-- Foresight curated overrides: hand-maintained corrections layered over generated data.
 -- Primary feed: user reports ("this doesn't work because X") and probe mismatches.
 -- Shape mirrors HM.gen.talentImpacts entries; an override fully replaces the
 -- generated entry for that talent id. 186/432 talents are proc/trigger-style and
 -- need curation (flagged needsCuration in generated data) - they land here over time.
 
 local _, HM = ...
-if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 HM.overrides = {
     talentImpacts = {

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0 - 2026-10-10
+
+Renamed: HelpMe -> **Foresight** (naming research before the public repo: "HelpMe"
+collides with HelpMePlay on CurseForge - a quest-automation addon, exactly the
+association a compliance-first project must avoid; Foresight captures both pillars -
+see what a point does before you commit, see danger before it kills you - and fits
+the ecosystem's one-word pattern: Pawn, Details, Recount).
+
+- Renamed addon folder, TOC, SavedVariables global (ForesightDB), slash commands
+  (/foresight, /fore; /helpme kept as a legacy alias), pipeline, docs, packager
+  config; generated data regenerated with new headers.
+- New TOC icon (Spell_Nature_FarSight) and Notes one-liner; version stamp 0.4.0.
+- Live install migrated: AddOns folder replaced, WTF SavedVariables carried over
+  (HelpMeDB -> ForesightDB) so pilot journals/probes survive.
+- Historical entries below intentionally keep the HelpMe name.
+
+*Features:* CORE-bootstrap, QA-publish-train
+
 ## 0.3.1 - 2026-10-10
 
 Tamper/abuse hardening (threat model in DATAFLOW.md 4c; incident-to-gate applied).

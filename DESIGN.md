@@ -1,4 +1,4 @@
-# HelpMe - Addon Design (WoW: Forever)
+# Foresight - Addon Design (WoW: Forever)
 
 Product spec and technical design. Research date: 2026-10-10. Target: official WoW: Forever
 (modern retail client, classic-era Azeroth, level 60 cap, Midnight 12.0 "secret values" API).
@@ -6,7 +6,7 @@ See `FEASIBILITY.md` for the platform research this builds on.
 
 ## Product summary
 
-**HelpMe** - the hardcore player's safety net. Three pillars:
+**Foresight** - the hardcore player's safety net. Three pillars:
 
 1. **Panic Advisor** - knows your class's escape toolkit; when you're in a bind it flashes the
    right buttons on screen, ranked, with keybinds. Fully user-modifiable per character.
@@ -59,7 +59,7 @@ Blizzard's 12.0 client exposes its assisted-combat engine to addons:
 - `C_AssistedCombat.GetNextCastSpell()` - the spell the game itself recommends next
 - `C_AssistedCombat.IsAvailable()`, `C_Spell.GetSpellCooldown()` for state
 The Knickili addon on CurseForge proves this pattern is compliant: display the recommended
-spell icon + keybind in a HUD element, no secret-value inspection needed. HelpMe wraps the
+spell icon + keybind in a HUD element, no secret-value inspection needed. Foresight wraps the
 same API and optionally also glows the matching action button.
 
 **Assumption to verify in beta**: `C_AssistedCombat` is present and populated on the Forever
@@ -97,11 +97,11 @@ source (talent | item) -> modifier (damage %, cast time, cooldown, resource, pro
 Pattern source: Extended Character Stats / CharacterStatsClassic lineage - toggle button
 on the character frame, collapsible-category side panel, label/value rows, per-character
 expand-state memory. Forever's #1 UI addon (ClassicUI Forever) is a classic-look reskin,
-so HelpMe uses stock Blizzard templates to blend with both classic and default skins.
+so Foresight uses stock Blizzard templates to blend with both classic and default skins.
 
 ```
 +--------------------------+  +----------------------+
-|                          |  | HelpMe        [gear] |
+|                          |  | Foresight        [gear] |
 |   CharacterFrame         |  |----------------------|
 |   (Blizzard)             |  | [-] Dimensions       |
 |                          |  |   Spellcasting  312  |
@@ -120,7 +120,7 @@ so HelpMe uses stock Blizzard templates to blend with both classic and default s
 - **Sections** (collapsible, state saved per character): Dimensions (7 outcome scores),
   Regen (mana/health per tick, five-second-rule annotated), Mechanics (swing time,
   armor mitigation, effective HP), What-if (quick stat deltas in human terms - the
-  differentiator: ECS shows what you have, HelpMe shows what more would do).
+  differentiator: ECS shows what you have, Foresight shows what more would do).
 - `(p)` marks classic-presumed formula values until the probe verifies them; secret or
   unavailable values render as "-", never errors.
 - Separation for testability: `ui/panel_model.lua` builds the section/row model from a
@@ -130,8 +130,8 @@ so HelpMe uses stock Blizzard templates to blend with both classic and default s
 ## Architecture
 
 ```
-HelpMe/
-  HelpMe.toc
+Foresight/
+  Foresight.toc
   core/      -- event bus, SavedVariables DB (per-character profiles), config UI, secret-value guard layer
   data/      -- class escape registries, talent/item parser, curated overrides
   panic/     -- trigger engine, button-flash overlay, panic panel

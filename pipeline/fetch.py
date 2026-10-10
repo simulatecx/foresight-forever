@@ -41,7 +41,7 @@ def fetch_table(table: str, build: str, cache_dir: Path, force: bool) -> str:
     if dest.exists() and not force:
         return f"cached  {table} ({dest.stat().st_size:,} bytes)"
     url = BASE_URL.format(table=table, build=build)
-    req = urllib.request.Request(url, headers={"User-Agent": "HelpMe-addon-pipeline/0.1"})
+    req = urllib.request.Request(url, headers={"User-Agent": "Foresight-addon-pipeline/0.1"})
     started = time.time()
     with urllib.request.urlopen(req, timeout=120) as resp:
         data = resp.read()

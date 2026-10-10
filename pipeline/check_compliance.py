@@ -1,8 +1,8 @@
-"""Compliance gate: static scan proving the HelpMe addon stays inside Blizzard's rules.
+"""Compliance gate: static scan proving the Foresight addon stays inside Blizzard's rules.
 
 Protects the failure class "a code change introduces an automation call, protected-API
 use, or sandbox escape that could put the account at risk / break addon policy".
-HelpMe is display-and-advice only BY DESIGN, so the gate is maximally conservative:
+Foresight is display-and-advice only BY DESIGN, so the gate is maximally conservative:
 any casting, targeting, movement, item-use, or macro-execution call is a violation,
 even ones addons may legally make on a hardware event - this addon never needs them.
 
@@ -17,7 +17,7 @@ import re
 import sys
 from pathlib import Path
 
-ADDON_DIR = Path(__file__).parent.parent / "HelpMe"
+ADDON_DIR = Path(__file__).parent.parent / "Foresight"
 
 # Automation / protected-action APIs: display-only addons have zero business calling
 # these. Word-boundary + call-paren so prose in tooltips/comments doesn't trip it.
@@ -58,7 +58,7 @@ def scan() -> tuple[list[str], list[str]]:
     allowances: list[str] = []
     lua_files = sorted(ADDON_DIR.rglob("*.lua"))
     if not lua_files:
-        violations.append("no .lua files found under HelpMe/ - wrong directory?")
+        violations.append("no .lua files found under Foresight/ - wrong directory?")
         return violations, allowances
 
     for path in lua_files:
@@ -80,13 +80,13 @@ def scan() -> tuple[list[str], list[str]]:
             else:
                 violations.append(f"{rel}:{lineno} {'; '.join(hits)} :: {line.strip()[:120]}")
 
-    toc = ADDON_DIR / "HelpMe.toc"
+    toc = ADDON_DIR / "Foresight.toc"
     if not toc.exists():
-        violations.append("HelpMe.toc missing")
+        violations.append("Foresight.toc missing")
     else:
         toc_text = toc.read_text(encoding="utf-8")
         if "## Interface:" not in toc_text:
-            violations.append("HelpMe.toc: missing ## Interface")
+            violations.append("Foresight.toc: missing ## Interface")
     return violations, allowances
 
 
