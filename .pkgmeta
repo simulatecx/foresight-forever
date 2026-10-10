@@ -1,0 +1,21 @@
+# BigWigsMods/packager config (DATAFLOW.md 4b): tag vX.Y.Z -> CI zips the addon,
+# uploads to CurseForge + Wago Addons + GitHub Releases. Only HelpMe/ ships; the
+# pipeline, docs, and agent tooling stay repo-only.
+package-as: HelpMe
+enable-nolib-creation: no
+
+move-folders:
+    HelpMe/HelpMe: HelpMe
+
+ignore:
+    - pipeline
+    - .claude
+    - CLAUDE.md
+    - DATAFLOW.md
+    - DESIGN.md
+    - FEASIBILITY.md
+    - FEATURES.md
+    - SPRINTS.md
+    - README.md
+
+manual-changelog: CHANGELOG.md

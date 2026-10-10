@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Pipeline local artifacts: cache/ is regenerable (fetch.py), collected/ holds
+# harvested SavedVariables snapshots from real accounts - never commit (privacy).
+pipeline/cache/
+pipeline/collected/
+
+# Per-machine agent settings
+.claude/settings.local.json

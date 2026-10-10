@@ -1,0 +1,2 @@
+# Normalize line endings; CI (packager) runs on Linux, dev happens on Windows.
+* text=auto

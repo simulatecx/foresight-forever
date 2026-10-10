@@ -1,0 +1,114 @@
+# Changelog
+
+## 0.3.1 - 2026-10-10
+
+Tamper/abuse hardening (threat model in DATAFLOW.md 4c; incident-to-gate applied).
+
+- FIXED a real vulnerability: harvest.py executed SavedVariables Lua with os/io/python
+  reachable - hostile crowd submissions could have run code on the harvesting machine.
+  Now parsed in a neutered sandbox (os/io/require/load/package/debug/python nil,
+  register_eval off, 20MB cap).
+- GATE: `harvest.sandbox_selfcheck()` (5 hostile payloads must fail, benign must
+  parse) wired into run_tests.py - a sandbox regression blocks the ship.
+- Addon-side: SavedVariables load is now type-validated (`HM.initSavedVariables`);
+  tampered/corrupted files degrade to defaults; collect store self-heals.
+- Untrusted-input laws added to CLAUDE.md (data-only imports forever, k-of-n rule for
+  crowd-sourced database changes). Selftest grows to 32 checks.
+
+*Features:* QA-harvester, QA-selftest-harness, CORE-saveddb
+
+## 0.3.0 - 2026-10-10
+
+Crowd data-collection loop (pilot scale), copyable export, fancy panel skin, gated
+deploys. First confirmed in-game run: 28/28 on a level-9 Shaman, and SavedVariables
+persistence CONFIRMED on the live client (S3 item resolved).
+
+- New `core/collect.lua`: session journal, PLAYER_LEVEL_UP stat journal, `/helpme
+  verify` (automated S3 checklist: API shapes, live snapshot sanity, C_AssistedCombat,
+  secret-values presence) and a talent tooltip probe capturing EVERY talent's in-game
+  tooltip text - the authoritative data that settles the rank-scaling rule.
+- New `ui/export.lua`: copyable scroll/EditBox window (`/helpme export`) - fixes
+  "can't copy from the chat window"; `HM.serialize` for readable dumps.
+- New `pipeline/harvest.py`: finds HelpMe SavedVariables across WoW installs, parses
+  in a Lua VM, archives JSON to pipeline/collected/, prints verify summary, and runs
+  rank-rule hypothesis voting (A: max-total vs B: per-rank) from probed tooltips.
+- New `pipeline/deploy.py`: gate-then-copy deploy to the live install (release-train
+  binding); verified: 20 files deployed to `_classic_beta_` AddOns.
+- Stats panel reskinned: dark translucent card, class-color accents/title/top-strip,
+  zebra rows, hover highlight, green/red colored what-if deltas - all code-drawn.
+- Selftest grows to 30 checks (serialize, headless verify persistence).
+
+*Features:* QA-collector, QA-verify-command, QA-harvester, QA-deploy, UI-export-window,
+UI-stats-panel, CORE-bootstrap
+
+## 0.2.0 - 2026-10-10
+
+ECS-inspired stats panel + marginal stat conversions (UI pattern scan: Extended
+Character Stats lineage - toggle button, collapsible-category side panel, per-character
+state; mockup and mapping in DESIGN.md "UI map").
+
+- New `ui/panel_model.lua` (pure, selftest-covered) + `ui/stats_panel.lua` (renderer):
+  side panel docked to CharacterFrame with HM toggle button; sections Dimensions /
+  Regen / Mechanics / What-if; collapse state persists per character; presumed-formula
+  values marked `(p)`; secret/unavailable values render "-".
+- What-if section is the differentiator vs ECS: live "+10 stat -> human terms" rows.
+- Classic per-class primary-stat conversions added to the formula registry (AP per
+  Str/Agi, Agi per crit%, Int per spell-crit%), applied as MARGINAL rates around the
+  snapshot so game-reported AP/crit is never double-counted. Str/Agi/Int now move
+  dimensions (Shaman demo: +10 Str = +6.45% melee DPS, +10 Sta = +5.56% tankability).
+- Selftest grows to 28 checks.
+
+*Features:* UI-stats-panel, DATA-formula-registry, MODEL-impact-diff, QA-selftest-harness
+
+## 0.1.2 - 2026-10-10
+
+- `/helpme talent` now accepts names (case-insensitive, partial match lists candidates)
+  via new `HM.findTalents`; selftest grows to 21 checks.
+- Shaman verified end-to-end in generated data (46 talents across 3 trees; Forever
+  additions like Lava Burst present and mapped).
+- Rank-scaling rule downgraded to `disputed-mixed-evidence`: classic-value comparison
+  shows some talents store per-rank values, others max totals. Four named probe
+  talents added to the S3 beta checklist.
+
+*Features:* CORE-bootstrap, QA-selftest-harness, DATA-formula-registry
+
+## 0.1.1 - 2026-10-10
+
+Compliance audit + permanent gate (incident-to-gate: class = "a code change introduces
+an automation call, protected-API use, or sandbox escape risking the account").
+
+- Audited the full addon: zero automation/protected calls, zero sandbox escapes.
+- New `pipeline/check_compliance.py`: static scan banning ~40 casting/targeting/
+  movement/item-use/macro APIs and os/io/require/loadstring escapes; documented
+  `-- compliance-allow:` mechanism for justified exceptions; TOC sanity checks.
+- Wired into `run_tests.py` as the FIRST step of the ship gate (red blocks everything).
+- Gate proven: planted CastSpellByName violation detected (exit 1), clean run green.
+- Hardened gate output for BOM/cp1252 consoles (utf-8-sig reads, replace-errors stdout).
+
+*Features:* QA-compliance-gate
+
+## 0.1.0 - 2026-10-10
+
+Foundation release: data pipeline, impact graph, character modelling, test harness.
+
+- Data pipeline: fetch 14 Forever DB2 tables (build 1.60.1.70338) from wago.tools;
+  generator computes talent->affected-spells via spell-family class masks (246/432
+  talents auto-mapped, 186 flagged for curation) and emits Lua data tables
+  (432 talents, 27 tabs, 3,448 player spells with cast/cost/tick/cooldown data).
+- Discovered + encoded Forever client data layout: multi-rank talent values stored
+  only on the rank-1 spell as max-rank totals; rank scaling shipped as
+  "linearToMax-presumed" pending beta verification.
+- Impact graph engine: typed modifier DAG (flat/pctAdd/pctMult/override), stacking
+  groups, per-value breakdowns, cycle detection.
+- Formula registry with confidence tags (classic regen formulas, swing time, armor
+  mitigation, spell coefficients, talent rank rule).
+- Loadout modelling: snapshot + what-if deltas (talents, stat changes), dimension
+  scoring (7 lenses), diffing, and the "+2 Spirit -> human terms" explainer.
+- Core addon: TOC (Interface 16001), secret-value guard layer, versioned SavedVariables,
+  /helpme talent|stat|selftest commands.
+- Headless test harness (lupa Lua VM): 19/19 selftest checks pass.
+
+*Features:* DATA-pipeline-fetch, DATA-pipeline-generate, DATA-generated-tables,
+DATA-formula-registry, DATA-overrides, GRAPH-impact-engine, GRAPH-dimensions,
+MODEL-snapshot, MODEL-loadout-whatif, MODEL-impact-diff, MODEL-talent-summary,
+CORE-bootstrap, CORE-guards, CORE-saveddb, QA-selftest-harness

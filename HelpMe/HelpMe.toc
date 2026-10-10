@@ -1,0 +1,27 @@
+## Interface: 16001
+## Title: HelpMe
+## Notes: The hardcore player's safety net: talent impact mapping, what-if character modelling, panic advisor.
+## Author: SimulateCX
+## Version: 0.3.1
+## SavedVariables: HelpMeDB
+## IconTexture: Interface\Icons\INV_Misc_EngGizmos_27
+
+core\guards.lua
+graph\graph.lua
+graph\dimensions.lua
+data\formulas.lua
+data\generated\build.lua
+data\generated\talent_tabs.lua
+data\generated\talents.lua
+data\generated\talent_impacts.lua
+data\generated\spells.lua
+data\overrides.lua
+model\snapshot.lua
+model\loadout.lua
+model\impact.lua
+ui\panel_model.lua
+ui\stats_panel.lua
+ui\export.lua
+selftest.lua
+core\init.lua
+core\collect.lua

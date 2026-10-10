@@ -1,0 +1,42 @@
+-- HelpMe secret-value guard layer. ALL reads of game state that can be secret in
+-- restricted contexts (instances, PvP) go through here, so the rest of the codebase
+-- never branches on a value that might explode. Headless-safe: issecretvalue does not
+-- exist outside the client, so everything degrades to plain passthrough in tests.
+
+local _, HM = ...
+if not HM then HM = _G.HelpMe or {}; _G.HelpMe = HM end
+
+local Guards = {}
+HM.Guards = Guards
+
+local issecret = _G.issecretvalue or function() return false end
+
+-- Returns the value if it is a plain readable number, else nil + "secret"/"missing".
+function Guards.number(v)
+    if v == nil then return nil, "missing" end
+    if issecret(v) then return nil, "secret" end
+    if type(v) ~= "number" then return nil, "not-a-number" end
+    return v
+end
+
+-- Call fn safely; returns nil on error or secret result instead of propagating.
+function Guards.call(fn, ...)
+    if type(fn) ~= "function" then return nil, "missing-api" end
+    local ok, result = pcall(fn, ...)
+    if not ok then return nil, "error" end
+    if issecret(result) then return nil, "secret" end
+    return result
+end
+
+-- True when we are in a context where combat values may be secret. Conservative:
+-- if the detection APIs are themselves unavailable, assume unrestricted (open world).
+function Guards.inRestrictedContext()
+    local C_Secrets = _G.C_Secrets
+    if C_Secrets and C_Secrets.ShouldUnitHealthMaxBeSecret then
+        local ok, secret = pcall(C_Secrets.ShouldUnitHealthMaxBeSecret, "player")
+        if ok then return secret and true or false end
+    end
+    return false
+end
+
+return Guards
