@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.22.0 - 2026-10-11
+
+- FIX (talents-affecting block not showing): the ability-map tooltip now resolves by the
+  spell's NAME, not its id - the game hands us a rank/variant id that isn't our shipped
+  one, so the id lookup silently failed. Name resolution always matches our name-keyed
+  map (Lightning Bolt has 440 modifier edges in the data); sources deduped by talent name.
+- CurseForge readiness: `LICENSE` (MIT), TOC `X-License`/`X-Website`, and
+  `docs/CURSEFORGE.md` - the listing copy, the 3-product lineup (Foresight / Foresight:
+  Assist / Foresight: Panic), a logo prompt, and the deploy checklist.
+- Selftest 137 (+1 name-resolution).
+
+*Features:* UI-mapping-panel, UI-spell-tooltip, QA-publish-train
+
 ## 0.21.1 - 2026-10-11
 
 - Impact map on the ability tooltip: hovering a spell now shows "talents affecting this"

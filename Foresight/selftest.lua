@@ -807,6 +807,14 @@ function HM.runSelftest(out)
         for _, l in ipairs(lines) do text[#text + 1] = l.text or l.left or "" end
         return table.concat(text, "\n"):find("Improved Fireball", 1, true) ~= nil
     end)())
+    check("ability map resolves by NAME when the id isn't ours (hover-rank fix)", (function()
+        -- A spell id we never shipped, but the displayed name matches - must still map.
+        local lines = HM.Tooltips.abilityMapLines(99999999, "Fireball")
+        if not lines then return false end
+        local text = {}
+        for _, l in ipairs(lines) do text[#text + 1] = l.text or l.left or "" end
+        return table.concat(text, "\n"):find("Improved Fireball", 1, true) ~= nil
+    end)())
 
     -- CATALOG: the unified content reference table over every impact source.
     check("catalog unifies all source kinds with counts", (function()

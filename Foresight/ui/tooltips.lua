@@ -726,25 +726,37 @@ end
 -- Impact-map block (S7b on the spell tooltip): hovering an ability shows which talents
 -- modify it - the inverse map made visible where players decide what to press. Pure.
 local MAX_MAP_SOURCES = 6
-function Tooltips.abilityMapLines(spellId)
-    local sp = HM.gen and HM.gen.spells and HM.gen.spells[spellId]
-    if not (sp and sp.name and HM.Mapping) then return nil end
-    local r = HM.Mapping.forSpell(sp.name)
+-- spellName optional: resolve by NAME (always matches our name-keyed map) so a hovered
+-- rank id the game hands us that isn't our shipped id still finds its modifiers.
+function Tooltips.abilityMapLines(spellId, spellName)
+    local name = spellName
+    if not name then
+        local sp = HM.gen and HM.gen.spells and HM.gen.spells[spellId]
+        name = sp and sp.name
+    end
+    if not (name and HM.Mapping) then return nil end
+    local r = HM.Mapping.forSpell(name)
     if not (r and r.sources and #r.sources > 0) then return nil end
     local lines = {}
     lines[#lines + 1] = {
         kind = "double", left = "Foresight", right = "talents affecting this",
         r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
     }
-    for i = 1, math.min(#r.sources, MAX_MAP_SOURCES) do
-        local s = r.sources[i]
-        lines[#lines + 1] = {
-            text = ("|cff9d9d9d%s|r %s"):format(s.name, HM.Mapping.describeOp(s.op)),
-            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
-        }
+    local shown, seen = 0, {}
+    for _, s in ipairs(r.sources) do
+        if not seen[s.name] then           -- one line per source talent
+            seen[s.name] = true
+            shown = shown + 1
+            if shown <= MAX_MAP_SOURCES then
+                lines[#lines + 1] = {
+                    text = ("|cff9d9d9d%s|r %s"):format(s.name, HM.Mapping.describeOp(s.op)),
+                    r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+                }
+            end
+        end
     end
-    if #r.sources > MAX_MAP_SOURCES then
-        lines[#lines + 1] = { text = ("+%d more"):format(#r.sources - MAX_MAP_SOURCES),
+    if shown > MAX_MAP_SOURCES then
+        lines[#lines + 1] = { text = ("+%d more"):format(shown - MAX_MAP_SOURCES),
             r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
     end
     return lines
@@ -752,17 +764,20 @@ end
 
 local function injectSpell(tip, spellId)
     if tip.foresightInjected then return end
-    if not spellId and type(tip.GetSpell) == "function" then
-        local _, id = tip:GetSpell()
-        spellId = id
+    local spellName
+    if type(tip.GetSpell) == "function" then
+        local a, b = tip:GetSpell()  -- (name, spellID) on both classic and mainline
+        if type(a) == "string" then spellName = a end
+        spellId = spellId or (type(b) == "number" and b) or nil
     end
-    if not spellId then return end
+    if not (spellId or spellName) then return end
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
-    local lines = Tooltips.imbueLines(spellId, loadout) or Tooltips.spellLines(spellId, loadout)
+    local lines = (spellId and (Tooltips.imbueLines(spellId, loadout)
+        or Tooltips.spellLines(spellId, loadout))) or nil
     -- Append the "which talents modify this" block (its own header if it stands alone).
-    local map = Tooltips.abilityMapLines(spellId)
+    local map = Tooltips.abilityMapLines(spellId, spellName)
     if map then
         if lines then
             for _, l in ipairs(map) do if not l.kind then lines[#lines + 1] = l end end
