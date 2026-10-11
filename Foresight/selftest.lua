@@ -771,6 +771,35 @@ function HM.runSelftest(out)
             and HM.Levers.classified("someFutureEffect") == false
     end)())
 
+    -- MAPPING (S7b): the bidirectional talent<->ability impact map.
+    check("impact map: inverse lists what modifies an ability", (function()
+        HM.Catalog._reset(); HM.Mapping._reset()
+        -- Improved Fireball modifies Fireball - the inverse query must find it.
+        local r = HM.Mapping.forSpell("Fireball")
+        if not (r and r.spell:find("Fireball", 1, true)) then return false end
+        for _, s in ipairs(r.sources) do
+            if s.name == "Improved Fireball" then return true end
+        end
+        return false
+    end)())
+    check("impact map: forward lists the abilities a talent touches", (function()
+        local fwd = HM.Mapping.forEntry("talent:26") -- Improved Fireball
+        if not (fwd and #fwd.abilities > 0) then return false end
+        for _, a in ipairs(fwd.abilities) do
+            if a.spell == "Fireball" then return true end
+        end
+        return false
+    end)())
+    check("impact map: describeOp humanizes the modifier", (function()
+        local r = HM.Mapping.forSpell("Fireball")
+        local txt = r and HM.Mapping.describeOp(r.sources[1].op) or ""
+        return type(txt) == "string" and #txt > 0 and txt:find("%a") ~= nil
+    end)())
+    check("impact map: unknown ability returns nil (no false claims)", (function()
+        HM.Mapping._reset()
+        return HM.Mapping.forSpell("Nonexistent Spell XYZ") == nil
+    end)())
+
     -- CATALOG: the unified content reference table over every impact source.
     check("catalog unifies all source kinds with counts", (function()
         HM.Catalog._reset()

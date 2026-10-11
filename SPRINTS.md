@@ -71,8 +71,10 @@ Make the talent map whole now that C_Traits coverage exists.
 - **S7a DATA-traits Phase 2** (◐ -> this sprint): feed trait-node impact ops into the
   what-if model so EVERY Forever talent (not just classic-overlap) moves the dimensions.
   Enhance loadout.lua (one shared op-folder; `withTraitNode`). No new math path.
-- **S7b UI-mapping-panel** (☐): per-build talent<->skill map; invert to "which talents
-  touch spell X". Pure model in a new `ui/mapping_model.lua` (selftest-covered) + renderer.
+- **S7b UI-mapping-panel** (◐, model shipped v0.21.0): `model/mapping.lua` - bidirectional
+  talent<->ability map (inverse "what modifies Fireball" + forward "what Improved Fireball
+  touches") off shared affected-spell edges; `/foresight affects`; pure + selftest-covered.
+  Remaining: the visual panel renderer (in-game).
 
 ### S8 - DATA-items + gear compare ◐  (strongest community demand)
 v0 SHIPPED (v0.9.0): `Impact.compareItems` nets two items' per-dimension impact (reuses

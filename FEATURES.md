@@ -50,10 +50,10 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ◐ `UI-spell-tooltip` - ability tooltip layman lines: client cast time + (p) coefficient translate live Spell/Healing Power into "+N to this spell per cast"; shares the ONE injection module; logic selftest-covered, in-game hook pending S3 verify -> `Foresight/ui/tooltips.lua`
 - ◐ `UI-item-tooltip` - item tooltip layman stat impact ("+4 Agility -> +X% Melee DPS for you"); shares the ONE injection module + explainItemDelta (diff path, no forked value code); GetItemStats live source; logic selftest-covered, in-game hook pending S3 verify -> `Foresight/ui/tooltips.lua`
 - ☑ `UI-playstyle-label` - build-profile line ("Caster-leaning - offense-focused") from dimension scores + stat lean; panel subtitle + /foresight build; v0 heuristic -> `Foresight/ui/panel_model.lua`
-- ☐ `UI-mapping-panel` - talent<->skill mapping panel
+- ◐ `UI-mapping-panel` - bidirectional talent<->ability impact map (v0.21.0): `model/mapping.lua` inverse ("what modifies Fireball") + forward ("what Improved Fireball touches") off the shared affected-spell edges; `/foresight affects <ability|talent>`; pure + selftest-covered. Remaining: a visual panel renderer -> `Foresight/model/mapping.lua`
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 131-check selftest (in-game + headless via lupa; incl. the lever-taxonomy completeness gate) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 135-check selftest (in-game + headless via lupa; incl. the lever-taxonomy completeness gate) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal + ITEM SIGHTINGS (v0.15.0: equipped+bag item IDs scanned at login/logout - the "what's actually in game" ground truth, crowd-DB phase A; capped, IDs only) into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

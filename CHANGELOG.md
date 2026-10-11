@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.21.0 - 2026-10-11
+
+IMPACT MAP (S7b) - the Talent Impact Map's bidirectional core.
+
+- New `model/mapping.lua`: the talent<->ability index, both directions off the same
+  affected-spell edges. INVERSE - "what modifies this ability" (`/foresight affects
+  Fireball` -> every talent/trait that changes it, with the magnitude). FORWARD - "what
+  does this talent touch" (name a talent -> the abilities it changes). One data source,
+  so the two views can never disagree.
+- `/foresight affects <ability|talent>` surfaces it; `Mapping.describeOp` humanizes each
+  modifier (-0.5s cast time, +15% damage...).
+- Pure + selftest-covered (135 checks, +4): inverse find, forward find, humanized op,
+  honest nil for unknown abilities.
+
+*Features:* UI-mapping-panel, SYNERGY-engine, CATALOG, QA-selftest-harness
+
 ## 0.20.0 - 2026-10-11
 
 Provenance stamp + publish-train (S12) scaffolding.

@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.20.0"
+HM.version = "0.21.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -244,6 +244,36 @@ local function onSlash(input)
             for _, line in ipairs(okd and lines or {}) do printMsg("  " .. line) end
             printMsg("  on expiry these gains reverse")
         end
+    elseif cmd == "affects" or cmd == "map" then
+        -- The impact map: what modifies an ability (inverse), or what an ability's
+        -- talent touches (forward, when given a talent name).
+        if not HM.Mapping then
+            printMsg("impact map unavailable")
+            return
+        end
+        if rest == "" then
+            printMsg("usage: /foresight affects <ability>  (e.g. Fireball, Lightning Bolt)")
+            return
+        end
+        local r = HM.Mapping.forSpell(rest)
+        if r then
+            printMsg(("%s is modified by %d source(s):"):format(r.spell, #r.sources))
+            for _, s in ipairs(r.sources) do
+                printMsg(("  [%s] %s: %s"):format(s.kind, s.name, HM.Mapping.describeOp(s.op)))
+            end
+        else
+            -- Maybe they named a talent - show the forward direction.
+            local found = HM.findTalents and HM.findTalents(rest)
+            local fwd = found and found[1] and HM.Mapping.forEntry(found[1].id)
+            if fwd and #fwd.abilities > 0 then
+                printMsg(("%s touches %d abilit(ies):"):format(fwd.name, #fwd.abilities))
+                for _, a in ipairs(fwd.abilities) do
+                    printMsg(("  %s: %s"):format(a.spell, HM.Mapping.describeOp(a.op)))
+                end
+            else
+                printMsg("nothing modifies '" .. rest .. "' in the data (try an ability or talent name)")
+            end
+        end
     elseif cmd == "catalog" or cmd == "db" then
         -- The content reference table: counts per kind, or a search across everything.
         if not HM.Catalog then
@@ -436,7 +466,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 
