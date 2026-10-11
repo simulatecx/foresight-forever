@@ -62,6 +62,16 @@ AURA_LABELS = {
     52: "melee crit chance",
     108: "spell modifier (%)",
     107: "spell modifier (flat)",
+    # Label-only decodes (surface via tooltip/synergy; no fold - ground-truthed on the
+    # racial rework tooltips 2026-10-11): 290 is CONDITIONAL on racials (weapon-type
+    # specializations), so folding it waits for the equipped-item discriminator.
+    49: "dodge chance",
+    54: "hit chance",
+    55: "spell hit chance",
+    166: "attack power (%)",
+    167: "ranged attack power (%)",
+    317: "spell power (%)",
+    290: "crit chance (%)",
 }
 
 STAT_NAMES = {-1: "all stats", 0: "Strength", 1: "Agility", 2: "Stamina", 3: "Intellect", 4: "Spirit"}
@@ -110,6 +120,22 @@ def school_label(mask: int) -> str:
     return "/".join(names) if names else f"school:{mask}"
 
 
+def races_for_masks(rm0: int, rm1: int, bit_to_race: dict) -> set:
+    """Decode RaceMasks_0/_1 into ChrRaces IDs. The bit index is ChrRaces.PlayableRaceBit
+    (verified this build: Human=0..Troll=7 in _0; the new Skyborne races 95/96 carry
+    PlayableRaceBit 32/33 -> RaceMasks_1 bits 0/1, which is why the naive 1<<(ID-1)
+    formula breaks for them). -1 masks (all races) normalize to the full word."""
+    races = set()
+    for base, mask in ((0, rm0 & 0xFFFFFFFF), (32, rm1 & 0xFFFFFFFF)):
+        bit = 0
+        while mask:
+            if mask & 1 and (base + bit) in bit_to_race:
+                races.add(bit_to_race[base + bit])
+            mask >>= 1
+            bit += 1
+    return races
+
+
 def build_ops(first, effects_by_spell, class_options, family_members, player_spells):
     """Derive impact ops from a passive/modifier spell's SpellEffect rows. Shared by
     classic talents and Retail trait nodes - the same aura/spell-mod decoding either way.
@@ -145,6 +171,17 @@ def build_ops(first, effects_by_spell, class_options, family_members, player_spe
             op["kind"] = "stat"
             op["isPct"] = aura == 137
             op["stat"] = stat_label(misc0, misc1)
+        elif aura == 133:
+            # Ground-truthed vs tooltip: "Total Health increased by $s1%" (Tauren
+            # Endurance 20550). Folds into stat.maxHealth as a what-if delta.
+            op["kind"] = "maxHealth"
+            op["isPct"] = True
+        elif aura == 178:
+            # "Maximum Mana/Rage/Energy increased by $s1%" (Expansive Mind rework);
+            # misc0 = power type (0 mana, 1 rage, 3 energy). Only mana folds (graph node).
+            op["kind"] = "maxPower"
+            op["isPct"] = True
+            op["powerType"] = misc0
         elif aura == 10:
             # SPELL_AURA_MOD_THREAT: misc0 is a school mask, value is the threat %
             # modifier (negative = reduction). Ground-truthed against tooltips:
@@ -238,10 +275,50 @@ def main() -> int:
     # Player-learnable spells: abilities on class skill lines (SkillLine CategoryID 7).
     skill_lines = {to_int(r["ID"]): r for r in read_csv(cache, "SkillLine")}
     class_lines = {sid for sid, r in skill_lines.items() if to_int(r.get("CategoryID", "0")) == 7}
+
+    # Racial skill lines: CategoryID 9 with "Racial" in the name (category 9 also holds
+    # riding/cooking/etc., some of which are race-gated too - the name filter is the
+    # discriminator on the enUS CSVs we generate from).
+    racial_lines = {sid for sid, r in skill_lines.items()
+                    if to_int(r.get("CategoryID", "0")) == 9
+                    and "Racial" in (r.get("DisplayName_lang") or "")}
+    chr_races = {to_int(r["ID"]): r for r in read_csv(cache, "ChrRaces")}
+    bit_to_race = {}
+    for rid, r in chr_races.items():
+        bit = r.get("PlayableRaceBit", "")
+        if bit not in ("", "-1"):
+            b = to_int(bit)
+            if b not in bit_to_race or rid < bit_to_race[b]:
+                bit_to_race[b] = rid
+    # Per-line race gate (SkillRaceClassInfo) as fallback for mask-less ability rows.
+    line_races = {}
+    for r in read_csv(cache, "SkillRaceClassInfo"):
+        if to_int(r["SkillID"]) in racial_lines:
+            line_races[to_int(r["SkillID"])] = races_for_masks(
+                to_int(r["RaceMasks_0"]), to_int(r["RaceMasks_1"]), bit_to_race)
+
     player_spells = set()
+    racial_sla = defaultdict(dict)  # raceId -> {spellID: SLA ClassMask}
+    racial_dropped = 0
     for r in read_csv(cache, "SkillLineAbility"):
-        if to_int(r["SkillLine"]) in class_lines:
+        line = to_int(r["SkillLine"])
+        if line in class_lines:
             player_spells.add(to_int(r["Spell"]))
+        elif line in racial_lines:
+            races = races_for_masks(to_int(r["RaceMasks_0"]), to_int(r["RaceMasks_1"]),
+                                    bit_to_race) or line_races.get(line, set())
+            if not races:
+                racial_dropped += 1
+                continue
+            cm = to_int(r["ClassMask"])
+            for rid in races:
+                racial_sla[rid][to_int(r["Spell"])] = cm if cm > 0 else 0
+    if racial_dropped:
+        print(f"WARNING: {racial_dropped} racial ability rows dropped (no decodable race)")
+    # Racials join the shippable set so their metadata lands in spells.lua and
+    # spell-mod affected-lists can resolve to them.
+    for spells in racial_sla.values():
+        player_spells.update(spells)
 
     cast_times = {to_int(r["ID"]): to_int(r["Base"]) for r in read_csv(cache, "SpellCastTimes")}
     durations = {to_int(r["ID"]): to_int(r["Duration"]) for r in read_csv(cache, "SpellDuration")}
@@ -401,6 +478,45 @@ def main() -> int:
         "trees": {t: {"skillLine": s} for t, s in tree_skill.items()},
     }
 
+    # ---- Racials (permanent race effects; NOT in the trait trees) --------------
+    # Chain: racial SkillLine -> SkillLineAbility (RaceMasks -> races, ClassMask ->
+    # class gate) -> spell -> build_ops (same decode as talents/traits). Passive vs
+    # active comes from SPELL_ATTR0_PASSIVE; only passives are model-foldable - actives
+    # surface via tooltip. Live snapshot stats ALREADY include racial passives, so the
+    # model applies these as what-if deltas, never as unconditional permanent folds.
+    SPELL_ATTR0_PASSIVE = 0x40
+    racials_out, race_tokens, racials_by_spell = {}, {}, {}
+    racial_curation = set()
+    for rid in sorted(racial_sla):
+        race = chr_races.get(rid)
+        if not race:
+            continue
+        spells = []
+        for sid in sorted(racial_sla[rid]):
+            m = misc.get(sid)
+            ops = build_ops(sid, effects_by_spell, class_options, family_members, player_spells)
+            entry = {
+                "spellID": sid,
+                "name": spell_names.get(sid, f"spell:{sid}"),
+                "classMask": racial_sla[rid][sid],
+                "passive": bool(m and to_int(m["Attributes_0"]) & SPELL_ATTR0_PASSIVE),
+                "ops": ops,
+                # Forever's racial rework adds new 1.25M+ spell ids alongside classic ones.
+                "confidence": "forever-new-unverified" if sid >= 1_000_000 else "classic-presumed",
+            }
+            if not ops or all(o.get("kind") == "unmapped" for o in ops):
+                entry["needsCuration"] = True
+                racial_curation.add(sid)
+            spells.append(entry)
+            racials_by_spell.setdefault(sid, rid)
+        racials_out[rid] = {"token": race["ClientFileString"], "name": race["Name_lang"],
+                            "spells": spells}
+        # Token fallback map (UnitRace #2): lowest raceId wins on collisions - both
+        # Skyborne variants share the "Skyborne" token; "Scourge" = Undead lands as 5.
+        token = race["ClientFileString"]
+        if token not in race_tokens or rid < race_tokens[token]:
+            race_tokens[token] = rid
+
     # ---- Emit ------------------------------------------------------------------
     stamp = dt.date.today().isoformat()
     written = [
@@ -414,6 +530,9 @@ def main() -> int:
                 "impactsNeedingCuration": needs_curation,
                 "traitNodes": len(trait_nodes),
                 "traitNodesNeedingCuration": trait_curation,
+                "racialRaces": len(racials_out),
+                "racialSpells": len(racials_by_spell),
+                "racialSpellsNeedingCuration": len(racial_curation),
             },
             "classNames": CLASS_NAMES,
         }, out_dir, args.build),
@@ -422,11 +541,16 @@ def main() -> int:
         LuaWriter.file("talent_impacts", {"talentImpacts": impacts_out}, out_dir, args.build),
         LuaWriter.file("spells", {"spells": spells_out}, out_dir, args.build),
         LuaWriter.file("traits", {"traits": traits_out}, out_dir, args.build),
+        LuaWriter.file("race_racials", {"racials": racials_out,
+                                        "racialsBySpell": racials_by_spell,
+                                        "raceTokens": race_tokens}, out_dir, args.build),
     ]
     for path in written:
         print(f"wrote {path.relative_to(root.parent)} ({path.stat().st_size:,} bytes)")
     print(f"\ntalents={len(talents_out)} tabs={len(tabs_out)} spells shipped={len(spells_out)} "
-          f"trait nodes={len(trait_nodes)} talents needing curation={needs_curation}/{len(talents_out)}")
+          f"trait nodes={len(trait_nodes)} talents needing curation={needs_curation}/{len(talents_out)}\n"
+          f"racial races={len(racials_out)} racial spells={len(racials_by_spell)} "
+          f"racials needing curation={len(racial_curation)}")
     return 0
 
 

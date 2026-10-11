@@ -66,6 +66,12 @@ function Snapshot.capture()
         weaponSpeed = Guards.number(Guards.call(_G.UnitAttackSpeed, "player")) or 2.0,
         talents = Snapshot.captureTalents(),
     }
+    -- Race (racial-impact modelling): UnitRace #2 is the locale-free token ("Scourge"
+    -- for Undead), #3 the numeric raceID - the generated race_racials key.
+    local raceToken = Guards.select(2, _G.UnitRace, "player")
+    snapshot.raceToken = type(raceToken) == "string" and raceToken or nil
+    snapshot.raceId = Guards.number(Guards.select(3, _G.UnitRace, "player"))
+        or (HM.Racials and HM.Racials.raceIdForToken(snapshot.raceToken)) or nil
     return snapshot
 end
 

@@ -31,6 +31,8 @@ TABLES = [
     "SpellLevels",
     "SkillLineAbility",   # class/profession skill-line membership
     "SkillLine",
+    "ChrRaces",           # race id/token (racial SkillLineAbility.RaceMasks bit = 1<<(ID-1))
+    "SkillRaceClassInfo", # race/class gating of skill lines (racial availability)
     # Retail trait system = the LIVE talent system on Forever (classic globals are gone).
     "TraitNode",               # node id, tree id, position, type
     "TraitNodeEntry",          # entry -> definition + max ranks

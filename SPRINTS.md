@@ -121,12 +121,15 @@ secret-degrade via C_Secrets.ShouldAurasBeSecret). New decode: aura 290 (crit%) 
 one-hop for Well-Fed. Survival consumables first (hardcore thesis). Details: research doc A.
 Fit & Overlap: reuses applyOps/diff (no forked math); complements S10 PANIC (consumable registry).
 
-### S15 - Racials impact ☐  (researched 2026-10-11)
-Model each race's passive racials as permanent effects (like talents). NOT in trait trees:
-separate DB2 path SkillLineAbility.RaceMasks (CategoryID-9 racial SkillLine) -> spell -> build_ops.
-Key by raceID (UnitRace #3; Undead token = "Scourge"; handle new Skyborne race 95/96 + new 1.25M+
-Forever racial IDs, tagged forever-new-unverified). Fold via applyOps in loadout:build; feed Synergy
-+ panel. Curation -> overrides.racialImpacts. Details: research doc B.
+### S15 - Racials impact ◐  (phase 1 SHIPPED v0.11.0)
+Data + model DONE: `race_racials.lua` (10 races, 45 spells; RaceMasks bit =
+ChrRaces.PlayableRaceBit so Skyborne needed no hardcode), ops via shared build_ops, class
+gates, passive/active split, confidence tags (classic-presumed / forever-new-unverified);
+snapshot captures raceId (token fallback, Scourge=5); `model/racials.lua` +
+`Loadout:withRacial`/`withRace`; aura 133/178 folds. PLAN CORRECTION: no unconditional
+fold into the base build - live stats already include racial passives (double-count).
+Remaining: Synergy ingestion + panel "Your <Race> racials" line (phase 3); curation ->
+overrides.racialImpacts. Details: research doc B.
 
 ### SYNERGY - talents that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

@@ -41,6 +41,18 @@ function Loadout:withStatDelta(stat, amount, label)
     return copyDeltas(self, { type = "stat", stat = stat, amount = amount, label = label })
 end
 
+-- Model one racial passive (what-if). NOTE: a live snapshot already contains your own
+-- race's passives inside its stat reads - these deltas exist for cross-race questions
+-- and synthetic snapshots, never as an unconditional fold of the current race.
+function Loadout:withRacial(spellID)
+    return copyDeltas(self, { type = "racial", spellID = spellID })
+end
+
+-- Model a whole race's passive kit (class-gated), e.g. "what would a Gnome get?".
+function Loadout:withRace(raceId)
+    return copyDeltas(self, { type = "race", raceId = raceId })
+end
+
 local STAT_NODE = {
     Strength = "stat.strength", Agility = "stat.agility", Stamina = "stat.stamina",
     Intellect = "stat.intellect", Spirit = "stat.spirit",
@@ -78,6 +90,15 @@ local function applyOps(graph, ops, rank, maxRank, source)
             -- Threat % modifier (own-state): sums into the threat lens. A -20 op means
             -- 20% less threat. Per-ability threat + stance stay future (overrides k-of-n).
             graph:addModifier{ target = "agg.threatModPct", op = "flat",
+                               value = value, source = source }
+        elseif op.kind == "maxHealth" and op.isPct then
+            -- "Total Health increased by X%" (e.g. Tauren Endurance).
+            graph:addModifier{ target = "stat.maxHealth", op = "pctAdd",
+                               value = value, source = source }
+        elseif op.kind == "maxPower" and op.isPct and op.powerType == 0 then
+            -- "Maximum Mana increased by X%" (e.g. Expansive Mind). Rage/energy
+            -- variants have no graph node yet and stay tooltip-only.
+            graph:addModifier{ target = "stat.maxMana", op = "pctAdd",
                                value = value, source = source }
         end
         -- Other ops (cast time, cost, cooldown...) surface via tooltip/explain for now;
@@ -199,6 +220,25 @@ function Loadout:build()
             local ok = addTraitModifiers(g, d.nodeId, d.rank, "trait:" .. tostring(d.nodeId))
             if not ok then
                 notes[#notes + 1] = "unknown trait node " .. tostring(d.nodeId)
+            end
+        elseif d.type == "racial" then
+            local sp = HM.Racials and HM.Racials.bySpell(d.spellID)
+            if not sp then
+                notes[#notes + 1] = "unknown racial " .. tostring(d.spellID)
+            elseif not HM.Racials.classMatches(sp.classMask, s.classToken) then
+                notes[#notes + 1] = sp.name .. " does not apply to your class"
+            else
+                applyOps(g, sp.ops, 1, 1, "racial:" .. tostring(d.spellID))
+            end
+        elseif d.type == "race" then
+            local kit = HM.Racials and HM.Racials.forRace(d.raceId, s.classToken, true) or {}
+            for _, sp in ipairs(kit) do
+                applyOps(g, sp.ops, 1, 1, "racial:" .. tostring(sp.spellID))
+            end
+            if s.raceId then
+                -- Honest-compare caveat: your own race's passives stay baked into the
+                -- live snapshot stats; this delta only ADDS the modeled race's kit.
+                notes[#notes + 1] = "race what-if adds the modeled race's passives; your current racials remain in your stats"
             end
         elseif d.type == "stat" then
             local node = STAT_NODE[d.stat] or ("stat." .. d.stat)

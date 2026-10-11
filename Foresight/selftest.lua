@@ -368,6 +368,67 @@ function HM.runSelftest(out)
         end
         return false
     end)())
+    -- RACIAL-impact: generated per-race data + what-if modelling (race_racials.lua).
+    check("racial data covers the 8 classic races + both Skyborne", (function()
+        local r = HM.gen and HM.gen.racials
+        if not r then return false end
+        for _, id in ipairs({ 1, 2, 3, 4, 5, 6, 7, 8, 95, 96 }) do
+            if not r[id] then return false, "missing race " .. id end
+        end
+        return true
+    end)())
+    check("Scourge token maps to raceId 5 (the Undead gotcha)",
+        HM.Racials.raceIdForToken("Scourge") == 5 and HM.gen.raceTokens.Scourge == 5)
+    check("The Human Spirit decodes +5% Spirit (passive, classic-presumed)", (function()
+        local sp = HM.Racials.bySpell(20598)
+        local op = sp and sp.ops and sp.ops[1]
+        return sp and sp.passive == true and sp.confidence == "classic-presumed"
+            and op and op.kind == "stat" and op.stat == "Spirit" and op.isPct == true
+            and op.maxValue == 5
+    end)())
+    check("Tauren Endurance decodes max-health% (aura 133)", (function()
+        local sp = HM.Racials.bySpell(20550)
+        for _, op in ipairs((sp and sp.ops) or {}) do
+            if op.kind == "maxHealth" and op.isPct and op.maxValue == 5 then return true end
+        end
+        return false
+    end)())
+    check("Expansive Mind decodes max-mana% gated to mana classes", (function()
+        local sp = HM.Racials.bySpell(20591)
+        local op = sp and sp.ops and sp.ops[1]
+        return op and op.kind == "maxPower" and op.powerType == 0
+            and sp.classMask == 400 and HM.Racials.classMatches(sp.classMask, "MAGE")
+            and not HM.Racials.classMatches(sp.classMask, "WARRIOR")
+    end)())
+    check("Forever-new racial ids carry forever-new-unverified", (function()
+        local sp = HM.Racials.bySpell(1259802) -- Warrior-variant Expansive Mind (rage)
+        return sp and sp.confidence == "forever-new-unverified"
+    end)())
+    check("withRacial(Endurance) raises tankability via max health", (function()
+        local ok, changes = pcall(HM.Impact.diff, base, base:withRacial(20550))
+        if not ok then return false end
+        for _, c in ipairs(changes) do
+            if c.id == "tankability" and c.delta > 0 then return true end
+        end
+        return false
+    end)())
+    check("withRace(Gnome) grows a Mage's max mana by exactly the one gated passive", (function()
+        local b, m = base:build(), base:withRace(7):build()
+        local baseMana = b.graph:value("stat.maxMana", b.ctx)
+        local gnomeMana = m.graph:value("stat.maxMana", m.ctx)
+        -- Only mana-class Expansive Mind (mask 400) may fold for a MAGE; the
+        -- Warrior/Rogue rage/energy variants must be class-gated out.
+        return gnomeMana > baseMana and approx(gnomeMana, baseMana * 1.05)
+    end)())
+    check("active racials are flagged and excluded from passive folds", (function()
+        local sp = HM.Racials.bySpell(20572) -- Blood Fury: active, tooltip-only
+        if not sp or sp.passive ~= false then return false end
+        for _, e in ipairs(HM.Racials.forRace(2, "WARRIOR", true)) do
+            if e.spellID == 20572 then return false end
+        end
+        return true
+    end)())
+
     check("synergy groups talents by shared theme", (function()
         HM.Synergy._reset()
         local r = HM.Synergy.query("intellect")

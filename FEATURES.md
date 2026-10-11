@@ -6,7 +6,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## DATA - data pipeline & shipped data
 - ☑ `DATA-pipeline-fetch` - download Forever DB2 tables from wago.tools, cached per build -> `pipeline/fetch.py`
 - ☑ `DATA-pipeline-generate` - compute talent->affected-spells via class masks, emit Lua tables -> `pipeline/generate.py`
-- ☑ `DATA-generated-tables` - talents, tabs, impacts, 3,448 spells (cast/cost/tick/cooldown), 555 trait nodes -> `Foresight/data/generated/`
+- ☑ `DATA-generated-tables` - talents, tabs, impacts, 3,493 spells (cast/cost/tick/cooldown), 555 trait nodes, 45 racial spells across 10 races -> `Foresight/data/generated/`
 - ☑ `DATA-formula-registry` - confidence-tagged conversion math (regen, swing, coefficients, rank rule) -> `Foresight/data/formulas.lua`
 - ☑ `DATA-overrides` - curated corrections layered over generated data -> `Foresight/data/overrides.lua`
 - ◐ `DATA-items` - gear compare v0 (v0.9.0): `Impact.compareItems` nets two items' per-dimension impact (built on explainItemDelta, no forked math); item tooltip shows a "vs equipped [slot]" block via live GetItemStats. Offline ItemSparse DB deliberately deferred (addon bloat vs live reads) -> `Foresight/model/impact.lua`, `Foresight/ui/tooltips.lua`
@@ -20,7 +20,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 
 ## MODEL - character modelling
 - ☑ `MODEL-snapshot` - live character capture, secret-guarded (API indices pending beta verification) -> `Foresight/model/snapshot.lua`
-- ☑ `MODEL-loadout-whatif` - snapshot + delta stack (classic talents, trait nodes, stat tweaks); immutable what-if copies; one shared op-folder -> `Foresight/model/loadout.lua`
+- ☑ `MODEL-loadout-whatif` - snapshot + delta stack (classic talents, trait nodes, stat tweaks, racials/races); immutable what-if copies; one shared op-folder -> `Foresight/model/loadout.lua`
 - ☑ `MODEL-impact-diff` - evaluate/diff loadouts; stat CHAIN explainer (statImpactDetail: +AP -> dmg/swing, live-derived crit%, mana -> dimensions); itemDerivedLines; compareItems -> `Foresight/model/impact.lua`
 - ☑ `MODEL-talent-summary` - per-talent humanized ops + affected spell names -> `Foresight/model/impact.lua`
 - ☑ `MODEL-stat-advisor` - comparative marginal stat ranking ("For your Spellcasting: Intellect > ... per point"), built on explainStatDelta (no forked value path); /foresight advisor + panel "Stat value" rows; v0 heuristic -> `Foresight/model/impact.lua`
@@ -31,7 +31,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 
 ## CONSUME / RACIAL - more impact sources (researched 2026-10-11)
 - ☐ `CONSUME-buffs` - alchemy/food/scroll buff impact: active-vs-expiry delta via Loadout:withBuff + diff; consumables.lua from ItemEffect->spell; secret-safe aura read (docs/RESEARCH-2026-10-11.md A)
-- ☐ `RACIAL-impact` - per-race passive racials as permanent effects via SkillLineAbility.RaceMasks -> build_ops; race_racials.lua keyed by raceID (docs/RESEARCH-2026-10-11.md B)
+- ◐ `RACIAL-impact` - racial impact data + model (v0.11.0): `race_racials.lua` keyed by raceID (10 races, 45 spells; RaceMasks bit = ChrRaces.PlayableRaceBit, no Skyborne hardcode) with ops/class gates/passive split/confidence tags; `model/racials.lua` access + `Loadout:withRacial`/`withRace` what-ifs; new aura 133 (max-health%) + 178 (max-power%) folds. NOT folded into the base build (live stats already include racials - double-count law). Remaining: synergy + panel surfacing (phase 3) -> `pipeline/generate.py`, `Foresight/data/generated/race_racials.lua`, `Foresight/model/racials.lua`, `Foresight/model/loadout.lua`
 
 ## CORE - addon plumbing
 - ☑ `CORE-bootstrap` - namespace, events, slash commands (/foresight talent|stat|selftest) -> `Foresight/core/init.lua`
@@ -49,7 +49,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 74-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 83-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

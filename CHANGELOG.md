@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.11.0 - 2026-10-11
+
+RACIAL IMPACT (phase 1 of the all-sources expansion): the pipeline now generates every
+race's racials, and the model answers racial what-ifs through the same ops engine.
+
+- Pipeline: fetch `ChrRaces` + `SkillRaceClassInfo`; generate.py decodes the racial
+  skill lines into `data/generated/race_racials.lua` - 10 races (the classic 8 + both
+  Skyborne variants), 45 racial spells with build_ops impact ops, per-spell class gates,
+  passive/active split (SPELL_ATTR0_PASSIVE), and confidence tags (`classic-presumed`
+  vs `forever-new-unverified` for the 1.25M+ rework ids), plus `racialsBySpell` and
+  `raceTokens` (Scourge=5) indexes.
+- Decode discovery: the RaceMasks bit index is `ChrRaces.PlayableRaceBit` (verified
+  Human=0..Troll=7 in _0; Skyborne 95/96 = bits 32/33 -> _1 bits 0/1), so the planned
+  Skyborne hardcode was unnecessary - the decode is fully data-driven.
+- New ops (tooltip-ground-truthed): aura 133 max-health% (Tauren Endurance) and aura
+  178 max-power% (Expansive Mind rework; misc0 = power type) fold via applyOps into
+  stat.maxHealth / stat.maxMana; label-only decodes for dodge/hit/AP%/SP%/crit%
+  (49/54/55/166/167/317/290) surface without folding - 290 is weapon-conditional on
+  racials (fold decision deferred to the consumables phase).
+- Model: snapshot captures `raceId`/`raceToken` (guarded UnitRace, token fallback);
+  new `model/racials.lua` (class-mask gating, bySpell/forRace access);
+  `Loadout:withRacial` + `withRace` what-ifs reuse applyOps - no forked math.
+- PLAN CORRECTION (recorded in docs/RESEARCH-2026-10-11.md): racial passives are NOT
+  folded unconditionally into the base build. Live snapshot stats already include them
+  (UnitStat/UnitHealthMax/GetDodgeChance...), so a permanent fold would double-count.
+  They model as what-if deltas and surface via synergy/panel in phase 3.
+- Selftest 83 checks (+9): race coverage incl. both Skyborne, Scourge token, Human
+  Spirit/Endurance/Expansive Mind decodes, class gating (Mage gets mana - not the
+  rage/energy variants), confidence tags, active exclusion, tankability/maxMana folds.
+
+*Features:* RACIAL-impact, DATA-pipeline-fetch, DATA-pipeline-generate, DATA-generated-tables, MODEL-snapshot, MODEL-loadout-whatif, QA-selftest-harness
+
 ## 0.10.0 - 2026-10-11
 
 Talent tooltips CONFIRMED working in-game (the owner-name hook landed). New feature:
