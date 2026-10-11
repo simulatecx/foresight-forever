@@ -34,14 +34,14 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## UI - surfaces
 - ◐ `UI-stats-panel` - character-frame side panel (Dimensions/Regen/Mechanics/What-if/Stat-value), dark class-colored skin, zebra rows, colored deltas, playstyle subtitle; DRAGGABLE with per-character saved position (validated) + `/foresight panel reset`; model selftest-covered; in-game render pending next login -> `Foresight/ui/panel_model.lua`, `Foresight/ui/stats_panel.lua`
 - ☑ `UI-export-window` - copyable scroll EditBox (/foresight export), fixes chat-copy gap -> `Foresight/ui/export.lua`
-- ◐ `UI-talent-tooltip` - talent hover injection (S2): shared injection module with position+name resolver, next-point marginal values, dimension delta, needs-curation/(p) honesty; in-game verify pending (S3 session) -> `Foresight/ui/tooltips.lua`
+- ◐ `UI-talent-tooltip` - talent hover injection (S2): shared injection module, next-point marginal values, dimension delta, needs-curation/(p) honesty. SetTalent is dead on Forever's trait UI, so now hooks the TraitEntry tooltip type (entry->definition spell->our talent) as the live path; activates if the type is exposed, else discovery reports the real hook. Live confirm pending next harvest -> `Foresight/ui/tooltips.lua`
 - ◐ `UI-spell-tooltip` - ability tooltip layman lines: client cast time + (p) coefficient translate live Spell/Healing Power into "+N to this spell per cast"; shares the ONE injection module; logic selftest-covered, in-game hook pending S3 verify -> `Foresight/ui/tooltips.lua`
 - ◐ `UI-item-tooltip` - item tooltip layman stat impact ("+4 Agility -> +X% Melee DPS for you"); shares the ONE injection module + explainItemDelta (diff path, no forked value code); GetItemStats live source; logic selftest-covered, in-game hook pending S3 verify -> `Foresight/ui/tooltips.lua`
 - ☑ `UI-playstyle-label` - build-profile line ("Caster-leaning - offense-focused") from dimension scores + stat lean; panel subtitle + /foresight build; v0 heuristic -> `Foresight/ui/panel_model.lua`
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 65-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 66-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

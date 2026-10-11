@@ -131,6 +131,9 @@ function Collect.verify(out)
         "Enum.TooltipDataType.Item", "Enum.TooltipDataType.Spell",
         "GetItemStats", "C_Item.GetItemStats", "GameTooltip.SetSpellByID",
         "GameTooltip.GetItem", "C_TooltipInfo.GetBagItem", "C_TooltipInfo.GetHyperlink",
+        -- Trait-node tooltip surfaces (S2 on the Forever trait UI; SetTalent is dead).
+        "Enum.TooltipDataType.TraitEntry", "GameTooltip.SetTraitEntry",
+        "C_TooltipInfo.GetTraitEntry", "ClassTalentFrame", "PlayerSpellsFrame",
     }
     local found = {}
     for _, path in ipairs(candidates) do
@@ -164,8 +167,10 @@ function Collect.verify(out)
         _G.C_AssistedCombat and (_G.C_AssistedCombat.GetNextCastSpell and "has GetNextCastSpell" or "no GetNextCastSpell") or nil)
     result("secret values system present", _G.issecretvalue ~= nil or _G.C_Secrets ~= nil)
     result("C_TooltipInfo present", _G.C_TooltipInfo ~= nil)
-    result("talent tooltip injection hook (S2)", HM.Tooltips and HM.Tooltips.installed or false,
+    result("talent tooltip injection hook (S2 classic)", HM.Tooltips and HM.Tooltips.installed or false,
         (HM.Tooltips and HM.Tooltips.installed) and "GameTooltip.SetTalent hooked" or "not installed")
+    result("talent tooltip injection hook (S2 trait)", HM.Tooltips and HM.Tooltips.traitTipInstalled or false,
+        (HM.Tooltips and HM.Tooltips.traitTipInstalled) and "TraitEntry tooltip hooked" or "TraitEntry type not exposed")
     result("item tooltip injection hook", HM.Tooltips and HM.Tooltips.itemsInstalled or false,
         (HM.Tooltips and HM.Tooltips.itemsInstalled) and "GetItemStats path hooked" or "not installed")
     result("spell tooltip injection hook", HM.Tooltips and HM.Tooltips.spellsInstalled or false,

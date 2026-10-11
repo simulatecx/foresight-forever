@@ -96,10 +96,15 @@ GetDefinitionInfo.spellID; ranksPurchased = rank), and maps that spellID back to
 generated talent via spellRanks (the capture bridge, no tab/tier/column needed). The
 shape probe now runs the same walk and records nodes/purchased/mapped-to-generated + a
 sample, so the next harvest CONFIRMS the path live and proves the spellID bridge.
-STILL OPEN: the S2 talent-TOOLTIP injection hook is GameTooltip.SetTalent = classic-only,
-so it won't fire on the trait UI; the trait-node tooltip hook mechanism (TooltipDataProcessor
-type? C_TooltipInfo.GetTalent is present) is the next thing to identify. Talent DATA
-capture is now correct; talent-tooltip INJECTION on Forever is the remaining S2 unknown.
+S2 TRAIT-TOOLTIP HOOK (v0.8.2): SetTalent is dead on the trait UI (confirmed, 0 lines),
+so added a TraitEntry-tooltip hook - TooltipDataProcessor.AddTooltipPostCall(
+Enum.TooltipDataType.TraitEntry) -> resolve data.id (entryID) -> GetEntryInfo ->
+GetDefinitionInfo.spellID -> our classic talent -> talentLines. Activates only if the
+TraitEntry type is exposed (discovery now probes Enum.TooltipDataType.TraitEntry,
+GameTooltip.SetTraitEntry, C_TooltipInfo.GetTraitEntry, ClassTalentFrame,
+PlayerSpellsFrame); if not exposed, the next harvest names the real hook. Best-effort
+pending live confirmation. (New Forever nodes with no classic talent still fall through;
+the spell-tooltip hook may already cover those on hover.)
 
 CONFIRMED LIVE (2026-10-11 07:12, v0.7.2 after a clean logout/login flush - the prior
 "we ran it" was STALE 0.5.3 data; harvester now warns on version mismatch): the C_Traits

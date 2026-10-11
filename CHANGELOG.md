@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.8.2 - 2026-10-11
+
+S2 talent tooltips on Forever's trait UI. SetTalent renders nothing there (confirmed by
+the probe), so Foresight now hooks the trait-entry tooltip instead.
+
+- New TraitEntry-tooltip hook: TooltipDataProcessor.AddTooltipPostCall for
+  Enum.TooltipDataType.TraitEntry -> resolve the hovered entry -> its definition spell
+  -> our classic talent -> the same "Affects / next point / for-you-now" talentLines
+  block. Degrade-safe; activates only when the TraitEntry type is exposed.
+- `TalentAPI.talentForSpell(spellID)` exposes the classic spell->talent bridge for it.
+- Discovery now probes the trait-tooltip surfaces (Enum.TooltipDataType.TraitEntry,
+  GameTooltip.SetTraitEntry, C_TooltipInfo.GetTraitEntry, ClassTalentFrame,
+  PlayerSpellsFrame); `/foresight verify` shows the classic vs trait S2 hook status.
+- Best-effort pending live confirmation: if the TraitEntry type isn't exposed, the next
+  harvest names the real hook. New Forever nodes without a classic talent fall through
+  for now (the spell-tooltip hook may already cover them on hover).
+- Selftest grows to 66 (talentForSpell resolves 11069 -> Improved Fireball).
+
+*Features:* UI-talent-tooltip, CORE-talent-api, QA-verify-command, QA-selftest-harness
+
 ## 0.8.1 - 2026-10-11
 
 The Foresight panel is now movable - it defaults to docking beside the character sheet,

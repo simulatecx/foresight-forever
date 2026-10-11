@@ -338,6 +338,11 @@ function HM.runSelftest(out)
         return nonClassic > 50
     end)())
 
+    check("talentForSpell resolves a classic spell to its talent", (function()
+        return HM.TalentAPI.talentForSpell(11069) == 26  -- Improved Fireball rank 1
+            and HM.TalentAPI.talentForSpell(nil) == nil
+    end)())
+
     check("talent adapter walks C_Traits + maps spellID -> talent", (function()
         -- Mock Forever's real shape (forever-addon-kit): one purchased node whose entry
         -- definition resolves to spell 11069 = Improved Fireball rank 1 (our talent 26).

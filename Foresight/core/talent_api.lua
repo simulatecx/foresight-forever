@@ -172,6 +172,12 @@ function TalentAPI.all()
     return out
 end
 
+-- Our classic talent id for a spell (via spellRanks), or nil. Used by the trait-node
+-- tooltip hook to turn a hovered entry's spell into a talent summary.
+function TalentAPI.talentForSpell(spellID)
+    return spellID and spellIndex()[spellID] or nil
+end
+
 function TalentAPI.mode() return mode end
 
 -- Test hook: clears locked state so a mocked API can't poison real in-game reads.

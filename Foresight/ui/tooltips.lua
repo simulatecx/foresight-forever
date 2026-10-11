@@ -423,6 +423,59 @@ end
 
 local function clearSpellGuard(tip) tip.foresightSpellId = nil end
 
+-- Trait-node tooltip (the Forever talent UI). SetTalent is dead here (renders nothing),
+-- so we hook the TraitEntry tooltip data type when present and resolve the hovered
+-- entry -> definition spell -> our classic talent -> the same talentLines block. If the
+-- data type isn't exposed, this stays off and discovery reports what to hook instead.
+local function activeConfigID()
+    local CT = _G.C_ClassTalents
+    if CT and CT.GetActiveConfigID then
+        local ok, id = pcall(CT.GetActiveConfigID)
+        if ok then return id end
+    end
+end
+
+local function injectTraitEntry(tip, entryID)
+    local Traits = _G.C_Traits
+    if not (entryID and Traits and Traits.GetEntryInfo and Traits.GetDefinitionInfo) then return end
+    if tip.foresightTraitEntry == entryID then return end
+    local cfg = activeConfigID()
+    if not cfg then return end
+    local okE, entry = pcall(Traits.GetEntryInfo, cfg, entryID)
+    if not (okE and type(entry) == "table" and entry.definitionID) then return end
+    local okD, def = pcall(Traits.GetDefinitionInfo, entry.definitionID)
+    if not (okD and type(def) == "table" and def.spellID) then return end
+    local talentId = HM.TalentAPI and HM.TalentAPI.talentForSpell(def.spellID)
+    if not talentId then return end
+    local loadout
+    local snap = HM.Snapshot and HM.Snapshot.capture()
+    if snap then loadout = HM.Loadout.fromSnapshot(snap) end
+    local lines = Tooltips.talentLines(talentId, nil, loadout)
+    if lines then
+        tip.foresightTraitEntry = entryID
+        attach(tip, lines)
+    end
+end
+
+function Tooltips.installTraitTooltips()
+    if Tooltips.traitTipInstalled then return true end
+    local TDP, Enum = _G.TooltipDataProcessor, _G.Enum
+    if TDP and TDP.AddTooltipPostCall and Enum and Enum.TooltipDataType
+            and Enum.TooltipDataType.TraitEntry then
+        TDP.AddTooltipPostCall(Enum.TooltipDataType.TraitEntry, function(tip, data)
+            if tip == _G.GameTooltip and data and data.id then
+                pcall(injectTraitEntry, tip, data.id)
+            end
+        end)
+        if _G.GameTooltip and _G.GameTooltip.HookScript then
+            _G.GameTooltip:HookScript("OnHide", function(t) t.foresightTraitEntry = nil end)
+        end
+        Tooltips.traitTipInstalled = true
+        return true
+    end
+    return false -- TraitEntry tooltip type not exposed: discovery reports the real hook
+end
+
 function Tooltips.installSpells()
     if Tooltips.spellsInstalled then return true end
     local TDP, Enum = _G.TooltipDataProcessor, _G.Enum
@@ -451,6 +504,7 @@ if _G.CreateFrame then
     Tooltips.install()
     Tooltips.installItems()
     Tooltips.installSpells()
+    Tooltips.installTraitTooltips()
 end
 
 return Tooltips
