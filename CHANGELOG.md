@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.7.0 - 2026-10-10
+
+`GRAPH-threat`: threat becomes the 8th outcome lens, built on real client data.
+
+- Generator: discovered + mapped SPELL_AURA_MOD_THREAT (aura 10, EffectMiscValue_0 =
+  school mask) to a "threat" op. Ground-truthed against tooltips - Subtlety mask 72 =
+  Nature/Arcane, Silent Resolve 2 = Holy, Frost Channeling 16 = Frost - the same
+  base-points-match-tooltip bar as the stat-bitmask fix. Side effect: 4 threat talents
+  moved OUT of needs-curation (186 -> 182).
+- Threat ops fold through a new `agg.threatModPct` graph node (not a second math path);
+  the `threat` dimension scores 100% baseline + your own talent threat %, (p)
+  classic-presumed. The talent tooltip now surfaces threat lines for free.
+- Per-ability base threat + stance multipliers are explicitly future, scaffolded in
+  `overrides.abilityThreat` under the k-of-n crowd rule - no fabricated values now.
+- Selftest grows to 60 checks (op mapping + school, lens baseline, modeled Suppression
+  lowering the lens to 80%). Live signal depends on the S3 talent-read unblock; panel
+  8th-row readability folds into the S3 pass.
+
+*Features:* GRAPH-threat, GRAPH-dimensions, DATA-pipeline-generate, DATA-generated-tables,
+DATA-formula-registry, QA-selftest-harness
+
 ## 0.6.2 - 2026-10-10
 
 `UI-spell-tooltip`: ability tooltips now translate your gear onto the button.

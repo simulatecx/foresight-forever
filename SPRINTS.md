@@ -129,17 +129,21 @@ hardcoded math (we generate from client DB2 + confidence-tag; hardcoding goes st
 every patch), multi-version targeting (Forever-only is the beachhead), and
 secret-value-blind realtime calc (guards/degrade discipline is law).
 
-- ☐ GRAPH-threat: threat as the 8th outcome dimension, plus per-ability threat values.
-  As a hardcore dungeon leveler, I want to see how gear/talents shift my threat vs
-  damage so I don't rip aggro and die. AC: threat lens evaluates from own-state only;
-  per-ability threat mods live in overrides.lua (k-of-n for crowd corrections); every
-  value tagged classic-presumed until verified; panel row readable at 1280x720/0.65;
-  selftest covers the lens; compliance gate green.
-  Fit & Overlap - GRAPH (-> DATA). Verdict: Enhance graph/dimensions.lua + formula
-  registry entries - never a second math path outside the graph. Complements:
-  tankability/survivability. Touches: dimensions.lua, formulas.lua, overrides.lua,
-  panel_model.lua. Mobile: one panel row, existing templates. Languages: full-sentence
-  strings. Trust: (p)-tagged, display-only. Data: none captured. Abuse: not reachable.
+- ◐ GRAPH-threat (built v0.7.0, 2026-10-10): threat as the 8th outcome lens, own-state.
+  As a hardcore dungeon leveler, I want to see how gear/talents shift my threat so I
+  don't rip aggro and die. Shipped: discovered + mapped SPELL_AURA_MOD_THREAT (aura 10,
+  misc0 = school mask) to a real "threat" op - ground-truthed vs tooltips (Subtlety 72 =
+  Nature/Arcane, Silent Resolve 2 = Holy, Frost Channeling 16 = Frost), which also moved
+  4 talents OUT of needsCuration (186->182). Threat ops fold through a new
+  agg.threatModPct graph node (never a second math path); the lens scores 100% baseline
+  + own talent threat %, (p) classic-presumed. The talent tooltip (S2) now surfaces
+  threat lines for free. Per-ability base threat + stance multipliers are future
+  (overrides.abilityThreat, k-of-n crowd rule; secret-safe stance read). Selftest covers
+  op mapping, the lens baseline, and a modeled Suppression lowering it to 80%.
+  Remaining: live signal depends on the S3 talent-read unblock (base shows 100% until
+  talents are readable); panel 8th row readability at mobile baseline folds into S3.
+  Fit & Overlap - GRAPH (-> DATA): enhanced dimensions.lua + formula registry, no new
+  math path. Complements tankability/survivability.
 
 - ◐ UI-spell-tooltip (built v0.6.2, 2026-10-10): ability-tooltip injection with layman
   lines. As a leveler comparing buttons, I want each ability's tooltip to say what it

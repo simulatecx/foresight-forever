@@ -271,6 +271,16 @@ def main() -> int:
                 op["kind"] = "stat"
                 op["isPct"] = aura == 137
                 op["stat"] = stat_label(misc0, misc1)
+            elif aura == 10:
+                # SPELL_AURA_MOD_THREAT: misc0 is a school mask, value is the threat %
+                # modifier (negative = reduction). Ground-truthed against tooltips:
+                # Subtlety 72 = Nature/Arcane, Silent Resolve 2 = Holy, Frost Chan. 16 = Frost.
+                op["kind"] = "threat"
+                op["isPct"] = True
+                all_schools = misc0 != 0 and (misc0 & 126) == 126  # all magic (or +physical)
+                schools = school_label(misc0)
+                op["school"] = "all" if all_schools else schools
+                op["property"] = "threat" if all_schools else f"threat ({schools})"
             elif aura in AURA_LABELS:
                 op["kind"] = "aura"
                 op["label"] = AURA_LABELS[aura]

@@ -14,8 +14,8 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 
 ## GRAPH - impact engine
 - ☑ `GRAPH-impact-engine` - typed modifier DAG with stacking rules, breakdowns, cycle detection -> `Foresight/graph/graph.lua`
-- ☑ `GRAPH-dimensions` - 7 outcome lenses (spellcasting, melee/ranged DPS, healing, tankability, survivability, sustain), v0 heuristics -> `Foresight/graph/dimensions.lua`
-- ☐ `GRAPH-threat` - threat as the 8th outcome lens + per-ability threat values (classic-presumed; crowd corrections via overrides k-of-n) - triaged 2026-10-10
+- ☑ `GRAPH-dimensions` - 8 outcome lenses (spellcasting, melee/ranged DPS, healing, tankability, survivability, sustain, threat), v0 heuristics -> `Foresight/graph/dimensions.lua`
+- ◐ `GRAPH-threat` - threat as the 8th outcome lens: own-state threat % from talents (SPELL_AURA_MOD_THREAT mapped to a "threat" op, school-verified vs tooltips) folded through agg.threatModPct; (p) classic-presumed. Live signal pending the S3 talent-read unblock; per-ability base threat + stance are future (overrides.abilityThreat, k-of-n) -> `Foresight/graph/dimensions.lua`, `Foresight/data/formulas.lua`
 
 ## MODEL - character modelling
 - ☑ `MODEL-snapshot` - live character capture, secret-guarded (API indices pending beta verification) -> `Foresight/model/snapshot.lua`
@@ -40,7 +40,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 57-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 60-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

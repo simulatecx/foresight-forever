@@ -12,6 +12,13 @@ HM.overrides = {
         -- [talentId] = { ops = { { kind=..., property=..., maxValue=..., affected={...} } },
         --                curatedBy = "REQ-123", note = "why" },
     },
+    -- Per-ability base threat values (GRAPH-threat): classic threat-per-damage differs by
+    -- ability (e.g. taunts, Shield Slam bonus threat). These are NOT in client DB2; they
+    -- arrive here via the k-of-n crowd rule + human-reviewed PR, never one submission.
+    -- Until then the threat lens shows own-talent threat % modifiers only.
+    abilityThreat = {
+        -- [spellId] = { threat = <number>, curatedBy = "REQ-###", note = "source" },
+    },
 }
 
 -- Apply overrides on top of generated data at load time.

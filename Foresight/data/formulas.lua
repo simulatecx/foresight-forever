@@ -96,6 +96,19 @@ F.talentRankValue = {
     end,
 }
 
+-- Threat model (GRAPH-threat). v0 is own-state only: a 100% baseline modified by the
+-- character's own talent threat % effects (mapped from SPELL_AURA_MOD_THREAT in client
+-- data). Stance/form multipliers (Defensive Stance, Bear, Righteous Fury) and per-ability
+-- base threat are NOT here yet - those arrive as curated overrides (k-of-n crowd rule)
+-- and a secret-safe stance read. Everything the lens shows is classic-presumed until the
+-- probe/crowd verifies it.
+F.threatModel = {
+    unit = "percent of normal threat (own talents only in v0)",
+    source = "classic threat mechanics; talent values from Forever client DB2",
+    confidence = "classic-presumed",
+    base = 100,
+}
+
 -- Primary-stat conversions (classic-era per-class values). Used as MARGINAL rates
 -- around the live snapshot (the game's reported AP/crit already includes stats, so
 -- the graph adds conversion * (stat - snapshotStat), never the absolute).

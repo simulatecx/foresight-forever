@@ -69,6 +69,11 @@ local function addTalentModifiers(graph, talentId, rank, source)
         elseif op.kind == "spellmod" and op.property == "crit chance" then
             graph:addModifier{ target = "stat.spellCritPct", op = "flat",
                                value = value, source = source }
+        elseif op.kind == "threat" then
+            -- Threat % modifier (own-state): sums into the threat lens. A -20 op means
+            -- 20% less threat. Per-ability threat + stance stay future (overrides k-of-n).
+            graph:addModifier{ target = "agg.threatModPct", op = "flat",
+                               value = value, source = source }
         end
         -- Other ops (cast time, cost, cooldown...) surface via tooltip/explain for now;
         -- folding them into throughput needs per-spell rotation weights (post-beta).
@@ -99,6 +104,7 @@ function Loadout:build()
         ["agg.healingThroughputPct"] = 0,
         ["agg.meleeThroughputPct"] = 0,
         ["agg.rangedThroughputPct"] = 0,
+        ["agg.threatModPct"] = 0, -- talent threat modifiers sum here (negative = less threat)
     }
     for id in pairs(baseStats) do
         g:addNode{ id = id, kind = id:find("^agg") and "aggregate" or "stat" }

@@ -85,6 +85,16 @@ D.list = {
             return get("mech.manaPerTick") * 30
         end,
     },
+    {
+        id = "threat",
+        label = "Threat modifier",
+        unit = "% of normal threat from your talents (p; stance + per-ability pending)",
+        -- Own-state only: 100% baseline plus the summed talent threat modifiers. Below
+        -- 100 = you pull less (good for non-tanks); above = more. A lens, not an absolute.
+        score = function(get)
+            return 100 + get("agg.threatModPct")
+        end,
+    },
 }
 
 function D.byId(id)

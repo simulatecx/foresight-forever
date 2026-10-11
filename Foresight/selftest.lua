@@ -99,6 +99,21 @@ function HM.runSelftest(out)
     end)())
     check("sustain = manaTick*30", approx(results.sustain.score, 38 * 30))
 
+    -- GRAPH-threat: threat as the 8th lens, fed by mapped SPELL_AURA_MOD_THREAT ops.
+    check("threat lens baselines at 100% with no talents", approx(results.threat.score, 100),
+        results.threat and results.threat.score)
+    check("Subtlety threat op mapped to Nature/Arcane schools", (function()
+        local imp = gen.talentImpacts and gen.talentImpacts[841]
+        local op = imp and imp.ops and imp.ops[1]
+        return op and op.kind == "threat" and op.school == "Nature/Arcane" and op.isPct == true
+    end)())
+    check("modeling Suppression lowers the threat lens", (function()
+        -- Suppression (1005): -20% all-school threat at max rank 5.
+        local modeled = base:withTalent(1005, 5)
+        local r = HM.Impact.evaluate(modeled)
+        return r.threat and r.threat.score < 100 and approx(r.threat.score, 80)
+    end)())
+
     -- The +2 Spirit question.
     local lines, changes = HM.Impact.explainStatDelta(base, "Spirit", 2)
     check("+2 Spirit produces explanation lines", #lines > 0, table.concat(lines or {}, " | "))
@@ -175,7 +190,7 @@ function HM.runSelftest(out)
         end
         return false
     end)())
-    check("panel dimensions section has 7 rows", model.sections[1].rows and #model.sections[1].rows == 7)
+    check("panel dimensions section has 8 rows (incl. threat)", model.sections[1].rows and #model.sections[1].rows == 8)
     check("panel regen marks presumed formulas", (function()
         local v = model.sections[2].rows[1].value
         return type(v) == "string" and v:find("%(p%)") ~= nil
