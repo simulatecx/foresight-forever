@@ -54,4 +54,5 @@ runs the built-in checks.
 
 Docs: `DESIGN.md` (product), `DATAFLOW.md` (architecture, threat model, publishing),
 `FEASIBILITY.md` (platform research), `SPRINTS.md` / `FEATURES.md` / `CHANGELOG.md`
-(work tracker / capability inventory / release history).
+(work tracker / capability inventory / dev release history), and
+`docs/RELEASE_NOTES.md` (plain-language "what works / known issues" for players).
