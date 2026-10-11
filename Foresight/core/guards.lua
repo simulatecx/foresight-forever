@@ -50,4 +50,15 @@ function Guards.inRestrictedContext()
     return false
 end
 
+-- True when aura data may be secret in this context. spellId itself is NeverSecret,
+-- but aura values (duration, stacks) aren't - buff features degrade to display-only.
+function Guards.aurasSecret()
+    local C_Secrets = _G.C_Secrets
+    if C_Secrets and C_Secrets.ShouldAurasBeSecret then
+        local ok, secret = pcall(C_Secrets.ShouldAurasBeSecret)
+        if ok then return secret and true or false end
+    end
+    return false
+end
+
 return Guards

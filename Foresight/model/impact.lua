@@ -279,6 +279,16 @@ function Impact.talentChainLines(loadout, nodeId, rank)
     return derivedChainLines(loadout, loadout:withTraitNode(nodeId, rank))
 end
 
+-- CONSUME-buffs: what a consumable buff is worth while active - and, sign-flipped,
+-- what expires with it. One diff through the shared path; no forked math.
+-- Returns derived chain lines (incl. dimension moves) + the raw changes.
+function Impact.buffDelta(loadout, id)
+    local modeled = loadout:withBuff(id)
+    local lines = derivedChainLines(loadout, modeled)
+    local changes = Impact.diff(loadout, modeled)
+    return lines, changes
+end
+
 -- Talent summary for tooltips: what a talent touches, from precise generated data.
 -- Returns { name, affectedNames = {...}, property, valueAtRank, isPct, needsCuration }.
 function Impact.talentSummary(talentId, rank)

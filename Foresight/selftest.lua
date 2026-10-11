@@ -429,6 +429,80 @@ function HM.runSelftest(out)
         return true
     end)())
 
+    -- CONSUME-buffs: generated consumable chain + buff what-if modelling.
+    check("consumables data loaded at meaningful scale", (function()
+        local gen = HM.gen
+        if not (gen and gen.consumables and gen.buffsBySpell) then return false end
+        local n = 0
+        for _ in pairs(gen.consumables) do n = n + 1 end
+        return n > 300, n
+    end)())
+    check("Elixir of the Mongoose decodes +25 Agi +2% crit, 30m", (function()
+        local e = HM.gen.consumables[13452]
+        if not (e and e.buffSpellId == 17538 and e.type == "elixir"
+                and e.durationMs == 1800000 and HM.gen.buffsBySpell[17538] == 13452) then
+            return false
+        end
+        local agi, crit
+        for _, op in ipairs(e.ops) do
+            if op.kind == "stat" and op.stat == "Agility" and op.maxValue == 25 then agi = true end
+            if op.kind == "critChance" and op.maxValue == 2 then crit = true end
+        end
+        return agi and crit
+    end)())
+    check("food chases EffectTriggerSpell one hop to the Well-Fed stats", (function()
+        local e = HM.gen.consumables[21023] -- Dirge's Kickin' Chimaerok Chops
+        local op = e and e.ops and e.ops[1]
+        return e and e.type == "food" and e.buffSpellId == 25661
+            and op and op.kind == "stat" and op.stat == "Stamina" and op.maxValue == 25
+    end)())
+    check("withBuff(Mongoose) folds crit exactly (flat 2 spell, 2+derived melee)", (function()
+        local b, m = base:build(), base:withBuff(13452):build()
+        local dSpell = m.graph:value("stat.spellCritPct", m.ctx)
+            - b.graph:value("stat.spellCritPct", b.ctx)
+        local dMelee = m.graph:value("stat.meleeCritPct", m.ctx)
+            - b.graph:value("stat.meleeCritPct", b.ctx)
+        -- +2% flat on both; melee also gains +25 Agi via the live-derived conversion
+        -- (40 agi / 3% crit -> 13.33 agi per crit% -> +1.875%).
+        return approx(dSpell, 2, 1e-6) and approx(dMelee, 2 + 25 / (40 / 3), 1e-6)
+    end)())
+    check("withBuff accepts the buff spellId too (live aura match path)", (function()
+        local a, b2 = base:withBuff(13452):build(), base:withBuff(17538):build()
+        return approx(a.graph:value("stat.meleeCritPct", a.ctx),
+                      (b2.graph:value("stat.meleeCritPct", b2.ctx)))
+    end)())
+    check("Flask of the Titans folds +1200 max health into tankability", (function()
+        local b, m = base:build(), base:withBuff(13510):build()
+        local dHp = m.graph:value("stat.maxHealth", m.ctx) - b.graph:value("stat.maxHealth", b.ctx)
+        if not approx(dHp, 1200) then return false end
+        for _, c in ipairs(HM.Impact.diff(base, base:withBuff(13510))) do
+            if c.id == "tankability" and c.delta > 0 then return true end
+        end
+        return false
+    end)())
+    check("buffDelta returns the derived chain for the expiry story", (function()
+        local ok, lines = pcall(HM.Impact.buffDelta, base, 13452)
+        if not ok or #lines == 0 then return false end
+        return table.concat(lines, "\n"):find("crit", 1, true) ~= nil
+    end)())
+    check("weapon-conditional crit stays label-only (aura 290 discriminator)", (function()
+        local sp = HM.Racials.bySpell(20574) -- Axe Specialization: "while axe equipped"
+        local op = sp and sp.ops and sp.ops[1]
+        return op and op.kind == "aura" and (op.label or ""):find("conditional", 1, true) ~= nil
+    end)())
+    check("buff tooltip block: while-active + values + expiry honesty", (function()
+        local text = linesText(HM.Tooltips.buffLines(13452, base))
+        return text:find("While active:", 1, true) ~= nil
+            and text:find("+25 Agility", 1, true) ~= nil
+            and text:find("+2% crit chance", 1, true) ~= nil
+            and text:find("(30m)", 1, true) ~= nil
+            and text:find("On expiry these gains reverse.", 1, true) ~= nil
+    end)())
+    check("captureActiveBuffs degrades to none headless", (function()
+        local found = HM.Snapshot.captureActiveBuffs()
+        return type(found) == "table" and #found == 0
+    end)())
+
     check("synergy groups talents by shared theme", (function()
         HM.Synergy._reset()
         local r = HM.Synergy.query("intellect")
@@ -438,6 +512,52 @@ function HM.runSelftest(out)
         local themes = HM.Synergy.themesFor(104756) -- Ancestral Knowledge (Intellect%)
         for _, t in ipairs(themes) do if t.key == "Intellect" and t.others > 0 then return true end end
         return false
+    end)())
+    -- SYNERGY phase 3: themes draw from ALL sources with player context.
+    check("synergy ingests the player's racials (Spirit <- The Human Spirit)", (function()
+        HM.Synergy._reset()
+        local r = HM.Synergy.query("spirit", { raceId = 1, classToken = "MAGE" })
+        local hit = false
+        for _, n in ipairs((r and r.nodes) or {}) do
+            if n == "The Human Spirit (racial)" then hit = true end
+        end
+        HM.Synergy._reset()
+        return hit
+    end)())
+    check("synergy racials are class-gated (Gnome max mana for a Mage only)", (function()
+        HM.Synergy._reset()
+        local mage = HM.Synergy.query("max mana", { raceId = 7, classToken = "MAGE" })
+        local mageHit = false
+        for _, n in ipairs((mage and mage.nodes) or {}) do
+            if n:find("Expansive Mind", 1, true) then mageHit = true end
+        end
+        HM.Synergy._reset()
+        local warrior = HM.Synergy.query("max mana", { raceId = 7, classToken = "WARRIOR" })
+        local warriorHit = false
+        for _, n in ipairs((warrior and warrior.nodes) or {}) do
+            if n:find("Expansive Mind", 1, true) then warriorHit = true end
+        end
+        HM.Synergy._reset()
+        return mageHit and not warriorHit
+    end)())
+    check("synergy ingests active consumable buffs (crit <- Mongoose)", (function()
+        HM.Synergy._reset()
+        local r = HM.Synergy.query("crit", { buffs = { { itemId = 13452 } } })
+        local hit = false
+        for _, n in ipairs((r and r.nodes) or {}) do
+            if n == "Elixir of the Mongoose (elixir)" then hit = true end
+        end
+        HM.Synergy._reset()
+        return hit
+    end)())
+    check("synergy without player context stays trait-only", (function()
+        HM.Synergy._reset()
+        local r = HM.Synergy.query("agility")
+        for _, n in ipairs((r and r.nodes) or {}) do
+            if n:find("(elixir)", 1, true) or n:find("(racial)", 1, true) then return false end
+        end
+        HM.Synergy._reset()
+        return true
     end)())
 
     check("trait data covers NON-classic Forever nodes (the gap this fills)", (function()

@@ -75,6 +75,29 @@ function Snapshot.capture()
     return snapshot
 end
 
+-- Active consumable buffs we know (CONSUME-buffs, secret-safe): spellId is NeverSecret,
+-- so probing the generated buffsBySpell index via C_UnitAuras.GetPlayerAuraBySpellID is
+-- legal everywhere; in aura-secret contexts we degrade to none (display-only law) since
+-- aura VALUES (expiry) may be secret. Returns { {spellId, itemId, expirationTime?} }.
+function Snapshot.captureActiveBuffs()
+    local found = {}
+    local index = HM.gen and HM.gen.buffsBySpell
+    local getAura = _G.C_UnitAuras and _G.C_UnitAuras.GetPlayerAuraBySpellID
+    if not (index and getAura) or Guards.aurasSecret() then return found end
+    for spellId, itemId in pairs(index) do
+        local aura = Guards.call(getAura, spellId)
+        if aura then
+            found[#found + 1] = {
+                spellId = spellId, itemId = itemId,
+                expirationTime = type(aura) == "table"
+                    and Guards.number(aura.expirationTime) or nil,
+            }
+        end
+    end
+    table.sort(found, function(a, b) return a.spellId < b.spellId end)
+    return found
+end
+
 -- Current talent allocation. On Forever this walks C_Traits and maps each purchased
 -- node's spell back to our generated talent id (via spellRanks); on a classic client it
 -- falls back to the old globals. All reads route through the TalentAPI adapter.

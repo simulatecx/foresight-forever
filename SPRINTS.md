@@ -112,13 +112,15 @@ k-of-n confirmation before any overrides change; privacy-by-design pass (consent
 retention). Phase B in DATAFLOW 4b. Full design (Cloudflare Worker + D1/R2, k-of-n via unique
 index, companion sanitize) in `docs/RESEARCH-2026-10-11.md`.
 
-### S14 - Buffs & consumables impact ☐  (researched 2026-10-11)
-"How does an alchemy flask/elixir/food impact me while active, and what do I lose when it
-expires." Pipeline: ItemXItemEffect->ItemEffect->buff spell, reuse build_ops; emit
-consumables.lua. Model: `Loadout:withBuff` + `Impact.buffDelta` (one diff = active vs expiry).
-Live: `C_UnitAuras.GetPlayerAuraBySpellID` (spellId is never-secret; model from generated ops,
-secret-degrade via C_Secrets.ShouldAurasBeSecret). New decode: aura 290 (crit%) + EffectTriggerSpell
-one-hop for Well-Fed. Survival consumables first (hardcore thesis). Details: research doc A.
+### S14 - Buffs & consumables impact ◐  (SHIPPED code-complete v0.12.0)
+"How does a flask/elixir/food impact me while active, and what do I lose when it expires."
+DONE: consumables.lua (390 items; Well-Fed one-hop keys the TRIGGERED aura spell);
+`Loadout:withBuff(itemId|spellId)` + `Impact.buffDelta` (one diff = active vs expiry);
+`Snapshot.captureActiveBuffs` via never-secret spellId probe + `Guards.aurasSecret` degrade;
+consumable tooltip "While active / On expiry these gains reverse" block; `/foresight buffs`.
+Decodes: 290 crit% (SpellEquippedItems discriminates weapon-conditional ones), 34 flat
+max health (Titans), 22 armor (Scrolls of Protection), 99/124 AP (Well Fed).
+Remaining: in-game render verify (fold into S3 session). Details: research doc A.
 Fit & Overlap: reuses applyOps/diff (no forked math); complements S10 PANIC (consumable registry).
 
 ### S15 - Racials impact ◐  (phase 1 SHIPPED v0.11.0)
@@ -128,17 +130,20 @@ gates, passive/active split, confidence tags (classic-presumed / forever-new-unv
 snapshot captures raceId (token fallback, Scourge=5); `model/racials.lua` +
 `Loadout:withRacial`/`withRace`; aura 133/178 folds. PLAN CORRECTION: no unconditional
 fold into the base build - live stats already include racial passives (double-count).
-Remaining: Synergy ingestion + panel "Your <Race> racials" line (phase 3); curation ->
-overrides.racialImpacts. Details: research doc B.
+Synergy ingestion SHIPPED v0.12.0. Remaining: panel "Your <Race> racials" line + in-game
+verify; curation -> overrides.racialImpacts. Details: research doc B.
 
-### SYNERGY - talents that work together ◐
+### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
-/foresight synergy. NEXT (baked-in UI, researched 2026-10-11 doc C1): talent-tree node highlight
+/foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),
+themes include the player's racials and active consumables alongside talents - typed members
+(racial:<spellID>, buff:<itemId>) through one op-walker; trait-only without context.
+NEXT (baked-in UI, researched 2026-10-11 doc C1): talent-tree node highlight
 (Diablo-4 paragon selection) - node buttons are named by talent (proven), locate via
 PlayerSpellsFrame probe + name-match fallback, glow via LibCustomGlow PixelGlow (key-scoped, no
 taint; NOT the tainting ActionButton glow). Dropdown on the talent frame + a stats-panel Synergies
 section, one validated settings.synergy.theme syncing all surfaces. New ui/synergy_highlight.lua.
-Then: chained synergies (A boosts Int -> B converts Int to AP); extend Synergy to items/buffs/racials.
+Then: chained synergies (A boosts Int -> B converts Int to AP).
 
 ## Backlog (not yet scheduled)
 - ☐ DATA-professions: SkillLine/recipes -> consumables/crafted gear as modifier sources.

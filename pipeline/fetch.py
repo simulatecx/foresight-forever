@@ -15,7 +15,6 @@ from pathlib import Path
 DEFAULT_BUILD = "1.60.1.70338"
 
 # Tables needed for the Talent Impact Map and the impact graph foundation.
-# ItemSparse/Item are deferred to the item-impact phase (large, not yet consumed).
 TABLES = [
     "Talent",
     "TalentTab",
@@ -33,6 +32,13 @@ TABLES = [
     "SkillLine",
     "ChrRaces",           # race id/token (racial SkillLineAbility.RaceMasks bit = 1<<(ID-1))
     "SkillRaceClassInfo", # race/class gating of skill lines (racial availability)
+    # Consumable-buff chain (CONSUME-buffs): item -> effect -> buff spell.
+    "Item",               # ClassID 0 = Consumable; SubclassID = potion/elixir/flask/food/...
+    "ItemSparse",         # item name + required level (large; consumables filtered out)
+    "ItemEffect",         # effect -> SpellID
+    "ItemXItemEffect",    # item -> effect link
+    "SpellAuraOptions",   # CumulativeAura = max stacks
+    "SpellEquippedItems", # weapon/armor requirement (discriminates conditional auras, e.g. 290)
     # Retail trait system = the LIVE talent system on Forever (classic globals are gone).
     "TraitNode",               # node id, tree id, position, type
     "TraitNodeEntry",          # entry -> definition + max ranks

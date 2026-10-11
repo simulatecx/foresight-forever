@@ -382,6 +382,81 @@ function Tooltips._itemDims(loadout, mapped)
     return HM.Impact.explainItemDelta(loadout, mapped)
 end
 
+-- Consumable-buff provider (CONSUME-buffs) --------------------------------------
+
+local function fmtDuration(ms)
+    local s = math.floor(ms / 1000 + 0.5)
+    if s >= 3600 and s % 3600 == 0 then return (s / 3600) .. "h" end
+    if s >= 60 then return math.floor(s / 60 + 0.5) .. "m" end
+    return s .. "s"
+end
+
+-- One human fragment per decoded op; nil for unmapped kinds (honesty: never invent).
+local POWER_NAMES = { [0] = "mana", [1] = "rage", [3] = "energy" }
+local function describeOp(op)
+    local v = op.maxValue or 0
+    if op.kind == "stat" then
+        return ("%s %s"):format(fmtValue(v, op.isPct), op.stat or "stat")
+    elseif op.kind == "schoolDamage" then
+        return ("%s %s spell damage"):format(fmtValue(v, op.isPct), op.school or "")
+    elseif op.kind == "maxHealth" then
+        return ("%s max health"):format(fmtValue(v, op.isPct))
+    elseif op.kind == "maxPower" then
+        return ("%s max %s"):format(fmtValue(v, op.isPct), POWER_NAMES[op.powerType] or "power")
+    elseif op.kind == "armor" then
+        return ("%s armor"):format(fmtValue(v, false))
+    elseif op.kind == "attackPower" then
+        return ("%s Attack Power"):format(fmtValue(v, false))
+    elseif op.kind == "rangedAttackPower" then
+        return ("%s ranged Attack Power"):format(fmtValue(v, false))
+    elseif op.kind == "critChance" then
+        return ("%s crit chance"):format(fmtValue(v, true))
+    elseif op.kind == "threat" then
+        return ("%s %s"):format(fmtValue(v, true), op.property or "threat")
+    elseif op.kind == "spellmod" and op.property then
+        return ("%s %s"):format(fmtValue(v, op.isPct, op.property), op.property)
+    elseif op.kind == "aura" and op.label then
+        return ("%s %s"):format(fmtValue(v, op.isPct), op.label)
+    end
+    return nil
+end
+Tooltips.describeOp = describeOp -- shared with /foresight buffs
+
+-- Build the injected block for a consumable with generated buff data: what it is worth
+-- for YOUR character while active - and the honest reminder that expiry reverses it.
+function Tooltips.buffLines(itemId, loadout)
+    local entry = HM.gen and HM.gen.consumables and HM.gen.consumables[itemId]
+    if not entry then return nil end
+    local parts = {}
+    for _, op in ipairs(entry.ops or {}) do
+        parts[#parts + 1] = describeOp(op)
+    end
+    if #parts == 0 then return nil end
+
+    local lines = {}
+    lines[#lines + 1] = {
+        kind = "double", left = "Foresight",
+        right = "(p) " .. (entry.confidence or "classic-presumed"),
+        r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
+    }
+    lines[#lines + 1] = {
+        text = ("|cff9d9d9dWhile active:|r %s%s"):format(table.concat(parts, ", "),
+            entry.durationMs and (" (" .. fmtDuration(entry.durationMs) .. ")") or ""),
+        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+    }
+    if loadout then
+        local okc, chain = pcall(HM.Impact.buffDelta, loadout, itemId)
+        for _, l in ipairs(okc and chain or {}) do
+            lines[#lines + 1] = { text = "  " .. l, r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
+        end
+    end
+    lines[#lines + 1] = {
+        text = "On expiry these gains reverse.",
+        r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+    }
+    return lines
+end
+
 -- Spell provider (UI-spell-tooltip) -------------------------------------------
 
 -- What a spell does for YOU, honestly, from the data we actually ship: the client cast
@@ -519,6 +594,11 @@ local function injectItem(tip)
     local okc, c = pcall(equippedCompareStats, link)
     if okc then compared = c end
     local lines = Tooltips.itemLines(mapped, loadout, compared)
+    if not lines then
+        -- No gear stats: consumables carry their impact as a generated buff block.
+        local itemId = tonumber(type(link) == "string" and link:match("item:(%d+)") or nil)
+        if itemId then lines = Tooltips.buffLines(itemId, loadout) end
+    end
     if lines then
         tip.foresightInjected = true
         attach(tip, lines)

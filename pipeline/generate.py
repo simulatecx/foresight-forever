@@ -63,15 +63,13 @@ AURA_LABELS = {
     108: "spell modifier (%)",
     107: "spell modifier (flat)",
     # Label-only decodes (surface via tooltip/synergy; no fold - ground-truthed on the
-    # racial rework tooltips 2026-10-11): 290 is CONDITIONAL on racials (weapon-type
-    # specializations), so folding it waits for the equipped-item discriminator.
+    # racial rework tooltips 2026-10-11).
     49: "dodge chance",
     54: "hit chance",
     55: "spell hit chance",
     166: "attack power (%)",
     167: "ranged attack power (%)",
     317: "spell power (%)",
-    290: "crit chance (%)",
 }
 
 STAT_NAMES = {-1: "all stats", 0: "Strength", 1: "Agility", 2: "Stamina", 3: "Intellect", 4: "Spirit"}
@@ -136,10 +134,14 @@ def races_for_masks(rm0: int, rm1: int, bit_to_race: dict) -> set:
     return races
 
 
-def build_ops(first, effects_by_spell, class_options, family_members, player_spells):
+def build_ops(first, effects_by_spell, class_options, family_members, player_spells,
+              equipped_items=None):
     """Derive impact ops from a passive/modifier spell's SpellEffect rows. Shared by
-    classic talents and Retail trait nodes - the same aura/spell-mod decoding either way.
-    Forever stores multi-rank values only on the rank-1 spell as the max-rank total."""
+    classic talents, Retail trait nodes, racials, and consumable buffs - the same
+    aura/spell-mod decoding everywhere. Forever stores multi-rank values only on the
+    rank-1 spell as the max-rank total. equipped_items (spellID set from
+    SpellEquippedItems) marks weapon/armor-conditional spells - their crit aura is
+    label-only instead of foldable."""
     ops = []
     fam = class_options.get(first)
     for eff in effects_by_spell.get(first, []):
@@ -176,6 +178,32 @@ def build_ops(first, effects_by_spell, class_options, family_members, player_spe
             # Endurance 20550). Folds into stat.maxHealth as a what-if delta.
             op["kind"] = "maxHealth"
             op["isPct"] = True
+        elif aura == 34:
+            # MOD_INCREASE_HEALTH: flat max health (Flask of the Titans +1200).
+            op["kind"] = "maxHealth"
+            op["isPct"] = False
+        elif aura == 22:
+            # MOD_RESISTANCE: misc0 is a school mask; the physical bit means ARMOR
+            # (Scroll of Protection) and folds; magic resistances stay label-only.
+            if misc0 & 1:
+                op["kind"] = "armor"
+            else:
+                op["kind"] = "aura"
+                op["label"] = f"{school_label(misc0)} resistance"
+        elif aura == 99 or aura == 124:
+            # MOD_ATTACK_POWER / MOD_RANGED_ATTACK_POWER (flat; e.g. Well Fed food).
+            op["kind"] = "attackPower" if aura == 99 else "rangedAttackPower"
+        elif aura == 290:
+            # Crit chance %: ground-truthed on Elixir of the Mongoose (+2% crit) and
+            # the weapon-specialization racials. A SpellEquippedItems row makes the
+            # spell CONDITIONAL ("while you have an axe equipped") -> label-only;
+            # unconditional 290s fold into all three crit stats.
+            if equipped_items and first in equipped_items:
+                op["kind"] = "aura"
+                op["label"] = "crit chance (%) (conditional)"
+            else:
+                op["kind"] = "critChance"
+                op["isPct"] = True
         elif aura == 178:
             # "Maximum Mana/Rage/Energy increased by $s1%" (Expansive Mind rework);
             # misc0 = power type (0 mana, 1 rage, 3 energy). Only mana folds (graph node).
@@ -271,6 +299,11 @@ def main() -> int:
     for r in read_csv(cache, "SpellEffect"):
         if to_int(r["DifficultyID"]) == 0:
             effects_by_spell[to_int(r["SpellID"])].append(r)
+
+    # Spells with a weapon/armor requirement: their auras are conditional (see the
+    # aura-290 branch in build_ops).
+    equipped_items = {to_int(r["SpellID"]) for r in read_csv(cache, "SpellEquippedItems")
+                      if to_int(r["EquippedItemClass"]) > 0}
 
     # Player-learnable spells: abilities on class skill lines (SkillLine CategoryID 7).
     skill_lines = {to_int(r["ID"]): r for r in read_csv(cache, "SkillLine")}
@@ -371,7 +404,8 @@ def main() -> int:
         # rows), and the stored value matches the classic MAX-RANK total. Rank scaling is
         # therefore presumed linear (rank N = value * N / maxRank) until verified in-game;
         # the addon surfaces this flag and the probe/beta check confirms or corrects it.
-        ops = build_ops(first, effects_by_spell, class_options, family_members, player_spells)
+        ops = build_ops(first, effects_by_spell, class_options, family_members, player_spells,
+                        equipped_items)
 
         if not ops or all(o.get("kind") == "unmapped" for o in ops):
             needs_curation += 1
@@ -457,7 +491,7 @@ def main() -> int:
             continue
         primary = entries[0]
         ops = build_ops(primary["spellID"], effects_by_spell, class_options,
-                        family_members, player_spells)
+                        family_members, player_spells, equipped_items)
         node = {
             "tree": to_int(r["TraitTreeID"]), "type": to_int(r["Type"]),
             "spellID": primary["spellID"], "name": primary["name"],
@@ -494,7 +528,8 @@ def main() -> int:
         spells = []
         for sid in sorted(racial_sla[rid]):
             m = misc.get(sid)
-            ops = build_ops(sid, effects_by_spell, class_options, family_members, player_spells)
+            ops = build_ops(sid, effects_by_spell, class_options, family_members, player_spells,
+                            equipped_items)
             entry = {
                 "spellID": sid,
                 "name": spell_names.get(sid, f"spell:{sid}"),
@@ -517,6 +552,74 @@ def main() -> int:
         if token not in race_tokens or rid < race_tokens[token]:
             race_tokens[token] = rid
 
+    # ---- Consumables (CONSUME-buffs: item -> effect -> buff spell) --------------
+    # Chain: Item(ClassID 0) -> ItemXItemEffect -> ItemEffect(TriggerType 0 = on use)
+    # -> SpellID -> build_ops. Foods park their stats on a TRIGGERED Well-Fed spell -
+    # when the direct spell has no decoded ops, chase EffectTriggerSpell one hop (the
+    # triggered spell is also the aura the player actually carries). Only items whose
+    # buff decodes to at least one mapped op ship (bloat control); enhancements (6,
+    # applied to gear) and bandages (7) are out of scope for self-buffs.
+    CONSUMABLE_TYPES = {0: "consumable", 1: "potion", 2: "elixir", 3: "flask",
+                        4: "scroll", 5: "food", 8: "other"}
+    consumable_sub = {to_int(r["ID"]): to_int(r["SubclassID"]) for r in read_csv(cache, "Item")
+                      if to_int(r["ClassID"]) == 0 and to_int(r["SubclassID"]) in CONSUMABLE_TYPES}
+    sparse = {}
+    for r in read_csv(cache, "ItemSparse"):
+        iid = to_int(r["ID"])
+        if iid in consumable_sub:
+            sparse[iid] = (r["Display_lang"], to_int(r["RequiredLevel"]))
+    item_effects = {to_int(r["ID"]): r for r in read_csv(cache, "ItemEffect")}
+    item_links = defaultdict(list)
+    for r in read_csv(cache, "ItemXItemEffect"):
+        item_links[to_int(r["ItemID"])].append(to_int(r["ItemEffectID"]))
+    max_stacks = {to_int(r["SpellID"]): to_int(r["CumulativeAura"])
+                  for r in read_csv(cache, "SpellAuraOptions") if to_int(r["DifficultyID"]) == 0}
+
+    def decoded(ops):
+        return [o for o in ops if o.get("kind") != "unmapped"]
+
+    consumables_out, buffs_by_spell = {}, {}
+    for iid in sorted(consumable_sub):
+        name, req_level = sparse.get(iid, ("", 0))
+        for eid in sorted(item_links.get(iid, [])):
+            eff = item_effects.get(eid)
+            if not eff or to_int(eff["TriggerType"]) != 0:
+                continue
+            sid = to_int(eff["SpellID"])
+            buff_sid = sid
+            ops = build_ops(sid, effects_by_spell, class_options, family_members,
+                            player_spells, equipped_items)
+            if not decoded(ops):
+                for e in effects_by_spell.get(sid, []):
+                    tsid = to_int(e["EffectTriggerSpell"])
+                    if tsid:
+                        t_ops = build_ops(tsid, effects_by_spell, class_options,
+                                          family_members, player_spells, equipped_items)
+                        if decoded(t_ops):
+                            buff_sid, ops = tsid, t_ops
+                            break
+            if not decoded(ops):
+                continue
+            entry = {
+                "buffSpellId": buff_sid,
+                "name": name or spell_names.get(sid, f"item:{iid}"),
+                "type": CONSUMABLE_TYPES[consumable_sub[iid]],
+                "ops": ops,
+                "confidence": "forever-new-unverified" if buff_sid >= 1_000_000
+                              else "classic-presumed",
+            }
+            m = misc.get(buff_sid)
+            dur = m and durations.get(to_int(m["DurationIndex"]))
+            if dur and dur > 0:
+                entry["durationMs"] = dur
+            if max_stacks.get(buff_sid):
+                entry["maxStacks"] = max_stacks[buff_sid]
+            if req_level > 1:
+                entry["reqLevel"] = req_level
+            consumables_out[iid] = entry
+            buffs_by_spell.setdefault(buff_sid, iid)
+            break  # one buff effect per item is the consumable shape
+
     # ---- Emit ------------------------------------------------------------------
     stamp = dt.date.today().isoformat()
     written = [
@@ -533,6 +636,7 @@ def main() -> int:
                 "racialRaces": len(racials_out),
                 "racialSpells": len(racials_by_spell),
                 "racialSpellsNeedingCuration": len(racial_curation),
+                "consumables": len(consumables_out),
             },
             "classNames": CLASS_NAMES,
         }, out_dir, args.build),
@@ -544,13 +648,15 @@ def main() -> int:
         LuaWriter.file("race_racials", {"racials": racials_out,
                                         "racialsBySpell": racials_by_spell,
                                         "raceTokens": race_tokens}, out_dir, args.build),
+        LuaWriter.file("consumables", {"consumables": consumables_out,
+                                       "buffsBySpell": buffs_by_spell}, out_dir, args.build),
     ]
     for path in written:
         print(f"wrote {path.relative_to(root.parent)} ({path.stat().st_size:,} bytes)")
     print(f"\ntalents={len(talents_out)} tabs={len(tabs_out)} spells shipped={len(spells_out)} "
           f"trait nodes={len(trait_nodes)} talents needing curation={needs_curation}/{len(talents_out)}\n"
           f"racial races={len(racials_out)} racial spells={len(racials_by_spell)} "
-          f"racials needing curation={len(racial_curation)}")
+          f"racials needing curation={len(racial_curation)} consumables={len(consumables_out)}")
     return 0
 
 

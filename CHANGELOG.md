@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.12.0 - 2026-10-11
+
+CONSUMABLE BUFFS + ALL-SOURCES SYNERGY (phases 2+3 of the expansion): hover a flask/
+elixir/food/scroll and see what it's worth for YOUR character while active - and what
+you lose when it expires; synergy themes now draw from talents + racials + active buffs.
+
+- Pipeline: fetch `Item`/`ItemSparse`/`ItemEffect`/`ItemXItemEffect`/`SpellAuraOptions`/
+  `SpellEquippedItems`; generate `consumables.lua` (390 items: potion/elixir/flask/
+  scroll/food) via Item(ClassID 0) -> ItemXItemEffect -> ItemEffect(on-use) -> buff
+  spell -> the shared build_ops. Foods chase `EffectTriggerSpell` ONE hop and key the
+  TRIGGERED Well-Fed spell (the aura the player actually carries). durationMs/maxStacks/
+  reqLevel + `buffsBySpell` index. Validated: Mongoose 13452 -> 17538 (+25 Agi, +2%
+  crit, 30m); Supreme Power +150 all-magic; Titans +1200 health; Dirge's Chops -> +25 Stam.
+- New foldable ops (ground-truthed): aura 290 crit% folds into all three crit stats,
+  with the SpellEquippedItems discriminator (weapon-conditional racial 290s stay
+  label-only - resolves the phase-1 deferral); aura 34 flat max health (Flask of the
+  Titans); aura 22 armor (Scrolls of Protection; magic resistances label-only);
+  aura 99/124 flat attack power (Well Fed).
+- Model: `Loadout:withBuff(itemId or buff spellId)` + `Impact.buffDelta` (one diff =
+  while-active gains; sign-flipped = the expiry loss). `Snapshot.captureActiveBuffs()`
+  probes the generated index via `C_UnitAuras.GetPlayerAuraBySpellID` - spellId is
+  NeverSecret; new `Guards.aurasSecret` (C_Secrets.ShouldAurasBeSecret) degrades buff
+  features to display-only in restricted contexts.
+- UI: consumable item tooltips inject "While active: ... (30m)" + the derived chain +
+  "On expiry these gains reverse." (the hardcore warning). New `/foresight buffs`
+  lists active known buffs with time left and what each is worth.
+- SYNERGY from all sources: `Synergy.build/query/themes` accept player context
+  (raceId/class/active buffs) - `/foresight synergy intellect` lists racials and
+  flasks alongside talents (typed members `racial:<spellID>`/`buff:<itemId>`, one
+  shared op-walker). Without context the index stays trait-only, so tooltip synergy
+  counts are unchanged.
+- Selftest 97 checks (+14: chain decode cases, exact crit/health folds, spellId-keyed
+  withBuff, the 290 discriminator, tooltip block, headless degrade, synergy ingestion
+  + class gating + static-view isolation).
+
+*Features:* CONSUME-buffs, RACIAL-impact, SYNERGY-engine, DATA-pipeline-fetch, DATA-pipeline-generate, DATA-generated-tables, MODEL-snapshot, MODEL-loadout-whatif, CORE-guards, UI-item-tooltip, QA-selftest-harness
+
 ## 0.11.0 - 2026-10-11
 
 RACIAL IMPACT (phase 1 of the all-sources expansion): the pipeline now generates every

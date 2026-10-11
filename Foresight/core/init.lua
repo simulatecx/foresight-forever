@@ -141,17 +141,47 @@ local function onSlash(input)
             printMsg("synergy engine unavailable")
             return
         end
+        -- Player context folds YOUR racials + active consumable buffs into the themes.
+        local player
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if snapshot then
+            player = { raceId = snapshot.raceId, classToken = snapshot.classToken,
+                       buffs = HM.Snapshot.captureActiveBuffs() }
+        end
         if rest == "" then
             printMsg("synergy themes - /foresight synergy <name>:")
-            printMsg("  " .. table.concat(HM.Synergy.themes(), ", "))
+            printMsg("  " .. table.concat(HM.Synergy.themes(player), ", "))
         else
-            local r = HM.Synergy.query(rest)
+            local r = HM.Synergy.query(rest, player)
             if r then
-                printMsg(("%s synergy - %d talents push this lever:"):format(r.label, #r.nodes))
+                printMsg(("%s synergy - %d sources push this lever:"):format(r.label, #r.nodes))
                 printMsg("  " .. table.concat(r.nodes, ", "))
             else
                 printMsg("no synergy matches '" .. rest .. "' (try: intellect, crit, threat, nature, lightning)")
             end
+        end
+    elseif cmd == "buffs" then
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not snapshot then
+            printMsg("no character snapshot available")
+            return
+        end
+        local active = HM.Snapshot.captureActiveBuffs()
+        if #active == 0 then
+            printMsg("no known consumable buffs active (or aura data is restricted here)")
+            return
+        end
+        local loadout = HM.Loadout.fromSnapshot(snapshot)
+        local now = _G.GetTime and _G.GetTime() or nil
+        for _, b in ipairs(active) do
+            local entry = HM.gen.consumables[b.itemId]
+            local remaining = (b.expirationTime and now and b.expirationTime > now)
+                and math.floor((b.expirationTime - now) / 60 + 0.5) .. "m left" or nil
+            printMsg(("%s (%s)%s"):format(entry.name, entry.type,
+                remaining and (" - " .. remaining) or ""))
+            local okd, lines = pcall(HM.Impact.buffDelta, loadout, b.itemId)
+            for _, line in ipairs(okd and lines or {}) do printMsg("  " .. line) end
+            printMsg("  on expiry these gains reverse")
         end
     elseif cmd == "panel" then
         if rest == "reset" then
@@ -180,7 +210,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name] | buffs | panel [reset] | verify | export | selftest")
     end
 end
 

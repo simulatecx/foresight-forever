@@ -53,6 +53,15 @@ function Loadout:withRace(raceId)
     return copyDeltas(self, { type = "race", raceId = raceId })
 end
 
+-- Model a consumable buff being active (CONSUME-buffs). Accepts the itemId from the
+-- generated consumables table or the buff's spellId (what a live aura read returns).
+-- Diffing base vs withBuff gives "while active +X"; the same numbers sign-flipped are
+-- the expiry loss. (An ALREADY-active buff is inside your live snapshot stats - the
+-- delta answers "what is this worth / what do I lose", not "add it twice".)
+function Loadout:withBuff(id)
+    return copyDeltas(self, { type = "buff", id = id })
+end
+
 local STAT_NODE = {
     Strength = "stat.strength", Agility = "stat.agility", Stamina = "stat.stamina",
     Intellect = "stat.intellect", Spirit = "stat.spirit",
@@ -91,14 +100,33 @@ local function applyOps(graph, ops, rank, maxRank, source)
             -- 20% less threat. Per-ability threat + stance stay future (overrides k-of-n).
             graph:addModifier{ target = "agg.threatModPct", op = "flat",
                                value = value, source = source }
-        elseif op.kind == "maxHealth" and op.isPct then
-            -- "Total Health increased by X%" (e.g. Tauren Endurance).
-            graph:addModifier{ target = "stat.maxHealth", op = "pctAdd",
+        elseif op.kind == "maxHealth" then
+            -- "Total Health increased by X%" (Tauren Endurance) or flat +X (Flask
+            -- of the Titans).
+            graph:addModifier{ target = "stat.maxHealth",
+                               op = op.isPct and "pctAdd" or "flat",
                                value = value, source = source }
         elseif op.kind == "maxPower" and op.isPct and op.powerType == 0 then
             -- "Maximum Mana increased by X%" (e.g. Expansive Mind). Rage/energy
             -- variants have no graph node yet and stay tooltip-only.
             graph:addModifier{ target = "stat.maxMana", op = "pctAdd",
+                               value = value, source = source }
+        elseif op.kind == "critChance" then
+            -- Unconditional crit % (Elixir of the Mongoose): all three crit stats.
+            graph:addModifier{ target = "stat.meleeCritPct", op = "flat",
+                               value = value, source = source }
+            graph:addModifier{ target = "stat.spellCritPct", op = "flat",
+                               value = value, source = source }
+            graph:addModifier{ target = "stat.rangedCritPct", op = "flat",
+                               value = value, source = source }
+        elseif op.kind == "armor" then
+            graph:addModifier{ target = "stat.armor", op = "flat",
+                               value = value, source = source }
+        elseif op.kind == "attackPower" then
+            graph:addModifier{ target = "stat.attackPower", op = "flat",
+                               value = value, source = source }
+        elseif op.kind == "rangedAttackPower" then
+            graph:addModifier{ target = "stat.rangedAttackPower", op = "flat",
                                value = value, source = source }
         end
         -- Other ops (cast time, cost, cooldown...) surface via tooltip/explain for now;
@@ -229,6 +257,17 @@ function Loadout:build()
                 notes[#notes + 1] = sp.name .. " does not apply to your class"
             else
                 applyOps(g, sp.ops, 1, 1, "racial:" .. tostring(d.spellID))
+            end
+        elseif d.type == "buff" then
+            local gen = HM.gen
+            local entry = gen and gen.consumables and gen.consumables[d.id]
+            if not entry and gen and gen.buffsBySpell and gen.buffsBySpell[d.id] then
+                entry = gen.consumables[gen.buffsBySpell[d.id]]
+            end
+            if entry then
+                applyOps(g, entry.ops, 1, 1, "buff:" .. tostring(d.id))
+            else
+                notes[#notes + 1] = "unknown buff " .. tostring(d.id)
             end
         elseif d.type == "race" then
             local kit = HM.Racials and HM.Racials.forRace(d.raceId, s.classToken, true) or {}
