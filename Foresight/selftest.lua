@@ -275,6 +275,20 @@ function HM.runSelftest(out)
             and text:find("%%") ~= nil
     end)())
     check("item lines nil when nothing maps", HM.Tooltips.itemLines({}, base) == nil)
+    check("gear compare: net favors the right dimension", (function()
+        -- Int item vs Stamina item: A should win spellcasting, B should win tankability.
+        local rows = HM.Impact.compareItems(base, { Intellect = 20 }, { Stamina = 20 })
+        local spell, tank
+        for _, r in ipairs(rows) do
+            if r.id == "spellcasting" then spell = r.net end
+            if r.id == "tankability" then tank = r.net end
+        end
+        return spell and spell > 0 and tank and tank < 0
+    end)())
+    check("item lines render a vs-equipped block when compared", (function()
+        local text = linesText(HM.Tooltips.itemLines({ Intellect = 20 }, base, { Stamina = 20 }))
+        return text:find("vs equipped:", 1, true) ~= nil
+    end)())
     check("explainItemDelta combines deltas via the diff path", (function()
         local _, changes = HM.Impact.explainItemDelta(base, { Stamina = 10 })
         for _, c in ipairs(changes) do

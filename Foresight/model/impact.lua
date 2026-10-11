@@ -110,6 +110,33 @@ function Impact.explainItemDelta(loadout, statDeltas)
     return lines, changes
 end
 
+-- Gear compare (DATA-items v0): net per-dimension impact of equipping item A instead of
+-- item B. Both are mapped stat bundles ({ Agility=4, Stamina=6, ... }). Reuses
+-- explainItemDelta (the diff path) - no forked value math. net > 0 means A wins that
+-- dimension. Returns rows sorted by |net|, biggest swing first.
+function Impact.compareItems(loadout, statsA, statsB)
+    local _, changesA = Impact.explainItemDelta(loadout, statsA)
+    local _, changesB = Impact.explainItemDelta(loadout, statsB)
+    local byId = {}
+    for _, c in ipairs(changesA or {}) do
+        byId[c.id] = { id = c.id, label = c.label, a = c.pct or 0, b = 0 }
+    end
+    for _, c in ipairs(changesB or {}) do
+        local r = byId[c.id] or { id = c.id, label = c.label, a = 0, b = 0 }
+        r.b = c.pct or 0
+        byId[c.id] = r
+    end
+    local rows = {}
+    for _, r in pairs(byId) do
+        local net = r.a - r.b
+        if math.abs(net) > 1e-9 then
+            rows[#rows + 1] = { id = r.id, label = r.label, net = net }
+        end
+    end
+    table.sort(rows, function(x, y) return math.abs(x.net) > math.abs(y.net) end)
+    return rows
+end
+
 -- MODEL-stat-advisor: rank stats by marginal value for THIS build, so gear/drop choices
 -- are obvious. Built entirely on explainStatDelta (no second value path). v0 heuristic:
 -- "value" is each stat's strongest dimension move per +1 point; the headline orders by

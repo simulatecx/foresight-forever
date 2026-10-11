@@ -23,7 +23,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S5 Stats panel (built + movable; render verify pending) | 3 | ◐ |
 | S6 Crowd data-collection loop (pilot scale) | - | ☑ |
 | S7 Talent Impact Map completion (trait modelling + mapping panel) | 3 | ◐ |
-| S8 DATA-items: offline item DB + gear compare | 3 | ☐ |
+| S8 DATA-items: gear compare (live v0 ☑; offline DB deferred) | 3 | ◐ |
 | S9 ASSIST-hud: what-to-press HUD | 2 | ☐ |
 | S10 PANIC-advisor: escape registry + triggers + flash | 1 | ☐ |
 | S11 QA-probe: empirical formula verification from live play | - | ☐ |
@@ -60,11 +60,14 @@ Make the talent map whole now that C_Traits coverage exists.
 - **S7b UI-mapping-panel** (☐): per-build talent<->skill map; invert to "which talents
   touch spell X". Pure model in a new `ui/mapping_model.lua` (selftest-covered) + renderer.
 
-### S8 - DATA-items + gear compare ☐  (strongest community demand)
-ItemSparse/Item into the pipeline -> item stat deltas through the SAME loadout modelling;
-"equip-compare: this upgrade mostly benefits [dimensions/spells]". The live-GetItemStats
-item tooltip (UI-item-tooltip) already exists; this adds the offline DB for compare/search
-and gear the player isn't hovering. Reuses explainItemDelta - no forked value math.
+### S8 - DATA-items + gear compare ◐  (strongest community demand)
+v0 SHIPPED (v0.9.0): `Impact.compareItems` nets two items' per-dimension impact (reuses
+explainItemDelta, no forked math); the item tooltip shows "vs equipped [slot]" using live
+GetItemStats on the equipped item. SCOPE DECISION: the offline ItemSparse DB is
+deliberately deferred - shipping ~all items is megabytes of addon bloat, and live
+GetItemStats already covers every item the player holds (the leveling use case). A
+curated/filtered item DB (for out-of-hand lookup/search) can follow if demand appears.
+Remaining: in-game verify the "vs equipped" render + slot resolution (fold into S3).
 
 ### S9 - ASSIST-hud (Pillar 2) ☐
 `C_AssistedCombat.GetNextCastSpell()` (confirmed present live) -> a movable HUD showing the

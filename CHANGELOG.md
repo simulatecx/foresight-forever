@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.9.0 - 2026-10-11
+
+Gear compare (DATA-items v0): the item tooltip now tells you whether a drop is an upgrade
+for *your* character, dimension by dimension.
+
+- `Impact.compareItems(loadout, statsA, statsB)` nets two items' per-dimension impact,
+  built on the existing explainItemDelta diff path (no forked value math).
+- The item tooltip gains a "vs equipped [slot]" line: it reads the item currently in the
+  slot this one would occupy (live GetItemStats) and shows the net dimension swing of
+  equipping it ("+3.0% Spellcasting, -2.0% Tankability"). Degrade-safe; nothing shown
+  when the slot is empty or the item isn't comparable gear.
+- SCOPE: the offline ItemSparse database is deliberately NOT shipped - it would add
+  megabytes of addon bloat, and live GetItemStats already covers every item in hand (the
+  leveling use case). A curated/filtered item DB can follow if out-of-hand lookup is wanted.
+- Selftest grows to 69 (compare nets Int-item vs Stamina-item to the right dimensions;
+  the vs-equipped block renders).
+
+*Features:* DATA-items, UI-item-tooltip, MODEL-impact-diff, QA-selftest-harness
+
 ## 0.8.3 - 2026-10-11
 
 DATA-traits Phase 2: Forever's trait talents now move the what-if model, not just show

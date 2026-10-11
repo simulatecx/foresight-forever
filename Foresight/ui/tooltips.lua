@@ -217,8 +217,22 @@ function Tooltips.mapItemStats(raw)
     return out
 end
 
+-- INVTYPE -> the equipped inventory slot(s) to compare a hovered item against. First
+-- matching slot that holds an item is used. Common slots only; unknown types skip.
+local INVSLOT = {
+    INVTYPE_HEAD = { 1 }, INVTYPE_NECK = { 2 }, INVTYPE_SHOULDER = { 3 },
+    INVTYPE_CHEST = { 5 }, INVTYPE_ROBE = { 5 }, INVTYPE_WAIST = { 6 },
+    INVTYPE_LEGS = { 7 }, INVTYPE_FEET = { 8 }, INVTYPE_WRIST = { 9 },
+    INVTYPE_HAND = { 10 }, INVTYPE_FINGER = { 11, 12 }, INVTYPE_TRINKET = { 13, 14 },
+    INVTYPE_CLOAK = { 15 }, INVTYPE_WEAPON = { 16, 17 }, INVTYPE_2HWEAPON = { 16 },
+    INVTYPE_WEAPONMAINHAND = { 16 }, INVTYPE_WEAPONOFFHAND = { 17 },
+    INVTYPE_SHIELD = { 17 }, INVTYPE_HOLDABLE = { 17 }, INVTYPE_RANGED = { 18 },
+    INVTYPE_RANGEDRIGHT = { 18 }, INVTYPE_THROWN = { 18 }, INVTYPE_RELIC = { 18 },
+}
+
 -- Build the injected block for an item's mapped stats. Returns line list or nil.
-function Tooltips.itemLines(mapped, loadout)
+-- comparedStats (optional): the equipped item's mapped stats, for a "vs equipped" block.
+function Tooltips.itemLines(mapped, loadout, comparedStats)
     if not loadout then return nil end
     local parts, any = {}, false
     for _, k in ipairs(STAT_ORDER) do
@@ -254,6 +268,23 @@ function Tooltips.itemLines(mapped, loadout)
             text = "no modeled dimension change for your class yet",
             r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
         }
+    end
+
+    -- vs equipped (DATA-items gear compare): net dimension swing of equipping this.
+    if comparedStats then
+        local okc, cmp = pcall(HM.Impact.compareItems, loadout, mapped, comparedStats)
+        if okc and cmp and #cmp > 0 then
+            local segs = {}
+            for i = 1, math.min(#cmp, 3) do
+                local c = cmp[i]
+                local color = c.net >= 0 and "|cff4ade80" or "|cfff87171"
+                segs[#segs + 1] = ("%s%+.1f%%|r %s"):format(color, c.net, c.label)
+            end
+            lines[#lines + 1] = {
+                text = "|cff9d9d9dvs equipped:|r " .. table.concat(segs, ", "),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
     end
     return lines
 end
@@ -355,6 +386,22 @@ local function resolveItemStats(link)
     return ok and raw or nil
 end
 
+-- Mapped stats of the item currently equipped where a hovered item would go (live only,
+-- no shipped item DB). nil if the slot is empty or the item isn't equippable gear.
+local function equippedCompareStats(link)
+    local equipLoc
+    if _G.GetItemInfo then equipLoc = select(9, _G.GetItemInfo(link)) end
+    local slots = equipLoc and INVSLOT[equipLoc]
+    if not (slots and _G.GetInventoryItemLink) then return nil end
+    for _, slot in ipairs(slots) do
+        local eqLink = _G.GetInventoryItemLink("player", slot)
+        if eqLink and eqLink ~= link then
+            return Tooltips.mapItemStats(resolveItemStats(eqLink))
+        end
+    end
+    return nil
+end
+
 local function injectItem(tip)
     if type(tip.GetItem) ~= "function" then return end
     local _, link = tip:GetItem()
@@ -364,7 +411,10 @@ local function injectItem(tip)
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
-    local lines = Tooltips.itemLines(mapped, loadout)
+    local compared
+    local okc, c = pcall(equippedCompareStats, link)
+    if okc then compared = c end
+    local lines = Tooltips.itemLines(mapped, loadout, compared)
     if lines then
         tip.foresightItemLink = link
         attach(tip, lines)

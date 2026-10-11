@@ -9,7 +9,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☑ `DATA-generated-tables` - talents, tabs, impacts, 3,448 spells (cast/cost/tick/cooldown), 555 trait nodes -> `Foresight/data/generated/`
 - ☑ `DATA-formula-registry` - confidence-tagged conversion math (regen, swing, coefficients, rank rule) -> `Foresight/data/formulas.lua`
 - ☑ `DATA-overrides` - curated corrections layered over generated data -> `Foresight/data/overrides.lua`
-- ☐ `DATA-items` - item stats into the pipeline (deferred)
+- ◐ `DATA-items` - gear compare v0 (v0.9.0): `Impact.compareItems` nets two items' per-dimension impact (built on explainItemDelta, no forked math); item tooltip shows a "vs equipped [slot]" block via live GetItemStats. Offline ItemSparse DB deliberately deferred (addon bloat vs live reads) -> `Foresight/model/impact.lua`, `Foresight/ui/tooltips.lua`
 - ☐ `DATA-professions` - profession recipes as modifier sources (deferred)
 - ☑ `DATA-traits` - Retail Trait DB2 (TraitNode/TraitNodeEntry/TraitNodeXTraitNodeEntry/TraitDefinition/SkillLineXTraitTree) -> `traits.lua`: 555 nodes keyed by nodeID with spellID/name/maxRank/ops (via shared build_ops) + bySpell index + tree->class. Covers ALL live nodes incl new Forever talents; adapter resolves every selection by nodeID; `Loadout:withTraitNode` folds any node's ops into the what-if model (phase 2, v0.8.3) -> `pipeline/generate.py`, `Foresight/data/generated/traits.lua`, `Foresight/model/loadout.lua`
 
@@ -41,7 +41,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 67-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 69-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`
