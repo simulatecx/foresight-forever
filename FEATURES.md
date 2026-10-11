@@ -24,10 +24,11 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☑ `MODEL-impact-diff` - evaluate/diff loadouts; stat CHAIN explainer (statImpactDetail: +AP -> dmg/swing, live-derived crit%, mana -> dimensions); itemDerivedLines; compareItems -> `Foresight/model/impact.lua`
 - ☑ `MODEL-talent-summary` - per-talent humanized ops + affected spell names -> `Foresight/model/impact.lua`
 - ☑ `MODEL-stat-advisor` - comparative marginal stat ranking ("For your Spellcasting: Intellect > ... per point"), built on explainStatDelta (no forked value path); /foresight advisor + panel "Stat value" rows; v0 heuristic -> `Foresight/model/impact.lua`
+- ◐ `WHATIF-planner` - persistent future-build workbench (v0.13.0, S16): typed plan deltas (stat / item bundle / trait / buff / racial / race) validated per read, composed through the one loadout delta stack; `/foresight plan add|remove|clear|show` + panel "Future build" section with net impact + chain. Remaining: clickable builder UI (plan-from-tooltip, per-row remove), in-game verify -> `Foresight/model/plan.lua`, `Foresight/ui/panel_model.lua`
 
 ## SYNERGY - talents that work together
 - ◐ `SYNERGY-engine` - groups impact sources by shared lever (stat/spell/school/mechanic); tooltip "Synergy:" line + `/foresight synergy <name>`; v0.12.0 draws from ALL sources - talents + the player's racials + active consumable buffs via optional player context (typed members, one op-walker). Remaining: chained synergies (A boosts Int -> B converts Int) + the tree-highlight UI -> `Foresight/model/synergy.lua`
-- ☐ `SYNERGY-highlight` - Diablo-4-style talent-tree highlight of a selected synergy group (LibCustomGlow PixelGlow, node buttons located by name; dropdown + stats-panel section) - researched 2026-10-11 (docs/RESEARCH-2026-10-11.md C1)
+- ◐ `SYNERGY-highlight` - Diablo-4-style talent-tree highlight of a synergy theme (v0.13.0): `/foresight synergy <theme>` glows every member node (enumerator probe -> name-match fallback; house pulse textures, taint-free; theme saved per char, auto-applies on talent-UI open, `clear` stops). Remaining: in-game render verify, talent-frame dropdown, LibCustomGlow at packaging -> `Foresight/ui/synergy_highlight.lua`
 
 ## CONSUME / RACIAL - more impact sources (researched 2026-10-11)
 - ◐ `CONSUME-buffs` - consumable buff impact (v0.12.0): `consumables.lua` (390 potions/elixirs/flasks/scrolls/foods; Well-Fed one-hop keyed by the triggered aura spell) + `Loadout:withBuff`/`Impact.buffDelta` (one diff = active gains / expiry loss); secret-safe live read (`Snapshot.captureActiveBuffs` via never-secret spellId, `Guards.aurasSecret` degrade); consumable tooltip "While active / On expiry" block + `/foresight buffs`. Remaining: in-game render verify -> `pipeline/generate.py`, `Foresight/data/generated/consumables.lua`, `Foresight/model/loadout.lua`, `Foresight/ui/tooltips.lua`
@@ -40,7 +41,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☑ `CORE-saveddb` - versioned SavedVariables with per-character sections -> `Foresight/core/init.lua`
 
 ## UI - surfaces
-- ◐ `UI-stats-panel` - character-frame side panel (Dimensions/Regen/Mechanics/What-if/Stat-value), dark class-colored skin, zebra rows, colored deltas, playstyle subtitle; DRAGGABLE with per-character saved position (validated) + `/foresight panel reset`; model selftest-covered; in-game render pending next login -> `Foresight/ui/panel_model.lua`, `Foresight/ui/stats_panel.lua`
+- ◐ `UI-stats-panel` - character-frame side panel (Dimensions/Regen/Mechanics/What-if/Future-build/Stat-value), dark class-colored skin, zebra rows, colored deltas, playstyle subtitle; DRAGGABLE with per-character saved position (validated) + `/foresight panel reset`; LIVE refresh (gear/stats/talents/buffs, 0.2s debounce, v0.13.0); model selftest-covered; in-game render pending next login -> `Foresight/ui/panel_model.lua`, `Foresight/ui/stats_panel.lua`
 - ☑ `UI-export-window` - copyable scroll EditBox (/foresight export), fixes chat-copy gap -> `Foresight/ui/export.lua`
 - ◐ `UI-talent-tooltip` - talent hover injection (S2): hooks `GameTooltip.SetTraitEntry` (live-verified; the TraitEntry data type isn't exposed). `nodeImpactLines` shows, for EVERY trait node (classic + new Forever), the affected spells, each op at max rank, and the derived "what this does for you now" chain. `traitTipProbe` diagnostic records hook fires. Live render confirm pending next harvest -> `Foresight/ui/tooltips.lua`
 - ◐ `UI-spell-tooltip` - ability tooltip layman lines: client cast time + (p) coefficient translate live Spell/Healing Power into "+N to this spell per cast"; shares the ONE injection module; logic selftest-covered, in-game hook pending S3 verify -> `Foresight/ui/tooltips.lua`
@@ -49,7 +50,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 97-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 105-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

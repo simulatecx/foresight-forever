@@ -136,6 +136,34 @@ function PanelModel.build(loadout)
     end
     sections[#sections + 1] = { id = "whatif", title = "What-if", rows = whatifRows }
 
+    -- Future build (WHATIF-planner): the user's composed plan + its net impact.
+    local planRows = {}
+    local plan = HM.Plan and HM.Plan.store() or {}
+    if #plan == 0 then
+        planRows[1] = { label = "empty", value = "/foresight plan add stat Agility 5",
+                        wide = true }
+    else
+        for i, d in ipairs(plan) do
+            planRows[#planRows + 1] = { label = i .. ".", value = HM.Plan.describe(d), wide = true }
+        end
+        local okp, changes, chain = pcall(HM.Plan.summary, loadout, plan)
+        for _, l in ipairs(okp and chain or {}) do
+            planRows[#planRows + 1] = { label = "", value = l, wide = true }
+        end
+        local shown = 0
+        for _, c in ipairs(okp and changes or {}) do
+            if shown >= 4 then break end
+            shown = shown + 1
+            planRows[#planRows + 1] = {
+                label = "", value = ("-> %s %+.1f%%"):format(c.label, c.pct or 0), wide = true,
+            }
+        end
+        if okp and #changes == 0 and #chain == 0 then
+            planRows[#planRows + 1] = { label = "", value = "no modeled change yet", wide = true }
+        end
+    end
+    sections[#sections + 1] = { id = "plan", title = "Future build", rows = planRows }
+
     -- Stat value: each stat's strongest impact per +1 point (MODEL-stat-advisor).
     local statRows = {}
     local ok, ranked = pcall(HM.Impact.rankStats, loadout)

@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.13.0 - 2026-10-12
+
+SYNERGY TREE-HIGHLIGHT + the FUTURE-BUILD PLANNER (the PoE-style "what if I got those
+pants" workbench), plus fully dynamic panel scores.
+
+- SYNERGY-highlight: `/foresight synergy <theme>` now also lights up every talent node
+  in that theme on the talent tree (Diablo-paragon selection) and saves the theme per
+  character - the tree glows whenever you open it; `/foresight synergy clear` stops it.
+  New `ui/synergy_highlight.lua`: pure selector (theme -> trait node ids/names; racial/
+  buff members excluded - no buttons) + locator (official enumerator PROBED first,
+  bounded name-match scan fallback - node button frame name = talent name, the proven
+  owner-name signal) + house glow (own pulsing border/fill textures parented to the
+  buttons; no Blizzard glow reuse, no taint; LibCustomGlow can slot in at packaging).
+- WHATIF-planner (triaged S16): compose a persistent future build - `/foresight plan
+  add stat Agility 5`, `add item Pants Agility=5,Stamina=3`, `add buff mongoose`,
+  `add talent ancestral knowledge 5`, `remove <n>`, `clear` - and the plan + its net
+  dimension impact render in a new stats-panel "Future build" section and in
+  `/foresight plan`. New pure `model/plan.lua`: typed deltas validated against the
+  generated data on EVERY read (untrusted-input law - tampered SavedVariables heal to
+  the valid subset), composed through the ONE loadout delta stack (no new math);
+  `Impact.chainLines` exposes the derived-stat chain between any two loadouts.
+- Panel scores are now fully live: refresh on talent changes (TRAIT_CONFIG_UPDATED /
+  PLAYER_TALENT_UPDATE / CHARACTER_POINTS_CHANGED) and buff changes (UNIT_AURA) in
+  addition to gear/stats - debounced to one rebuild per 0.2s; event names pcall-
+  registered so client drift degrades silently.
+- Selftest 105 checks (+6 planner, +2 highlight selector; panel section count now 6).
+
+*Features:* SYNERGY-highlight, WHATIF-planner, SYNERGY-engine, UI-stats-panel, MODEL-loadout-whatif, QA-selftest-harness
+
 ## 0.12.0 - 2026-10-11
 
 CONSUMABLE BUFFS + ALL-SOURCES SYNERGY (phases 2+3 of the expansion): hover a flask/

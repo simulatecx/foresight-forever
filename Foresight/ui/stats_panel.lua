@@ -274,13 +274,22 @@ local function createPanel()
 
     parent:HookScript("OnHide", function() panel:Hide() end)
 
+    -- Live refresh while visible: gear, stats, talents, and buffs all re-snapshot.
+    -- pcall per registration - event names drift across client flavors (degrade law).
     local events = _G.CreateFrame("Frame")
-    events:RegisterEvent("UNIT_STATS")
-    events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+    for _, ev in ipairs({ "UNIT_STATS", "PLAYER_EQUIPMENT_CHANGED", "UNIT_AURA",
+                          "TRAIT_CONFIG_UPDATED", "PLAYER_TALENT_UPDATE",
+                          "CHARACTER_POINTS_CHANGED" }) do
+        pcall(events.RegisterEvent, events, ev)
+    end
+    -- Debounced: UNIT_AURA can burst in combat; one rebuild per 0.2s is plenty.
+    local pending
     events:SetScript("OnEvent", function(_, _, unit)
-        if unit == nil or unit == "player" then
-            StatsPanel.refresh()
-        end
+        if unit ~= nil and unit ~= "player" then return end
+        if not panel:IsShown() or pending then return end
+        pending = true
+        local function run() pending = nil; StatsPanel.refresh() end
+        if _G.C_Timer and _G.C_Timer.After then _G.C_Timer.After(0.2, run) else run() end
     end)
 end
 

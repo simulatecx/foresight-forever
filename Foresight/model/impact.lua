@@ -279,6 +279,12 @@ function Impact.talentChainLines(loadout, nodeId, rank)
     return derivedChainLines(loadout, loadout:withTraitNode(nodeId, rank))
 end
 
+-- The derived-stat chain between any two loadouts (WHATIF-planner surface; stats
+-- only - dimension changes come from diff so callers never show them twice).
+function Impact.chainLines(base, modeled)
+    return derivedChainLines(base, modeled, true)
+end
+
 -- CONSUME-buffs: what a consumable buff is worth while active - and, sign-flipped,
 -- what expires with it. One diff through the shared path; no forked math.
 -- Returns derived chain lines (incl. dimension moves) + the raw changes.

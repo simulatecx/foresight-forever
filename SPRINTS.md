@@ -133,17 +133,35 @@ fold into the base build - live stats already include racial passives (double-co
 Synergy ingestion SHIPPED v0.12.0. Remaining: panel "Your <Race> racials" line + in-game
 verify; curation -> overrides.racialImpacts. Details: research doc B.
 
-### SYNERGY - impact sources that work together ◐
+### S16 - WHATIF-planner: the future-build workbench ◐  (triaged 2026-10-12)
+Fit & Overlap - Category MODEL -> UI. Verdict: Enhance `model/loadout.lua` delta stack +
+`ui/panel_model.lua` What-if surface. Complements: SYNERGY-engine, DATA-items gear compare.
+Touches: new `model/plan.lua` (pure), `model/impact.lua` (chainLines wrapper), `ui/panel_model.lua`
+(new "Future build" section), `core/init.lua` (/foresight plan), selftest. Avoid duplicating: the
+diff path (compose existing withX only) and the stats panel (one renderer). Mobile: panel section
+reuses the 240px wide-row renderer (passes the 1280x720 @ 0.65 binding). Languages: enUS addon
+strings (house state, no i18n layer yet). Trust: display-only, user's own composition, (p) tags
+carry through. Data: new per-char SavedVariables `plan` (typed delta list, no PII, type-validated
+on read - untrusted-input law, cleared via /foresight plan clear). Abuse: not externally reachable;
+tampered SavedVariables degrade to an empty plan.
+
+As a hardcore player, I want to compose a persistent "future build" plan - talents I'll take,
+gear stats I'm hunting ("pants with +5 Agility"), buffs I'd run - and see the net dimension
+impact vs my character now, so I can plan builds Path-of-Exile-style inside the game.
+AC: ☑ plan persists per character and survives tampering (validated, drops garbage with a note)
+· ☑ deltas compose through the ONE loadout path (stat, item bundle, trait, buff, racial, race)
+· ☑ `/foresight plan` add/remove/clear/show with net impact + chain lines · ☑ panel "Future
+build" section renders the plan + top net deltas live · ☐ clickable builder UI (add-from-tooltip
+"plan this", per-delta remove buttons) - next iteration · ☐ in-game render verify (S3 session).
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
 /foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),
 themes include the player's racials and active consumables alongside talents - typed members
 (racial:<spellID>, buff:<itemId>) through one op-walker; trait-only without context.
-NEXT (baked-in UI, researched 2026-10-11 doc C1): talent-tree node highlight
-(Diablo-4 paragon selection) - node buttons are named by talent (proven), locate via
-PlayerSpellsFrame probe + name-match fallback, glow via LibCustomGlow PixelGlow (key-scoped, no
-taint; NOT the tainting ActionButton glow). Dropdown on the talent frame + a stats-panel Synergies
-section, one validated settings.synergy.theme syncing all surfaces. New ui/synergy_highlight.lua.
-Then: chained synergies (A boosts Int -> B converts Int to AP).
+TREE-HIGHLIGHT SHIPPED (v0.13.0): /foresight synergy <theme> glows member nodes (enumerator
+probe -> name-match fallback; house pulse textures, taint-free; settings.synergy.theme saved,
+auto-applies on talent-UI open; clear stops). Remaining: in-game render verify, talent-frame
+dropdown, LibCustomGlow swap at packaging (doc C1). Then: chained synergies (A boosts Int ->
+B converts Int to AP).
 
 ## Backlog (not yet scheduled)
 - ☐ DATA-professions: SkillLine/recipes -> consumables/crafted gear as modifier sources.

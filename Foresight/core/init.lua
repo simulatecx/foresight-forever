@@ -149,13 +149,29 @@ local function onSlash(input)
                        buffs = HM.Snapshot.captureActiveBuffs() }
         end
         if rest == "" then
-            printMsg("synergy themes - /foresight synergy <name>:")
+            printMsg("synergy themes - /foresight synergy <name> (or clear):")
             printMsg("  " .. table.concat(HM.Synergy.themes(player), ", "))
+        elseif rest == "clear" then
+            if HM.SynergyHighlight then
+                HM.SynergyHighlight.setTheme(nil)
+                if HM.SynergyHighlight.clear then pcall(HM.SynergyHighlight.clear) end
+            end
+            printMsg("synergy highlight cleared")
         else
             local r = HM.Synergy.query(rest, player)
             if r then
                 printMsg(("%s synergy - %d sources push this lever:"):format(r.label, #r.nodes))
                 printMsg("  " .. table.concat(r.nodes, ", "))
+                -- SYNERGY-highlight: save the theme + glow the talent tree now/on open.
+                if HM.SynergyHighlight and HM.SynergyHighlight.apply then
+                    HM.SynergyHighlight.setTheme(rest)
+                    local okh, lit = pcall(HM.SynergyHighlight.apply, rest)
+                    if okh and type(lit) == "number" and lit > 0 then
+                        printMsg(("%d talent nodes highlighted (/foresight synergy clear to stop)"):format(lit))
+                    else
+                        printMsg("theme saved - your talent tree glows when opened (/foresight synergy clear to stop)")
+                    end
+                end
             else
                 printMsg("no synergy matches '" .. rest .. "' (try: intellect, crit, threat, nature, lightning)")
             end
@@ -182,6 +198,96 @@ local function onSlash(input)
             local okd, lines = pcall(HM.Impact.buffDelta, loadout, b.itemId)
             for _, line in ipairs(okd and lines or {}) do printMsg("  " .. line) end
             printMsg("  on expiry these gains reverse")
+        end
+    elseif cmd == "plan" then
+        -- WHATIF-planner: compose a persistent future build and see its net impact.
+        local Plan = HM.Plan
+        if not Plan then
+            printMsg("plan module unavailable")
+            return
+        end
+        local sub, planArgs = rest:match("^(%S*)%s*(.-)$")
+        local plan = Plan.store()
+        local function rerender()
+            if HM.StatsPanel and HM.StatsPanel.refresh then pcall(HM.StatsPanel.refresh) end
+        end
+        if sub == "" or sub == "show" then
+            if #plan == 0 then
+                printMsg("plan is empty - /foresight plan add stat Agility 5 | add item <label> Stat=N,... | add buff <name> | add talent <name> [rank] | remove <n> | clear")
+                return
+            end
+            printMsg("your future build:")
+            for i, d in ipairs(plan) do printMsg(("  %d. %s"):format(i, Plan.describe(d))) end
+            local snapshot = HM.Snapshot and HM.Snapshot.capture()
+            if snapshot then
+                local loadout = HM.Loadout.fromSnapshot(snapshot)
+                local okp, changes, chain = pcall(Plan.summary, loadout, plan)
+                for _, l in ipairs(okp and chain or {}) do printMsg("  " .. l) end
+                for _, c in ipairs(okp and changes or {}) do
+                    printMsg(("  -> %s %+.1f%%"):format(c.label, c.pct or 0))
+                end
+            end
+        elseif sub == "clear" then
+            Plan.save({})
+            rerender()
+            printMsg("plan cleared")
+        elseif sub == "remove" then
+            local n = tonumber(planArgs)
+            if n and plan[n] then
+                local gone = Plan.describe(plan[n])
+                table.remove(plan, n)
+                Plan.save(plan)
+                rerender()
+                printMsg("removed " .. gone)
+            else
+                printMsg("usage: /foresight plan remove <entry number>")
+            end
+        elseif sub == "add" then
+            local kind, spec = planArgs:match("^(%S*)%s*(.-)$")
+            local delta
+            if kind == "stat" then
+                local stat, amount = spec:match("^(%S+)%s+(-?%d+%.?%d*)$")
+                -- Accept lowercase primaries ("agility" -> "Agility").
+                if stat and not Plan.stats[stat] then
+                    local cap = stat:sub(1, 1):upper() .. stat:sub(2):lower()
+                    if Plan.stats[cap] then stat = cap end
+                end
+                delta = stat and { type = "stat", stat = stat, amount = tonumber(amount) }
+            elseif kind == "item" then
+                local label, bundle = spec:match("^(.-)%s+(%S+=%S+)$")
+                local stats = {}
+                for statName, amount in (bundle or ""):gmatch("(%a+)=(-?%d+%.?%d*)") do
+                    local key = statName
+                    if not Plan.stats[key] then
+                        local cap = key:sub(1, 1):upper() .. key:sub(2):lower()
+                        if Plan.stats[cap] then key = cap end
+                    end
+                    stats[key] = tonumber(amount)
+                end
+                delta = { type = "item", label = label or "item", stats = stats }
+            elseif kind == "buff" then
+                local id = Plan.findConsumable(spec)
+                delta = id and { type = "buff", id = id }
+                if not delta then printMsg("no consumable matches '" .. spec .. "'") end
+            elseif kind == "talent" then
+                local name, rank = spec:match("^(.-)%s+(%d+)$")
+                if not name then name = spec end
+                local nodeId = Plan.findTraitNode(name)
+                delta = nodeId and { type = "trait", nodeId = nodeId, rank = tonumber(rank) }
+                if not delta then printMsg("no talent matches '" .. spec .. "'") end
+            end
+            local clean = delta and Plan.validateDelta(delta)
+            if clean then
+                plan[#plan + 1] = clean
+                Plan.save(plan)
+                rerender()
+                printMsg(("planned: %s (%d in plan - /foresight plan to review)"):format(
+                    Plan.describe(clean), #plan))
+            elseif kind ~= "buff" and kind ~= "talent" then
+                printMsg("usage: /foresight plan add stat <Stat> <n> | add item <label> Stat=N,... | add buff <name> | add talent <name> [rank]")
+            end
+        else
+            printMsg("usage: /foresight plan [show] | add ... | remove <n> | clear")
         end
     elseif cmd == "panel" then
         if rest == "reset" then
@@ -210,7 +316,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name] | buffs | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | buffs | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

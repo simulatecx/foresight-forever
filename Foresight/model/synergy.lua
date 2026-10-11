@@ -161,15 +161,17 @@ function Synergy.query(q, player)
         return ns
     end
     for key, list in pairs(c.stat) do
-        if key:lower() == q then return { label = key, nodes = names(list) } end
+        if key:lower() == q then return { label = key, nodes = names(list), members = list } end
     end
     for key, list in pairs(c.mechanic) do
         if key:lower() == q or (q == "mana" and key == "cost") then
-            return { label = key, nodes = names(list) }
+            return { label = key, nodes = names(list), members = list }
         end
     end
     for key, list in pairs(c.school) do
-        if key:lower():find(q, 1, true) then return { label = key .. " damage", nodes = names(list) } end
+        if key:lower():find(q, 1, true) then
+            return { label = key .. " damage", nodes = names(list), members = list }
+        end
     end
     -- Spell-name substring (e.g. "lightning").
     local matchKey, matchList, best
@@ -178,7 +180,7 @@ function Synergy.query(q, player)
             if not best or #list > best then best = #list; matchKey = key; matchList = list end
         end
     end
-    if matchKey then return { label = matchKey, nodes = names(matchList) } end
+    if matchKey then return { label = matchKey, nodes = names(matchList), members = matchList } end
     return nil
 end
 

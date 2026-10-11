@@ -200,7 +200,16 @@ function HM.runSelftest(out)
 
     -- Stats panel model (the renderer is in-game only; the model is fully testable).
     local model = HM.PanelModel.build(base)
-    check("panel model has 5 sections", model and #model.sections == 5, model and #model.sections)
+    check("panel model has 6 sections (incl. Future build)", model and #model.sections == 6,
+        model and #model.sections)
+    check("panel Future build section hints when the plan is empty", (function()
+        for _, s in ipairs(model.sections) do
+            if s.id == "plan" then
+                return #s.rows == 1 and (s.rows[1].value or ""):find("plan add", 1, true) ~= nil
+            end
+        end
+        return false
+    end)())
     check("panel exposes a playstyle label", model.playstyle and model.playstyle:find("leaning") ~= nil)
     check("panel position validates untrusted saved values", (function()
         local good = HM.PanelModel.normalizePanelPos({ point = "TOPLEFT", relPoint = "TOPLEFT", x = 100, y = -50 })
@@ -503,6 +512,61 @@ function HM.runSelftest(out)
         return type(found) == "table" and #found == 0
     end)())
 
+    -- WHATIF-planner: persistent future-build plan over the one delta stack.
+    check("plan validates typed deltas and drops garbage", (function()
+        local clean, dropped = HM.Plan.validate({
+            "garbage",
+            { type = "stat", stat = "Agility", amount = 5 },
+            { type = "stat", stat = "NotAStat", amount = 5 },
+            { type = "stat", stat = "Spirit", amount = 1e9 },
+            { type = "trait", nodeId = 104756 },
+            { type = "trait", nodeId = -1 },
+            { type = "buff", id = 13452 },
+            { type = "item", label = "pants", stats = { Agility = 5, junk = 3 } },
+        })
+        if not (#clean == 4 and dropped == 4) then return false, #clean .. "/" .. dropped end
+        return clean[4].stats.Agility == 5 and clean[4].stats.junk == nil
+            and clean[2].rank ~= nil -- trait rank defaults to maxRank
+    end)())
+    check("plan composes stat+item+buff+trait through the one delta path", (function()
+        local plan = HM.Plan.validate({
+            { type = "stat", stat = "Agility", amount = 5 },
+            { type = "item", label = "future pants", stats = { Intellect = 10 } },
+            { type = "buff", id = 13452 },
+            { type = "trait", nodeId = 104756, rank = 1 },
+        })
+        local changes, chain = HM.Plan.summary(base, plan)
+        if #changes == 0 or #chain == 0 then return false end
+        for _, c in ipairs(changes) do
+            if c.id == "spellcasting" and c.delta > 0 then return true end
+        end
+        return false
+    end)())
+    check("plan store heals a tampered SavedVariables plan", (function()
+        if not HM.charDb then return false end
+        local db = HM.charDb()
+        local saved = db.plan
+        db.plan = "corrupted"
+        local plan = HM.Plan.store()
+        local ok = type(plan) == "table" and #plan == 0 and type(db.plan) == "table"
+        db.plan = saved
+        return ok
+    end)())
+    check("plan describes deltas in human terms", (function()
+        local d1 = HM.Plan.describe({ type = "stat", stat = "Agility", amount = 5 })
+        local d2 = HM.Plan.describe({ type = "item", label = "pants", stats = { Agility = 5 } })
+        local d3 = HM.Plan.describe({ type = "buff", id = 13452 })
+        return d1 == "+5 Agility" and d2:find("pants", 1, true) ~= nil
+            and d2:find("+5 Agility", 1, true) ~= nil
+            and d3 == "Elixir of the Mongoose"
+    end)())
+    check("plan lookup helpers resolve names", (function()
+        local nodeId = HM.Plan.findTraitNode("ancestral knowledge")
+        local itemId = HM.Plan.findConsumable("mongoose")
+        return nodeId ~= nil and HM.gen.traits.nodes[nodeId].name == "Ancestral Knowledge"
+            and itemId ~= nil and HM.gen.consumables[itemId].name:find("Mongoose", 1, true) ~= nil
+    end)())
+
     check("synergy groups talents by shared theme", (function()
         HM.Synergy._reset()
         local r = HM.Synergy.query("intellect")
@@ -549,6 +613,34 @@ function HM.runSelftest(out)
         end
         HM.Synergy._reset()
         return hit
+    end)())
+    -- SYNERGY-highlight: the pure selector behind the talent-tree glow.
+    check("highlight selector returns trait ids + names for a theme", (function()
+        HM.Synergy._reset()
+        local ids, names = HM.SynergyHighlight.traitMembers("intellect")
+        HM.Synergy._reset()
+        if not (ids and names) then return false end
+        local n = 0
+        for _ in pairs(ids) do n = n + 1 end
+        return n > 1 and names["Ancestral Knowledge"] == true
+    end)())
+    check("highlight selector excludes racial/buff members (no tree buttons)", (function()
+        HM.Synergy._reset()
+        -- With Gnome-Mage context the "max mana" theme includes racial Expansive Mind,
+        -- but the HIGHLIGHT set must only carry trait nodes (racials have no buttons).
+        local player = { raceId = 7, classToken = "MAGE" }
+        local r = HM.Synergy.query("max mana", player)
+        local hasRacial = false
+        for _, n in ipairs((r and r.nodes) or {}) do
+            if n:find("(racial)", 1, true) then hasRacial = true end
+        end
+        local ids, names = HM.SynergyHighlight.traitMembers("max mana", player)
+        HM.Synergy._reset()
+        if not (hasRacial and ids and names) then return false end
+        for m in pairs(ids) do
+            if type(m) ~= "number" then return false end
+        end
+        return names["Expansive Mind"] == nil
     end)())
     check("synergy without player context stays trait-only", (function()
         HM.Synergy._reset()
