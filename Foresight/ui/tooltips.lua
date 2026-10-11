@@ -581,6 +581,41 @@ local function equippedCompareStats(link)
     return nil
 end
 
+-- Write-back journal (CONSUME-buffs QA loop): every consumable hover is logged to
+-- SavedVariables - injected ones into buffTipLog (last 15, proves the surface works
+-- and shows exactly what we displayed), and ClassID-0 items we have NO data for into
+-- missedConsumables (capped). The harvester surfaces both; data gaps close through
+-- the pipeline/overrides - the addon never edits its own data in-game.
+local function journalConsumableTip(itemId, link, injected)
+    if not (HM.db and type(HM.db.collect) == "table") then return end
+    local c = HM.db.collect
+    local name = type(link) == "string" and link:match("%[(.-)%]") or nil
+    if injected then
+        if type(c.buffTipLog) ~= "table" then c.buffTipLog = {} end
+        for i = #c.buffTipLog, 1, -1 do
+            if c.buffTipLog[i].itemId == itemId then table.remove(c.buffTipLog, i) end
+        end
+        c.buffTipLog[#c.buffTipLog + 1] = { itemId = itemId, name = name,
+            at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?" }
+        while #c.buffTipLog > 15 do table.remove(c.buffTipLog, 1) end
+        return
+    end
+    if not _G.GetItemInfoInstant then return end
+    local ok, _, _, _, _, _, classID, subClassID = pcall(_G.GetItemInfoInstant, itemId)
+    if not ok or classID ~= 0 then return end -- only consumables are data gaps
+    if type(c.missedConsumables) ~= "table" then c.missedConsumables = {} end
+    local entry = c.missedConsumables[itemId]
+    if entry then
+        entry.count = (entry.count or 1) + 1
+        return
+    end
+    local n = 0
+    for _ in pairs(c.missedConsumables) do n = n + 1 end
+    if n >= 100 then return end
+    c.missedConsumables[itemId] = { name = name, subClass = subClassID, count = 1,
+        at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?" }
+end
+
 local function injectItem(tip)
     if tip.foresightInjected then return end
     if type(tip.GetItem) ~= "function" then return end
@@ -597,7 +632,10 @@ local function injectItem(tip)
     if not lines then
         -- No gear stats: consumables carry their impact as a generated buff block.
         local itemId = tonumber(type(link) == "string" and link:match("item:(%d+)") or nil)
-        if itemId then lines = Tooltips.buffLines(itemId, loadout) end
+        if itemId then
+            lines = Tooltips.buffLines(itemId, loadout)
+            journalConsumableTip(itemId, link, lines ~= nil)
+        end
     end
     if lines then
         tip.foresightInjected = true

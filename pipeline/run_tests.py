@@ -25,12 +25,33 @@ def toc_files() -> list[Path]:
     return files
 
 
+def version_sync_check() -> bool:
+    """TOC Version must equal core/init.lua HM.version. Incident 2026-10-11: the
+    constant sat three releases behind and a harvest mis-diagnosed the live client."""
+    import re
+
+    toc = (ADDON_DIR / "Foresight.toc").read_text(encoding="utf-8")
+    init = (ADDON_DIR / "core" / "init.lua").read_text(encoding="utf-8")
+    toc_ver = re.search(r"^## Version:\s*(\S+)", toc, re.M)
+    code_ver = re.search(r'^HM\.version\s*=\s*"([^"]+)"', init, re.M)
+    if not (toc_ver and code_ver) or toc_ver.group(1) != code_ver.group(1):
+        print(f"VERSION DRIFT RED - Foresight.toc says "
+              f"{toc_ver.group(1) if toc_ver else '?'} but core/init.lua HM.version is "
+              f"{code_ver.group(1) if code_ver else '?'} - keep them identical")
+        return False
+    print(f"version sync green: v{toc_ver.group(1)} (toc == code)")
+    return True
+
+
 def main() -> int:
     # Compliance gate first: a selftest pass means nothing if the code breaks the
     # rules the account depends on. Red here blocks the ship outright.
     import check_compliance
 
     if check_compliance.main() != 0:
+        return 1
+
+    if not version_sync_check():
         return 1
 
     # Harvest sandbox gate: untrusted SavedVariables must never reach os/io/python.

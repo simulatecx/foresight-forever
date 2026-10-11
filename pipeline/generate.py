@@ -596,6 +596,18 @@ def main() -> int:
                         t_ops = build_ops(tsid, effects_by_spell, class_options,
                                           family_members, player_spells, equipped_items)
                         if decoded(t_ops):
+                            # MAGNITUDE LAW (ground-truthed 2026-10-11): Forever's
+                            # reworked foods park UNIT values (bp 1) on SHARED Well-Fed
+                            # spells and carry the real magnitude on the trigger
+                            # effect's BasePoints (Slitherskin Mackerel: aura227 bp6 ->
+                            # Well Fed +1 AP unit = +6 AP; Mithril Head Trout bp20 ->
+                            # +20). Classic foods keep the magnitude on the triggered
+                            # spell (trigger bp 0/1, e.g. Dirge's Chops -> +25 Stam).
+                            # So: scale hop ops by the trigger bp when it is > 1.
+                            scale = float(e["EffectBasePointsF"] or 0)
+                            if scale > 1:
+                                for o in t_ops:
+                                    o["maxValue"] = (o.get("maxValue") or 0) * scale
                             buff_sid, ops = tsid, t_ops
                             break
             if not decoded(ops):

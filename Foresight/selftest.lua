@@ -465,6 +465,22 @@ function HM.runSelftest(out)
         return e and e.type == "food" and e.buffSpellId == 25661
             and op and op.kind == "stat" and op.stat == "Stamina" and op.maxValue == 25
     end)())
+    check("Forever food magnitude = trigger bp x Well-Fed unit (Mackerel +6 AP)", (function()
+        -- Incident 2026-10-11: shared Well-Fed spells carry UNIT values; the real
+        -- magnitude rides the aura-227 trigger effect (user saw +1 instead of +6).
+        local e = HM.gen.consumables[787] -- Slitherskin Mackerel
+        if not (e and e.buffSpellId == 1249519) then return false end
+        local ap
+        for _, op in ipairs(e.ops) do
+            if op.kind == "attackPower" then ap = op.maxValue end
+        end
+        local trout = HM.gen.consumables[8364] -- Mithril Head Trout: same spell, x20
+        local tap
+        for _, op in ipairs((trout and trout.ops) or {}) do
+            if op.kind == "attackPower" then tap = op.maxValue end
+        end
+        return ap == 6 and tap == 20
+    end)())
     check("withBuff(Mongoose) folds crit exactly (flat 2 spell, 2+derived melee)", (function()
         local b, m = base:build(), base:withBuff(13452):build()
         local dSpell = m.graph:value("stat.spellCritPct", m.ctx)

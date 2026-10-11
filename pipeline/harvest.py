@@ -251,6 +251,18 @@ def main() -> int:
             print(f"   trait-tooltip hook last fired: {json.dumps(ttp, ensure_ascii=False)}")
         if collect.get("lastTooltipOwner"):
             print(f"   last tooltip owner frame: {collect['lastTooltipOwner']}")
+        # CONSUME-buffs QA loop: what the consumable tooltip actually did in-game.
+        buff_log = collect.get("buffTipLog") or []
+        if buff_log:
+            print(f"   consumable tooltips injected ({len(buff_log)} recent):")
+            for e in buff_log:
+                print(f"     {e.get('at')} item {e.get('itemId')} {e.get('name')}")
+        missed = collect.get("missedConsumables") or {}
+        if missed:
+            print(f"   !! consumables hovered WITHOUT data ({len(missed)}) - pipeline gaps:")
+            for iid, e in sorted(missed.items(), key=lambda kv: str(kv[0])):
+                print(f"     item {iid} {e.get('name')} subclass={e.get('subClass')} "
+                      f"seen x{e.get('count')}")
         shape = collect.get("talentApiShape") or {}
         if shape:
             print(f"   talent API shape probe @{shape.get('at')}:")

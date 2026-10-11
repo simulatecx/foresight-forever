@@ -6,7 +6,37 @@ local ADDON_NAME, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 _G.Foresight = HM
 
-HM.version = "0.10.0" -- keep in sync with Foresight.toc (collect journals this stamp)
+-- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
+-- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
+-- harvest mis-diagnose a live-client state). Collect journals this stamp.
+HM.version = "0.13.1"
+
+-- Detect a stale in-client file list: /reload re-runs files but a client started
+-- before a deploy that ADDED files to the .toc never loads them until a full restart.
+-- Checks that every module this code generation expects actually loaded.
+function HM.staleCodeCheck()
+    local missing = {}
+    for _, m in ipairs({ "Plan", "SynergyHighlight", "Racials" }) do
+        if not HM[m] then missing[#missing + 1] = m end
+    end
+    for _, g in ipairs({ "consumables", "racials" }) do
+        if not (HM.gen and HM.gen[g]) then missing[#missing + 1] = "gen." .. g end
+    end
+    local meta
+    local getMeta = (_G.C_AddOns and _G.C_AddOns.GetAddOnMetadata) or _G.GetAddOnMetadata
+    if getMeta then
+        local ok, ver = pcall(getMeta, "Foresight", "Version")
+        if ok then meta = ver end
+    end
+    if #missing > 0 then
+        return ("missing modules: %s (code v%s, client TOC v%s)"):format(
+            table.concat(missing, ", "), HM.version, tostring(meta))
+    end
+    if meta and meta ~= HM.version then
+        return ("client TOC v%s vs code v%s"):format(tostring(meta), HM.version)
+    end
+    return nil
+end
 
 -- Defensive load: SavedVariables are user-editable files, so every field is
 -- type-validated and anything malformed is reset, never trusted. A tampered or
@@ -333,6 +363,11 @@ if _G.CreateFrame then
             printMsg(("v%s loaded - data build %s (%s talents)"):format(
                 HM.version, gen and gen.build or "?",
                 gen and gen.counts and gen.counts.talents or "?"))
+            local stale = HM.staleCodeCheck and HM.staleCodeCheck()
+            if stale then
+                printMsg("|cfff87171STALE FILE LIST|r - " .. stale
+                    .. ". Fully EXIT and restart the game (a /reload cannot load newly added files).")
+            end
             if HM.Guards.inRestrictedContext() then
                 printMsg("restricted context detected - advisory features degrade to display-only")
             end

@@ -134,6 +134,8 @@ function Collect.verify(out)
         -- Trait-node tooltip surfaces (S2 on the Forever trait UI; SetTalent is dead).
         "Enum.TooltipDataType.TraitEntry", "GameTooltip.SetTraitEntry",
         "C_TooltipInfo.GetTraitEntry", "ClassTalentFrame", "PlayerSpellsFrame",
+        -- Live buff read (CONSUME-buffs) + item identity for the missed-item journal.
+        "C_UnitAuras.GetPlayerAuraBySpellID", "AuraUtil.ForEachAura", "GetItemInfoInstant",
     }
     local found = {}
     for _, path in ipairs(candidates) do
@@ -175,6 +177,23 @@ function Collect.verify(out)
         (HM.Tooltips and HM.Tooltips.itemsInstalled) and "GetItemStats path hooked" or "not installed")
     result("spell tooltip injection hook", HM.Tooltips and HM.Tooltips.spellsInstalled or false,
         (HM.Tooltips and HM.Tooltips.spellsInstalled) and "spell tooltip hooked" or "not installed")
+
+    -- All-sources data + the stale-file-list check (incident 2026-10-11: a client
+    -- running since before a deploy that ADDS toc files silently misses them).
+    local stale = HM.staleCodeCheck and HM.staleCodeCheck()
+    result("running code matches the loaded file list", not stale,
+        stale and (stale .. " - FULL RESTART required") or ("v" .. tostring(HM.version)))
+    local counts = HM.gen and HM.gen.counts or {}
+    result("all-sources data loaded",
+        (counts.consumables or 0) > 0 and (counts.racialSpells or 0) > 0,
+        ("consumables=%s racials=%s traitNodes=%s"):format(
+            tostring(counts.consumables), tostring(counts.racialSpells), tostring(counts.traitNodes)))
+    result("live buff read available",
+        _G.C_UnitAuras and _G.C_UnitAuras.GetPlayerAuraBySpellID ~= nil,
+        _G.C_UnitAuras and "C_UnitAuras.GetPlayerAuraBySpellID" or "C_UnitAuras absent")
+    local okBuffs, active = pcall(HM.Snapshot.captureActiveBuffs)
+    result("active known buffs captured", okBuffs,
+        okBuffs and (#active .. " active") or tostring(active))
 
     -- Live snapshot sanity.
     local snap = HM.Snapshot.capture()

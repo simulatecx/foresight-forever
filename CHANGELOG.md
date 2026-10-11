@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.13.1 - 2026-10-11
+
+Field-report fixes (pilot hover session) + the in-game verify/write-back loop for
+consumable data.
+
+- FIX (fish +6): Forever's reworked foods park UNIT values on shared Well-Fed spells
+  and carry the real magnitude on the aura-227 trigger effect - Slitherskin Mackerel
+  showed "+1 Attack Power" instead of +6. generate.py now scales hop ops by the trigger
+  bp when > 1 (Mackerel x6, Mud Snapper x10, Mithril Head Trout x20, Mightfish x40);
+  the classic pattern (magnitude on the triggered spell, Dirge's Chops +25) unchanged.
+- FIX (version drift, incident-to-gate): `HM.version` sat at 0.10.0 for three releases,
+  so session journals mislabeled the running build and the harvester's staleness
+  warning fired wrongly. run_tests.py now REDS when Foresight.toc and core/init.lua
+  versions differ (permanent gate).
+- Stale-file-list detection: a client started before a deploy that ADDS .toc files
+  never loads them on /reload (full restart required). Login + verify now run
+  `HM.staleCodeCheck()` (expected modules present + TOC metadata vs code version) and
+  print a loud restart warning when it trips.
+- In-game verify additions (/foresight verify, auto-collected every login):
+  "running code matches the loaded file list", "all-sources data loaded"
+  (consumables/racials/trait counts), "live buff read available"
+  (C_UnitAuras.GetPlayerAuraBySpellID), "active known buffs captured".
+- WRITE-BACK LOOP: every consumable hover journals to SavedVariables - injections into
+  `collect.buffTipLog` (last 15), ClassID-0 items with NO data into
+  `collect.missedConsumables` (capped 100, with name/subclass/count). harvest.py
+  surfaces both, so "this elixir shows nothing" becomes a named pipeline gap on the
+  next harvest. The addon never edits its own data in-game - gaps close through the
+  pipeline/overrides (account-safety doctrine).
+- Selftest 106 checks (+1 Mackerel/Trout magnitude law).
+
+*Features:* CONSUME-buffs, QA-verify-command, QA-harvester, QA-selftest-harness, CORE-bootstrap
+
 ## 0.13.0 - 2026-10-12
 
 SYNERGY TREE-HIGHLIGHT + the FUTURE-BUILD PLANNER (the PoE-style "what if I got those
