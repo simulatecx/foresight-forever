@@ -30,6 +30,12 @@ function Loadout:withTalent(talentId, rank)
     return copyDeltas(self, { type = "talent", talentId = talentId, rank = rank })
 end
 
+-- Model taking a Retail trait node (Forever's live talents) - same what-if as withTalent
+-- but keyed by the C_Traits node id, so new Forever nodes (no classic talent) model too.
+function Loadout:withTraitNode(nodeId, rank)
+    return copyDeltas(self, { type = "trait", nodeId = nodeId, rank = rank })
+end
+
 -- Model a raw stat change ("what does +2 Spirit do?"): stat key as in snapshot.stats.
 function Loadout:withStatDelta(stat, amount, label)
     return copyDeltas(self, { type = "stat", stat = stat, amount = amount, label = label })
@@ -40,13 +46,12 @@ local STAT_NODE = {
     Intellect = "stat.intellect", Spirit = "stat.spirit",
 }
 
-local function addTalentModifiers(graph, talentId, rank, source)
-    local impacts = HM.gen and HM.gen.talentImpacts and HM.gen.talentImpacts[talentId]
-    local talent = HM.gen and HM.gen.talents and HM.gen.talents[talentId]
-    if not impacts or not talent then return false end
+-- Fold a list of impact ops (classic talent OR trait node - identical op shape) into the
+-- graph at the given rank. The one place talent/trait effects become modifiers.
+local function applyOps(graph, ops, rank, maxRank, source)
     local rankValue = HM.formulas.talentRankValue.fn
-    for _, op in ipairs(impacts.ops or {}) do
-        local value = rankValue(op.maxValue or 0, rank, talent.maxRank)
+    for _, op in ipairs(ops or {}) do
+        local value = rankValue(op.maxValue or 0, rank, maxRank)
         if op.kind == "stat" and STAT_NODE[op.stat] then
             graph:addModifier{
                 target = STAT_NODE[op.stat],
@@ -78,6 +83,21 @@ local function addTalentModifiers(graph, talentId, rank, source)
         -- Other ops (cast time, cost, cooldown...) surface via tooltip/explain for now;
         -- folding them into throughput needs per-spell rotation weights (post-beta).
     end
+end
+
+local function addTalentModifiers(graph, talentId, rank, source)
+    local impacts = HM.gen and HM.gen.talentImpacts and HM.gen.talentImpacts[talentId]
+    local talent = HM.gen and HM.gen.talents and HM.gen.talents[talentId]
+    if not impacts or not talent then return false end
+    applyOps(graph, impacts.ops, rank, talent.maxRank, source)
+    return true
+end
+
+-- Trait-node modifiers (Forever's live talents, incl. new nodes with no classic talent).
+local function addTraitModifiers(graph, nodeId, rank, source)
+    local node = HM.gen and HM.gen.traits and HM.gen.traits.nodes and HM.gen.traits.nodes[nodeId]
+    if not node then return false end
+    applyOps(graph, node.ops, rank, node.maxRank or 1, source)
     return true
 end
 
@@ -167,6 +187,11 @@ function Loadout:build()
             local ok = addTalentModifiers(g, d.talentId, d.rank, "talent:" .. d.talentId)
             if not ok then
                 notes[#notes + 1] = "unknown talent " .. tostring(d.talentId)
+            end
+        elseif d.type == "trait" then
+            local ok = addTraitModifiers(g, d.nodeId, d.rank, "trait:" .. tostring(d.nodeId))
+            if not ok then
+                notes[#notes + 1] = "unknown trait node " .. tostring(d.nodeId)
             end
         elseif d.type == "stat" then
             local node = STAT_NODE[d.stat] or ("stat." .. d.stat)

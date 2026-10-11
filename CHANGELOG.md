@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.8.3 - 2026-10-11
+
+DATA-traits Phase 2: Forever's trait talents now move the what-if model, not just show
+their name. Closes the "recognized but doesn't model" gap.
+
+- `Loadout:withTraitNode(nodeId, rank)` folds a trait node's impact ops into the graph,
+  so modelling any Forever node (including new ones with no classic talent) shifts the
+  dimension scores - the same what-if path as classic talents.
+- The op-folding logic is now one shared `applyOps()` used by both the classic-talent and
+  trait paths (no second math path); `addTalentModifiers` / `addTraitModifiers` wrap it.
+- Captured talents now carry `nodeId` alongside `talentId` for future "model my current
+  build" use.
+- Selftest grows to 67 (modelling trait node 104756, an Intellect% node, raises a
+  caster's spellcasting). DATA-traits is now ☑ (data + coverage + modelling).
+
+*Features:* DATA-traits, MODEL-loadout-whatif, MODEL-snapshot, QA-selftest-harness
+
 ## 0.8.2 - 2026-10-11
 
 S2 talent tooltips on Forever's trait UI. SetTalent renders nothing there (confirmed by

@@ -11,7 +11,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☑ `DATA-overrides` - curated corrections layered over generated data -> `Foresight/data/overrides.lua`
 - ☐ `DATA-items` - item stats into the pipeline (deferred)
 - ☐ `DATA-professions` - profession recipes as modifier sources (deferred)
-- ◐ `DATA-traits` - Retail Trait DB2 (TraitNode/TraitNodeEntry/TraitNodeXTraitNodeEntry/TraitDefinition/SkillLineXTraitTree) -> `traits.lua`: 555 nodes keyed by nodeID with spellID/name/maxRank/ops (via shared build_ops) + bySpell index + tree->class. Covers ALL live nodes incl new Forever talents; adapter resolves every selection by nodeID. Shipped v0.8.0. Phase 2: feed new-node ops into the what-if model (today classic-mapped nodes model via talentImpacts) -> `pipeline/generate.py`, `Foresight/data/generated/traits.lua`
+- ☑ `DATA-traits` - Retail Trait DB2 (TraitNode/TraitNodeEntry/TraitNodeXTraitNodeEntry/TraitDefinition/SkillLineXTraitTree) -> `traits.lua`: 555 nodes keyed by nodeID with spellID/name/maxRank/ops (via shared build_ops) + bySpell index + tree->class. Covers ALL live nodes incl new Forever talents; adapter resolves every selection by nodeID; `Loadout:withTraitNode` folds any node's ops into the what-if model (phase 2, v0.8.3) -> `pipeline/generate.py`, `Foresight/data/generated/traits.lua`, `Foresight/model/loadout.lua`
 
 ## GRAPH - impact engine
 - ☑ `GRAPH-impact-engine` - typed modifier DAG with stacking rules, breakdowns, cycle detection -> `Foresight/graph/graph.lua`
@@ -20,7 +20,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 
 ## MODEL - character modelling
 - ☑ `MODEL-snapshot` - live character capture, secret-guarded (API indices pending beta verification) -> `Foresight/model/snapshot.lua`
-- ☑ `MODEL-loadout-whatif` - snapshot + delta stack (talents, stat tweaks); immutable what-if copies -> `Foresight/model/loadout.lua`
+- ☑ `MODEL-loadout-whatif` - snapshot + delta stack (classic talents, trait nodes, stat tweaks); immutable what-if copies; one shared op-folder -> `Foresight/model/loadout.lua`
 - ☑ `MODEL-impact-diff` - evaluate/diff loadouts, "+2 Spirit" human-terms explainer -> `Foresight/model/impact.lua`
 - ☑ `MODEL-talent-summary` - per-talent humanized ops + affected spell names -> `Foresight/model/impact.lua`
 - ☑ `MODEL-stat-advisor` - comparative marginal stat ranking ("For your Spellcasting: Intellect > ... per point"), built on explainStatDelta (no forked value path); /foresight advisor + panel "Stat value" rows; v0 heuristic -> `Foresight/model/impact.lua`
@@ -41,7 +41,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 66-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 67-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

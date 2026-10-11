@@ -326,6 +326,16 @@ function HM.runSelftest(out)
         end
         return withOps > 50
     end)())
+    check("trait node feeds the what-if model (DATA-traits phase 2)", (function()
+        -- Node 104756 is an Intellect% trait; taking it raises a caster's spellcasting.
+        local modeled = base:withTraitNode(104756, 1)
+        local ok, changes = pcall(HM.Impact.diff, base, modeled)
+        if not ok then return false end
+        for _, c in ipairs(changes) do
+            if c.id == "spellcasting" and c.delta > 0 then return true end
+        end
+        return false
+    end)())
     check("trait data covers NON-classic Forever nodes (the gap this fills)", (function()
         local classic = {}
         for _, t in pairs(gen.talents) do

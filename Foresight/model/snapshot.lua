@@ -80,7 +80,7 @@ function Snapshot.captureTalents()
     for _, t in ipairs(HM.TalentAPI.captureSelected() or {}) do
         if (t.rank or 0) > 0 then
             talents[#talents + 1] = {
-                talentId = t.talentId, rank = t.rank, maxRank = t.maxRank,
+                talentId = t.talentId, nodeId = t.nodeID, rank = t.rank, maxRank = t.maxRank,
                 name = t.name, spellID = t.spellID,
                 tier = t.tier, column = t.column, -- present only on the classic fallback
             }
