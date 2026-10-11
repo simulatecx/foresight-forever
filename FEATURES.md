@@ -39,10 +39,10 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 44-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 46-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
-- ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe -> `Foresight/core/collect.lua`
+- ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`
 - ☑ `QA-harvester` - SavedVariables -> JSON archive + rank-rule hypothesis voting -> `pipeline/harvest.py`
 - ☑ `QA-deploy` - gate-then-copy deploy to the live install -> `pipeline/deploy.py`
 - ◐ `QA-publish-train` - release/publishing infrastructure: git repo (root commit 2026-10-10) + `.pkgmeta` (BigWigsMods packager, only Foresight/ ships) + README official-channels front door + privacy-aware ignores; pending: packager CI action, CurseForge/Wago channels, branch protection (threat-model publish bindings, DATAFLOW.md 4b/4c) -> `.pkgmeta`, `README.md`, `.gitignore`

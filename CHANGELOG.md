@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.4 - 2026-10-10
+
+Level-10 read-back: the adapter's guessed conventions still return no data, so stop
+guessing - capture the raw API shape and auto-collect on every login.
+
+- Level-10 finding: C_SpecializationInfo.GetTalentInfo exists but none of the three
+  guessed calling conventions returns usable data (adapter mode none-answered, probe 0
+  talents) even after allocating a point - the S2 hook installs but injects nothing.
+- New `Collect.probeTalentApiShape`: records the LITERAL return of five GetTalentInfo
+  call shapes (positional, 3-arg, and table-queries), C_SpecializationInfo spec calls,
+  C_ClassTalents/C_Traits config calls, and a GameTooltip:SetTalent(1,1) render test -
+  table keys, scalars, or the error string - into SavedVariables. The harvester prints
+  it. Next read-back hands us the real signature to write the adapter against.
+- `/foresight verify` now AUTO-RUNS once per login (silent, C_Timer-deferred 1s, one
+  summary line) - a reload alone gathers verify + probes, no typing needed.
+- Shape discovery expanded to item/spell tooltip surfaces (Enum.TooltipDataType.Item/
+  Spell, GetItemStats, SetSpellByID, TooltipDataProcessor) for the upcoming spell- and
+  item-tooltip layman-impact features.
+- Selftest grows to 46 checks (describeValue, shape-probe headless persistence).
+
+*Features:* QA-verify-command, QA-collector, QA-selftest-harness
+
 ## 0.5.3 - 2026-10-10
 
 Shape-discovery read-back answered S3's API question; this build is the response.

@@ -245,6 +245,17 @@ function HM.runSelftest(out)
         HM.db.collect = saved
         return ok
     end)())
+    check("describeValue captures table keys + caps strings", (function()
+        local d = HM.describeValue({ name = "X", nested = { a = 1 }, big = string.rep("y", 200) }, 2)
+        return type(d) == "table" and d.name == "X" and type(d.nested) == "table"
+            and d.nested.a == 1 and #d.big <= 123
+    end)())
+    check("talent API shape probe runs headless + persists", (function()
+        local shape = HM.Collect.probeTalentApiShape(function() end)
+        return shape and shape.calls
+            and shape.calls["CSI.GetTalentInfo(1,1)"].present == false
+            and HM.db.collect.talentApiShape ~= nil
+    end)())
     check("serialize renders nested tables", (function()
         local s = HM.serialize({ a = 1, b = { c = "x" } })
         return s:find('c = "x"') ~= nil and s:find("a = 1") ~= nil

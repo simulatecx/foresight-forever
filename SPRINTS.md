@@ -73,6 +73,17 @@ coordinates (no GetNum* needed); snapshot capture, tooltip probe, and the S2 hoo
 rerouted through it; verify gained "talent API adapter returns data" (reports locked
 mode + sample). Next read-back confirms which convention Forever answers - possibly
 only at level 10+ if talent data is level-gated.
+Level-10 read-back (2026-10-10 21:21, v0.5.4 response): adapter STILL mode=none-answered,
+probe 0 talents, even after allocating a point - none of the three guessed GetTalentInfo
+conventions returns data; the S2 hook installs but injects nothing (nothing on hover
+before OR after allocation). STOPPED GUESSING: v0.5.4 adds `Collect.probeTalentApiShape`,
+recording the literal return (table keys / scalars / error string) of 5 GetTalentInfo
+call shapes + spec/trait/config calls + a GameTooltip:SetTalent(1,1) render test into
+SavedVariables; harvester prints it. Next read-back gives the real signature -> write
+the adapter convention against ground truth. Also: `/foresight verify` now auto-runs
+once per login (silent, C_Timer-deferred 1s) so a reload alone gathers data; discovery
+expanded to item/spell tooltip surfaces. THIS IS THE S3 BLOCKER - needs one more pilot
+reload + harvest to unblock S2/snapshot-talents.
 
 ### S5 - ECS-style stats panel ◐
 Side panel on CharacterFrame (pattern: Extended Character Stats; mockup in DESIGN.md

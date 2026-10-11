@@ -38,6 +38,33 @@ local function trim(list, max)
     while #list > max do table.remove(list, 1) end
 end
 
+-- Compact value describer for API-shape capture: records types and table keys
+-- (depth-limited, count-capped) so an undocumented API's real return shape lands in
+-- SavedVariables without dumping unbounded data. Secret/odd values never error it.
+local function describe(v, depth)
+    local t = type(v)
+    if t == "table" then
+        if depth and depth <= 0 then return "table{...}" end
+        local out, n = {}, 0
+        for k, val in pairs(v) do
+            n = n + 1
+            if n > 24 then out["..."] = "(more keys)" break end
+            out[tostring(k)] = describe(val, (depth or 2) - 1)
+        end
+        if n == 0 then return "table{}" end
+        return out
+    elseif t == "string" then
+        return #v > 120 and (v:sub(1, 120) .. "...") or v
+    elseif t == "number" or t == "boolean" then
+        return v
+    elseif t == "nil" then
+        return "nil"
+    else
+        return t -- function, userdata, thread
+    end
+end
+HM.describeValue = describe
+
 local function charInfo()
     local name = _G.UnitName and _G.UnitName("player") or "?"
     local _, classToken = _G.UnitClass and _G.UnitClass("player") or nil, nil
@@ -100,6 +127,10 @@ function Collect.verify(out)
         "C_ClassTalents.GetActiveConfigID", "C_Traits.GetConfigInfo",
         "C_TooltipInfo.GetTalent", "TooltipDataProcessor.AddTooltipPostCall",
         "Enum.TooltipDataType.Talent", "GameTooltip.SetTalent",
+        -- Item/spell impact surfaces (for UI-spell-tooltip + item tooltip injection).
+        "Enum.TooltipDataType.Item", "Enum.TooltipDataType.Spell",
+        "GetItemStats", "C_Item.GetItemStats", "GameTooltip.SetSpellByID",
+        "GameTooltip.GetItem", "C_TooltipInfo.GetBagItem", "C_TooltipInfo.GetHyperlink",
     }
     local found = {}
     for _, path in ipairs(candidates) do
@@ -154,6 +185,78 @@ function Collect.verify(out)
     return v
 end
 
+-- Raw talent-API shape capture. The discovery proved C_SpecializationInfo.GetTalentInfo
+-- EXISTS but no guessed calling convention returned usable data (adapter mode
+-- none-answered). Rather than keep guessing in shipped code, this records the literal
+-- return of each candidate call shape - table keys, scalar values, or the error string -
+-- so the harvest shows the real signature and the adapter is written against ground
+-- truth. Pure diagnostic: calls only info-reads, each pcall-wrapped.
+function Collect.probeTalentApiShape(out)
+    out = out or HM.print
+    local shape = { at = now(), char = charInfo(), calls = {} }
+
+    local function record(label, fn, ...)
+        if type(fn) ~= "function" then
+            shape.calls[label] = { present = false }
+            return
+        end
+        local res = { pcall(fn, ...) }
+        if res[1] then
+            local returns = {}
+            for i = 2, #res do returns[#returns + 1] = describe(res[i], 2) end
+            shape.calls[label] = { present = true, ok = true, nreturns = #res - 1, returns = returns }
+        else
+            shape.calls[label] = { present = true, ok = false, err = tostring(res[2]) }
+        end
+    end
+
+    local CSI = _G.C_SpecializationInfo or {}
+    record("CSI.GetTalentInfo(1,1)", CSI.GetTalentInfo, 1, 1)
+    record("CSI.GetTalentInfo(1,1,1)", CSI.GetTalentInfo, 1, 1, 1)
+    record("CSI.GetTalentInfo{tabIndex=1,talentIndex=1}", CSI.GetTalentInfo, { tabIndex = 1, talentIndex = 1 })
+    record("CSI.GetTalentInfo{tier=1,column=1}", CSI.GetTalentInfo, { tier = 1, column = 1 })
+    record("CSI.GetTalentInfo{tier=1,column=1,groupIndex=1}", CSI.GetTalentInfo, { tier = 1, column = 1, groupIndex = 1 })
+    record("CSI.GetSpecialization()", CSI.GetSpecialization)
+    record("CSI.GetSpecializationInfo(1)", CSI.GetSpecializationInfo, 1)
+    record("CSI.GetNumSpecializations()", CSI.GetNumSpecializations)
+    record("CSI.GetActiveSpecGroup()", CSI.GetActiveSpecGroup)
+
+    -- Trait/config system (the Mainline node-based path, in case talents live there).
+    local CT = _G.C_ClassTalents or {}
+    record("C_ClassTalents.GetActiveConfigID()", CT.GetActiveConfigID)
+    local configID
+    if type(CT.GetActiveConfigID) == "function" then
+        local ok, id = pcall(CT.GetActiveConfigID)
+        if ok then configID = id end
+    end
+    local CTr = _G.C_Traits or {}
+    record("C_Traits.GetConfigInfo(activeConfigID=" .. tostring(configID) .. ")", CTr.GetConfigInfo, configID)
+
+    -- Does GameTooltip:SetTalent(1,1) actually render anything? (The S2 hook target.)
+    local tip = _G.ForesightScanTooltip
+    if not tip and _G.CreateFrame then
+        tip = _G.CreateFrame("GameTooltip", "ForesightScanTooltip", nil, "GameTooltipTemplate")
+        tip:SetOwner(_G.UIParent, "ANCHOR_NONE")
+    end
+    if tip and type(tip.SetTalent) == "function" then
+        tip:ClearLines()
+        local okSet = pcall(tip.SetTalent, tip, 1, 1)
+        local lines = {}
+        if okSet then
+            for L = 1, tip:NumLines() do
+                local fs = _G["ForesightScanTooltipTextLeft" .. L]
+                local txt = fs and fs:GetText()
+                if txt and txt ~= "" then lines[#lines + 1] = txt end
+            end
+        end
+        shape.setTalentProbe = { ok = okSet, lineCount = #lines, lines = lines }
+    end
+
+    store().talentApiShape = shape
+    out("talent API shape probe captured - log out (or /reload) then run the harvester")
+    return shape
+end
+
 -- Talent tooltip probe: renders every talent tooltip of the player's class via a
 -- hidden tooltip and stores the raw text. Offline analysis compares these
 -- authoritative numbers against generated data to settle the rank-scaling rule.
@@ -194,6 +297,22 @@ function Collect.probeTalentTooltips(out)
     return probe
 end
 
+-- Automatic collection pass: runs verify + the API-shape and tooltip probes once per
+-- login, silently (persists for the harvester; one summary line to chat). Means a
+-- player never has to type /foresight verify for us to gather data - a reload is enough.
+function Collect.autoCollect()
+    local silent = function() end
+    local v = Collect.verify(silent)
+    Collect.probeTalentApiShape(silent)
+    local probe = Collect.probeTalentTooltips(silent)
+    local flagged = 0
+    for _, r in ipairs(v and v.results or {}) do
+        if not r.ok then flagged = flagged + 1 end
+    end
+    HM.print(("auto-collected: verify (%d checks, %d flagged), talent probe (%d) - /foresight verify for detail")
+        :format(v and #v.results or 0, flagged, probe and #probe.talents or 0))
+end
+
 -- Wire events (in-game only).
 if _G.CreateFrame then
     local f = _G.CreateFrame("Frame")
@@ -202,6 +321,12 @@ if _G.CreateFrame then
     f:SetScript("OnEvent", function(_, event, arg1)
         if event == "PLAYER_LOGIN" then
             Collect.onLogin()
+            -- Defer the probe pass one frame so all addons/APIs have finished loading.
+            if _G.C_Timer and _G.C_Timer.After then
+                _G.C_Timer.After(1, function() pcall(Collect.autoCollect) end)
+            else
+                pcall(Collect.autoCollect)
+            end
         elseif event == "PLAYER_LEVEL_UP" then
             Collect.onLevelUp(arg1)
         end

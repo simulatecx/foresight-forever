@@ -6,7 +6,7 @@ local ADDON_NAME, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 _G.Foresight = HM
 
-HM.version = "0.5.3" -- keep in sync with Foresight.toc (collect journals this stamp)
+HM.version = "0.5.4" -- keep in sync with Foresight.toc (collect journals this stamp)
 
 -- Defensive load: SavedVariables are user-editable files, so every field is
 -- type-validated and anything malformed is reset, never trusted. A tampered or
@@ -115,6 +115,7 @@ local function onSlash(input)
         for _, line in ipairs(lines) do printMsg("  " .. line) end
     elseif cmd == "verify" then
         HM.Collect.verify(printMsg)
+        HM.Collect.probeTalentApiShape(printMsg)
         HM.Collect.probeTalentTooltips(printMsg)
     elseif cmd == "export" then
         local payload = HM.db and HM.db.collect or {}

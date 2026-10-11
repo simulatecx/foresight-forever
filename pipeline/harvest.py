@@ -226,6 +226,13 @@ def main() -> int:
             for r in verify.get("results", []):
                 if r.get("name") == "talent API shape discovery" and r.get("detail"):
                     print(f"     talent API shape: {r['detail']}")
+        shape = collect.get("talentApiShape") or {}
+        if shape:
+            print(f"   talent API shape probe @{shape.get('at')}:")
+            for label, info in (shape.get("calls") or {}).items():
+                print(f"     {label}: {json.dumps(info, ensure_ascii=False)}")
+            if shape.get("setTalentProbe"):
+                print(f"     GameTooltip:SetTalent(1,1) -> {json.dumps(shape['setTalentProbe'], ensure_ascii=False)}")
         if probe:
             analysis = analyze_rank_rule(probe, gen)
             print(f"   talent tooltip probe: {len(probe.get('talents', []))} talents; "
