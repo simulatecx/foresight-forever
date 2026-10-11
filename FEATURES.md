@@ -27,6 +27,11 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 
 ## SYNERGY - talents that work together
 - ◐ `SYNERGY-engine` - groups trait nodes by shared lever (stat/spell/school/mechanic) from generated trait data; tooltip "Synergy:" line + `/foresight synergy <name>`; v0 direct grouping (chained synergies + buff/racial/UI-view are next) -> `Foresight/model/synergy.lua`
+- ☐ `SYNERGY-highlight` - Diablo-4-style talent-tree highlight of a selected synergy group (LibCustomGlow PixelGlow, node buttons located by name; dropdown + stats-panel section) - researched 2026-10-11 (docs/RESEARCH-2026-10-11.md C1)
+
+## CONSUME / RACIAL - more impact sources (researched 2026-10-11)
+- ☐ `CONSUME-buffs` - alchemy/food/scroll buff impact: active-vs-expiry delta via Loadout:withBuff + diff; consumables.lua from ItemEffect->spell; secret-safe aura read (docs/RESEARCH-2026-10-11.md A)
+- ☐ `RACIAL-impact` - per-race passive racials as permanent effects via SkillLineAbility.RaceMasks -> build_ops; race_racials.lua keyed by raceID (docs/RESEARCH-2026-10-11.md B)
 
 ## CORE - addon plumbing
 - ☑ `CORE-bootstrap` - namespace, events, slash commands (/foresight talent|stat|selftest) -> `Foresight/core/init.lua`

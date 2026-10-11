@@ -109,7 +109,33 @@ channels (slug registration), branch protection, SHA-pinned actions, data-freshn
 ### S13 - Crowd scale-up ☐
 Opt-in companion uploader (reads SavedVariables, POSTs harvest JSON) + ingestion/aggregation;
 k-of-n confirmation before any overrides change; privacy-by-design pass (consent, hashing,
-retention). Phase B in DATAFLOW 4b.
+retention). Phase B in DATAFLOW 4b. Full design (Cloudflare Worker + D1/R2, k-of-n via unique
+index, companion sanitize) in `docs/RESEARCH-2026-10-11.md`.
+
+### S14 - Buffs & consumables impact ☐  (researched 2026-10-11)
+"How does an alchemy flask/elixir/food impact me while active, and what do I lose when it
+expires." Pipeline: ItemXItemEffect->ItemEffect->buff spell, reuse build_ops; emit
+consumables.lua. Model: `Loadout:withBuff` + `Impact.buffDelta` (one diff = active vs expiry).
+Live: `C_UnitAuras.GetPlayerAuraBySpellID` (spellId is never-secret; model from generated ops,
+secret-degrade via C_Secrets.ShouldAurasBeSecret). New decode: aura 290 (crit%) + EffectTriggerSpell
+one-hop for Well-Fed. Survival consumables first (hardcore thesis). Details: research doc A.
+Fit & Overlap: reuses applyOps/diff (no forked math); complements S10 PANIC (consumable registry).
+
+### S15 - Racials impact ☐  (researched 2026-10-11)
+Model each race's passive racials as permanent effects (like talents). NOT in trait trees:
+separate DB2 path SkillLineAbility.RaceMasks (CategoryID-9 racial SkillLine) -> spell -> build_ops.
+Key by raceID (UnitRace #3; Undead token = "Scourge"; handle new Skyborne race 95/96 + new 1.25M+
+Forever racial IDs, tagged forever-new-unverified). Fold via applyOps in loadout:build; feed Synergy
++ panel. Curation -> overrides.racialImpacts. Details: research doc B.
+
+### SYNERGY - talents that work together ◐
+v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
+/foresight synergy. NEXT (baked-in UI, researched 2026-10-11 doc C1): talent-tree node highlight
+(Diablo-4 paragon selection) - node buttons are named by talent (proven), locate via
+PlayerSpellsFrame probe + name-match fallback, glow via LibCustomGlow PixelGlow (key-scoped, no
+taint; NOT the tainting ActionButton glow). Dropdown on the talent frame + a stats-panel Synergies
+section, one validated settings.synergy.theme syncing all surfaces. New ui/synergy_highlight.lua.
+Then: chained synergies (A boosts Int -> B converts Int to AP); extend Synergy to items/buffs/racials.
 
 ## Backlog (not yet scheduled)
 - ☐ DATA-professions: SkillLine/recipes -> consumables/crafted gear as modifier sources.
