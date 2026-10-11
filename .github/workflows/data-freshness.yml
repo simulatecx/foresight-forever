@@ -1,0 +1,38 @@
+# Data-freshness watch (DATAFLOW.md 4b, zero-PII): a daily cron asks wago.tools whether
+# Forever has shipped a new client build. If so, it fetches + regenerates + runs the
+# ship gate, then either opens a green release PR (gate passed) or files an issue (gate
+# red) so the shipped data never silently drifts behind the live game.
+#
+# ACTIVATION: needs the GitHub remote only. Tune the schedule as the patch cadence settles.
+# SECURITY: pin action refs to SHAs before enabling on a public repo.
+name: Data freshness
+
+on:
+  schedule:
+    - cron: "0 9 * * *"   # daily 09:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4          # TODO pin to SHA
+      - uses: actions/setup-python@v5      # TODO pin to SHA
+        with:
+          python-version: "3.12"
+      - run: pip install lupa
+      - name: Fetch latest client data + regenerate
+        run: |
+          python pipeline/fetch.py
+          python pipeline/generate.py
+      - name: Ship gate on the refreshed data
+        id: gate
+        run: python pipeline/run_tests.py
+      # A real build change leaves generated/*.lua diffs; package the follow-up as a PR.
+      # (PR/issue steps are left for activation time so the token + branch policy are the
+      # repo owner's choice - the checkout+fetch+generate+gate above is the engine.)

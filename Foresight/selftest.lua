@@ -791,6 +791,12 @@ function HM.runSelftest(out)
         return #conv > 0
     end)())
     -- Item seed: the in-client gear catalog (stat TYPES; amounts come live).
+    check("gear carries Forever-verified provenance with the patch/channel", (function()
+        local p = HM.provenance()
+        return type(p) == "string" and p:find("Forever%-verified") ~= nil
+            and p:find(HM.gen.build, 1, true) ~= nil
+            and (HM.gen.channel ~= nil)
+    end)())
     check("catalog includes the gear seed at scale", (function()
         HM.Catalog._reset()
         local items = 0

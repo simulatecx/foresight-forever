@@ -1,0 +1,30 @@
+# Foresight CI gate: runs the SAME ship gate as local (compliance scan + harvest
+# sandbox + 131-check selftest) on every push and PR. A red gate blocks merge - the
+# account-safety and correctness guarantees are enforced in the cloud, not just locally.
+#
+# ACTIVATION: works the moment the repo has a GitHub remote; no secrets needed.
+# SECURITY (release-train law): the action refs below are tags for readability - pin
+# each to a full commit SHA before trusting CI on a public repo.
+name: CI gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4          # TODO pin to SHA
+      - uses: actions/setup-python@v5      # TODO pin to SHA
+        with:
+          python-version: "3.12"
+      - name: Install Lua VM harness
+        run: pip install lupa
+      - name: Ship gate (compliance + sandbox + selftest)
+        run: python pipeline/run_tests.py

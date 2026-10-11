@@ -18,6 +18,10 @@ from collections import defaultdict
 from pathlib import Path
 
 DEFAULT_BUILD = "1.60.1.70338"
+# Release channel of the client these tables came from. Forever is in beta until
+# 2026-10-21 (launches 2026-11-04); flip to "live" when generating from a launch build.
+# Stamps every generated fact as "Forever-verified - <channel> <build>".
+DEFAULT_CHANNEL = "beta"
 
 # Classic-lineage SpellModOp ids -> human label + which ability property they move.
 SPELL_MOD_OPS = {
@@ -315,6 +319,8 @@ class LuaWriter:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build", default=DEFAULT_BUILD)
+    parser.add_argument("--channel", default=DEFAULT_CHANNEL,
+                        help="release channel stamped on the data (beta/live)")
     args = parser.parse_args()
 
     root = Path(__file__).parent
@@ -808,6 +814,7 @@ def main() -> int:
     written = [
         LuaWriter.file("build", {
             "build": args.build,
+            "channel": args.channel,
             "generated": stamp,
             "counts": {
                 "talents": len(talents_out),

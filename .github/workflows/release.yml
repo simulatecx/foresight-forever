@@ -1,0 +1,46 @@
+# Foresight release train (DATAFLOW.md 4b): push a version tag (vX.Y.Z) -> gate ->
+# BigWigsMods/packager zips Foresight/ (per .pkgmeta) and uploads to CurseForge, Wago
+# Addons, and GitHub Releases. Players then auto-update through their addon manager -
+# the compliant distribution channel (the addon itself never networks).
+#
+# ACTIVATION CHECKLIST (your decisions - CI is inert until these exist):
+#   1. Create the GitHub remote + push (public recommended for an audit-first addon).
+#   2. Register the CurseForge and Wago project slugs; put their tokens in repo secrets
+#      as CF_API_TOKEN and WAGO_API_TOKEN (WOWI_API_TOKEN optional for WoWInterface).
+#   3. Add the project ids to Foresight.toc (## X-Curse-Project-ID / ## X-Wago-ID) OR
+#      let the packager resolve by slug.
+#   4. Tag a release: git tag v0.20.0 && git push --tags
+# SECURITY: pin every action ref to a full commit SHA before enabling on a public repo.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # create the GitHub Release
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4          # TODO pin to SHA
+      - uses: actions/setup-python@v5      # TODO pin to SHA
+        with:
+          python-version: "3.12"
+      - run: pip install lupa
+      - name: Ship gate before any upload
+        run: python pipeline/run_tests.py
+
+  package:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4          # TODO pin to SHA
+      - name: Package + upload (CurseForge / Wago / GitHub Releases)
+        uses: BigWigsMods/packager@v2      # TODO pin to SHA
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_TOKEN }}
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+          WOWI_API_TOKEN: ${{ secrets.WOWI_API_TOKEN }}
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}

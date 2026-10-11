@@ -645,13 +645,21 @@ local function injectItem(tip)
     local okc, c = pcall(equippedCompareStats, link)
     if okc then compared = c end
     local lines = Tooltips.itemLines(mapped, loadout, compared)
+    local itemId = tonumber(type(link) == "string" and link:match("item:(%d+)") or nil)
     if not lines then
         -- No gear stats: consumables carry their impact as a generated buff block.
-        local itemId = tonumber(type(link) == "string" and link:match("item:(%d+)") or nil)
         if itemId then
             lines = Tooltips.buffLines(itemId, loadout)
             journalConsumableTip(itemId, link, lines ~= nil)
         end
+    end
+    -- Provenance: if this item is in our client-decoded catalog, stamp it so the player
+    -- knows the data is real Forever content at a known patch, not a datamined guess.
+    if lines and itemId and HM.gen and HM.gen.items and HM.gen.items[itemId] then
+        lines[#lines + 1] = {
+            text = "|cff4ade80" .. (HM.provenance and HM.provenance() or "Forever-verified") .. "|r",
+            r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+        }
     end
     if lines then
         tip.foresightInjected = true
@@ -772,6 +780,39 @@ local function traitNodeByName(name)
     return traitNameIndex[name]
 end
 
+-- Capture the REAL rendered node tooltip text + the node's current rank, journaled per
+-- node. This is the authoritative rank-scaling ground truth (the classic SetTalent probe
+-- is dead on Forever), gathered passively as the player mouses over talents - the harvest
+-- compares these numbers against the generated ops to settle each (p) rank rule.
+local function journalTalentTooltip(tip, nodeId, snap)
+    if not (HM.db and type(HM.db.collect) == "table") then return end
+    if type(tip.NumLines) ~= "function" then return end
+    local lines = {}
+    for i = 1, tip:NumLines() do
+        local fs = _G["GameTooltipTextLeft" .. i]
+        local t = fs and fs:GetText()
+        if t and t ~= "" then lines[#lines + 1] = t end
+    end
+    if #lines == 0 then return end
+    local rank
+    for _, t in ipairs((snap and snap.talents) or {}) do
+        if t.nodeId == nodeId then rank = t.rank; break end
+    end
+    local node = HM.gen and HM.gen.traits and HM.gen.traits.nodes and HM.gen.traits.nodes[nodeId]
+    local c = HM.db.collect
+    if type(c.talentTooltips) ~= "table" then c.talentTooltips = {} end
+    local n = 0
+    for _ in pairs(c.talentTooltips) do n = n + 1 end
+    if c.talentTooltips[nodeId] or n < 300 then
+        c.talentTooltips[nodeId] = {
+            rank = rank, maxRank = node and node.maxRank,
+            name = node and node.name, spellID = node and node.spellID,
+            text = table.concat(lines, "\n"),
+            at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?",
+        }
+    end
+end
+
 -- Core: inject the impact block for a resolved node id, recording a diagnostic.
 local function injectNodeBlock(tip, nodeId, source)
     if HM.db and type(HM.db.collect) == "table" then
@@ -781,6 +822,8 @@ local function injectNodeBlock(tip, nodeId, source)
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
+    -- Capture the game's base tooltip text BEFORE we append our block.
+    pcall(journalTalentTooltip, tip, nodeId, snap)
     local lines = Tooltips.nodeImpactLines(nodeId, loadout)
     if lines then
         tip.foresightInjected = true

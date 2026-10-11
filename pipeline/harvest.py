@@ -287,6 +287,15 @@ def main() -> int:
         sightings = collect.get("itemSightings") or {}
         if sightings:
             print(f"   item sightings: {len(sightings)} distinct items seen on this account")
+        tips = collect.get("talentTooltips") or {}
+        if tips:
+            ranked = sum(1 for e in tips.values() if isinstance(e, dict) and e.get("rank"))
+            print(f"   talent tooltips captured (real in-game text): {len(tips)} nodes "
+                  f"({ranked} at a trained rank - rank-scaling ground truth)")
+            for nid, e in list(tips.items())[:4]:
+                if isinstance(e, dict):
+                    first = (e.get("text") or "").split("\n")[0]
+                    print(f"     {e.get('name') or nid} r{e.get('rank')}/{e.get('maxRank')}: {first!r}")
         observed = collect.get("observedImpacts") or {}
         if observed:
             def _k(d):  # id-keyed lua tables arrive with int/float/str keys

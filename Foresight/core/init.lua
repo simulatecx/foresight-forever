@@ -9,7 +9,18 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.19.2"
+HM.version = "0.20.0"
+
+-- Provenance stamp for generated content: everything in data/generated came straight
+-- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
+-- from the (p) tags on presumed rank-scaling). Gear/catalog surfaces show this so the
+-- player knows the data is real Forever content, not datamined guesswork.
+function HM.provenance()
+    local gen = HM.gen
+    local build = gen and gen.build or "?"
+    local channel = (gen and gen.channel) or "beta"
+    return ("Forever-verified - %s %s"):format(channel, build)
+end
 
 -- Detect a stale in-client file list: /reload re-runs files but a client started
 -- before a deploy that ADDED files to the .toc never loads them until a full restart.
@@ -247,7 +258,7 @@ local function onSlash(input)
             end
             if #hits > 15 then printMsg(("  ...and %d more"):format(#hits - 15)) end
         else
-            printMsg("Foresight content catalog (impact sources we model):")
+            printMsg(("Foresight content catalog [%s]:"):format(HM.provenance()))
             local total = 0
             for _, row in ipairs(HM.Catalog.stats()) do
                 total = total + row.count
@@ -268,8 +279,8 @@ local function onSlash(input)
             return
         end
         local hits, total = HM.Catalog.itemsWithStat(rest, 15)
-        printMsg(("gear with '%s': %d found%s"):format(rest, total,
-            total > 15 and " (showing 15 by required level)" or ""))
+        printMsg(("gear with '%s': %d found%s  [%s]"):format(rest, total,
+            total > 15 and " (showing 15 by required level)" or "", HM.provenance()))
         for _, e in ipairs(hits) do
             printMsg(("  [%s] %s (req %d, %s) - %s"):format(
                 e.slot or "?", e.name, e.reqLevel or 0, e.quality or "?",

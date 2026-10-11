@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.20.0 - 2026-10-11
+
+Provenance stamp + publish-train (S12) scaffolding.
+
+- Every generated fact now carries its source: `HM.provenance()` = "Forever-verified -
+  <channel> <build>" (e.g. "beta 1.60.1.70338"), built from a new `channel` stamp in
+  the generated build metadata. Gear tooltips (for items in our client-decoded catalog),
+  `/foresight items`, and `/foresight catalog` show it - so the player knows the data is
+  real Forever client content at a known patch, not a datamined guess. Flip the channel
+  to "live" at launch (`generate.py --channel live`).
+- CI scaffolding (`.github/workflows/`): `ci.yml` runs the full ship gate on push/PR;
+  `release.yml` packages + uploads to CurseForge/Wago/GitHub Releases on a version tag
+  (BigWigsMods/packager, gate-first); `data-freshness.yml` daily-polls wago.tools and
+  regenerates+gates when Forever ships a new build. All inert until the repo has a remote
+  + secrets; action refs flagged for SHA-pinning before public use.
+- TALENT VERIFICATION CAPTURE: hovering a talent now journals the REAL rendered node
+  tooltip text + the node's current rank (`collect.talentTooltips`), via the working
+  owner-name hook - the classic SetTalent probe is dead on Forever, so mousing over
+  talents previously captured nothing for rank-scaling. Now "mouse over all talents"
+  gathers authoritative per-node text; the harvest surfaces it to settle the (p) rank
+  rules against the generated ops.
+- Selftest 131 checks (+1 provenance).
+
+*Features:* DATA-generated-tables, DATA-items, QA-publish-train, QA-collector, CORE-bootstrap
+
 ## 0.19.2 - 2026-10-11
 
 - Gear seed trimmed to Uncommon+ quality (your call) - statted gear only existed at
