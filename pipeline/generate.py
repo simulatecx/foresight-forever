@@ -713,11 +713,14 @@ def main() -> int:
         name = r.get("Display_lang") or f"item:{iid}"
         if "(Test)" in name or "OLD" in name or "DEPRECATED" in name.upper():
             continue  # client scaffolding, not real gear
+        quality = to_int(r.get("OverallQualityID", "") or 0)
+        if quality < 2:
+            continue  # drop Poor/Common - Uncommon+ is the planning-relevant gear (user call)
         items_out[iid] = {
             "name": name, "slot": INV_SLOT.get(inv, f"slot:{inv}"),
             "ilvl": to_int(r.get("ItemLevel", "") or 0),
             "reqLevel": to_int(r.get("RequiredLevel", "") or 0),
-            "quality": QUALITY.get(to_int(r.get("OverallQualityID", "") or 0), "?"),
+            "quality": QUALITY.get(quality, "?"),
             "stats": stat_types,
         }
 

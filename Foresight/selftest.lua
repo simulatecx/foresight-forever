@@ -941,6 +941,13 @@ function HM.runSelftest(out)
         return d.agility == 25 and d.meleeCritPct == 2
             and d.intellect == nil and d.armor == nil
     end)())
+    check("observatory claim-filter keeps only a buff's own stats (anti-pollution)", (function()
+        -- Elixir of the Mongoose (13452 -> buff 17538) claims Agility + crit only.
+        local claimed = HM.Collect.claimedFields(HM.Collect.opsForBuffSpell(17538))
+        if not (claimed.agility and claimed.meleeCritPct) then return false end
+        -- A coincidental gear swap would add armor/strength - those must be rejected.
+        return claimed.armor == nil and claimed.strength == nil and claimed.intellect == nil
+    end)())
     check("observatory attributes only single buff changes", (function()
         local id1, s1 = HM.Collect.attributeBuffChange({}, { [17538] = true })
         local id2, s2 = HM.Collect.attributeBuffChange({ [17538] = true }, {})

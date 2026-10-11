@@ -53,7 +53,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 129-check selftest (in-game + headless via lupa; incl. the lever-taxonomy completeness gate) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 130-check selftest (in-game + headless via lupa; incl. the lever-taxonomy completeness gate) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal + ITEM SIGHTINGS (v0.15.0: equipped+bag item IDs scanned at login/logout - the "what's actually in game" ground truth, crowd-DB phase A; capped, IDs only) into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

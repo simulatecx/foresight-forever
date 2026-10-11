@@ -174,6 +174,51 @@ function Collect.statDiff(before, after)
     return out
 end
 
+-- op kind -> the snapshot stat fields that op is EXPECTED to move. The observatory
+-- records only these for a given buff, so a coincidental gear swap or second buff in
+-- the same window (big armor/stat jumps) can't pollute the ground truth - we confirm
+-- what the buff CLAIMS, nothing else. A statConvert's output field; a crit op all three.
+local STAT_FIELD = { Strength = "strength", Agility = "agility", Stamina = "stamina",
+                     Intellect = "intellect", Spirit = "spirit" }
+local CONVERT_FIELD = { attackPower = "attackPower", spellDamage = "spellDamage",
+                        healingPower = "healingPower" }
+
+-- Pure: the set of snapshot fields a buff's ops claim to move.
+function Collect.claimedFields(ops)
+    local claimed = {}
+    for _, op in ipairs(ops or {}) do
+        local k = op.kind
+        if k == "stat" and STAT_FIELD[op.stat] then
+            claimed[STAT_FIELD[op.stat]] = true
+        elseif k == "critChance" then
+            claimed.meleeCritPct = true; claimed.spellCritPct = true; claimed.rangedCritPct = true
+        elseif k == "armor" then
+            claimed.armor = true
+        elseif k == "attackPower" then
+            claimed.attackPower = true
+        elseif k == "rangedAttackPower" then
+            claimed.rangedAttackPower = true
+        elseif k == "maxHealth" then
+            claimed.maxHealth = true
+        elseif k == "maxPower" and op.powerType == 0 then
+            claimed.maxMana = true
+        elseif (k == "schoolDamage" or k == "spellmod") then
+            claimed.spellDamage = true
+        elseif k == "statConvert" and CONVERT_FIELD[op.to] then
+            claimed[CONVERT_FIELD[op.to]] = true
+        end
+    end
+    return claimed
+end
+
+-- The generated ops a live aura spellId belongs to (consumable buff), for claim-filtering.
+function Collect.opsForBuffSpell(spellId)
+    local gen = HM.gen
+    local itemId = gen and gen.buffsBySpell and gen.buffsBySpell[spellId]
+    local entry = itemId and gen.consumables and gen.consumables[itemId]
+    return entry and entry.ops or nil
+end
+
 -- Pure: which single tracked buff changed between two id-sets (nil unless EXACTLY
 -- one, so simultaneous changes never pollute an attribution). sign: +1 gained/-1 faded.
 function Collect.attributeBuffChange(oldIds, newIds)
@@ -210,6 +255,15 @@ function Collect.observe()
             local deltas = Collect.statDiff(lastObsSnap.stats, snap.stats)
             if sign == -1 then -- a fading buff reads as losses; store the GAIN shape
                 for f, v in pairs(deltas) do deltas[f] = -v end
+            end
+            -- Claim-filter: keep only the fields THIS buff is known to move, so a
+            -- coincidental gear/other-buff change in the window can't pollute it. If we
+            -- have no ops for the buff, keep the raw diff (an unknown buff to learn).
+            local claimed = Collect.claimedFields(Collect.opsForBuffSpell(id))
+            if next(claimed) then
+                for f in pairs(deltas) do
+                    if not claimed[f] then deltas[f] = nil end
+                end
             end
             if next(deltas) then
                 local c = store()

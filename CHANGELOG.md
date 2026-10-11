@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.19.2 - 2026-10-11
+
+- Gear seed trimmed to Uncommon+ quality (your call) - statted gear only existed at
+  Uncommon+ anyway, so 4,663 -> 4,621 (~594KB).
+- FIX (observatory pollution, caught in the first live harvest): an elixir was recorded
+  with +22 Agility / +225 armor / +all-stats - a coincidental gear swap mis-attributed
+  to one buff. The observatory now CLAIM-FILTERS each observation to the stats the buff
+  is actually known to move (from its generated ops), so a gear change or second buff in
+  the same window can no longer pollute the ground truth. We confirm what the buff
+  claims, nothing else. Unknown buffs (no ops) still record raw, to be learned.
+
+*Features:* DATA-items, QA-collector, QA-selftest-harness
+
 ## 0.19.0 - 2026-10-11
 
 GEAR SEED + secondary-stat vocabulary - the in-client item database, no scraping.
