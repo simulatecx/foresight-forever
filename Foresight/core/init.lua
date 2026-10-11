@@ -6,7 +6,7 @@ local ADDON_NAME, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 _G.Foresight = HM
 
-HM.version = "0.9.5" -- keep in sync with Foresight.toc (collect journals this stamp)
+HM.version = "0.10.0" -- keep in sync with Foresight.toc (collect journals this stamp)
 
 -- Defensive load: SavedVariables are user-editable files, so every field is
 -- type-validated and anything malformed is reset, never trusted. A tampered or
@@ -136,6 +136,23 @@ local function onSlash(input)
         local loadout = HM.Loadout.fromSnapshot(snapshot)
         local results = HM.Impact.evaluate(loadout)
         printMsg("your build: " .. HM.PanelModel.playstyleLabel(results, snapshot))
+    elseif cmd == "synergy" then
+        if not HM.Synergy then
+            printMsg("synergy engine unavailable")
+            return
+        end
+        if rest == "" then
+            printMsg("synergy themes - /foresight synergy <name>:")
+            printMsg("  " .. table.concat(HM.Synergy.themes(), ", "))
+        else
+            local r = HM.Synergy.query(rest)
+            if r then
+                printMsg(("%s synergy - %d talents push this lever:"):format(r.label, #r.nodes))
+                printMsg("  " .. table.concat(r.nodes, ", "))
+            else
+                printMsg("no synergy matches '" .. rest .. "' (try: intellect, crit, threat, nature, lightning)")
+            end
+        end
     elseif cmd == "panel" then
         if rest == "reset" then
             if HM.StatsPanel and HM.StatsPanel.resetPosition then
@@ -163,7 +180,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name] | panel [reset] | verify | export | selftest")
     end
 end
 

@@ -242,6 +242,21 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
         end
     end
 
+    -- Synergy: other talents that push the same lever (stat / mechanic / school).
+    if HM.Synergy then
+        local okt, themes = pcall(HM.Synergy.themesFor, nodeId)
+        if okt and themes and #themes > 0 then
+            local parts = {}
+            for i = 1, math.min(#themes, 2) do
+                parts[#parts + 1] = ("%s (+%d)"):format(themes[i].label, themes[i].others)
+            end
+            lines[#lines + 1] = {
+                text = "|cff9d9d9dSynergy:|r " .. table.concat(parts, ", "),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
+    end
+
     if node.needsCuration then
         lines[#lines + 1] = {
             text = "Some effects aren't mapped yet (needs curation).",

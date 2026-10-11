@@ -368,6 +368,17 @@ function HM.runSelftest(out)
         end
         return false
     end)())
+    check("synergy groups talents by shared theme", (function()
+        HM.Synergy._reset()
+        local r = HM.Synergy.query("intellect")
+        return r and r.label == "Intellect" and #r.nodes > 1
+    end)())
+    check("synergy themesFor lists a node's levers", (function()
+        local themes = HM.Synergy.themesFor(104756) -- Ancestral Knowledge (Intellect%)
+        for _, t in ipairs(themes) do if t.key == "Intellect" and t.others > 0 then return true end end
+        return false
+    end)())
+
     check("trait data covers NON-classic Forever nodes (the gap this fills)", (function()
         local classic = {}
         for _, t in pairs(gen.talents) do

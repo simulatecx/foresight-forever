@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.0 - 2026-10-11
+
+Talent tooltips CONFIRMED working in-game (the owner-name hook landed). New feature:
+SYNERGIES - which talents work together.
+
+- New `model/synergy.lua`: groups every trait node by the lever it pushes - stat
+  (Intellect, Strength...), affected spell (Lightning Bolt...), school (Nature...), or
+  mechanic (crit, threat, cost, cast time, cooldown) - from the generated trait data.
+- Talent tooltips gain a "Synergy:" line (the top shared levers + how many other talents
+  feed them). `/foresight synergy <name>` lists every talent on a theme
+  (e.g. "intellect", "crit", "lightning"); no-arg lists the themes.
+- Pure + selftest-covered (74 checks). Next: bake synergies into a persistent UI view
+  (talent-tree highlight, feasible now that node buttons are named by talent) and extend
+  the impact engine to buffs/consumables and racials.
+
+*Features:* SYNERGY-engine, UI-talent-tooltip, CORE-bootstrap, QA-selftest-harness
+
 ## 0.9.5 - 2026-10-11
 
 Talent tooltip - SOLVED via the owner-name signal. The diagnostic showed neither
