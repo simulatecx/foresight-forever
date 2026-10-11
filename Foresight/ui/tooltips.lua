@@ -349,6 +349,22 @@ function Tooltips.itemLines(mapped, loadout, comparedStats)
         kind = "double", left = "Foresight", right = "(p) for your character",
         r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
     }
+    -- Headline verdict (the Pawn-style at-a-glance answer, judged for your gearing goal).
+    local goal = HM.gearGoal and HM.gearGoal() or "auto"
+    local okv, verdict = pcall(HM.Impact.itemVerdict, loadout, mapped, comparedStats, goal)
+    if okv and verdict then
+        local word, color
+        if verdict.direction == "upgrade" then word, color = "Upgrade", "|cff4ade80"
+        elseif verdict.direction == "downgrade" then word, color = "Downgrade", "|cfff87171"
+        else word, color = "Sidegrade", "|cff9d9d9d" end
+        local pctText = (verdict.direction == "sidegrade") and ""
+            or (" (%+.1f%%)"):format(verdict.pct)
+        lines[#lines + 1] = {
+            text = ("%s%s|r for %s%s%s"):format(color, word, verdict.label, pctText,
+                verdict.compared and "" or " |cff9d9d9d(added)|r"),
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+        }
+    end
     lines[#lines + 1] = {
         text = "|cff9d9d9dThis item:|r " .. table.concat(parts, ", "),
         r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,

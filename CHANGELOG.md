@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.23.0 - 2026-10-11
+
+Gear verdict + gearing goal (borrowing Pawn's best UX, done honestly).
+
+- HEADLINE VERDICT on item tooltips: a one-line at-a-glance answer at the top of the
+  Foresight block - "Upgrade for Spellcasting (+4.1%)" / "Downgrade" / "Sidegrade" -
+  so the detail no longer buries the answer. Unlike Pawn's one-directional stat weights,
+  it uses the real diff: the NET swap vs your equipped item when comparable, or a marginal
+  add otherwise (tagged "(added)"). `Impact.itemVerdict` (pure).
+- GEARING GOAL: `/foresight goal <survival|tank|dps|caster|healing|...|auto>` picks the
+  dimension the verdict judges against, per character - so a hardcore player gearing for
+  survival sees survival verdicts, not raw DPS. Default "auto" follows the build's primary
+  output. Validated on read (tampered goal -> auto). `HM.gearGoal()`.
+- Selftest 142 (+6: verdict upgrade/goal-flip/vs-equipped net, headline placement, goal
+  validation).
+
+*Features:* UI-item-tooltip, MODEL-impact-diff, CORE-saveddb, QA-selftest-harness
+
 ## 0.22.0 - 2026-10-11
 
 - FIX (talents-affecting block not showing): the ability-map tooltip now resolves by the

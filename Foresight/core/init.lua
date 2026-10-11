@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.22.0"
+HM.version = "0.23.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -74,6 +74,18 @@ function HM.charDb()
     local key = charKey()
     HM.db.chars[key] = HM.db.chars[key] or { escapeRegistry = nil, settings = {} }
     return HM.db.chars[key]
+end
+
+-- The dimension the player is gearing FOR (the gear-verdict lens). "auto" = the build's
+-- primary output. Validated on read (untrusted-input law): an unknown saved goal falls
+-- back to auto rather than erroring.
+function HM.gearGoal()
+    local db = HM.charDb and HM.charDb()
+    local g = db and db.settings and db.settings.goal
+    if type(g) == "string" and (g == "auto" or (HM.dimensions and HM.dimensions.byId(g))) then
+        return g
+    end
+    return "auto"
 end
 
 local function printMsg(msg)
@@ -243,6 +255,37 @@ local function onSlash(input)
             local okd, lines = pcall(HM.Impact.buffDelta, loadout, b.itemId)
             for _, line in ipairs(okd and lines or {}) do printMsg("  " .. line) end
             printMsg("  on expiry these gains reverse")
+        end
+    elseif cmd == "goal" then
+        -- What you're gearing FOR - the dimension the item verdict judges against.
+        local ALIAS = { survival = "survivability", tank = "tankability",
+                        dps = "meleeDps", melee = "meleeDps", ranged = "rangedDps",
+                        caster = "spellcasting", spell = "spellcasting", mana = "sustain" }
+        local db = HM.charDb()
+        if rest == "" then
+            local cur = HM.gearGoal()
+            printMsg("gearing goal: " .. cur .. " (what the item verdict judges)")
+            local ids = { "auto" }
+            for _, d in ipairs(HM.dimensions.list) do ids[#ids + 1] = d.id end
+            printMsg("  set with /foresight goal <" .. table.concat(ids, " | ") .. ">")
+        elseif rest == "auto" or rest == "clear" then
+            db.settings.goal = "auto"
+            printMsg("gearing goal: auto (follows your build's primary output)")
+        else
+            local want = ALIAS[rest:lower()] or rest
+            local dim = HM.dimensions.byId(want)
+            if not dim then
+                for _, d in ipairs(HM.dimensions.list) do
+                    if d.label:lower():find(rest:lower(), 1, true) then dim = d; want = d.id end
+                end
+            end
+            if dim then
+                db.settings.goal = want
+                printMsg("gearing goal set: " .. dim.label .. " - item verdicts now judge for this")
+                if HM.StatsPanel and HM.StatsPanel.refresh then pcall(HM.StatsPanel.refresh) end
+            else
+                printMsg("unknown goal '" .. rest .. "' - try: survival, tank, dps, caster, healing, auto")
+            end
         end
     elseif cmd == "affects" or cmd == "map" then
         -- The impact map: what modifies an ability (inverse), or what an ability's
@@ -466,7 +509,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

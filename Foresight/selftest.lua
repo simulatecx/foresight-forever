@@ -316,6 +316,35 @@ function HM.runSelftest(out)
         local text = linesText(HM.Tooltips.itemLines({ Intellect = 20 }, base, { Stamina = 20 }))
         return text:find("vs equipped:", 1, true) ~= nil
     end)())
+    -- Gear verdict (Pawn-style headline) + gearing goal.
+    check("item verdict calls an Int item an upgrade for a caster's spellcasting", (function()
+        local v = HM.Impact.itemVerdict(base, { Intellect = 20 }, nil, "spellcasting")
+        return v.direction == "upgrade" and v.pct > 0 and v.label == "Spellcasting"
+    end)())
+    check("item verdict flips by gearing goal (Stamina: tank up, spell sidegrade)", (function()
+        local tank = HM.Impact.itemVerdict(base, { Stamina = 30 }, nil, "tankability")
+        local caster = HM.Impact.itemVerdict(base, { Stamina = 30 }, nil, "spellcasting")
+        return tank.direction == "upgrade" and caster.direction ~= "upgrade"
+    end)())
+    check("item verdict vs equipped nets the swap (Int item over a Stamina item)", (function()
+        local v = HM.Impact.itemVerdict(base, { Intellect = 20 }, { Stamina = 20 }, "spellcasting")
+        return v.compared == true and v.direction == "upgrade" and v.pct > 0
+    end)())
+    check("the headline verdict shows at the top of the item block", (function()
+        local lines = HM.Tooltips.itemLines({ Intellect = 20 }, base)
+        -- line 1 is the Foresight header; line 2 should be the verdict.
+        local t = (lines[2] and (lines[2].text or "")) or ""
+        return t:find("Upgrade", 1, true) ~= nil or t:find("grade", 1, true) ~= nil
+    end)())
+    check("gearGoal validates a tampered saved goal to auto", (function()
+        if not HM.charDb then return false end
+        local db = HM.charDb()
+        local saved = db.settings.goal
+        db.settings.goal = "evilNonDimension"
+        local g = HM.gearGoal()
+        db.settings.goal = saved
+        return g == "auto"
+    end)())
     check("explainItemDelta combines deltas via the diff path", (function()
         local _, changes = HM.Impact.explainItemDelta(base, { Stamina = 10 })
         for _, c in ipairs(changes) do

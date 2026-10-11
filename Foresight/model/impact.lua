@@ -137,6 +137,32 @@ function Impact.compareItems(loadout, statsA, statsB)
     return rows
 end
 
+-- Gear VERDICT (Pawn-style headline, but honest): the one-line answer - is this item an
+-- upgrade for the dimension you're gearing for? Uses the real diff (net swap vs equipped,
+-- or marginal add when there's nothing to compare), never a one-directional stat weight.
+-- goalId = a dimension id, or "auto"/nil to use the build's primary output lens.
+function Impact.itemVerdict(loadout, mapped, comparedStats, goalId)
+    local goal = goalId
+    if not goal or goal == "auto" then goal = Impact.primaryDimension(loadout) end
+    local pct
+    if comparedStats then
+        for _, r in ipairs(Impact.compareItems(loadout, mapped, comparedStats)) do
+            if r.id == goal then pct = r.net end
+        end
+    else
+        local _, changes = Impact.explainItemDelta(loadout, mapped)
+        for _, c in ipairs(changes or {}) do
+            if c.id == goal then pct = c.pct end
+        end
+    end
+    pct = pct or 0
+    local dim = HM.dimensions.byId(goal)
+    local direction = (pct > 0.05 and "upgrade")
+        or (pct < -0.05 and "downgrade") or "sidegrade"
+    return { dim = goal, label = dim and dim.label or goal, pct = pct,
+             direction = direction, compared = comparedStats ~= nil }
+end
+
 -- MODEL-stat-advisor: rank stats by marginal value for THIS build, so gear/drop choices
 -- are obvious. Built entirely on explainStatDelta (no second value path). v0 heuristic:
 -- "value" is each stat's strongest dimension move per +1 point; the headline orders by
