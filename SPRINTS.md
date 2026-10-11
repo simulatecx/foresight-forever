@@ -39,12 +39,20 @@ CHANGELOG 0.5.1-0.8.2. State:
   `C_SpecializationInfo`, `C_AssistedCombat` (+GetNextCastSpell), secret-values,
   `C_TooltipInfo`; talents are Retail **C_Traits** node trees (classic globals gone);
   the C_Traits walk + spellID->talent bridge (77 nodes, 7 selected, 38 mapped).
-- **Open:** eyeball the item/spell/talent tooltips rendering in-game (hooks installed,
-  APIs confirmed present); confirm the S2 TraitEntry talent-tooltip hook fires; the
-  rank-scaling rule (still (p); needs the trained-rank tooltip probe); panel render +
-  drag at mobile baseline. Beta window closes **2026-10-21**.
-- **Next capture:** relog on the shipped build -> auto-collect on login -> logout/login
-  -> `python pipeline/harvest.py` (now warns on stale/version-mismatch files).
+- **Render feedback (2026-10-11, v0.9.0 screenshots, L10 Shaman):** panel renders;
+  playstyle subtitle works; **panel drag persists + reset works** (confirmed). Three bugs
+  found and FIXED in v0.9.1: talent tooltips (wrong hook - `SetTraitEntry` exists but the
+  `TraitEntry` data type doesn't; now hook the method), item tooltip flash-vanish (async
+  rebuild + stale guard; now `OnTooltipCleared` flag), and What-if row overlap (fixed-height
+  wide rows; now sized to wrapped height).
+- **Open:** re-verify the three fixes in-game (talent block appears on a classic talent
+  hover; item block stays; What-if rows don't overlap); the rank-scaling rule (still (p));
+  the gear-compare "vs equipped" render. Beta window closes **2026-10-21**.
+- **Design direction (user, 2026-10-11):** move the panel + mouseover popups toward the
+  "Combat Matrix" mockup - dimension bars, a playstyle badge/chip, colored-accent advice
+  sections, a clean popup card. Needs an honest fill-basis decision for dimension bars
+  (our scores are relative indices, not 0-100%). Scheduled as a UI-redesign pass.
+- **Next capture:** relog on the shipped build -> logout/login -> `python pipeline/harvest.py`.
 
 ### S2 / S5 - fold into the S3 render check
 S2 (talent tooltips) and S5 (stats panel) are code-complete and gated; both flip to ☑

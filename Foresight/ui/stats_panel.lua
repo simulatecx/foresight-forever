@@ -147,18 +147,31 @@ local function layout(model)
                 f.stripe:SetColorTexture(1, 1, 1, zebra and 0.04 or 0)
                 zebra = not zebra
                 if row.wide then
+                    -- Wide rows hold a full sentence; anchor the label to the top and let
+                    -- it wrap, then size the row to the wrapped height so rows never overlap.
+                    f.label:ClearAllPoints()
+                    f.label:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -1)
+                    f.label:SetPoint("RIGHT", f, "RIGHT", -6, 0)
+                    f.label:SetJustifyH("LEFT")
                     f.label:SetText(("|cff%02x%02x%02x%s|r  %s"):format(
                         r * 255, g * 255, b * 255, row.label, colorizeDeltas(row.value)))
-                    f.label:SetPoint("RIGHT", f, "RIGHT", -6, 0)
                     f.value:SetText("")
                 else
-                    f.label:SetText(row.label)
+                    f.label:ClearAllPoints()
+                    f.label:SetPoint("LEFT", f, "LEFT", 6, 0)
                     f.label:SetPoint("RIGHT", f.value, "LEFT", -4, 0)
+                    f.label:SetText(row.label)
                     f.value:SetText(colorizeDeltas(row.value))
                 end
                 f:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
                 f:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
-                y = y - ROW_HEIGHT
+                local rowH = ROW_HEIGHT
+                if row.wide then
+                    local h = f.label:GetStringHeight()
+                    if h and h > 0 then rowH = math.max(ROW_HEIGHT, math.ceil(h) + 4) end
+                end
+                f:SetHeight(rowH)
+                y = y - rowH
             end
         end
         y = y - 6

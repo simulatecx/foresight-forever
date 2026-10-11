@@ -170,7 +170,7 @@ function Collect.verify(out)
     result("talent tooltip injection hook (S2 classic)", HM.Tooltips and HM.Tooltips.installed or false,
         (HM.Tooltips and HM.Tooltips.installed) and "GameTooltip.SetTalent hooked" or "not installed")
     result("talent tooltip injection hook (S2 trait)", HM.Tooltips and HM.Tooltips.traitTipInstalled or false,
-        (HM.Tooltips and HM.Tooltips.traitTipInstalled) and "TraitEntry tooltip hooked" or "TraitEntry type not exposed")
+        (HM.Tooltips and HM.Tooltips.traitTipInstalled) and "GameTooltip.SetTraitEntry hooked" or "no trait tooltip surface")
     result("item tooltip injection hook", HM.Tooltips and HM.Tooltips.itemsInstalled or false,
         (HM.Tooltips and HM.Tooltips.itemsInstalled) and "GetItemStats path hooked" or "not installed")
     result("spell tooltip injection hook", HM.Tooltips and HM.Tooltips.spellsInstalled or false,

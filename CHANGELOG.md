@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.9.1 - 2026-10-11
+
+Three live-render bugs fixed from the first real in-game screenshots (level-10 Shaman).
+
+- TALENT TOOLTIPS now hook the right method. The harvest proved `GameTooltip.SetTraitEntry`
+  exists but `Enum.TooltipDataType.TraitEntry` does NOT, so the data-processor hook never
+  installed. Now we hook `SetTraitEntry` directly (like SetTalent): entry -> definition
+  spell -> talent -> block. (Classic-overlap talents show; purely new Forever nodes - e.g.
+  the pilot's cooking traits - have no combat impact block yet.)
+- ITEM TOOLTIP "flash then vanish" fixed. Items load async and rebuild the tooltip; the
+  old per-item guard then refused to re-inject, so our block showed once and was wiped.
+  Now a single `foresightInjected` flag is cleared on `OnTooltipCleared` (fires on every
+  rebuild) and set before attach (so attach's Show() can't recurse) - re-injects cleanly
+  on each rebuild, for item/spell/trait alike.
+- WHAT-IF / wide panel rows no longer overlap: wide rows anchor their text to the top,
+  wrap, and the row is sized to the wrapped height instead of a fixed 15px.
+- `/foresight verify` reports the SetTraitEntry hook status.
+
+*Features:* UI-talent-tooltip, UI-item-tooltip, UI-spell-tooltip, UI-stats-panel
+
 ## 0.9.0 - 2026-10-11
 
 Gear compare (DATA-items v0): the item tooltip now tells you whether a drop is an upgrade
