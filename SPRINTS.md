@@ -153,6 +153,32 @@ AC: ☑ plan persists per character and survives tampering (validated, drops gar
 · ☑ `/foresight plan` add/remove/clear/show with net impact + chain lines · ☑ panel "Future
 build" section renders the plan + top net deltas live · ☐ clickable builder UI (add-from-tooltip
 "plan this", per-delta remove buttons) - next iteration · ☐ in-game render verify (S3 session).
+
+### S17 - IMBUE-compare: weapon-imbue simulation ◐  (triaged 2026-10-11, live user case)
+Fit & Overlap - Category MODEL -> UI. Verdict: Net-new data chain (SpellItemEnchantment, now
+fetched) + Enhance model/tooltip surfaces. Complements: MODEL-impact-diff (one AP->per-swing
+law, 14 AP = 1 DPS), UI-spell-tooltip (same injection module), WHATIF-planner (plan an imbue,
+later). Touches: pipeline fetch/generate (`weapon_imbues.lua`), new `model/imbues.lua` (pure),
+`core/init.lua` (/foresight imbue), `ui/tooltips.lua` (imbue block), snapshot (weapon damage).
+Avoid duplicating: swing/AP math. Mobile: chat + tooltip text (low-res binding ok). Languages:
+enUS addon strings (house state). Trust: display-only, (p) tags, unknown proc rates say
+"unverified" - never invented. Data: no new stored data. Abuse: not externally reachable.
+
+As a shaman with a slow 2H axe, I want Rockbiter (+AP, +threat) vs Flametongue (per-hit fire
+scaling with weapon speed) compared on MY weapon - per swing and per second - so the imbue
+choice is a number, not a guess (the user's live case, 2026-10-11).
+Ground truth (this build): imbue spell -> effect 360/54 -> SpellItemEnchantment; type-3 equip
+spells carry +AP/threat auras (Rockbiter r1 +29 AP); Flametongue's basis rides the tooltip
+macro ($8026m1/77../25 = the 1.3s/4.0s speed extremes -> per-hit = basis x speed / 100; r1
+basis 326 = the in-game "3-13"); type-1 procs carry flat school damage + chance in
+EffectPointsMin (Instant Poison 20% x 15 Nature; Frostbrand chance absent -> "unverified").
+AC: ☑ weapon_imbues.lua generated (377 temp enchants incl. item-applied poisons/stones/oils -
+poisons are ClassID-0 subclass-8 items here, not skill-line spells) · ☑ Imbues.compare pure +
+selftest (per-swing/per-sec, rank dedupe, speed scaling, honest unknown proc rates) ·
+☑ /foresight imbue on the live weapon speed · ☑ imbue block on the apply-spell tooltip ·
+☐ in-game verify · ☐ Windfury extra-attack EV (weapon-damage baseline now in the snapshot).
+
+### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
 /foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),
 themes include the player's racials and active consumables alongside talents - typed members

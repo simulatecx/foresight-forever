@@ -528,6 +528,70 @@ function HM.runSelftest(out)
         return type(found) == "table" and #found == 0
     end)())
 
+    -- IMBUE-compare: the "Rockbiter or Flametongue on my 2H axe" simulation (S17).
+    check("imbue data decodes the shaman chains", (function()
+        local g = HM.gen.imbues
+        if not g then return false end
+        local rb = g[8017] -- Rockbiter r1: equip +29 AP + threat aura
+        local ft = g[8024] -- Flametongue r1: speed-scaled fire, basis 326
+        local wf = g[8232] -- Windfury r1: 20% on-hit chance
+        local fb = g[8033] -- Frostbrand r1: proc 32 Frost, rate unknown
+        local ip = g[8679] -- Instant Poison r1: 20% x 15 Nature
+        local rbAp, rbThreat
+        for _, op in ipairs((rb and rb.ops) or {}) do
+            if op.kind == "attackPower" and op.maxValue == 29 then rbAp = true end
+            if op.kind == "threat" then rbThreat = true end
+        end
+        return rbAp and rbThreat
+            and ft and ft.speedDamage and ft.speedDamage.per100Speed == 326
+            and ft.speedDamage.school == "Fire"
+            and wf and wf.chance == 20
+            and fb and fb.procs and fb.procs[1].damage == 32 and fb.procs[1].chance == nil
+            and ip and ip.procs and ip.procs[1].chance == 20 and ip.procs[1].damage == 15
+    end)())
+    check("Flametongue per-hit scales with weapon speed, DPS constant", (function()
+        local slow = select(1, HM.Imbues.compare({ weaponSpeed = 3.6 }, { 8024 }))[1]
+        local fast = select(1, HM.Imbues.compare({ weaponSpeed = 1.5 }, { 8024 }))[1]
+        return approx(slow.perSwing, 326 * 3.6 / 100, 1e-6)
+            and approx(fast.perSwing, 326 * 1.5 / 100, 1e-6)
+            and approx(slow.perSec, fast.perSec, 1e-6)
+    end)())
+    check("the 2H-axe question: FT out-DPSes Rockbiter r1, RB notes threat", (function()
+        local rows = select(1, HM.Imbues.compare({ weaponSpeed = 3.6 }, { 8017, 8024 }))
+        if not (rows[1] and rows[1].name == "Flametongue Weapon") then return false end
+        local rb
+        for _, r in ipairs(rows) do if r.name == "Rockbiter Weapon" then rb = r end end
+        if not (rb and approx(rb.perSwing, 29 / 14 * 3.6, 1e-6)
+                and approx(rb.perSec, 29 / 14, 1e-6)) then return false end
+        for _, n in ipairs(rb.notes) do
+            if n:find("threat", 1, true) then return true end
+        end
+        return false
+    end)())
+    check("imbue rank dedupe keeps the strongest known rank", (function()
+        local rows = select(1, HM.Imbues.compare({ weaponSpeed = 2.0 }, { 8017, 8018 }))
+        return #rows == 1 and approx(rows[1].perSec, 58 / 14, 1e-6)
+    end)())
+    check("unknown proc rates say so; known ones get an expected value", (function()
+        local rows = select(1, HM.Imbues.compare({ weaponSpeed = 2.0 }, { 8033, 8679 }))
+        local fb, ip
+        for _, r in ipairs(rows) do
+            if r.name == "Frostbrand Weapon" then fb = r end
+            if r.name == "Instant Poison" then ip = r end
+        end
+        if not (fb and fb.needsCuration
+                and table.concat(fb.notes, "\n"):find("unverified", 1, true)) then return false end
+        return ip and approx(ip.perSwing, 3, 1e-6) and approx(ip.perSec, 1.5, 1e-6)
+    end)())
+    check("imbue tooltip block renders the per-swing answer", (function()
+        local snap = testSnapshot()
+        snap.weaponSpeed = 3.6
+        local text = linesText(HM.Tooltips.imbueLines(8024, HM.Loadout.fromSnapshot(snap)))
+        return text:find("3.6s weapon", 1, true) ~= nil
+            and text:find("per swing", 1, true) ~= nil
+            and text:find("slower weapon = bigger hits", 1, true) ~= nil
+    end)())
+
     -- WHATIF-planner: persistent future-build plan over the one delta stack.
     check("plan validates typed deltas and drops garbage", (function()
         local clean, dropped = HM.Plan.validate({

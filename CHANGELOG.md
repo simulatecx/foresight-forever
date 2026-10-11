@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.14.0 - 2026-10-11
+
+WEAPON-IMBUE SIMULATION (S17, the user's live Rockbiter-vs-Flametongue question):
+every temp weapon enchant becomes per-swing and per-second numbers on YOUR weapon.
+
+- Pipeline: fetch `SpellItemEnchantment`; generate `weapon_imbues.lua` (377 entries:
+  shaman imbues, rogue poisons, sharpening stones, oils - via class/poison-line spells
+  AND ClassID-0 item on-use spells, since poisons are items subclass 8 here). Decodes:
+  type-3 equip spells through build_ops (Rockbiter +AP & threat aura), type-1 procs
+  (flat school damage + chance from EffectPointsMin), type-2 flat weapon damage
+  (sharpening stones). Flametongue's basis rides the tooltip macro - /77 and /25 are
+  the 1.3s/4.0s weapon-speed extremes, so per-hit = basis x speed / 100 (r1 basis 326
+  = the in-game "3-13"); parsed for both macro syntaxes.
+- New pure `model/imbues.lua`: Imbues.compare(snapshot, ids) -> per-swing/per-second
+  rows on the live weapon speed (14 AP = 1 DPS, one law with the chain explainer),
+  expected value for known proc rates (Instant Poison 20% x 15), honest "proc rate
+  not in the data (unverified)" for unknown ones (Frostbrand), rank dedupe keeps the
+  strongest known rank. Imbues.known() filters by IsPlayerSpell (read-only).
+- Surfaces: `/foresight imbue` compares every known imbue on your weapon and names
+  the best-DPS and biggest-swing choice; hovering an imbue spell/poison item's APPLY
+  spell injects "On your 3.6s weapon: ~+11.7 damage per swing (+3.26 DPS)" + notes
+  ("slower weapon = bigger hits, same DPS" / "extra threat, tank-friendly").
+- Snapshot captures the main-hand damage range (UnitDamage, guarded) as the baseline
+  for future proc expected-values (Windfury extra-attack EV needs it).
+- Selftest 112 checks (+6: chain decodes, speed scaling vs constant DPS, the 2H-axe
+  verdict incl. threat note, rank dedupe, honest proc rates, tooltip block).
+
+*Features:* IMBUE-compare, DATA-pipeline-fetch, DATA-pipeline-generate, DATA-generated-tables, MODEL-snapshot, UI-spell-tooltip, QA-selftest-harness
+
 ## 0.13.1 - 2026-10-11
 
 Field-report fixes (pilot hover session) + the in-game verify/write-back loop for

@@ -39,6 +39,7 @@ TABLES = [
     "ItemXItemEffect",    # item -> effect link
     "SpellAuraOptions",   # CumulativeAura = max stacks
     "SpellEquippedItems", # weapon/armor requirement (discriminates conditional auras, e.g. 290)
+    "SpellItemEnchantment", # weapon imbues/temp enchants (Rockbiter/Flametongue chain)
     # Retail trait system = the LIVE talent system on Forever (classic globals are gone).
     "TraitNode",               # node id, tree id, position, type
     "TraitNodeEntry",          # entry -> definition + max ranks

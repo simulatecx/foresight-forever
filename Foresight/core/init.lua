@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.13.1"
+HM.version = "0.14.0"
 
 -- Detect a stale in-client file list: /reload re-runs files but a client started
 -- before a deploy that ADDED files to the .toc never loads them until a full restart.
@@ -229,6 +229,39 @@ local function onSlash(input)
             for _, line in ipairs(okd and lines or {}) do printMsg("  " .. line) end
             printMsg("  on expiry these gains reverse")
         end
+    elseif cmd == "imbue" or cmd == "imbues" then
+        -- IMBUE-compare: Rockbiter vs Flametongue (etc.) on YOUR weapon, as numbers.
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not snapshot then
+            printMsg("no character snapshot available")
+            return
+        end
+        local ids = HM.Imbues and HM.Imbues.known() or {}
+        if #ids == 0 then
+            printMsg("no known weapon imbues (shaman weapon imbues / rogue poisons)")
+            return
+        end
+        local rows, speed = HM.Imbues.compare(snapshot, ids)
+        printMsg(("weapon imbues on your %.1fs weapon (p):"):format(speed))
+        local bestSwing = rows[1]
+        for _, r in ipairs(rows) do
+            if r.perSwing > bestSwing.perSwing then bestSwing = r end
+            if r.perSwing > 0 then
+                printMsg(("  %s: ~%+.1f damage per swing (%+.2f DPS)")
+                    :format(r.name, r.perSwing, r.perSec))
+            else
+                printMsg("  " .. r.name .. ":")
+            end
+            for _, n in ipairs(r.notes) do printMsg("    " .. n) end
+            if r.needsCuration then
+                printMsg("    (some effects aren't mapped - the spell tooltip knows more)")
+            end
+        end
+        if #rows >= 2 and rows[1].perSec > 0 then
+            printMsg(("  -> best estimated DPS: %s%s"):format(rows[1].name,
+                bestSwing.name ~= rows[1].name
+                    and ("; biggest single swing: " .. bestSwing.name) or ""))
+        end
     elseif cmd == "plan" then
         -- WHATIF-planner: compose a persistent future build and see its net impact.
         local Plan = HM.Plan
@@ -346,7 +379,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | buffs | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

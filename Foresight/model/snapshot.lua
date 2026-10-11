@@ -64,6 +64,10 @@ function Snapshot.capture()
                 - statIndex(4) * 15),
         },
         weaponSpeed = Guards.number(Guards.call(_G.UnitAttackSpeed, "player")) or 2.0,
+        -- Main-hand damage range (UnitDamage #1/#2): the per-swing baseline the imbue
+        -- comparison and future proc expected-values sit on.
+        weaponDamageMin = Guards.number(Guards.select(1, _G.UnitDamage, "player")) or 0,
+        weaponDamageMax = Guards.number(Guards.select(2, _G.UnitDamage, "player")) or 0,
         talents = Snapshot.captureTalents(),
     }
     -- Race (racial-impact modelling): UnitRace #2 is the locale-free token ("Scourge"

@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -315,6 +316,11 @@ def main() -> int:
     racial_lines = {sid for sid, r in skill_lines.items()
                     if to_int(r.get("CategoryID", "0")) == 9
                     and "Racial" in (r.get("DisplayName_lang") or "")}
+    # Rogue poisons are player abilities on their own category-9 line (not a class
+    # line) - they join the shippable set so the imbue pass sees them.
+    poison_lines = {sid for sid, r in skill_lines.items()
+                    if to_int(r.get("CategoryID", "0")) == 9
+                    and "Poison" in (r.get("DisplayName_lang") or "")}
     chr_races = {to_int(r["ID"]): r for r in read_csv(cache, "ChrRaces")}
     bit_to_race = {}
     for rid, r in chr_races.items():
@@ -335,7 +341,7 @@ def main() -> int:
     racial_dropped = 0
     for r in read_csv(cache, "SkillLineAbility"):
         line = to_int(r["SkillLine"])
-        if line in class_lines:
+        if line in class_lines or line in poison_lines:
             player_spells.add(to_int(r["Spell"]))
         elif line in racial_lines:
             races = races_for_masks(to_int(r["RaceMasks_0"]), to_int(r["RaceMasks_1"]),
@@ -561,8 +567,14 @@ def main() -> int:
     # applied to gear) and bandages (7) are out of scope for self-buffs.
     CONSUMABLE_TYPES = {0: "consumable", 1: "potion", 2: "elixir", 3: "flask",
                         4: "scroll", 5: "food", 8: "other"}
-    consumable_sub = {to_int(r["ID"]): to_int(r["SubclassID"]) for r in read_csv(cache, "Item")
-                      if to_int(r["ClassID"]) == 0 and to_int(r["SubclassID"]) in CONSUMABLE_TYPES}
+    consumable_sub, class0_items = {}, set()
+    for r in read_csv(cache, "Item"):
+        if to_int(r["ClassID"]) != 0:
+            continue
+        iid, sc = to_int(r["ID"]), to_int(r["SubclassID"])
+        class0_items.add(iid)
+        if sc in CONSUMABLE_TYPES:
+            consumable_sub[iid] = sc
     sparse = {}
     for r in read_csv(cache, "ItemSparse"):
         iid = to_int(r["ID"])
@@ -632,6 +644,85 @@ def main() -> int:
             buffs_by_spell.setdefault(buff_sid, iid)
             break  # one buff effect per item is the consumable shape
 
+    # ---- Weapon imbues (IMBUE-compare: temp weapon enchants from player spells) --
+    # Chain: player spell -> SpellEffect (Effect 53/54/360, misc0 = enchantment id)
+    # -> SpellItemEnchantment: type-3 EQUIP spells carry fold-able auras (Rockbiter
+    # +AP/threat -> build_ops), type-1 PROC spells carry flat school damage with the
+    # chance in EffectPointsMin (0 = unknown, stays honest). Flametongue's damage
+    # basis lives OUTSIDE the enchant (dummy equip spell): the imbue tooltip macro
+    # divides a basis spell's m1 by 77 and 25 = 100/1.3s and 100/4.0s (the weapon-
+    # speed extremes), i.e. per-hit = basis_bp * weaponSpeed / 100 - parsed from the
+    # description ($<id>m1/77 classic syntax, $/77;<id>m1 new syntax).
+    enchants = {to_int(r["ID"]): r for r in read_csv(cache, "SpellItemEnchantment")}
+    # Item-applied temp enchants (rogue poisons, sharpening stones, oils): the apply
+    # spell hangs off a ClassID-0 item (poisons are subclass 8 "Other" on this build),
+    # not a skill line - scan every consumable-class on-use spell; the enchant-effect
+    # check below is the membership filter.
+    enhance_spells = set()
+    for iid in class0_items:
+        for eid in item_links.get(iid, []):
+            eff = item_effects.get(eid)
+            if eff and to_int(eff["TriggerType"]) == 0:
+                enhance_spells.add(to_int(eff["SpellID"]))
+    imbues_out = {}
+    for sid in sorted(player_spells | enhance_spells):
+        for e in effects_by_spell.get(sid, []):
+            if to_int(e["Effect"]) not in (53, 54, 360):
+                continue
+            er = enchants.get(to_int(e["EffectMiscValue_0"]))
+            if not er:
+                continue
+            entry = {
+                "name": spell_names.get(sid, f"spell:{sid}"),
+                "enchant": to_int(er["ID"]),
+                "confidence": "forever-new-unverified" if sid >= 1_000_000 else "classic-presumed",
+            }
+            ops, procs = [], []
+            for i in range(3):
+                etype = to_int(er.get(f"Effect_{i}") or 0)
+                arg = to_int(er.get(f"EffectArg_{i}") or 0)
+                pts = to_int(er.get(f"EffectPointsMin_{i}") or 0)
+                if etype == 3 and arg:  # equip spell: fold its auras (AP, threat...)
+                    ops.extend(op for op in build_ops(arg, effects_by_spell, class_options,
+                                                      family_members, player_spells, equipped_items)
+                               if op.get("kind") != "unmapped")
+                    if pts and pts != 100:
+                        entry["chance"] = pts  # Windfury-style on-hit chance
+                elif etype == 2 and pts:  # flat weapon damage (sharpening stones)
+                    entry["flatDamage"] = (entry.get("flatDamage") or 0) + pts
+                elif etype == 1 and arg:  # proc-on-hit spell: flat school damage
+                    dmg = sum(float(pe["EffectBasePointsF"] or 0)
+                              for pe in effects_by_spell.get(arg, [])
+                              if to_int(pe["Effect"]) == 2)
+                    pm = misc.get(arg)
+                    proc = { "spellID": arg, "name": spell_names.get(arg, "") }
+                    if pts:
+                        proc["chance"] = pts
+                    if dmg:
+                        proc["damage"] = dmg
+                        proc["school"] = school_label(to_int(pm["SchoolMask"])) if pm else "?"
+                    procs.append(proc)
+            if ops:
+                entry["ops"] = ops
+            if procs:
+                entry["procs"] = procs
+            basis_ref = re.search(r"\$(\d+)m1/77", spell_desc.get(sid) or "") \
+                or re.search(r"/77;(\d+)m1", spell_desc.get(sid) or "")
+            if basis_ref:
+                basis = to_int(basis_ref.group(1))
+                bp = sum(float(pe["EffectBasePointsF"] or 0)
+                         for pe in effects_by_spell.get(basis, []))
+                bm = misc.get(basis)
+                if bp:
+                    entry["speedDamage"] = {
+                        "per100Speed": bp, "basisSpellID": basis,
+                        "school": school_label(to_int(bm["SchoolMask"])) if bm else "Fire",
+                    }
+            if entry.get("ops") or entry.get("procs") or entry.get("speedDamage") \
+                    or entry.get("chance") or entry.get("flatDamage"):
+                imbues_out[sid] = entry
+            break  # one enchant effect per imbue spell
+
     # ---- Emit ------------------------------------------------------------------
     stamp = dt.date.today().isoformat()
     written = [
@@ -649,6 +740,7 @@ def main() -> int:
                 "racialSpells": len(racials_by_spell),
                 "racialSpellsNeedingCuration": len(racial_curation),
                 "consumables": len(consumables_out),
+                "imbues": len(imbues_out),
             },
             "classNames": CLASS_NAMES,
         }, out_dir, args.build),
@@ -662,13 +754,15 @@ def main() -> int:
                                         "raceTokens": race_tokens}, out_dir, args.build),
         LuaWriter.file("consumables", {"consumables": consumables_out,
                                        "buffsBySpell": buffs_by_spell}, out_dir, args.build),
+        LuaWriter.file("weapon_imbues", {"imbues": imbues_out}, out_dir, args.build),
     ]
     for path in written:
         print(f"wrote {path.relative_to(root.parent)} ({path.stat().st_size:,} bytes)")
     print(f"\ntalents={len(talents_out)} tabs={len(tabs_out)} spells shipped={len(spells_out)} "
           f"trait nodes={len(trait_nodes)} talents needing curation={needs_curation}/{len(talents_out)}\n"
           f"racial races={len(racials_out)} racial spells={len(racials_by_spell)} "
-          f"racials needing curation={len(racial_curation)} consumables={len(consumables_out)}")
+          f"racials needing curation={len(racial_curation)} consumables={len(consumables_out)} "
+          f"imbues={len(imbues_out)}")
     return 0
 
 

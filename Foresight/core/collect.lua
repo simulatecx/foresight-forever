@@ -185,9 +185,11 @@ function Collect.verify(out)
         stale and (stale .. " - FULL RESTART required") or ("v" .. tostring(HM.version)))
     local counts = HM.gen and HM.gen.counts or {}
     result("all-sources data loaded",
-        (counts.consumables or 0) > 0 and (counts.racialSpells or 0) > 0,
-        ("consumables=%s racials=%s traitNodes=%s"):format(
-            tostring(counts.consumables), tostring(counts.racialSpells), tostring(counts.traitNodes)))
+        (counts.consumables or 0) > 0 and (counts.racialSpells or 0) > 0
+            and (counts.imbues or 0) > 0,
+        ("consumables=%s racials=%s traitNodes=%s imbues=%s"):format(
+            tostring(counts.consumables), tostring(counts.racialSpells),
+            tostring(counts.traitNodes), tostring(counts.imbues)))
     result("live buff read available",
         _G.C_UnitAuras and _G.C_UnitAuras.GetPlayerAuraBySpellID ~= nil,
         _G.C_UnitAuras and "C_UnitAuras.GetPlayerAuraBySpellID" or "C_UnitAuras absent")

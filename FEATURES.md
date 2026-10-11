@@ -6,7 +6,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## DATA - data pipeline & shipped data
 - ☑ `DATA-pipeline-fetch` - download Forever DB2 tables from wago.tools, cached per build -> `pipeline/fetch.py`
 - ☑ `DATA-pipeline-generate` - compute talent->affected-spells via class masks, emit Lua tables -> `pipeline/generate.py`
-- ☑ `DATA-generated-tables` - talents, tabs, impacts, 3,493 spells (cast/cost/tick/cooldown), 555 trait nodes, 45 racial spells across 10 races, 390 consumable buffs -> `Foresight/data/generated/`
+- ☑ `DATA-generated-tables` - talents, tabs, impacts, 3,520 spells (cast/cost/tick/cooldown), 555 trait nodes, 45 racial spells across 10 races, 390 consumable buffs, 377 weapon imbues -> `Foresight/data/generated/`
 - ☑ `DATA-formula-registry` - confidence-tagged conversion math (regen, swing, coefficients, rank rule) -> `Foresight/data/formulas.lua`
 - ☑ `DATA-overrides` - curated corrections layered over generated data -> `Foresight/data/overrides.lua`
 - ◐ `DATA-items` - gear compare v0 (v0.9.0): `Impact.compareItems` nets two items' per-dimension impact (built on explainItemDelta, no forked math); item tooltip shows a "vs equipped [slot]" block via live GetItemStats. Offline ItemSparse DB deliberately deferred (addon bloat vs live reads) -> `Foresight/model/impact.lua`, `Foresight/ui/tooltips.lua`
@@ -30,7 +30,8 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ◐ `SYNERGY-engine` - groups impact sources by shared lever (stat/spell/school/mechanic); tooltip "Synergy:" line + `/foresight synergy <name>`; v0.12.0 draws from ALL sources - talents + the player's racials + active consumable buffs via optional player context (typed members, one op-walker). Remaining: chained synergies (A boosts Int -> B converts Int) + the tree-highlight UI -> `Foresight/model/synergy.lua`
 - ◐ `SYNERGY-highlight` - Diablo-4-style talent-tree highlight of a synergy theme (v0.13.0): `/foresight synergy <theme>` glows every member node (enumerator probe -> name-match fallback; house pulse textures, taint-free; theme saved per char, auto-applies on talent-UI open, `clear` stops). Remaining: in-game render verify, talent-frame dropdown, LibCustomGlow at packaging -> `Foresight/ui/synergy_highlight.lua`
 
-## CONSUME / RACIAL - more impact sources (researched 2026-10-11)
+## CONSUME / RACIAL / IMBUE - more impact sources (researched 2026-10-11)
+- ◐ `IMBUE-compare` - weapon-imbue simulation (v0.14.0, S17): `weapon_imbues.lua` (377 temp enchants: shaman imbues/poisons/stones/oils via SpellItemEnchantment; Flametongue per-hit = basis x speed/100, ground-truthed from the tooltip macro) + pure `Imbues.compare` (per-swing/per-sec on the live weapon, proc EV only when the rate is known, rank dedupe) + `/foresight imbue` + imbue block on the apply-spell tooltip. Remaining: in-game verify, Windfury extra-attack EV (needs weapon damage baseline, now captured) -> `pipeline/generate.py`, `Foresight/model/imbues.lua`, `Foresight/ui/tooltips.lua`
 - ◐ `CONSUME-buffs` - consumable buff impact (v0.12.0): `consumables.lua` (390 potions/elixirs/flasks/scrolls/foods; Well-Fed one-hop keyed by the triggered aura spell) + `Loadout:withBuff`/`Impact.buffDelta` (one diff = active gains / expiry loss); secret-safe live read (`Snapshot.captureActiveBuffs` via never-secret spellId, `Guards.aurasSecret` degrade); consumable tooltip "While active / On expiry" block + `/foresight buffs`. Remaining: in-game render verify -> `pipeline/generate.py`, `Foresight/data/generated/consumables.lua`, `Foresight/model/loadout.lua`, `Foresight/ui/tooltips.lua`
 - ◐ `RACIAL-impact` - racial impact data + model (v0.11.0): `race_racials.lua` keyed by raceID (10 races, 45 spells; RaceMasks bit = ChrRaces.PlayableRaceBit, no Skyborne hardcode) with ops/class gates/passive split/confidence tags; `model/racials.lua` access + `Loadout:withRacial`/`withRace` what-ifs; new aura 133 (max-health%) + 178 (max-power%) folds. NOT folded into the base build (live stats already include racials - double-count law). Synergy surfacing shipped v0.12.0. Remaining: panel "Your <Race> racials" line + in-game verify -> `pipeline/generate.py`, `Foresight/data/generated/race_racials.lua`, `Foresight/model/racials.lua`, `Foresight/model/loadout.lua`
 
@@ -50,7 +51,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 105-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 112-check selftest (in-game + headless via lupa) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

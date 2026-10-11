@@ -4,5 +4,5 @@ if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 HM.gen = HM.gen or {}
 HM.gen.build = "1.60.1.70338"
 HM.gen.generated = "2026-10-11"
-HM.gen.counts = {consumables=390,impactsNeedingCuration=159,racialRaces=10,racialSpells=45,racialSpellsNeedingCuration=29,spells=3493,tabs=27,talents=432,traitNodes=555,traitNodesNeedingCuration=236}
+HM.gen.counts = {consumables=390,imbues=377,impactsNeedingCuration=159,racialRaces=10,racialSpells=45,racialSpellsNeedingCuration=29,spells=3520,tabs=27,talents=432,traitNodes=555,traitNodesNeedingCuration=236}
 HM.gen.classNames = {[1]="Warrior",[11]="Druid",[2]="Paladin",[3]="Hunter",[4]="Rogue",[5]="Priest",[7]="Shaman",[8]="Mage",[9]="Warlock"}

@@ -670,6 +670,35 @@ end
 
 -- Spell hook (shares attach/brand - same one injection module) ----------------
 
+-- Imbue block (IMBUE-compare): hovering a weapon imbue (Rockbiter/Flametongue/
+-- poison) answers "what is this worth per swing on MY weapon" from the generated
+-- enchant data + the live weapon speed.
+function Tooltips.imbueLines(spellId, loadout)
+    if not (loadout and HM.Imbues and HM.gen and HM.gen.imbues
+            and HM.gen.imbues[spellId]) then return nil end
+    local ok, rows, speed = pcall(HM.Imbues.compare, loadout.snapshot, { spellId })
+    local r = ok and rows and rows[1]
+    if not r then return nil end
+    local lines = {}
+    lines[#lines + 1] = {
+        kind = "double", left = "Foresight",
+        right = "(p) " .. (r.confidence or "classic-presumed"),
+        r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
+    }
+    if r.perSwing > 0 then
+        lines[#lines + 1] = {
+            text = ("On your %.1fs weapon: |cff4ade80~%+.1f|r damage per swing (%+.2f DPS)")
+                :format(speed, r.perSwing, r.perSec),
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+        }
+    end
+    for _, n in ipairs(r.notes) do
+        lines[#lines + 1] = { text = n, r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
+    end
+    if #lines <= 1 then return nil end
+    return lines
+end
+
 local function injectSpell(tip, spellId)
     if tip.foresightInjected then return end
     if not spellId and type(tip.GetSpell) == "function" then
@@ -680,7 +709,7 @@ local function injectSpell(tip, spellId)
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
-    local lines = Tooltips.spellLines(spellId, loadout)
+    local lines = Tooltips.imbueLines(spellId, loadout) or Tooltips.spellLines(spellId, loadout)
     if lines then
         tip.foresightInjected = true
         attach(tip, lines)
