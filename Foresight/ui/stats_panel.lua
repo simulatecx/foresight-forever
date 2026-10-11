@@ -160,6 +160,9 @@ function StatsPanel.refresh()
     local loadout = HM.Loadout.fromSnapshot(snapshot)
     local ok, model = pcall(HM.PanelModel.build, loadout)
     if ok and model then
+        if panel.subtitle and model.playstyle then
+            panel.subtitle:SetText((model.playstyle:gsub(" %(v0 heuristic%)", "")))
+        end
         layout(model)
     else
         HM.print("stats panel refresh failed: " .. tostring(model))
@@ -212,6 +215,7 @@ local function createPanel()
     local subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     subtitle:SetPoint("TOPRIGHT", -PAD, -9)
     subtitle:SetText("what more would do")
+    panel.subtitle = subtitle -- updated each refresh with the playstyle label
 
     toggleButton = _G.CreateFrame("Button", "ForesightToggleButton", parent, "UIPanelButtonTemplate")
     toggleButton:SetSize(36, 18)

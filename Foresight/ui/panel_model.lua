@@ -22,6 +22,37 @@ end
 
 local WHATIF_STATS = { "Spirit", "Intellect", "Stamina", "Agility", "Strength" }
 
+-- UI-playstyle-label: one-line "what IS my build" from dimension scores. v0 heuristic.
+-- Archetype = the top output lens; the offense/survival lean compares the archetype's
+-- key stat against Stamina (a within-character, scale-stable signal).
+local ARCHETYPE = {
+    spellcasting = { word = "Caster", stat = "intellect" },
+    healing      = { word = "Healer", stat = "intellect" },
+    meleeDps     = { word = "Melee",  stat = "strength" },
+    rangedDps    = { word = "Ranged", stat = "agility" },
+}
+
+function PanelModel.playstyleLabel(results, snapshot)
+    local bestId, bestScore
+    for id in pairs(ARCHETYPE) do
+        local r = results[id]
+        if r and r.score and (not bestScore or r.score > bestScore) then
+            bestId, bestScore = id, r.score
+        end
+    end
+    local arch = ARCHETYPE[bestId] or ARCHETYPE.spellcasting
+    local lean = ""
+    local stats = snapshot and snapshot.stats
+    if stats then
+        local off = stats[arch.stat] or 0
+        local sta = stats.stamina or 0
+        if sta > off * 1.15 then lean = " - survival-focused"
+        elseif off > sta * 1.15 then lean = " - offense-focused"
+        else lean = " - balanced" end
+    end
+    return ("%s-leaning%s (v0 heuristic)"):format(arch.word, lean)
+end
+
 -- Build the full panel model for a loadout.
 -- Returns { sections = { { id, title, rows = { { label, value, tooltip? } } } } }
 function PanelModel.build(loadout)
@@ -88,7 +119,24 @@ function PanelModel.build(loadout)
     end
     sections[#sections + 1] = { id = "whatif", title = "What-if", rows = whatifRows }
 
-    return { sections = sections, notes = built.notes }
+    -- Stat value: each stat's strongest impact per +1 point (MODEL-stat-advisor).
+    local statRows = {}
+    local ok, ranked = pcall(HM.Impact.rankStats, loadout)
+    for _, r in ipairs(ok and ranked or {}) do
+        statRows[#statRows + 1] = {
+            label = r.stat,
+            value = r.bestLabel and ("%+.1f%% %s"):format(r.bestPct, r.bestLabel)
+                or "no modeled effect",
+            wide = true,
+        }
+    end
+    sections[#sections + 1] = { id = "statvalue", title = "Stat value (per +1)", rows = statRows }
+
+    return {
+        sections = sections,
+        notes = built.notes,
+        playstyle = PanelModel.playstyleLabel(results, loadout.snapshot),
+    }
 end
 
 return PanelModel

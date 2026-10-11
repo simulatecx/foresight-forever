@@ -89,6 +89,66 @@ function Impact.explainStatDelta(loadout, stat, amount)
     return lines, changes
 end
 
+-- MODEL-stat-advisor: rank stats by marginal value for THIS build, so gear/drop choices
+-- are obvious. Built entirely on explainStatDelta (no second value path). v0 heuristic:
+-- "value" is each stat's strongest dimension move per +1 point; the headline orders by
+-- the build's primary output lens, the per-stat breakdown shows each stat's best use.
+local OUTPUT_DIMS = { "spellcasting", "meleeDps", "rangedDps", "healing" }
+local DEFAULT_STATS = { "Strength", "Agility", "Stamina", "Intellect", "Spirit" }
+
+-- The build's primary output lens: highest-scoring of the throughput dimensions.
+function Impact.primaryDimension(loadout)
+    local results = Impact.evaluate(loadout)
+    local bestId, bestScore
+    for _, id in ipairs(OUTPUT_DIMS) do
+        local r = results[id]
+        if r and r.score and (not bestScore or r.score > bestScore) then
+            bestId, bestScore = id, r.score
+        end
+    end
+    return bestId or "spellcasting", results
+end
+
+-- Rank stats for a loadout. Returns ordered list of
+-- { stat, focusPct, bestPct, bestLabel } plus the focus dimension id.
+function Impact.rankStats(loadout, stats, focusDimId)
+    stats = stats or DEFAULT_STATS
+    local focus = focusDimId or Impact.primaryDimension(loadout)
+    local ranked = {}
+    for _, stat in ipairs(stats) do
+        local _, changes = Impact.explainStatDelta(loadout, stat, 1)
+        local focusPct, bestPct, bestLabel = 0, 0, nil
+        for _, c in ipairs(changes or {}) do
+            if c.id == focus then focusPct = c.pct or 0 end
+            if math.abs(c.pct or 0) > math.abs(bestPct) then
+                bestPct, bestLabel = c.pct or 0, c.label
+            end
+        end
+        ranked[#ranked + 1] = { stat = stat, focusPct = focusPct,
+                                bestPct = bestPct, bestLabel = bestLabel }
+    end
+    table.sort(ranked, function(a, b)
+        if a.focusPct ~= b.focusPct then return a.focusPct > b.focusPct end
+        return math.abs(a.bestPct) > math.abs(b.bestPct)
+    end)
+    return ranked, focus
+end
+
+-- One human sentence: "For your Spellcasting right now: Intellect > Spirit per point".
+function Impact.statPrioritySentence(loadout, stats)
+    local ranked, focus = Impact.rankStats(loadout, stats)
+    local dim = HM.dimensions.byId(focus)
+    local names = {}
+    for _, r in ipairs(ranked) do
+        if r.focusPct > 0 then names[#names + 1] = r.stat end
+    end
+    if #names == 0 then -- nothing moves the focus lens; fall back to best-overall order
+        for _, r in ipairs(ranked) do names[#names + 1] = r.stat end
+    end
+    return ("For your %s right now: %s per point (v0 heuristic)"):format(
+        dim and dim.label or "build", table.concat(names, " > ")), ranked, focus
+end
+
 -- Talent summary for tooltips: what a talent touches, from precise generated data.
 -- Returns { name, affectedNames = {...}, property, valueAtRank, isPct, needsCuration }.
 function Impact.talentSummary(talentId, rank)

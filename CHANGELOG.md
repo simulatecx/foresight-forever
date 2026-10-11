@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.6.0 - 2026-10-10
+
+Two layman-impact features from the "Layman's Oracle" triage - what each stat is worth
+for YOUR build, and what your build even is. Both pure/selftest-covered (51 checks).
+
+- MODEL-stat-advisor: `Impact.rankStats` / `statPrioritySentence`, built entirely on
+  the existing explainStatDelta path (no forked value code). Headline sentence orders
+  stats by the build's primary output lens ("For your Spellcasting right now: Intellect
+  > ... per point"); the per-stat breakdown names each stat's strongest dimension move.
+  Surfaced via `/foresight advisor` and a new panel "Stat value (per +1)" section.
+- UI-playstyle-label: `PanelModel.playstyleLabel` classifies the build from dimension
+  scores (top output lens = Caster/Melee/Ranged/Healer) plus a within-character
+  offense/survival stat lean. Shown in the panel subtitle and `/foresight build`.
+- Both labeled "(v0 heuristic)". /foresight help + command list updated. In-game checks
+  (panel subtitle fit, advisor readability at mobile baseline) fold into the S3 pass.
+
+*Features:* MODEL-stat-advisor, UI-playstyle-label, MODEL-impact-diff, UI-stats-panel,
+QA-selftest-harness
+
 ## 0.5.4 - 2026-10-10
 
 Level-10 read-back: the adapter's guessed conventions still return no data, so stop

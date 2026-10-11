@@ -154,24 +154,15 @@ secret-value-blind realtime calc (guards/degrade discipline is law).
   game tooltip templates. Languages: full sentences. Trust: honest (p) claims.
   Data: none. Abuse: not reachable.
 
-- ☐ UI-playstyle-label: one-line build profile (e.g. "Caster-leaning - defensive")
-  derived from dimension scores. As a new player, I want the addon to tell me what my
-  build IS before I read seven numbers. AC: label derives purely from existing
-  dimension scores in panel_model.lua (selftest-covered, no new math); renders in the
-  panel title area; labeled "(v0 heuristic)"; mobile baseline readable.
-  Fit & Overlap - UI (-> GRAPH). Verdict: Enhance UI-stats-panel - a line on the
-  existing panel, NOT a second dashboard. Complements: GRAPH-dimensions. Touches:
-  panel_model.lua, stats_panel.lua. Languages: full sentences. Trust: heuristic
-  labeled as such. Data: none. Abuse: not reachable.
+- ☑ UI-playstyle-label (shipped v0.6.0, 2026-10-10): one-line build profile
+  ("Caster-leaning - offense-focused (v0 heuristic)") from the top output dimension +
+  a within-character offense/survival stat lean; pure in panel_model.playstyleLabel,
+  surfaced in the panel subtitle and `/foresight build`. Selftest-covered. Remaining:
+  in-game subtitle fit check at mobile baseline (fold into S3).
 
-- ☐ MODEL-stat-advisor: comparative marginal stat ranking ("for your build right now:
-  Crit > Haste > Spirit per point"). As a gearing player, I want stats ranked for MY
-  character so vendor/drop choices are obvious. AC: ranking built on the existing
-  explainStatDelta/marginal-conversion path (no forked stat-value code); ties to
-  dimension deltas; output is one human sentence + optional panel row; labeled
-  "(v0 heuristic)"; selftest-covered; mobile baseline readable.
-  Fit & Overlap - MODEL (-> UI). Verdict: Enhance MODEL-impact-diff (impact.lua) -
-  reuse explainStatDelta over the what-if stat set; the duplicate to avoid is any
-  second marginal-value computation. Complements: UI what-if section, future
-  DATA-items gear compare. Touches: impact.lua, panel_model.lua, selftest.lua.
-  Languages: full sentences. Trust: heuristic labeled. Data: none. Abuse: not reachable.
+- ☑ MODEL-stat-advisor (shipped v0.6.0, 2026-10-10): Impact.rankStats /
+  statPrioritySentence built entirely on explainStatDelta (no forked value path).
+  Headline orders stats by the build's primary output lens; the per-stat breakdown
+  names each stat's strongest dimension move. `/foresight advisor` + panel "Stat value
+  (per +1)" rows. v0 heuristic, selftest-covered. Feeds the future DATA-items gear
+  compare.

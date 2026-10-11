@@ -6,7 +6,7 @@ local ADDON_NAME, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 _G.Foresight = HM
 
-HM.version = "0.5.4" -- keep in sync with Foresight.toc (collect journals this stamp)
+HM.version = "0.6.0" -- keep in sync with Foresight.toc (collect journals this stamp)
 
 -- Defensive load: SavedVariables are user-editable files, so every field is
 -- type-validated and anything malformed is reset, never trusted. A tampered or
@@ -113,6 +113,29 @@ local function onSlash(input)
         local lines = HM.Impact.explainStatDelta(loadout, stat, tonumber(amount))
         printMsg(("+%s %s means:"):format(amount, stat))
         for _, line in ipairs(lines) do printMsg("  " .. line) end
+    elseif cmd == "advisor" or cmd == "stats" then
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not snapshot then
+            printMsg("no character snapshot available")
+            return
+        end
+        local loadout = HM.Loadout.fromSnapshot(snapshot)
+        local sentence, ranked = HM.Impact.statPrioritySentence(loadout)
+        printMsg(sentence)
+        for _, r in ipairs(ranked) do
+            printMsg(("  %s: %s"):format(r.stat,
+                r.bestLabel and ("%+.1f%% %s"):format(r.bestPct, r.bestLabel)
+                    or "no modeled effect"))
+        end
+    elseif cmd == "build" or cmd == "playstyle" then
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not snapshot then
+            printMsg("no character snapshot available")
+            return
+        end
+        local loadout = HM.Loadout.fromSnapshot(snapshot)
+        local results = HM.Impact.evaluate(loadout)
+        printMsg("your build: " .. HM.PanelModel.playstyleLabel(results, snapshot))
     elseif cmd == "verify" then
         HM.Collect.verify(printMsg)
         HM.Collect.probeTalentApiShape(printMsg)
@@ -125,7 +148,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | verify | export | selftest")
     end
 end
 

@@ -142,9 +142,39 @@ function HM.runSelftest(out)
         return approx(built.graph:value("stat.attackPower", built.ctx), 60)
     end)())
 
+    -- MODEL-stat-advisor: marginal stat ranking on explainStatDelta (no forked path).
+    check("stat advisor ranks + produces a sentence", (function()
+        local sentence, ranked, focus = HM.Impact.statPrioritySentence(base)
+        return type(sentence) == "string" and sentence:find("per point", 1, true) ~= nil
+            and #ranked == 5 and focus == "spellcasting"
+    end)())
+    check("stat advisor: each ranked stat names its best dimension", (function()
+        local ranked = HM.Impact.rankStats(base)
+        for _, r in ipairs(ranked) do
+            if r.bestPct ~= 0 and not r.bestLabel then return false end
+        end
+        -- Intellect should top a caster's spellcasting focus.
+        return ranked[1].stat == "Intellect"
+    end)())
+
+    -- UI-playstyle-label: one-line build profile from dimension scores (v0 heuristic).
+    check("playstyle label classifies the caster build", (function()
+        local results = HM.Impact.evaluate(base)
+        local label = HM.PanelModel.playstyleLabel(results, base.snapshot)
+        return type(label) == "string" and label:find("Caster%-leaning") ~= nil
+            and label:find("offense%-focused") ~= nil
+    end)())
+
     -- Stats panel model (the renderer is in-game only; the model is fully testable).
     local model = HM.PanelModel.build(base)
-    check("panel model has 4 sections", model and #model.sections == 4)
+    check("panel model has 5 sections", model and #model.sections == 5, model and #model.sections)
+    check("panel exposes a playstyle label", model.playstyle and model.playstyle:find("leaning") ~= nil)
+    check("panel stat-value section has 5 rows", (function()
+        for _, s in ipairs(model.sections) do
+            if s.id == "statvalue" then return #s.rows == 5 end
+        end
+        return false
+    end)())
     check("panel dimensions section has 7 rows", model.sections[1].rows and #model.sections[1].rows == 7)
     check("panel regen marks presumed formulas", (function()
         local v = model.sections[2].rows[1].value
