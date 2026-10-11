@@ -41,6 +41,13 @@ def main() -> int:
         return 1
     print("harvest sandbox green: hostile payloads blocked, benign data parses")
 
+    # Harvest analysis gate: the rank-rule voting must work end-to-end on real
+    # generated data (guards the id-keyed table contract in lua_to_py).
+    if not harvest.analyze_selfcheck():
+        print("HARVEST ANALYZE RED - rank-rule voting broke (table shapes or math)")
+        return 1
+    print("harvest analyze green: synthetic probe votes as expected (A+B, trained+untrained)")
+
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     load_chunk = lua.eval(
         """

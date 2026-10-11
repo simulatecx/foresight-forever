@@ -8,7 +8,7 @@ Single source of truth for work. Status glyphs: ☐ todo · ◐ in progress · �
 |---|---|
 | S1 Foundation: data pipeline + impact graph + modelling core | ☑ |
 | S2 Talent Impact Map in-game MVP (tooltip + /foresight talent) | ◐ |
-| S3 Beta verification pass (API shapes, rank rule, snapshot) | ☐ |
+| S3 Beta verification pass (API shapes, rank rule, snapshot) | ◐ |
 | S4 Report/feedback export strings | ☐ |
 | S5 ECS-style stats panel (code-complete, render pending beta) | ◐ |
 | S6 Crowd data-collection loop (pilot scale) | ☑ |
@@ -28,7 +28,7 @@ values, "for you now" dimension delta, needs-curation + (p) honesty lines; 8 sel
 checks; /foresight verify now reports hook status. Remaining: in-game verify (no taint,
 lines render, resolver matches live positions) - fold into the S3 beta session, then ☑.
 
-### S3 - Beta verification pass ☐
+### S3 - Beta verification pass ◐
 On the Forever beta client, verify: talent API shape (Snapshot.captureTalents),
 UnitStat/crit/haste API indices, `C_AssistedCombat` presence, SavedVariables
 persistence bug status, and THE RANK-SCALING RULE - evidence is mixed (see
@@ -36,6 +36,17 @@ formulas.talentRankValue): compare in-game rank 1 vs max tooltips for Improved
 Fireball (26), Concussion, Improved Reincarnation, Ancestral Knowledge; outcome is
 either one rule or a per-talent field in generated data. Pilot class: Shaman.
 **Features:** MODEL-snapshot, DATA-formula-registry. Beta window closes 2026-10-21.
+Initial pass 2026-10-10 (v0.5.1): in-game verify ran green on the level-9 pilot
+(0.5.0 login line confirmed). Harvest dry-run exposed + fixed two latent pipeline
+bugs, both now gated: lua_to_py flattened sparse-id tables to lists (rank-rule voting
+would have crashed on first real probe; analyze_selfcheck added to run_tests), and
+stat auras decoded MiscValue_0 as index when modern data uses a MiscValue_1 BITMASK -
+six talents (incl. probe talent Ancestral Knowledge) said "Strength" instead of
+Int/Sta/Agi; generator fixed, data regenerated, selftest pins the decode. Harvester
+now also votes on untrained rank-1 tooltip text (separate presumed tally) so the
+level-9 probe gives rank-rule signal before any point is spent. Remaining: pilot
+logs out/reloads -> harvest verify+probe read-back; trained votes + S2 hover check
+at level 10+; snapshot stat-index verification against the live journal.
 
 ### S5 - ECS-style stats panel ◐
 Side panel on CharacterFrame (pattern: Extended Character Stats; mockup in DESIGN.md

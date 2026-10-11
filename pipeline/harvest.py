@@ -32,10 +32,14 @@ GENERATED = Path(__file__).parent.parent / "Foresight" / "data" / "generated"
 
 
 def lua_to_py(obj):
+    # A table becomes a list ONLY when it is a true Lua array (keys exactly 1..n).
+    # Sparse integer keys (talent ids!) must stay dict keys - flattening them to a
+    # list silently discards the ids and breaks every id-joined analysis.
     if lupa.lua_type(obj) == "table":
         keys = list(obj.keys())
-        if keys and all(isinstance(k, (int, float)) for k in keys):
-            return [lua_to_py(obj[k]) for k in sorted(keys)]
+        if (keys and all(isinstance(k, (int, float)) for k in keys)
+                and sorted(keys) == list(range(1, len(keys) + 1))):
+            return [lua_to_py(obj[k]) for k in range(1, len(keys) + 1)]
         return {str(k): lua_to_py(v) for k, v in obj.items()}
     return obj
 
@@ -95,6 +99,31 @@ def sandbox_selfcheck() -> bool:
     return True
 
 
+def analyze_selfcheck() -> bool:
+    """Prove the harvest->vote path end-to-end against real generated data: a synthetic
+    probe must yield the expected hypothesis votes, trained and untrained. Called by
+    run_tests.py - guards the lua_to_py table-shape contract (sparse ids stay keyed)
+    and the voting math. Incident-to-gate: the id-flattening bug class stays dead."""
+    gen = load_generated()
+    talents = gen.get("talents")
+    if not isinstance(talents, dict) or "26" not in talents:
+        return False  # generated tables must arrive keyed by talent id, not as lists
+    probe = {"talents": [
+        # Concussion stores per-rank values (hypothesis B): rank-1 text says 1%.
+        {"name": "Concussion", "rank": 0,
+         "tooltip": "Increases the damage done by your Lightning Bolt, Chain Lightning, and Earth Shock spells by 1%."},
+        {"name": "Concussion", "rank": 2,
+         "tooltip": "Increases the damage done by your Lightning Bolt, Chain Lightning, and Earth Shock spells by 2%."},
+        # Improved Fireball stores the max-rank total (hypothesis A): -500ms over 5
+        # ranks -> rank-2 tooltip says 0.2 sec.
+        {"name": "Improved Fireball", "rank": 2,
+         "tooltip": "Reduces the casting time of your Fireball and Frostfire Bolt spells by 0.2 sec."},
+    ]}
+    analysis = analyze_rank_rule(probe, gen)
+    return (analysis["untrained_votes"]["B"] == 1 and analysis["votes"]["B"] == 1
+            and analysis["votes"]["A"] == 1)
+
+
 def load_generated() -> dict:
     lua = lupa.LuaRuntime()
     load_chunk = lua.eval("function(src, name) local c = assert(load(src, '@'..name)); return c() end")
@@ -113,43 +142,49 @@ def analyze_rank_rule(probe: dict, gen: dict) -> dict:
     A: stored value is the max-rank total  -> tooltip at rank R shows |v| * R / maxRank
     B: stored value is the per-rank value  -> tooltip at rank R shows |v| * R
     Values may be ms in data but seconds in tooltips, so /1000 variants are included.
+
+    Trained ranks are the authoritative votes. Untrained (rank 0) talents still vote -
+    classic-style tooltips show rank-1 text on untrained talents - but into a separate,
+    clearly-presumed tally so a pre-level-10 probe already gives rank-rule signal.
     """
     talents_by_name = {}
     for tid, t in (gen.get("talents") or {}).items():
         talents_by_name.setdefault(t["name"], (tid, t))
 
     votes = {"A": 0, "B": 0, "either": 0, "none": 0}
+    untrained = {"A": 0, "B": 0, "either": 0, "none": 0}
     details = []
     for entry in probe.get("talents", []):
         rank = entry.get("rank") or 0
-        if rank == 0:
-            continue  # untrained talents often show rank-1 text; only trained ranks vote
         match = talents_by_name.get(entry["name"])
         if not match:
             continue
         tid, talent = match
         impacts = (gen.get("talentImpacts") or {}).get(tid) or {}
         tooltip_nums = {float(n) for n in NUM_RE.findall(entry.get("tooltip", ""))}
+        box = votes if rank > 0 else untrained
+        eff_rank = rank if rank > 0 else 1
+        tag = "" if rank > 0 else " (untrained r1 text)"
         for op in impacts.get("ops", []):
             v = abs(op.get("maxValue") or 0)
             if v == 0 or not tooltip_nums:
                 continue
             max_rank = talent["maxRank"]
-            pred_a = {round(v * rank / max_rank, 2), round(v / 1000 * rank / max_rank, 2)}
-            pred_b = {round(v * rank, 2), round(v / 1000 * rank, 2)}
+            pred_a = {round(v * eff_rank / max_rank, 2), round(v / 1000 * eff_rank / max_rank, 2)}
+            pred_b = {round(v * eff_rank, 2), round(v / 1000 * eff_rank, 2)}
             hit_a = bool(pred_a & tooltip_nums)
             hit_b = bool(pred_b & tooltip_nums)
             if hit_a and hit_b:
-                votes["either"] += 1
+                box["either"] += 1
             elif hit_a:
-                votes["A"] += 1
-                details.append(f"A: {entry['name']} r{rank}/{max_rank} v={v}")
+                box["A"] += 1
+                details.append(f"A: {entry['name']} r{eff_rank}/{max_rank} v={v}{tag}")
             elif hit_b:
-                votes["B"] += 1
-                details.append(f"B: {entry['name']} r{rank}/{max_rank} v={v}")
+                box["B"] += 1
+                details.append(f"B: {entry['name']} r{eff_rank}/{max_rank} v={v}{tag}")
             else:
-                votes["none"] += 1
-    return {"votes": votes, "details": details}
+                box["none"] += 1
+    return {"votes": votes, "untrained_votes": untrained, "details": details}
 
 
 def main() -> int:
@@ -191,8 +226,9 @@ def main() -> int:
         if probe:
             analysis = analyze_rank_rule(probe, gen)
             print(f"   talent tooltip probe: {len(probe.get('talents', []))} talents; "
-                  f"rank-rule votes: {analysis['votes']}")
-            for d in analysis["details"][:10]:
+                  f"rank-rule votes (trained): {analysis['votes']}; "
+                  f"presumed (untrained r1 text): {analysis['untrained_votes']}")
+            for d in analysis["details"][:20]:
                 print(f"     {d}")
         if not verify and not probe:
             print("   no verify/probe data yet - run /foresight verify in-game, then log out")

@@ -79,6 +79,13 @@ function HM.runSelftest(out)
             return false
         end)())
         check("Fireball has tick data from client", gen.spells[133] and gen.spells[133].tickMs == 2000)
+        -- Incident-to-gate 2026-10-10: modern-format stat auras encode the stat as a
+        -- MiscValue_1 bitmask; index-decoding misc0 mislabeled six talents "Strength".
+        check("Ancestral Knowledge maps Intellect% (stat bitmask decode)", (function()
+            local op = gen.talentImpacts and gen.talentImpacts[614]
+                and gen.talentImpacts[614].ops and gen.talentImpacts[614].ops[1]
+            return op and op.kind == "stat" and op.stat == "Intellect" and op.isPct == true
+        end)())
     end
 
     -- Loadout modelling ------------------------------------------------------------

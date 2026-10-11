@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.5.1 - 2026-10-10
+
+S3 initial pass: two latent pipeline bugs found via harvest dry-run, fixed, and gated
+(incident-to-gate both times). Live pilot confirmed v0.5.0 login + verify at level 9.
+
+- FIXED generator stat decode: modern-format clients encode a stat aura's stat as a
+  BITMASK in EffectMiscValue_1 (8=Intellect, 31=all stats); reading MiscValue_0 as an
+  index mislabeled six talents "Strength" (Ancestral Knowledge, Arcane Mind, Heart of
+  the Wild, Mental Strength, Lightning Reflexes, Toughness, Demonic Embrace's Stamina
+  op) - the model would have buffed the wrong stat. All twelve stat ops now match
+  their tooltips; data regenerated; selftest pins the decode (41 checks).
+- FIXED harvester lua_to_py: any all-integer-keyed table became a Python list, so
+  sparse talent-id tables silently lost their ids - rank-rule voting would have
+  crashed on the first real probe. Lists now only for true 1..n Lua arrays.
+- GATE: `harvest.analyze_selfcheck()` wired into run_tests.py - synthetic probe must
+  vote A (Improved Fireball) + B (Concussion), trained and untrained, against real
+  generated data on every ship.
+- Harvester now votes on untrained talents' rank-1 tooltip text as a separate
+  clearly-presumed tally - a pre-level-10 probe already gives rank-rule signal.
+- Harvest dry-run also confirmed: SavedVariables on disk is still the migration
+  skeleton (client flushes only on logout//reload) - pilot read-back pending.
+
+*Features:* DATA-pipeline-generate, DATA-generated-tables, QA-harvester,
+QA-selftest-harness, MODEL-loadout-whatif
+
 ## 0.5.0 - 2026-10-10
 
 S2 build: Talent Impact Map tooltip injection, code-complete (in-game verify folds

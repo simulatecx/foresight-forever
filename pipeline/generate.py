@@ -65,6 +65,23 @@ AURA_LABELS = {
 }
 
 STAT_NAMES = {-1: "all stats", 0: "Strength", 1: "Agility", 2: "Stamina", 3: "Intellect", 4: "Spirit"}
+STAT_BITS = {1: "Strength", 2: "Agility", 4: "Stamina", 8: "Intellect", 16: "Spirit"}
+
+
+def stat_label(misc0: int, misc1: int) -> str:
+    """Decode which stat a stat-aura moves. Modern-format clients (Forever build
+    1.60.1.x) encode it as a BITMASK in EffectMiscValue_1 (1<<statIndex; 31 = all five;
+    verified against talent tooltips: Ancestral Knowledge misc1=8 -> Intellect, Toughness
+    4 -> Stamina, Blessing of Kings 31 -> all). MiscValue_0 as an index is the legacy
+    encoding, still used when misc1 is 0 (e.g. Divine Spirit, Demonic Embrace's Spirit op)."""
+    if misc1:
+        names = [name for bit, name in STAT_BITS.items() if misc1 & bit]
+        if len(names) == len(STAT_BITS):
+            return "all stats"
+        if len(names) == 1:
+            return names[0]
+        return "/".join(names) if names else f"statmask:{misc1}"
+    return STAT_NAMES.get(misc0, f"stat:{misc0}")
 SCHOOL_NAMES = {1: "Physical", 2: "Holy", 4: "Fire", 8: "Nature", 16: "Frost", 32: "Shadow", 64: "Arcane"}
 
 CLASS_NAMES = {
@@ -226,6 +243,7 @@ def main() -> int:
         for eff in effects_by_spell.get(first, []):
             aura = to_int(eff["EffectAura"])
             misc0 = to_int(eff["EffectMiscValue_0"])
+            misc1 = to_int(eff["EffectMiscValue_1"])
             masks = tuple(to_int(eff[f"EffectSpellClassMask_{i}"]) for i in range(4))
 
             max_value = float(eff["EffectBasePointsF"] or 0)
@@ -252,7 +270,7 @@ def main() -> int:
             elif aura in (29, 137):
                 op["kind"] = "stat"
                 op["isPct"] = aura == 137
-                op["stat"] = STAT_NAMES.get(misc0, f"stat:{misc0}")
+                op["stat"] = stat_label(misc0, misc1)
             elif aura in AURA_LABELS:
                 op["kind"] = "aura"
                 op["label"] = AURA_LABELS[aura]
