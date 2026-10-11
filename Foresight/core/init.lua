@@ -6,7 +6,7 @@ local ADDON_NAME, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 _G.Foresight = HM
 
-HM.version = "0.8.0" -- keep in sync with Foresight.toc (collect journals this stamp)
+HM.version = "0.8.1" -- keep in sync with Foresight.toc (collect journals this stamp)
 
 -- Defensive load: SavedVariables are user-editable files, so every field is
 -- type-validated and anything malformed is reset, never trusted. A tampered or
@@ -136,6 +136,21 @@ local function onSlash(input)
         local loadout = HM.Loadout.fromSnapshot(snapshot)
         local results = HM.Impact.evaluate(loadout)
         printMsg("your build: " .. HM.PanelModel.playstyleLabel(results, snapshot))
+    elseif cmd == "panel" then
+        if rest == "reset" then
+            if HM.StatsPanel and HM.StatsPanel.resetPosition then
+                HM.StatsPanel.resetPosition()
+                printMsg("panel position reset - re-docked beside the character frame")
+            else
+                local db = HM.charDb()
+                if db.settings.panel then db.settings.panel.pos = nil end
+                printMsg("panel position reset")
+            end
+        elseif HM.StatsPanel and HM.StatsPanel.toggle then
+            HM.StatsPanel.toggle()
+        else
+            printMsg("stats panel is in-game only")
+        end
     elseif cmd == "verify" then
         HM.Collect.verify(printMsg)
         HM.Collect.probeTalentApiShape(printMsg)
@@ -148,7 +163,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | panel [reset] | verify | export | selftest")
     end
 end
 

@@ -184,6 +184,14 @@ function HM.runSelftest(out)
     local model = HM.PanelModel.build(base)
     check("panel model has 5 sections", model and #model.sections == 5, model and #model.sections)
     check("panel exposes a playstyle label", model.playstyle and model.playstyle:find("leaning") ~= nil)
+    check("panel position validates untrusted saved values", (function()
+        local good = HM.PanelModel.normalizePanelPos({ point = "TOPLEFT", relPoint = "TOPLEFT", x = 100, y = -50 })
+        local junk = HM.PanelModel.normalizePanelPos("corrupted")
+        local offscreen = HM.PanelModel.normalizePanelPos({ x = 99999, y = 0 })
+        local badAnchor = HM.PanelModel.normalizePanelPos({ point = "EVIL", x = 10, y = 10 })
+        return good and good.x == 100 and junk == nil and offscreen == nil
+            and badAnchor and badAnchor.point == "TOPLEFT"
+    end)())
     check("panel stat-value section has 5 rows", (function()
         for _, s in ipairs(model.sections) do
             if s.id == "statvalue" then return #s.rows == 5 end

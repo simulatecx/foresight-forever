@@ -22,6 +22,23 @@ end
 
 local WHATIF_STATS = { "Spirit", "Intellect", "Stamina", "Agility", "Strength" }
 
+-- Validate a saved panel position (SavedVariables are user-editable - untrusted-input
+-- law). Returns a clean { point, relPoint, x, y } or nil if malformed/out of range, so a
+-- tampered value can never fling the panel off-screen or error the renderer.
+local ANCHORS = {
+    TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true,
+    RIGHT = true, BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true,
+}
+function PanelModel.normalizePanelPos(pos)
+    if type(pos) ~= "table" then return nil end
+    local x, y = tonumber(pos.x), tonumber(pos.y)
+    if not (x and y) then return nil end
+    if x < -5000 or x > 5000 or y < -5000 or y > 5000 then return nil end
+    local point = ANCHORS[pos.point] and pos.point or "TOPLEFT"
+    local relPoint = ANCHORS[pos.relPoint] and pos.relPoint or point
+    return { point = point, relPoint = relPoint, x = x, y = y }
+end
+
 -- UI-playstyle-label: one-line "what IS my build" from dimension scores. v0 heuristic.
 -- Archetype = the top output lens; the offense/survival lean compares the archetype's
 -- key stat against Stamina (a within-character, scale-stable signal).

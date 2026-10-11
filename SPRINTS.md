@@ -124,6 +124,10 @@ render/anchoring/toggle on the Forever beta client (fold into the S3 session), t
 **Features:** UI-stats-panel. Fit & Overlap: net-new surface (no prior UI); complements
 MODEL-impact-diff (same evaluate path). Mobile: default font templates, 230px panel -
 check readability at 1280x720 / 0.65 UI scale during the beta pass.
+v0.8.1: panel is now DRAGGABLE (it docks beside the character sheet by default, which can
+overlap other panels) - drag to move, position saved per character and restored,
+`/foresight panel reset` re-docks. Saved pos is validated (untrusted-input law) so a
+tampered value can't fling it off-screen. Drag/anchor behavior folds into the S3 render check.
 
 ## Shipped (archived)
 

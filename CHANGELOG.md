@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.1 - 2026-10-11
+
+The Foresight panel is now movable - it defaults to docking beside the character sheet,
+which can sit on top of other panels.
+
+- Drag the panel anywhere; the position is saved per character and restored on login.
+  `/foresight panel reset` re-docks it beside the character frame (and `/foresight panel`
+  toggles it).
+- The saved position is validated (`PanelModel.normalizePanelPos`) - a malformed or
+  out-of-range value (tampered SavedVariables) falls back to the default instead of
+  flinging the panel off-screen or erroring the renderer (untrusted-input law).
+- Selftest grows to 65 (position validation: good value kept, junk/off-screen/bad-anchor
+  rejected or clamped).
+
+*Features:* UI-stats-panel, CORE-bootstrap, QA-selftest-harness
+
 ## 0.8.0 - 2026-10-11
 
 `DATA-traits`: full talent coverage. Foresight now has data for EVERY Forever trait node,

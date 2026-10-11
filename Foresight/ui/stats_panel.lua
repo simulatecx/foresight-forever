@@ -30,6 +30,22 @@ local function uiState()
     return db.settings.panel
 end
 
+local DEFAULT_POINT = { "TOPLEFT", "TOPRIGHT", 2, -12 } -- anchored off CharacterFrame
+
+-- Anchor the panel: to a saved (validated) screen position if the user moved it, else
+-- the default dock beside the character frame.
+local function restorePosition()
+    if not panel then return end
+    panel:ClearAllPoints()
+    local pos = HM.PanelModel.normalizePanelPos(uiState().pos)
+    if pos then
+        panel:SetPoint(pos.point, _G.UIParent, pos.relPoint, pos.x, pos.y)
+    else
+        panel:SetPoint(DEFAULT_POINT[1], panel:GetParent(), DEFAULT_POINT[2],
+            DEFAULT_POINT[3], DEFAULT_POINT[4])
+    end
+end
+
 local function acquire(pool, create)
     for _, f in ipairs(pool) do
         if not f.inUse then
@@ -175,6 +191,13 @@ function StatsPanel.toggle()
     StatsPanel.refresh()
 end
 
+-- Clear the saved position and re-dock beside the character frame.
+function StatsPanel.resetPosition()
+    if not panel then return end
+    uiState().pos = nil
+    restorePosition()
+end
+
 local function createPanel()
     local parent = _G.CharacterFrame
     if not parent then return end
@@ -182,7 +205,20 @@ local function createPanel()
 
     panel = _G.CreateFrame("Frame", "ForesightStatsPanel", parent)
     panel:SetWidth(PANEL_WIDTH)
-    panel:SetPoint("TOPLEFT", parent, "TOPRIGHT", 2, -12)
+
+    -- Movable: drag the panel anywhere (it sits beside the character sheet by default,
+    -- which can overlap other panels); position is saved per character and restored.
+    panel:SetMovable(true)
+    panel:EnableMouse(true)
+    panel:RegisterForDrag("LeftButton")
+    panel:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    panel:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local point, _, relPoint, x, y = self:GetPoint()
+        uiState().pos = { point = point, relPoint = relPoint,
+                          x = math.floor(x + 0.5), y = math.floor(y + 0.5) }
+    end)
+    restorePosition()
 
     -- Dark card: base fill + hairline border + class-color top strip, all textures.
     local bg = panel:CreateTexture(nil, "BACKGROUND", nil, -8)
