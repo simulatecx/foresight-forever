@@ -5,9 +5,10 @@ sync with the pillars as they ship.
 
 ## Product lineup (the "3 downloads")
 
-One brand, three focused addons so players install exactly the problem they want solved
-(no bloat - the account-safety and "specific addon" doctrine). They share the generated
-data layer but each is a separate CurseForge/Wago project + TOC:
+DECIDED 2026-10-11 (user): ship as THREE SEPARATE CurseForge/Wago projects, not one
+modular addon - players install exactly the problem they want solved (no bloat; the
+account-safety and "specific addon" doctrine). The three share the generated data layer
+(and may share a small common lib later) but each is its own project + repo/TOC:
 
 1. **Foresight** - *Talent, Item & Consumable Impact Map.* The theorycraft core (shipped):
    what every talent point, stat, item, buff, and weapon imbue actually does for YOUR
@@ -48,7 +49,16 @@ data layer but each is a separate CurseForge/Wago project + TOC:
 > never touches the network. The full source is public and a static compliance gate
 > blocks any release that could break those promises.
 
-## Logo prompt (paste into Gemini / image model)
+## Logo - FINALIZED 2026-10-11
+
+The icon is chosen: an all-seeing eye fused with a shield, emerald-green + gold on dark
+slate, encircled by arcane runes (matches the brand green ~#33FF99). Save the PNG into the
+repo at `media/logo.png` (and a square 512x512 for CurseForge/Wago project avatars + the
+README header). Keep the transparent-background master for resizes. This same mark skins
+all three products, tinted per module (core = green, Assist = gold, Panic = red) so the
+suite reads as one family.
+
+## Logo prompt (the brief that produced it; kept for variations/resizes)
 
 > A minimalist game-addon app icon for "Foresight", a World of Warcraft addon. A single
 > stylized all-seeing eye fused with a protective shield/rune, suggesting foresight and

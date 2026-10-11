@@ -94,11 +94,14 @@ gives nothing the raw client data lacks. Forever is in BETA (ends 2026-10-21, la
 2026-11-04) so there is no mature external corpus anyway. Optional next: offline stat-amount
 computation (item-budget curves), bridge notable gear into synergy, trim catalog by quality.
 
-### S9 - ASSIST-hud (Pillar 2) ☐
+### S9 - ASSIST-hud (Pillar 2) ☐  (NEXT BUILD - its own project; new chat)
 `C_AssistedCombat.GetNextCastSpell()` (confirmed present live) -> a movable HUD showing the
 recommended next ability icon + keybind, optional action-button glow. Display/suggest-only
 (compliant by construction). Degrade-safe when the API is unavailable. Resolver logic
 (spell->icon->keybind, action-slot scan) pure/selftest-covered; frame render verified in-game.
+PACKAGING DECISION (2026-10-11): ships as a SEPARATE project "Foresight: Assist" (download
+#2 of 3), its own repo/TOC + CurseForge/Wago project, sharing the generated data layer.
+To be built in a NEW chat.
 
 ### S10 - PANIC-advisor (Pillar 1) ☐  (the headline safety net)
 Per-class escape registry (data table, level/known-spell filtered) + own-state trigger
