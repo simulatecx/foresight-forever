@@ -58,7 +58,7 @@ function Collect.onLogin()
     info.at = now()
     info.addonVersion = HM.version
     info.gameBuild = _G.GetBuildInfo and select(2, _G.GetBuildInfo()) or "?"
-    info.dataBuild = HM.gen and HM.gen.build and HM.gen.build.build or "?"
+    info.dataBuild = HM.gen and HM.gen.build or "?" -- gen.build is the build STRING
     c.sessions[#c.sessions + 1] = info
     trim(c.sessions, MAX_SESSIONS)
 end
@@ -87,6 +87,31 @@ function Collect.verify(out)
 
     -- API shapes.
     result("classic talent API (GetTalentInfo)", _G.GetTalentInfo ~= nil and _G.GetNumTalentTabs ~= nil)
+
+    -- Talent-API shape discovery (live-verified 2026-10-10: the classic globals are
+    -- ABSENT on Forever, which disables captureTalents, the tooltip probe, and the S2
+    -- hook - all degrade by design). Presence-only checks over candidate surfaces;
+    -- the harvest of this result decides what S2 hooks instead.
+    local candidates = {
+        "GetTalentInfo", "GetNumTalentTabs", "GetNumTalents", "GetTalentTabInfo",
+        "C_SpecializationInfo.GetTalentInfo", "C_SpecializationInfo.GetNumTalents",
+        "C_SpecializationInfo.GetNumTalentTabs", "C_SpecializationInfo.GetTalentTabInfo",
+        "C_SpecializationInfo.GetSpecialization", "C_SpecializationInfo.GetSpecializationInfo",
+        "C_ClassTalents.GetActiveConfigID", "C_Traits.GetConfigInfo",
+        "C_TooltipInfo.GetTalent", "TooltipDataProcessor.AddTooltipPostCall",
+        "Enum.TooltipDataType.Talent", "GameTooltip.SetTalent",
+    }
+    local found = {}
+    for _, path in ipairs(candidates) do
+        local node = _G
+        for part in path:gmatch("[^.]+") do
+            node = (type(node) == "table" or type(node) == "userdata") and node[part] or nil
+            if node == nil then break end
+        end
+        if node ~= nil then found[#found + 1] = path end
+    end
+    result("talent API shape discovery", #found > 0,
+        #found > 0 and table.concat(found, ", ") or "NO candidate surface found")
     result("C_SpecializationInfo present", _G.C_SpecializationInfo ~= nil)
     result("C_AssistedCombat present", _G.C_AssistedCombat ~= nil,
         _G.C_AssistedCombat and (_G.C_AssistedCombat.GetNextCastSpell and "has GetNextCastSpell" or "no GetNextCastSpell") or nil)

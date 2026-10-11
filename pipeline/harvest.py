@@ -223,6 +223,9 @@ def main() -> int:
                   f"{len(fails)} flagged")
             for r in fails:
                 print(f"     CHECK {r['name']}: {r.get('detail')}")
+            for r in verify.get("results", []):
+                if r.get("name") == "talent API shape discovery" and r.get("detail"):
+                    print(f"     talent API shape: {r['detail']}")
         if probe:
             analysis = analyze_rank_rule(probe, gen)
             print(f"   talent tooltip probe: {len(probe.get('talents', []))} talents; "

@@ -52,7 +52,9 @@ function Snapshot.capture()
             meleeCritPct = Guards.number(Guards.call(_G.GetCritChance)) or 0,
             rangedCritPct = Guards.number(Guards.call(_G.GetRangedCritChance)) or 0,
             hastePct = Guards.number(Guards.call(_G.GetHaste)) or 0,
-            armor = select(3, _G.UnitArmor and _G.UnitArmor("player") or nil) or 0,
+            -- effectiveArmor is return #2 on both the classic and mainline UnitArmor
+            -- shapes; #3 exists only on classic (live-verified: #3 read 0 on Forever).
+            armor = Guards.number(Guards.select(2, _G.UnitArmor, "player")) or 0,
             avoidancePct = (Guards.number(Guards.call(_G.GetDodgeChance)) or 0)
                 + (Guards.number(Guards.call(_G.GetParryChance)) or 0),
             -- Base pools minus stat-derived portion; refined once beta-verified.

@@ -28,6 +28,17 @@ function Guards.call(fn, ...)
     return result
 end
 
+-- Call fn safely and return its n-th result (APIs like UnitArmor return several
+-- values; which position means what is shape-verified on beta). Guarded like call().
+function Guards.select(n, fn, ...)
+    if type(fn) ~= "function" then return nil, "missing-api" end
+    local results = { pcall(fn, ...) }
+    if not results[1] then return nil, "error" end
+    local v = results[n + 1]
+    if issecret(v) then return nil, "secret" end
+    return v
+end
+
 -- True when we are in a context where combat values may be secret. Conservative:
 -- if the detection APIs are themselves unavailable, assume unrestricted (open world).
 function Guards.inRestrictedContext()

@@ -6,7 +6,7 @@ local ADDON_NAME, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 _G.Foresight = HM
 
-HM.version = "0.5.1" -- keep in sync with Foresight.toc (collect journals this stamp)
+HM.version = "0.5.2" -- keep in sync with Foresight.toc (collect journals this stamp)
 
 -- Defensive load: SavedVariables are user-editable files, so every field is
 -- type-validated and anything malformed is reset, never trusted. A tampered or
@@ -137,7 +137,7 @@ if _G.CreateFrame then
         if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
             initSavedVariables()
         elseif event == "PLAYER_LOGIN" then
-            local gen = HM.gen and HM.gen.build
+            local gen = HM.gen
             printMsg(("v%s loaded - data build %s (%s talents)"):format(
                 HM.version, gen and gen.build or "?",
                 gen and gen.counts and gen.counts.talents or "?"))

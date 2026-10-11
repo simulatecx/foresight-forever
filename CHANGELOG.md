@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.5.2 - 2026-10-10
+
+First live harvest read-back (build 70338): big S3 finding plus three fixes it exposed.
+
+- FINDING: the classic talent API is ABSENT on Forever (GetTalentInfo/GetNumTalentTabs
+  nil) - talent capture, the tooltip probe, and the S2 hook all degraded as designed,
+  which the verify results proved. `/foresight verify` now runs a 16-candidate
+  talent-API shape discovery (C_SpecializationInfo.*, C_ClassTalents, C_Traits,
+  C_TooltipInfo.GetTalent, TooltipDataProcessor, GameTooltip.SetTalent, ...) so the
+  next harvest tells us exactly what S2 hooks instead.
+- VERIFIED LIVE: SavedVariables persistence under ForesightDB, UnitStat indices,
+  crit/haste/weapon-speed reads, C_SpecializationInfo, C_AssistedCombat (with
+  GetNextCastSpell - the ASSIST-hud pillar is feasible), secret-values system,
+  C_TooltipInfo.
+- FIXED armor=0: UnitArmor return #3 is classic-only; effectiveArmor is #2 on both
+  shapes - read via new `Guards.select(n, fn, ...)` (multi-return guarded reads).
+- FIXED dataBuild journaled as "?" and the login line printing "data build ? (?
+  talents)": HM.gen.build is the build STRING and was indexed like a table.
+- Harvester prints the discovered talent-API shape; selftest grows to 43 checks
+  (Guards.select, session dataBuild journaling).
+
+*Features:* QA-verify-command, QA-collector, CORE-guards, MODEL-snapshot, QA-harvester,
+QA-selftest-harness
+
 ## 0.5.1 - 2026-10-10
 
 S3 initial pass: two latent pipeline bugs found via harvest dry-run, fixed, and gated

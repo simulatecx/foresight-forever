@@ -211,6 +211,19 @@ function HM.runSelftest(out)
     end)())
 
     -- Collector + export plumbing (headless-degraded paths).
+    check("guards select picks nth return",
+        HM.Guards.select(2, function() return 1, 42, 7 end) == 42
+        and HM.Guards.select(2, nil) == nil)
+    check("collect session journals the data build", (function()
+        if not HM.db then return false end
+        local saved = HM.db.collect
+        HM.db.collect = nil
+        HM.Collect.onLogin()
+        local s = HM.db.collect and HM.db.collect.sessions
+        local ok = s and s[1] and s[1].dataBuild == HM.gen.build
+        HM.db.collect = saved
+        return ok
+    end)())
     check("serialize renders nested tables", (function()
         local s = HM.serialize({ a = 1, b = { c = "x" } })
         return s:find('c = "x"') ~= nil and s:find("a = 1") ~= nil

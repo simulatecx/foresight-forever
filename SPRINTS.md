@@ -47,6 +47,20 @@ now also votes on untrained rank-1 tooltip text (separate presumed tally) so the
 level-9 probe gives rank-rule signal before any point is spent. Remaining: pilot
 logs out/reloads -> harvest verify+probe read-back; trained votes + S2 hover check
 at level 10+; snapshot stat-index verification against the live journal.
+First harvest read-back (2026-10-10 20:45, build 70338, v0.5.2 shipped fixes):
+- VERIFIED LIVE: SavedVariables persistence under ForesightDB; UnitStat indices
+  (str/agi/sta/int/spi all sane); crit/haste/weapon-speed APIs; C_SpecializationInfo,
+  C_AssistedCombat WITH GetNextCastSpell (ASSIST-hud feasible), secret-values system,
+  C_TooltipInfo all present.
+- CLASSIC TALENT API ABSENT (GetTalentInfo/GetNumTalentTabs nil): captureTalents, the
+  tooltip probe, and the S2 hook all degraded as designed. Verify now runs a 16-
+  candidate talent-API shape discovery (C_SpecializationInfo.*, C_ClassTalents,
+  C_Traits, C_TooltipInfo.GetTalent, TooltipDataProcessor, GameTooltip.SetTalent);
+  next harvest decides what S2 hooks instead. Talent frame itself unlocks at level 10
+  - the pilot is level 9, so the UI surface is also still unconfirmed.
+- FIXED from live data: armor read 0 (UnitArmor return #3 is classic-only; now #2,
+  effectiveArmor, via new Guards.select); dataBuild journaled "?" and login line
+  printed "data build ?" (HM.gen.build is a string, was indexed as a table).
 
 ### S5 - ECS-style stats panel ◐
 Side panel on CharacterFrame (pattern: Extended Character Stats; mockup in DESIGN.md
