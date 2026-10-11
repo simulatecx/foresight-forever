@@ -632,6 +632,20 @@ function Tooltips.installTraitTooltips()
         installed = true
     end
 
+    -- Diagnostic safety net: record the frame each tooltip anchors to. If the trait hooks
+    -- don't fire, the last-hovered talent node button's frame name tells us what to hook.
+    if tip and _G.hooksecurefunc and type(tip.SetOwner) == "function" then
+        _G.hooksecurefunc(tip, "SetOwner", function(_, owner)
+            if HM.db and type(HM.db.collect) == "table" and owner then
+                local name = (owner.GetName and owner:GetName())
+                    or (owner.GetObjectType and owner:GetObjectType()) or "?"
+                local parent = owner.GetParent and owner:GetParent()
+                local pname = parent and parent.GetName and parent:GetName()
+                HM.db.collect.lastTooltipOwner = pname and (name .. " < " .. pname) or name
+            end
+        end)
+    end
+
     Tooltips.traitTipInstalled = installed
     return installed
 end

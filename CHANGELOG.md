@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.4 - 2026-10-11
+
+Safety-net diagnostic so the next harvest completes the talent tooltip regardless of
+outcome: hook `GameTooltip:SetOwner` to record the frame each tooltip anchors to. If the
+`GetTraitEntry` hook fired, the talent block renders; if not, the last-hovered talent
+node's frame name (`lastTooltipOwner`) tells us exactly which button frame to hook
+`OnEnter` on next. Harvester prints it.
+
+*Features:* UI-talent-tooltip, QA-verify-command
+
 ## 0.9.3 - 2026-10-11
 
 Talent-tree tooltip hook, take two - the harvest proved SetTraitEntry is NEVER called on

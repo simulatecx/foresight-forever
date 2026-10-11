@@ -249,6 +249,8 @@ def main() -> int:
         ttp = collect.get("traitTipProbe")
         if ttp:
             print(f"   trait-tooltip hook last fired: {json.dumps(ttp, ensure_ascii=False)}")
+        if collect.get("lastTooltipOwner"):
+            print(f"   last tooltip owner frame: {collect['lastTooltipOwner']}")
         shape = collect.get("talentApiShape") or {}
         if shape:
             print(f"   talent API shape probe @{shape.get('at')}:")
