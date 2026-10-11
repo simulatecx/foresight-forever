@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.9.3 - 2026-10-11
+
+Talent-tree tooltip hook, take two - the harvest proved SetTraitEntry is NEVER called on
+Forever's trait UI, so hook the actual data getter instead.
+
+- The `traitTipProbe` diagnostic came back ABSENT: `GameTooltip:SetTraitEntry` is not how
+  Forever builds node tooltips. But `C_TooltipInfo.GetTraitEntry` (the 10.0.2 tooltip-data
+  API) IS present - that's the getter the trait UI calls on hover.
+- Now hook `C_TooltipInfo.GetTraitEntry(configID, entryID)` via hooksecurefunc, then inject
+  on the next frame (once the base tooltip is populated) into GameTooltip. Resolution tries
+  (cfg,entry) and (activeConfig,firstArg) so arg-order surprises still resolve. SetTraitEntry
+  stays as a fallback. The diagnostic now records which hook fired + the raw args.
+- Research: confirmed against forever-addon-kit + the cjber/tweaks-forever Forever addon and
+  the retail trait-tooltip pattern (TooltipDataProcessor / C_TooltipInfo, 10.0.2).
+
+*Features:* UI-talent-tooltip, QA-verify-command
+
 ## 0.9.2 - 2026-10-11
 
 Impact depth + accuracy overhaul - the "+1 Agility shows 0.00%" complaint. Now the

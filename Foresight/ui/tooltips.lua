@@ -554,11 +554,11 @@ local function injectSpell(tip, spellId)
     end
 end
 
--- Trait-node tooltip (the Forever talent UI). SetTalent renders nothing here and
--- Enum.TooltipDataType.TraitEntry is NOT exposed (live-verified), but GameTooltip:
--- SetTraitEntry IS - the trait UI builds node tooltips through it - so we hook that
--- method. Resolve the hovered entry -> definition spell -> our classic talent -> the
--- same talentLines block.
+-- Trait-node tooltip (the Forever talent UI). Live-verified: SetTalent renders nothing,
+-- SetTraitEntry is NEVER called, and Enum.TooltipDataType.TraitEntry is not exposed - but
+-- C_TooltipInfo.GetTraitEntry DOES exist (the 10.0.2 tooltip-data API), which is how the
+-- node tooltip is built. We hook that to learn the hovered (configID, entryID), then inject
+-- on the next frame once the base tooltip is populated. SetTraitEntry stays as a fallback.
 local function activeConfigID()
     local CT = _G.C_ClassTalents
     if CT and CT.GetActiveConfigID then
@@ -567,32 +567,30 @@ local function activeConfigID()
     end
 end
 
--- SetTraitEntry's arg order isn't guaranteed (entryID vs configID,entryID), so try each
--- numeric arg as the entry id and take whichever resolves to a definition spell.
+-- Resolve a (configID, entryID) to the entry's definition spell id.
 local function traitEntrySpell(cfg, entryID)
-    if type(entryID) ~= "number" then return nil end
+    if type(entryID) ~= "number" or type(cfg) ~= "number" then return nil end
     local Traits = _G.C_Traits
+    if not (Traits and Traits.GetEntryInfo and Traits.GetDefinitionInfo) then return nil end
     local okE, entry = pcall(Traits.GetEntryInfo, cfg, entryID)
     if not (okE and type(entry) == "table" and entry.definitionID) then return nil end
     local okD, def = pcall(Traits.GetDefinitionInfo, entry.definitionID)
     if okD and type(def) == "table" and def.spellID then return def.spellID end
 end
 
-local function injectTraitEntry(tip, a, b)
-    if tip.foresightInjected then return end
-    local Traits = _G.C_Traits
-    if not (Traits and Traits.GetEntryInfo and Traits.GetDefinitionInfo) then return end
-    local cfg = activeConfigID()
-    if not cfg then return end
+-- Core: inject the impact block for a (configID, entryID) pair into a tooltip, and record
+-- a diagnostic (which hook fired, what it resolved) for the harvester.
+local function injectTraitByEntry(tip, cfg, a, b, source)
+    -- Try (cfg,a), (cfg,b), and (activeConfig, cfg) in case the first arg was the entry id.
     local spellID = traitEntrySpell(cfg, a) or traitEntrySpell(cfg, b)
+        or traitEntrySpell(activeConfigID(), cfg)
     local nodeId = spellID and HM.gen and HM.gen.traits and HM.gen.traits.bySpell
         and HM.gen.traits.bySpell[spellID]
-    -- Diagnostic: record what the hook saw, so a harvest can confirm it fires + resolves.
     if HM.db and type(HM.db.collect) == "table" then
-        HM.db.collect.traitTipProbe = {
+        HM.db.collect.traitTipProbe = { source = source, cfg = tostring(cfg),
             a = tostring(a), b = tostring(b), spellID = spellID, nodeId = nodeId, injected = false }
     end
-    if not nodeId then return end
+    if not nodeId or tip.foresightInjected then return end
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
@@ -607,25 +605,35 @@ end
 function Tooltips.installTraitTooltips()
     if Tooltips.traitTipInstalled then return true end
     ensureClearHook()
+    local installed = false
+
+    -- Primary: C_TooltipInfo.GetTraitEntry(configID, entryID) is the tooltip-data getter
+    -- the trait UI calls on hover. hooksecurefunc gives us the args; defer one frame so the
+    -- base tooltip is built, then append to GameTooltip (if still shown over that node).
+    local CTI = _G.C_TooltipInfo
+    if _G.hooksecurefunc and _G.C_Timer and CTI and type(CTI.GetTraitEntry) == "function" then
+        _G.hooksecurefunc(CTI, "GetTraitEntry", function(configID, entryID)
+            _G.C_Timer.After(0, function()
+                local gt = _G.GameTooltip
+                if gt and gt.IsShown and gt:IsShown() then
+                    pcall(injectTraitByEntry, gt, configID, entryID, nil, "GetTraitEntry")
+                end
+            end)
+        end)
+        installed = true
+    end
+
+    -- Fallback: GameTooltip:SetTraitEntry, if a build ever routes through it.
     local tip = _G.GameTooltip
     if tip and _G.hooksecurefunc and type(tip.SetTraitEntry) == "function" then
         _G.hooksecurefunc(tip, "SetTraitEntry", function(self, a, b)
-            pcall(injectTraitEntry, self, a, b)
+            pcall(injectTraitByEntry, self, activeConfigID(), a, b, "SetTraitEntry")
         end)
-        Tooltips.traitTipInstalled = true
-        return true
+        installed = true
     end
-    -- Fallback: the TraitEntry tooltip data type, if a future build exposes it.
-    local TDP, Enum = _G.TooltipDataProcessor, _G.Enum
-    if TDP and TDP.AddTooltipPostCall and Enum and Enum.TooltipDataType
-            and Enum.TooltipDataType.TraitEntry then
-        TDP.AddTooltipPostCall(Enum.TooltipDataType.TraitEntry, function(t, data)
-            if t == _G.GameTooltip and data and data.id then pcall(injectTraitEntry, t, data.id) end
-        end)
-        Tooltips.traitTipInstalled = true
-        return true
-    end
-    return false
+
+    Tooltips.traitTipInstalled = installed
+    return installed
 end
 
 function Tooltips.installSpells()
