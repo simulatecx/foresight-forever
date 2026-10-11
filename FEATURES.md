@@ -27,7 +27,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## CORE - addon plumbing
 - ☑ `CORE-bootstrap` - namespace, events, slash commands (/foresight talent|stat|selftest) -> `Foresight/core/init.lua`
 - ☑ `CORE-guards` - secret-value guard layer; ALL risky reads route here -> `Foresight/core/guards.lua`
-- ◐ `CORE-talent-api` - talent API adapter: classic globals absent on Forever, so known C_SpecializationInfo conventions are pcall-probed, auto-locked, normalized to classic shape; ALL talent reads (snapshot, probe, S2 hook) route here; live convention lock pending next read-back -> `Foresight/core/talent_api.lua`
+- ◐ `CORE-talent-api` - talent API adapter: Forever talents are Retail C_Traits node trees (classic globals gone), per forever-addon-kit. Walks GetActiveConfigID -> GetConfigInfo -> GetTreeNodes -> GetNodeInfo -> GetEntryInfo -> GetDefinitionInfo.spellID, maps spellID -> our talent via spellRanks; classic globals are a fallback. Live confirmation pending next harvest (shape probe now captures the walk) -> `Foresight/core/talent_api.lua`
 - ☑ `CORE-saveddb` - versioned SavedVariables with per-character sections -> `Foresight/core/init.lua`
 
 ## UI - surfaces

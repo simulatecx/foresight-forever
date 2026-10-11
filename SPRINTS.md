@@ -84,6 +84,22 @@ the adapter convention against ground truth. Also: `/foresight verify` now auto-
 once per login (silent, C_Timer-deferred 1s) so a reload alone gathers data; discovery
 expanded to item/spell tooltip surfaces. THIS IS THE S3 BLOCKER - needs one more pilot
 reload + harvest to unblock S2/snapshot-talents.
+BREAKTHROUGH (2026-10-10, v0.7.1): scanned Thunderz96/forever-addon-kit (a working
+Forever addon kit). Forever talents are RETAIL'S C_Traits NODE TREES - the classic
+GetTalentInfo/GetNumTalentTabs globals are gone (its dumpTraits confirms; forever_api.json
+lists the full C_Traits + C_ClassTalents set). This invalidated both the Google AI
+Overview (which described the classic global signature) AND the adapter's three
+C_SpecializationInfo.GetTalentInfo guesses - all aimed at the wrong SYSTEM, which is why
+it returned none-answered. REPOINTED: talent_api.lua now walks C_Traits exactly like the
+kit (GetActiveConfigID -> GetConfigInfo -> GetTreeNodes -> GetNodeInfo -> GetEntryInfo ->
+GetDefinitionInfo.spellID; ranksPurchased = rank), and maps that spellID back to our
+generated talent via spellRanks (the capture bridge, no tab/tier/column needed). The
+shape probe now runs the same walk and records nodes/purchased/mapped-to-generated + a
+sample, so the next harvest CONFIRMS the path live and proves the spellID bridge.
+STILL OPEN: the S2 talent-TOOLTIP injection hook is GameTooltip.SetTalent = classic-only,
+so it won't fire on the trait UI; the trait-node tooltip hook mechanism (TooltipDataProcessor
+type? C_TooltipInfo.GetTalent is present) is the next thing to identify. Talent DATA
+capture is now correct; talent-tooltip INJECTION on Forever is the remaining S2 unknown.
 
 ### S5 - ECS-style stats panel ◐
 Side panel on CharacterFrame (pattern: Extended Character Stats; mockup in DESIGN.md

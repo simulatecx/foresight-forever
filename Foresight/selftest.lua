@@ -297,24 +297,26 @@ function HM.runSelftest(out)
     check("guards select picks nth return",
         HM.Guards.select(2, function() return 1, 42, 7 end) == 42
         and HM.Guards.select(2, nil) == nil)
-    check("talent adapter: modern convention, sparse cutoff, capture", (function()
-        local savedApi = _G.C_SpecializationInfo
+    check("talent adapter walks C_Traits + maps spellID -> talent", (function()
+        -- Mock Forever's real shape (forever-addon-kit): one purchased node whose entry
+        -- definition resolves to spell 11069 = Improved Fireball rank 1 (our talent 26).
+        local sTraits, sCT, sEnum = _G.C_Traits, _G.C_ClassTalents, _G.Enum
         HM.TalentAPI._resetForTest()
-        -- Mock Forever's shape: table-query GetTalentInfo, only tab 1 has 2 talents.
-        _G.C_SpecializationInfo = { GetTalentInfo = function(q)
-            if type(q) == "table" and q.tabIndex == 1 and q.talentIndex <= 2 then
-                return { name = "Mock Talent " .. q.talentIndex, tier = 2, column = 3,
-                         rank = 1, maxRank = 5 }
-            end
-        end }
-        local info = HM.TalentAPI.get(1, 1)
-        local all = HM.TalentAPI.all()
-        local captured = HM.Snapshot.captureTalents()
-        local ok = info and info.name == "Mock Talent 1" and info.tier == 2
-            and info.rank == 1 and info.maxRank == 5
-            and HM.TalentAPI.mode() == "spec-table"
-            and #all == 2 and #captured == 2 and captured[1].tier == 2
-        _G.C_SpecializationInfo = savedApi
+        _G.C_ClassTalents = { GetActiveConfigID = function() return 1 end }
+        _G.C_Traits = {
+            GetConfigInfo = function() return { treeIDs = { 7 } } end,
+            GetTreeNodes = function() return { 50 } end,
+            GetNodeInfo = function(_, nid) return { ID = nid, ranksPurchased = 2, maxRanks = 5,
+                activeEntry = { entryID = 500 }, entryIDs = { 500 } } end,
+            GetEntryInfo = function() return { definitionID = 9000, maxRanks = 5 } end,
+            GetDefinitionInfo = function() return { spellID = 11069, overrideName = "Improved Fireball" } end,
+        }
+        local sel = HM.TalentAPI.captureSelected()
+        local capt = HM.Snapshot.captureTalents()
+        local ok = sel and #sel == 1 and sel[1].talentId == 26 and sel[1].rank == 2
+            and sel[1].maxRank == 5 and HM.TalentAPI.mode() == "traits"
+            and #capt == 1 and capt[1].talentId == 26 and capt[1].rank == 2
+        _G.C_Traits, _G.C_ClassTalents, _G.Enum = sTraits, sCT, sEnum
         HM.TalentAPI._resetForTest()
         return ok
     end)())

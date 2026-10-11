@@ -144,16 +144,16 @@ function Collect.verify(out)
     result("talent API shape discovery", #found > 0,
         #found > 0 and table.concat(found, ", ") or "NO candidate surface found")
 
-    -- Adapter proof: does the normalized read path actually return data (and via
-    -- which convention)? This is the line that locks the S3 answer.
+    -- Adapter proof: does the C_Traits walk return purchased talents, and how many map
+    -- back to our generated data via spellID? This line locks the S3 answer.
     local adapterOk, adapterDetail = false, "no talent surface"
     if HM.TalentAPI and HM.TalentAPI.available() then
-        local sample = HM.TalentAPI.get(1, 1)
-        adapterOk = sample ~= nil
-        adapterDetail = ("mode=%s sample=%s"):format(
-            tostring(HM.TalentAPI.mode() or "none-answered"),
-            sample and ("%s r%s/%s"):format(sample.name,
-                tostring(sample.rank), tostring(sample.maxRank)) or "nil")
+        local sel = HM.TalentAPI.captureSelected() or {}
+        local matched = 0
+        for _, t in ipairs(sel) do if t.talentId then matched = matched + 1 end end
+        adapterOk = #sel > 0
+        adapterDetail = ("mode=%s selected=%d mapped-to-generated=%d"):format(
+            tostring(HM.TalentAPI.mode() or "none-answered"), #sel, matched)
     end
     result("talent API adapter returns data", adapterOk, adapterDetail)
     result("C_SpecializationInfo present", _G.C_SpecializationInfo ~= nil)
@@ -254,6 +254,26 @@ function Collect.probeTalentApiShape(out)
             end
         end
         shape.setTalentProbe = { ok = okSet, lineCount = #lines, lines = lines }
+    end
+
+    -- The decisive capture: walk C_Traits exactly as the adapter does and record the
+    -- live node tree (counts + a sample with spellIDs + how many map to generated data).
+    -- Confirms the forever-addon-kit path on THIS client and proves the spellID bridge.
+    if HM.TalentAPI and _G.C_Traits then
+        local ok, nodes = pcall(HM.TalentAPI.walkTraits, false)
+        if ok and type(nodes) == "table" then
+            local purchased, matched, sample = 0, 0, {}
+            for _, n in ipairs(nodes) do
+                if (n.rank or 0) > 0 then purchased = purchased + 1 end
+                if n.talentId then matched = matched + 1 end
+                if #sample < 15 then
+                    sample[#sample + 1] = { nodeID = n.nodeID, spellID = n.spellID,
+                        rank = n.rank, maxRank = n.maxRank, talentId = n.talentId, name = n.name }
+                end
+            end
+            shape.traitWalk = { nodes = #nodes, purchased = purchased,
+                                mappedToGenerated = matched, sample = sample }
+        end
     end
 
     store().talentApiShape = shape

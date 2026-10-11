@@ -233,6 +233,12 @@ def main() -> int:
                 print(f"     {label}: {json.dumps(info, ensure_ascii=False)}")
             if shape.get("setTalentProbe"):
                 print(f"     GameTooltip:SetTalent(1,1) -> {json.dumps(shape['setTalentProbe'], ensure_ascii=False)}")
+            tw = shape.get("traitWalk")
+            if tw:
+                print(f"     C_Traits walk: nodes={tw.get('nodes')} purchased={tw.get('purchased')} "
+                      f"mapped-to-generated={tw.get('mappedToGenerated')}")
+                for s in (tw.get("sample") or []):
+                    print(f"       {json.dumps(s, ensure_ascii=False)}")
         if probe:
             analysis = analyze_rank_rule(probe, gen)
             print(f"   talent tooltip probe: {len(probe.get('talents', []))} talents; "

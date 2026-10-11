@@ -1,12 +1,12 @@
--- Foresight talent API adapter. Live-verified 2026-10-10 (build 70338): Forever ships
--- the Mainline surface WITHOUT the classic talent globals - talent info lives on
--- C_SpecializationInfo.GetTalentInfo, whose calling convention for classic trees is
--- undocumented, and the GetNum* enumerators are absent. This adapter tries each known
--- convention under pcall, locks onto the first that yields a sane result, and
--- normalizes everything to one classic-style shape:
---   { name, tier, column, rank, maxRank }   (1-based coordinates)
--- EVERY talent read (snapshot capture, tooltip probe, S2 hook) routes through here;
--- no consumer touches a raw talent API again. No data at all degrades to empty results.
+-- Foresight talent API adapter.
+-- GROUND TRUTH (Thunderz96/forever-addon-kit, scanned 2026-10-10): Forever talents are
+-- Retail's C_Traits node trees - the classic GetTalentInfo/GetNumTalentTabs globals are
+-- gone. We walk C_Traits exactly like the kit's dumpTraits: active config -> trees ->
+-- nodes -> each purchased node's entry definition spellID, with node.ranksPurchased as
+-- the rank. That spellID maps back to our generated classic talent via spellRanks (the
+-- capture bridge, since our data is keyed by classic talent id, not trait node id).
+-- Classic globals remain a fallback for any context that still exposes them. No talent
+-- surface at all -> empty results (degrade-safe; never errors).
 
 local _, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
@@ -14,108 +14,161 @@ if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 local TalentAPI = {}
 HM.TalentAPI = TalentAPI
 
-local MAX_TABS, MAX_TALENTS, MISS_CUTOFF = 8, 64, 3
+local mode -- "traits" | "classic" | nil (set once a read path yields data)
 
-local mode -- "classic" | "spec-table" | "spec-positional"; nil until a call succeeds
-
--- Accept a TalentInfoResult-style table or classic multi-returns; nil when neither.
-local function normalize(a, _, c, d, e, f)
-    if type(a) == "table" then
-        if type(a.name) ~= "string" or a.name == "" then return nil end
-        return {
-            name = a.name,
-            tier = a.tier or a.row,
-            column = a.column,
-            rank = a.rank or a.currentRank or 0,
-            maxRank = a.maxRank or a.maximumRank or 1,
-        }
+-- spellID -> our talent id, built once from generated talents' spellRanks.
+local spellIndexCache
+local function spellIndex()
+    if spellIndexCache then return spellIndexCache end
+    spellIndexCache = {}
+    local talents = HM.gen and HM.gen.talents
+    if talents then
+        for tid, t in pairs(talents) do
+            for _, sid in ipairs(t.spellRanks or {}) do
+                if spellIndexCache[sid] == nil then spellIndexCache[sid] = tid end
+            end
+        end
     end
-    if type(a) ~= "string" or a == "" then return nil end
-    return { name = a, tier = c, column = d, rank = e or 0, maxRank = f or 1 }
+    return spellIndexCache
 end
 
-local function tryClassic(tab, index)
-    if not _G.GetTalentInfo then return nil end
-    local ok, a, b, c, d, e, f = pcall(_G.GetTalentInfo, tab, index)
-    if not ok then return nil end
-    return normalize(a, b, c, d, e, f)
+-- Candidate trait config IDs, gathered the way the kit's dumpTraits does.
+local function traitConfigIDs()
+    local CT, Traits = _G.C_ClassTalents, _G.C_Traits
+    local ids, seen = {}, {}
+    local function add(id) if id and not seen[id] then seen[id] = true; ids[#ids + 1] = id end end
+    if CT and CT.GetActiveConfigID then
+        local ok, id = pcall(CT.GetActiveConfigID)
+        if ok then add(id) end
+    end
+    if Traits and Traits.GetConfigsByType and _G.Enum and _G.Enum.TraitConfigType then
+        for _, val in pairs(_G.Enum.TraitConfigType) do
+            local ok, list = pcall(Traits.GetConfigsByType, val)
+            if ok and type(list) == "table" then
+                for _, id in ipairs(list) do add(id) end
+            end
+        end
+    end
+    return ids
 end
 
-local function trySpecTable(tab, index)
-    local api = _G.C_SpecializationInfo
-    if not (api and api.GetTalentInfo) then return nil end
-    local ok, a = pcall(api.GetTalentInfo, { tabIndex = tab, talentIndex = index })
-    if not ok then return nil end
-    return normalize(a)
-end
-
-local function trySpecPositional(tab, index)
-    local api = _G.C_SpecializationInfo
-    if not (api and api.GetTalentInfo) then return nil end
-    local ok, a, b, c, d, e, f = pcall(api.GetTalentInfo, tab, index)
-    if not ok then return nil end
-    return normalize(a, b, c, d, e, f)
-end
-
-local CONVENTIONS = {
-    { id = "classic", fn = tryClassic },
-    { id = "spec-table", fn = trySpecTable },
-    { id = "spec-positional", fn = trySpecPositional },
-}
-
--- Fetch one talent by classic-style coordinates; locks the working convention on
--- first success so steady-state reads don't re-probe.
-function TalentAPI.get(tab, index)
-    for _, c in ipairs(CONVENTIONS) do
-        if not mode or mode == c.id then
-            local info = c.fn(tab, index)
-            if info then
-                mode = c.id
-                return info
+-- Resolve a node's spell: prefer the active entry, else the first entry with a spell.
+local function nodeSpell(configID, node)
+    local Traits = _G.C_Traits
+    local candidates = {}
+    if node.activeEntry and node.activeEntry.entryID then candidates[1] = node.activeEntry.entryID end
+    for _, eid in ipairs(node.entryIDs or {}) do candidates[#candidates + 1] = eid end
+    for _, eid in ipairs(candidates) do
+        local okE, entry = pcall(Traits.GetEntryInfo, configID, eid)
+        if okE and type(entry) == "table" and entry.definitionID then
+            local okD, def = pcall(Traits.GetDefinitionInfo, entry.definitionID)
+            if okD and type(def) == "table" and def.spellID then
+                return def.spellID, def.overrideName, entry.maxRanks
             end
         end
     end
     return nil
 end
 
--- Which convention answered (nil = none has yet; e.g. no talent data at this level).
-function TalentAPI.mode() return mode end
-
--- Is any talent surface present at all (presence, not proof it returns data).
-function TalentAPI.available()
-    if _G.GetTalentInfo ~= nil then return true end
-    local api = _G.C_SpecializationInfo
-    return (api and api.GetTalentInfo) ~= nil
-end
-
--- Enumerate every talent the client exposes as a flat { tab, index, info } list.
--- GetNumTalentTabs/GetNumTalents guide the walk when present (classic); otherwise
--- coordinates are brute-probed up to hard caps, ending a tab after MISS_CUTOFF
--- consecutive holes (talent lists are dense in classic-style trees).
-function TalentAPI.all()
+-- Walk C_Traits -> list of { nodeID, rank, maxRank, spellID, name, talentId }.
+-- onlyPurchased=true keeps nodes with ranks > 0; false returns every node (shape probe).
+-- Returns nil when C_Traits is not present (so callers can fall back).
+function TalentAPI.walkTraits(onlyPurchased)
+    local Traits = _G.C_Traits
+    if not (Traits and Traits.GetConfigInfo and Traits.GetTreeNodes and Traits.GetNodeInfo) then
+        return nil
+    end
+    local idx = spellIndex()
     local out = {}
-    if not TalentAPI.available() then return out end
-    local Guards = HM.Guards
-    local numTabs = Guards.number(Guards.call(_G.GetNumTalentTabs)) or MAX_TABS
-    for tab = 1, numTabs do
-        local numTalents = Guards.number(Guards.call(_G.GetNumTalents, tab))
-        local misses = 0
-        for index = 1, numTalents or MAX_TALENTS do
-            local info = TalentAPI.get(tab, index)
-            if info then
-                misses = 0
-                out[#out + 1] = { tab = tab, index = index, info = info }
-            elseif not numTalents then
-                misses = misses + 1
-                if misses >= MISS_CUTOFF then break end
+    for _, configID in ipairs(traitConfigIDs()) do
+        local okC, info = pcall(Traits.GetConfigInfo, configID)
+        if okC and type(info) == "table" then
+            for _, treeID in ipairs(info.treeIDs or {}) do
+                local okN, nodes = pcall(Traits.GetTreeNodes, treeID)
+                for _, nodeID in ipairs(okN and nodes or {}) do
+                    local okNode, node = pcall(Traits.GetNodeInfo, configID, nodeID)
+                    if okNode and type(node) == "table" and node.ID and node.ID ~= 0 then
+                        local rank = node.ranksPurchased or 0
+                        if (not onlyPurchased) or rank > 0 then
+                            local spellID, oname, emax = nodeSpell(configID, node)
+                            out[#out + 1] = {
+                                nodeID = nodeID, rank = rank,
+                                maxRank = node.maxRanks or emax or 1,
+                                spellID = spellID, name = oname,
+                                talentId = spellID and idx[spellID] or nil,
+                            }
+                        end
+                    end
+                end
             end
         end
     end
     return out
 end
 
--- Test hook: clears the locked convention (the selftest mocks an API and must not
--- leave the adapter poisoned for real in-game use afterwards).
-function TalentAPI._resetForTest() mode = nil end
+-- Is any talent surface present at all (presence, not proof it returns data).
+function TalentAPI.available()
+    local Traits = _G.C_Traits
+    if Traits and Traits.GetConfigInfo and Traits.GetTreeNodes then return true end
+    return _G.GetTalentInfo ~= nil
+end
+
+-- Selected talents for the snapshot, matched to our generated talent ids via spellID.
+-- Returns { { talentId?, rank, maxRank, name, spellID, nodeID } } (or classic shape on
+-- the fallback path). Locks `mode` to whichever path answered.
+function TalentAPI.captureSelected()
+    local traits = TalentAPI.walkTraits(true)
+    if traits then
+        mode = "traits"
+        return traits
+    end
+    local out = {}
+    if _G.GetTalentInfo and _G.GetNumTalentTabs and _G.GetNumTalents then
+        mode = "classic"
+        for tab = 1, (_G.GetNumTalentTabs() or 0) do
+            for i = 1, (_G.GetNumTalents(tab) or 0) do
+                local name, _, tier, column, rank, maxRank = _G.GetTalentInfo(tab, i)
+                if name and rank and rank > 0 then
+                    out[#out + 1] = { name = name, rank = rank, maxRank = maxRank,
+                                      tier = tier, column = column }
+                end
+            end
+        end
+    end
+    return out
+end
+
+-- Classic single-talent fetch (for the S2 SetTalent hook path, classic clients only;
+-- returns nil on Forever, where the trait UI uses a different tooltip mechanism).
+function TalentAPI.get(tab, index)
+    if not _G.GetTalentInfo then return nil end
+    local name, _, tier, column, rank, maxRank = _G.GetTalentInfo(tab, index)
+    if not name then return nil end
+    mode = mode or "classic"
+    return { name = name, tier = tier, column = column, rank = rank or 0, maxRank = maxRank or 1 }
+end
+
+-- Classic flat enumeration (classic clients only; empty on Forever) - the tooltip probe
+-- uses this with GameTooltip:SetTalent, which does not exist for trait nodes.
+function TalentAPI.all()
+    local out = {}
+    if not (_G.GetTalentInfo and _G.GetNumTalentTabs and _G.GetNumTalents) then return out end
+    for tab = 1, (_G.GetNumTalentTabs() or 0) do
+        for i = 1, (_G.GetNumTalents(tab) or 0) do
+            local name, _, tier, column, rank, maxRank = _G.GetTalentInfo(tab, i)
+            if name then
+                out[#out + 1] = { tab = tab, index = i, info = {
+                    name = name, tier = tier, column = column,
+                    rank = rank or 0, maxRank = maxRank or 1 } }
+            end
+        end
+    end
+    return out
+end
+
+function TalentAPI.mode() return mode end
+
+-- Test hook: clears locked state so a mocked API can't poison real in-game reads.
+function TalentAPI._resetForTest() mode = nil; spellIndexCache = nil end
 
 return TalentAPI

@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.7.1 - 2026-10-10
+
+Repoint talent reads to C_Traits - the real Forever talent system, confirmed against a
+working addon kit (not a guess, not an AI summary).
+
+- FINDING (Thunderz96/forever-addon-kit): Forever talents are Retail's C_Traits node
+  trees; the classic GetTalentInfo/GetNumTalentTabs globals are gone. This invalidated
+  both a Google AI Overview (which described the classic global signature as if it were
+  Forever's) and this addon's own three C_SpecializationInfo.GetTalentInfo guesses -
+  all aimed at the wrong system, hence the earlier "none-answered".
+- `core/talent_api.lua` rewritten to walk C_Traits exactly like the kit's dumpTraits:
+  GetActiveConfigID -> GetConfigInfo -> GetTreeNodes -> GetNodeInfo -> GetEntryInfo ->
+  GetDefinitionInfo.spellID, with node.ranksPurchased as the rank. That spellID maps
+  back to our generated talent via spellRanks (the capture bridge). Classic globals
+  remain a fallback; degrade-safe when no talent surface exists.
+- `Snapshot.captureTalents` now returns talents matched to our generated talent ids.
+- The shape probe runs the same C_Traits walk and records nodes/purchased/
+  mapped-to-generated + a sample; `/foresight verify`'s adapter line reports it. The
+  next harvest confirms the path live and proves the spellID bridge.
+- Selftest (60) now mocks C_Traits end-to-end (node -> spell 11069 -> talent 26 rank 2).
+- STILL OPEN: the S2 talent-tooltip injection hook (GameTooltip.SetTalent) is classic-
+  only and won't fire on the trait UI; identifying the trait-node tooltip hook is the
+  remaining S2 unknown. Talent DATA capture is now correct.
+
+*Features:* CORE-talent-api, MODEL-snapshot, QA-verify-command, QA-harvester,
+QA-selftest-harness
+
 ## 0.7.0 - 2026-10-10
 
 `GRAPH-threat`: threat becomes the 8th outcome lens, built on real client data.

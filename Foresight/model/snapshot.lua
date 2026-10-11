@@ -69,18 +69,21 @@ function Snapshot.capture()
     return snapshot
 end
 
--- Current talent allocation, matched to generated data by (tab order, tier, column).
--- All reads go through the TalentAPI adapter (classic globals are absent on Forever).
+-- Current talent allocation. On Forever this walks C_Traits and maps each purchased
+-- node's spell back to our generated talent id (via spellRanks); on a classic client it
+-- falls back to the old globals. All reads route through the TalentAPI adapter.
 function Snapshot.captureTalents()
     local talents = {}
     if not (HM.TalentAPI and HM.TalentAPI.available()) then
         return talents -- headless, or no talent surface: verify tracks the API shape
     end
-    for _, t in ipairs(HM.TalentAPI.all()) do
-        local info = t.info
-        if info.rank and info.rank > 0 then
-            talents[#talents + 1] = { tab = t.tab, tier = info.tier, column = info.column,
-                                      rank = info.rank, name = info.name }
+    for _, t in ipairs(HM.TalentAPI.captureSelected() or {}) do
+        if (t.rank or 0) > 0 then
+            talents[#talents + 1] = {
+                talentId = t.talentId, rank = t.rank, maxRank = t.maxRank,
+                name = t.name, spellID = t.spellID,
+                tier = t.tier, column = t.column, -- present only on the classic fallback
+            }
         end
     end
     return talents
