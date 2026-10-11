@@ -197,6 +197,88 @@ function Impact.statPrioritySentence(loadout, stats)
         dim and dim.label or "build", table.concat(names, " > ")), ranked, focus
 end
 
+-- The CHAIN view (shared): given a base loadout and a modeled one (one stat added, or one
+-- talent taken), describe the derived stats it moves (AP + per-swing damage, crit%, mana)
+-- and the net dimension deltas - reading the graph's intermediate nodes, not just the
+-- final dimensions. This is the "+2 AP -> ~+0.5 dmg per main-hand swing" answer.
+local function derivedChainLines(base, modeled, statsOnly)
+    local bb, ab = base:build(), modeled:build()
+    local function delta(id)
+        local okb, vb = pcall(function() return bb.graph:value(id, bb.ctx, {}) end)
+        local oka, va = pcall(function() return ab.graph:value(id, ab.ctx, {}) end)
+        if okb and oka and vb and va then return va - vb end
+    end
+    local s = base.snapshot
+    local ws = s.weaponSpeed or 2
+    local lines = {}
+
+    local ap = delta("stat.attackPower")
+    if ap and math.abs(ap) > 0.05 then
+        lines[#lines + 1] = ("%+.0f Attack Power"):format(ap)
+        lines[#lines + 1] = ("  ~%+.1f damage per main-hand swing (%.1fs weapon)"):format(
+            ap / 14 * ws, ws)
+    end
+    local rap = delta("stat.rangedAttackPower")
+    if rap and math.abs(rap) > 0.05 then
+        lines[#lines + 1] = ("%+.0f Ranged Attack Power"):format(rap)
+    end
+    local mc = delta("stat.meleeCritPct")
+    if mc and math.abs(mc) > 0.004 then
+        lines[#lines + 1] = ("%+.2f%% melee crit (your swings + special attacks)"):format(mc)
+    end
+    local sc = delta("stat.spellCritPct")
+    if sc and math.abs(sc) > 0.004 then
+        lines[#lines + 1] = ("%+.2f%% spell crit (your damage/healing spells)"):format(sc)
+    end
+    local mana = delta("stat.maxMana")
+    if mana and math.abs(mana) > 0.5 then lines[#lines + 1] = ("%+.0f max mana"):format(mana) end
+    local hp = delta("stat.maxHealth")
+    if hp and math.abs(hp) > 0.5 then lines[#lines + 1] = ("%+.0f max health"):format(hp) end
+    local regen = delta("mech.manaPerTick")
+    if regen and math.abs(regen) > 0.02 then
+        lines[#lines + 1] = ("%+.1f mana/tick while regenerating"):format(regen)
+    end
+
+    if not statsOnly then
+        for _, c in ipairs(Impact.diff(base, modeled) or {}) do
+            if math.abs(c.pct or 0) > 0.009 then
+                lines[#lines + 1] = ("-> %s %+.2f%%"):format(c.label, c.pct)
+            end
+        end
+    end
+    return lines
+end
+
+-- The derived stats a bundle of item stats grants (crit%, AP + per-swing, mana) - the
+-- concrete "what +1 Agility actually gives you" for an item tooltip. No dimension lines.
+function Impact.itemDerivedLines(loadout, statDeltas)
+    local modeled, any = loadout, false
+    for stat, amount in pairs(statDeltas or {}) do
+        if type(amount) == "number" and amount ~= 0 then
+            modeled = modeled:withStatDelta(stat, amount, ("+%g %s"):format(amount, stat))
+            any = true
+        end
+    end
+    if not any then return {} end
+    return derivedChainLines(loadout, modeled, true)
+end
+
+-- What a raw stat change does, step by step (the /foresight stat answer).
+function Impact.statImpactDetail(loadout, stat, amount)
+    local modeled = loadout:withStatDelta(stat, amount, ("+%s %s"):format(amount, stat))
+    local lines = derivedChainLines(loadout, modeled)
+    if #lines == 0 then
+        lines[1] = ("+%s %s has no modeled effect for a %s yet"):format(
+            amount, stat, loadout.snapshot.classToken or "?")
+    end
+    return lines
+end
+
+-- What taking a trait node (classic talent or new Forever node) does for the character.
+function Impact.talentChainLines(loadout, nodeId, rank)
+    return derivedChainLines(loadout, loadout:withTraitNode(nodeId, rank))
+end
+
 -- Talent summary for tooltips: what a talent touches, from precise generated data.
 -- Returns { name, affectedNames = {...}, property, valueAtRank, isPct, needsCuration }.
 function Impact.talentSummary(talentId, rank)

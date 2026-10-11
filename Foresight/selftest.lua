@@ -157,6 +157,24 @@ function HM.runSelftest(out)
         return approx(built.graph:value("stat.attackPower", built.ctx), 60)
     end)())
 
+    -- Stat impact CHAIN (depth: "+N stat -> +AP -> dmg per swing / +crit%").
+    check("stat chain shows AP + per-swing damage for Strength", (function()
+        local s = table.concat(HM.Impact.statImpactDetail(base, "Strength", 10), "\n")
+        return s:find("Attack Power", 1, true) ~= nil
+            and s:find("per main-hand swing", 1, true) ~= nil
+    end)())
+    check("stat chain shows crit for Agility (live-derived conversion)", (function()
+        local s = table.concat(HM.Impact.statImpactDetail(base, "Agility", 10), "\n")
+        return s:find("melee crit", 1, true) ~= nil
+    end)())
+    check("trait node impact block shows effect + for-you chain", (function()
+        local lines = HM.Tooltips.nodeImpactLines(104756, base) -- an Intellect% node
+        if not lines then return false end
+        local parts = {}
+        for _, L in ipairs(lines) do parts[#parts + 1] = L.text or L.left or "" end
+        return table.concat(parts, "\n"):find("Intellect", 1, true) ~= nil
+    end)())
+
     -- MODEL-stat-advisor: marginal stat ranking on explainStatDelta (no forked path).
     check("stat advisor ranks + produces a sentence", (function()
         local sentence, ranked, focus = HM.Impact.statPrioritySentence(base)

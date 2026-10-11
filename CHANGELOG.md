@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.9.2 - 2026-10-11
+
+Impact depth + accuracy overhaul - the "+1 Agility shows 0.00%" complaint. Now the
+answer is the CHAIN and the SKILLS, and it's right at your level.
+
+- ACCURACY: crit-per-point is now DERIVED from your live crit and stat (critPct / stat),
+  which auto-scales to your level and gear. The old fixed level-60 constant badly
+  understated crit from Agility while leveling (hence the ~0% readings). Falls back to
+  the classic constant only when live crit is unavailable.
+- DEPTH: new `Impact.statImpactDetail` / `derivedChainLines` show the chain step by step:
+  "+2 Attack Power -> ~+0.5 damage per main-hand swing (3.2s weapon)", "+0.21% melee crit
+  (your swings + special attacks)", "+N max mana", then the net dimension deltas.
+  `/foresight stat <name> <amount>` now prints this.
+- TALENTS now show an impact block for EVERY node, not just classic-overlap ones.
+  `Tooltips.nodeImpactLines` (via the generated trait data) lists the affected spells,
+  each op's effect at max rank, AND the derived "what this does for you now" chain
+  (e.g. Ancestral Knowledge's +Intellect% -> your spell crit + max mana). The
+  SetTraitEntry hook now resolves spell -> node -> this block, and records a diagnostic
+  (`traitTipProbe`) so a harvest confirms it fires + what it resolved.
+- ITEM tooltips now show the concrete derived gains too (`Impact.itemDerivedLines`):
+  "+1 Agility -> +X% melee crit" instead of only a tiny dimension %.
+- Selftest grows to 72 (stat chain AP/per-swing + crit, trait node impact block).
+
+*Features:* MODEL-impact-diff, MODEL-loadout-whatif, UI-talent-tooltip, UI-item-tooltip,
+DATA-formula-registry, QA-verify-command, QA-selftest-harness
+
 ## 0.9.1 - 2026-10-11
 
 Three live-render bugs fixed from the first real in-game screenshots (level-10 Shaman).

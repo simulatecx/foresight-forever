@@ -246,6 +246,9 @@ def main() -> int:
             for r in verify.get("results", []):
                 if r.get("name") == "talent API shape discovery" and r.get("detail"):
                     print(f"     talent API shape: {r['detail']}")
+        ttp = collect.get("traitTipProbe")
+        if ttp:
+            print(f"   trait-tooltip hook last fired: {json.dumps(ttp, ensure_ascii=False)}")
         shape = collect.get("talentApiShape") or {}
         if shape:
             print(f"   talent API shape probe @{shape.get('at')}:")

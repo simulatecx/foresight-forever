@@ -136,6 +136,15 @@ function Loadout:build()
     local conv = (F.statConversions.byClass or {})[s.classToken] or {}
     local snapStr, snapAgi, snapInt =
         s.stats.strength or 0, s.stats.agility or 0, s.stats.intellect or 0
+
+    -- Marginal crit-per-point: DERIVE it from the character's own live crit and stat
+    -- (critPct / stat), which auto-scales to level and gear - far more accurate than a
+    -- fixed level-60 constant (which badly understated crit from Agility while leveling).
+    -- Falls back to the classic constant when live crit is unavailable (e.g. tests).
+    local liveAgiPerCrit = (snapAgi > 0 and (s.stats.meleeCritPct or 0) > 0)
+        and (snapAgi / s.stats.meleeCritPct) or conv.agiPerCrit
+    local liveIntPerCrit = (snapInt > 0 and (s.stats.spellCritPct or 0) > 0)
+        and (snapInt / s.stats.spellCritPct) or conv.intPerSpellCrit
     g:addNode{ id = "stat.attackPower", kind = "stat",
                formula = function(get)
                    return (s.stats.attackPower or 0)
@@ -149,15 +158,13 @@ function Loadout:build()
                end }
     g:addNode{ id = "stat.meleeCritPct", kind = "stat",
                formula = function(get)
-                   local perCrit = conv.agiPerCrit
                    return (s.stats.meleeCritPct or 0)
-                       + (perCrit and (get("stat.agility") - snapAgi) / perCrit or 0)
+                       + (liveAgiPerCrit and (get("stat.agility") - snapAgi) / liveAgiPerCrit or 0)
                end }
     g:addNode{ id = "stat.spellCritPct", kind = "stat",
                formula = function(get)
-                   local perCrit = conv.intPerSpellCrit
                    return (s.stats.spellCritPct or 0)
-                       + (perCrit and (get("stat.intellect") - snapInt) / perCrit or 0)
+                       + (liveIntPerCrit and (get("stat.intellect") - snapInt) / liveIntPerCrit or 0)
                end }
 
     -- Mechanic + outcome nodes (formula-driven).

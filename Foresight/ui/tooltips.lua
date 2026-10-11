@@ -185,6 +185,74 @@ function Tooltips.talentLines(talentId, currentRank, loadout)
     return lines
 end
 
+-- Impact block for ANY hovered trait node (classic talent OR new Forever node - the
+-- generated trait data covers all 555). Shows the affected spells, each op's effect at
+-- max rank, and the derived "what this does for you right now" chain. This is why a
+-- talent hover answers "which of MY skills does this change, and how".
+function Tooltips.nodeImpactLines(nodeId, loadout)
+    local node = HM.gen and HM.gen.traits and HM.gen.traits.nodes and HM.gen.traits.nodes[nodeId]
+    if not node then return nil end
+    local F = HM.formulas
+    local maxRank = node.maxRank or 1
+    local lines = {}
+    local presumed = F.presumedMark(F.talentRankValue) ~= ""
+    lines[#lines + 1] = {
+        kind = "double", left = "Foresight",
+        right = presumed and "(p) rank rule presumed" or nil,
+        r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
+    }
+
+    local affected, seen = {}, {}
+    for _, op in ipairs(node.ops or {}) do
+        for _, sid in ipairs(op.affected or {}) do
+            local sp = HM.gen.spells and HM.gen.spells[sid]
+            if sp and sp.name and not seen[sp.name] then
+                seen[sp.name] = true
+                affected[#affected + 1] = sp.name
+            end
+        end
+    end
+    if #affected > 0 then
+        table.sort(affected)
+        local shown = {}
+        for i = 1, math.min(#affected, MAX_AFFECTED_NAMES) do shown[i] = affected[i] end
+        local more = #affected - #shown
+        lines[#lines + 1] = {
+            text = "|cff9d9d9dAffects:|r " .. table.concat(shown, ", ")
+                .. (more > 0 and (" (+%d more)"):format(more) or ""),
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+        }
+    end
+
+    for _, op in ipairs(node.ops or {}) do
+        local prop = op.property or op.stat
+        if prop and op.maxValue then
+            lines[#lines + 1] = {
+                text = ("At max: %s %s"):format(
+                    fmtValue(F.talentRankValue.fn(op.maxValue, maxRank, maxRank), op.isPct, op.property), prop),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
+    end
+
+    if loadout then
+        local okc, chain = pcall(HM.Impact.talentChainLines, loadout, nodeId, maxRank)
+        for _, l in ipairs(okc and chain or {}) do
+            lines[#lines + 1] = { text = "  " .. l, r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
+        end
+    end
+
+    if node.needsCuration then
+        lines[#lines + 1] = {
+            text = "Some effects aren't mapped yet (needs curation).",
+            r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+        }
+    end
+
+    if #lines <= 1 then return nil end
+    return lines
+end
+
 -- Item provider (layman stat impact) ------------------------------------------
 
 -- GetItemStats keys -> snapshot stat names the loadout models. v0 covers the primaries
@@ -254,6 +322,11 @@ function Tooltips.itemLines(mapped, loadout, comparedStats)
         text = "|cff9d9d9dThis item:|r " .. table.concat(parts, ", "),
         r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
     }
+    -- Concrete derived gains (the "+1 Agility -> +X% crit, +Y AP per swing" answer).
+    local okd, derived = pcall(HM.Impact.itemDerivedLines, loadout, mapped)
+    for _, l in ipairs(okd and derived or {}) do
+        lines[#lines + 1] = { text = l, r = BODY.r, g = BODY.g, b = BODY.b, wrap = true }
+    end
     if ok and changes and #changes > 0 then
         for i = 1, math.min(#changes, 4) do
             local c = changes[i]
@@ -263,7 +336,7 @@ function Tooltips.itemLines(mapped, loadout, comparedStats)
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
         end
-    else
+    elseif not (okd and derived and #derived > 0) then
         lines[#lines + 1] = {
             text = "no modeled dimension change for your class yet",
             r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
@@ -512,15 +585,21 @@ local function injectTraitEntry(tip, a, b)
     local cfg = activeConfigID()
     if not cfg then return end
     local spellID = traitEntrySpell(cfg, a) or traitEntrySpell(cfg, b)
-    if not spellID then return end
-    local talentId = HM.TalentAPI and HM.TalentAPI.talentForSpell(spellID)
-    if not talentId then return end -- new Forever nodes w/o a classic talent: no block (v0)
+    local nodeId = spellID and HM.gen and HM.gen.traits and HM.gen.traits.bySpell
+        and HM.gen.traits.bySpell[spellID]
+    -- Diagnostic: record what the hook saw, so a harvest can confirm it fires + resolves.
+    if HM.db and type(HM.db.collect) == "table" then
+        HM.db.collect.traitTipProbe = {
+            a = tostring(a), b = tostring(b), spellID = spellID, nodeId = nodeId, injected = false }
+    end
+    if not nodeId then return end
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
-    local lines = Tooltips.talentLines(talentId, nil, loadout)
+    local lines = Tooltips.nodeImpactLines(nodeId, loadout)
     if lines then
         tip.foresightInjected = true
+        if HM.db and type(HM.db.collect) == "table" then HM.db.collect.traitTipProbe.injected = true end
         attach(tip, lines)
     end
 end

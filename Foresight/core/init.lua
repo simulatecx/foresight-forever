@@ -6,7 +6,7 @@ local ADDON_NAME, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 _G.Foresight = HM
 
-HM.version = "0.9.1" -- keep in sync with Foresight.toc (collect journals this stamp)
+HM.version = "0.9.2" -- keep in sync with Foresight.toc (collect journals this stamp)
 
 -- Defensive load: SavedVariables are user-editable files, so every field is
 -- type-validated and anything malformed is reset, never trusted. A tampered or
@@ -110,8 +110,8 @@ local function onSlash(input)
             return
         end
         local loadout = HM.Loadout.fromSnapshot(snapshot)
-        local lines = HM.Impact.explainStatDelta(loadout, stat, tonumber(amount))
-        printMsg(("+%s %s means:"):format(amount, stat))
+        local lines = HM.Impact.statImpactDetail(loadout, stat, tonumber(amount))
+        printMsg(("+%s %s does this for you:"):format(amount, stat))
         for _, line in ipairs(lines) do printMsg("  " .. line) end
     elseif cmd == "advisor" or cmd == "stats" then
         local snapshot = HM.Snapshot and HM.Snapshot.capture()
