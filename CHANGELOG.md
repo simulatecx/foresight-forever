@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.18.0 - 2026-10-11
+
+LEVER TAXONOMY - makes the synergy/relationship graph principled and growth-proof.
+
+- New `model/levers.lua`: the ONE declarative map from an impact op to the canonical
+  levers it pushes (axis + key). Attack Power, Spell Power, Healing, crit, defense,
+  resource and tempo are DISTINCT keys - "attacks" never blur into "spells". statConvert
+  yields two levers (its source stat + the output it feeds - the chained-synergy bridge);
+  spellmod routes affected spells to the ability axis (so "what touches this skill" and
+  "skills this talent touches" are the same edge, both directions free).
+- `model/synergy.lua` now groups ENTIRELY off the taxonomy (the hand-written per-op-kind
+  chain is gone) - one source of truth shared by synergy, and available to the catalog
+  and tooltips.
+- COMPLETENESS GATE (selftest): every op kind present in the shipped data must be
+  classified by the taxonomy or declared label-only - otherwise the ship gate reds. New
+  pipeline content can no longer silently drop out of synergies; it either classifies
+  cleanly or blocks the release. This is the "grows without breaking for users" guarantee.
+- Selftest 126 checks (+5: completeness gate, AP-vs-SP distinct keys, the statConvert
+  bridge, ability-axis routing, unknown-kind flagged).
+
+*Features:* SYNERGY-engine, CATALOG, QA-selftest-harness, DATA-pipeline-generate
+
 ## 0.17.0 - 2026-10-11
 
 CONTENT CATALOG + CHAINED SYNERGIES + crit tooltips - the "all content in one table,

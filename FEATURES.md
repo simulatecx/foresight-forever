@@ -29,6 +29,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## SYNERGY / CATALOG - how content connects
 - ◐ `SYNERGY-engine` - groups impact sources by shared lever (stat/spell/school/mechanic) from ALL sources (talents + player racials + active buffs); CHAINED synergies v0.17.0 - stat-conversion ops (Mental Dexterity Int->AP) bridge a stat theme to the output it feeds, so "Attack Power" lists converters + direct sources and "Intellect" shows what it powers; `/foresight synergy` prints a chains section + tooltip "Synergy:" line. Remaining: tree-highlight dropdown (highlight shipped), deeper multi-hop chains -> `Foresight/model/synergy.lua`
 - ◐ `CATALOG` - one normalized reference table over every impact source (talents/traits/racials/consumables-by-type/imbues) with a uniform entry shape; `/foresight catalog` counts-per-kind table + cross-kind search; the query spine for synergy/search/validation, grows cleanly as the pipeline (or crowd) adds content -> `Foresight/model/catalog.lua`
+- ☑ `LEVER-taxonomy` - the ONE declarative op-kind -> canonical lever (axis+key) map; distinct axes for Attack Power / Spell Power / crit / defense / resource / tempo / ability; statConvert = dual lever (stat + output bridge); synergy groups entirely off it; completeness gate reds the ship if any shipped op kind is unclassified (growth-proof) -> `Foresight/model/levers.lua`
 - ◐ `SYNERGY-highlight` - Diablo-4-style talent-tree highlight of a synergy theme (v0.13.0): `/foresight synergy <theme>` glows every member node (enumerator probe -> name-match fallback; house pulse textures, taint-free; theme saved per char, auto-applies on talent-UI open, `clear` stops). Remaining: in-game render verify, talent-frame dropdown, LibCustomGlow at packaging -> `Foresight/ui/synergy_highlight.lua`
 
 ## CONSUME / RACIAL / IMBUE - more impact sources (researched 2026-10-11)
@@ -52,7 +53,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 121-check selftest (in-game + headless via lupa) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 126-check selftest (in-game + headless via lupa; incl. the lever-taxonomy completeness gate) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal + ITEM SIGHTINGS (v0.15.0: equipped+bag item IDs scanned at login/logout - the "what's actually in game" ground truth, crowd-DB phase A; capped, IDs only) into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

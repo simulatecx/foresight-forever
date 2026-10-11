@@ -23,17 +23,6 @@ local function addTo(group, key, member)
     list[#list + 1] = member
 end
 
--- Mechanic lever a spellmod property maps to (coarse buckets players think in).
-local function mechanicOf(property)
-    if not property then return nil end
-    if property:find("crit") then return "crit" end
-    if property:find("cost") then return "cost" end
-    if property == "cast time" then return "cast time" end
-    if property == "cooldown" then return "cooldown" end
-    if property:find("threat") then return "threat" end
-    return nil
-end
-
 -- player (optional): { raceId, classToken, buffs = captureActiveBuffs() shape or
 -- plain itemIds }. The cache rebuilds when this context changes.
 local function playerKey(player)
@@ -62,42 +51,20 @@ function Synergy.build(player)
     cacheKey = key
     local spells = (HM.gen and HM.gen.spells) or {}
 
-    -- ONE op-walker for every source kind - the whole point of the shared op shape.
+    -- ONE op-walker for every source kind, driven by the declarative lever taxonomy
+    -- (model/levers.lua) so grouping is defined in exactly one place. axis names the
+    -- synergy index table; key is the bucket within it. statConvert additionally records
+    -- its stat->output bridge for the chained-synergy explanation.
+    local Levers = HM.Levers
     local function ingest(member, ops)
         for _, op in ipairs(ops or {}) do
-            if op.kind == "stat" and op.stat then
-                addTo(cache.stat, op.stat, member)
-            elseif op.kind == "schoolDamage" and op.school then
-                addTo(cache.school, op.school, member)
-            elseif op.kind == "threat" then
-                addTo(cache.mechanic, "threat", member)
-            elseif op.kind == "critChance" then
-                addTo(cache.mechanic, "crit", member)
-            elseif op.kind == "maxHealth" then
-                addTo(cache.mechanic, "health", member)
-            elseif op.kind == "maxPower" and op.powerType == 0 then
-                addTo(cache.mechanic, "max mana", member)
-            elseif op.kind == "armor" then
-                addTo(cache.mechanic, "armor", member)
-            elseif op.kind == "attackPower" or op.kind == "rangedAttackPower" then
-                addTo(cache.mechanic, "attack power", member)
-            elseif op.kind == "statConvert" then
-                -- The chained-synergy bridge: a converter scales an OUTPUT from a
-                -- primary stat. It belongs to BOTH the source-stat theme (it rewards
-                -- stacking that stat) and the output theme (it is an output source) -
-                -- and we record the bridge so a query can explain the chain.
-                local outTheme = CONVERT_THEME[op.to] or op.to
-                if op.from then addTo(cache.stat, op.from, member) end
-                addTo(cache.mechanic, outTheme, member)
+            for _, lever in ipairs((Levers and Levers.of(op, spells)) or {}) do
+                local tbl = cache[lever.axis]
+                if tbl then addTo(tbl, lever.key, member) end
+            end
+            if op.kind == "statConvert" and op.from then
                 cache.converts[#cache.converts + 1] =
-                    { member = member, from = op.from, to = outTheme }
-            elseif op.kind == "spellmod" then
-                local lever = mechanicOf(op.property)
-                if lever then addTo(cache.mechanic, lever, member) end
-                for _, sid in ipairs(op.affected or {}) do
-                    local sp = spells[sid]
-                    if sp and sp.name then addTo(cache.spell, sp.name, member) end
-                end
+                    { member = member, from = op.from, to = CONVERT_THEME[op.to] or op.to }
             end
         end
     end

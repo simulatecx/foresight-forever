@@ -722,6 +722,55 @@ function HM.runSelftest(out)
         end
         return names["Expansive Mind"] == nil
     end)())
+    -- LEVER TAXONOMY: the completeness gate - EVERY op kind in the shipped data must be
+    -- classified (has a lever) or declared label-only, so new content can never silently
+    -- drop out of synergies. This is the "grows without breaking" guarantee.
+    check("every op kind in the catalog is classified by the lever taxonomy", (function()
+        HM.Catalog._reset()
+        local unclassified = {}
+        for _, e in ipairs(HM.Catalog.all()) do
+            for _, op in ipairs(e.ops or {}) do
+                if op.kind and not HM.Levers.classified(op.kind) then
+                    unclassified[op.kind] = true
+                end
+            end
+        end
+        local names = {}
+        for k in pairs(unclassified) do names[#names + 1] = k end
+        return #names == 0, #names > 0 and ("unclassified: " .. table.concat(names, ", ")) or nil
+    end)())
+    check("levers keep Attack Power and Spell Power on distinct keys", (function()
+        local ap = HM.Levers.of({ kind = "attackPower" })
+        local sp = HM.Levers.of({ kind = "statConvert", to = "spellDamage", from = "Intellect" })
+        local apKey, spKey
+        for _, l in ipairs(ap) do if l.axis == "mechanic" then apKey = l.key end end
+        for _, l in ipairs(sp) do if l.axis == "mechanic" then spKey = l.key end end
+        return apKey == "attack power" and spKey == "spell damage" and apKey ~= spKey
+    end)())
+    check("statConvert yields both a stat lever and an output lever (the bridge)", (function()
+        local ls = HM.Levers.of({ kind = "statConvert", to = "attackPower", from = "Intellect" })
+        local hasStat, hasMech = false, false
+        for _, l in ipairs(ls) do
+            if l.axis == "stat" and l.key == "Intellect" then hasStat = true end
+            if l.axis == "mechanic" and l.key == "attack power" then hasMech = true end
+        end
+        return hasStat and hasMech
+    end)())
+    check("spellmod routes affected spells to the ability axis", (function()
+        local ls = HM.Levers.of({ kind = "spellmod", property = "crit chance", affected = { 133 } },
+            { [133] = { name = "Fireball" } })
+        local hasSpell, hasCrit = false, false
+        for _, l in ipairs(ls) do
+            if l.axis == "spell" and l.key == "Fireball" then hasSpell = true end
+            if l.axis == "mechanic" and l.key == "crit" then hasCrit = true end
+        end
+        return hasSpell and hasCrit
+    end)())
+    check("an unknown op kind is flagged, not silently ignored", (function()
+        return HM.Levers.of({ kind = "someFutureEffect" }) == nil
+            and HM.Levers.classified("someFutureEffect") == false
+    end)())
+
     -- CATALOG: the unified content reference table over every impact source.
     check("catalog unifies all source kinds with counts", (function()
         HM.Catalog._reset()
