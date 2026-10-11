@@ -6,10 +6,10 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## DATA - data pipeline & shipped data
 - ☑ `DATA-pipeline-fetch` - download Forever DB2 tables from wago.tools, cached per build -> `pipeline/fetch.py`
 - ☑ `DATA-pipeline-generate` - compute talent->affected-spells via class masks, emit Lua tables -> `pipeline/generate.py`
-- ☑ `DATA-generated-tables` - talents, tabs, impacts, 3,520 spells (cast/cost/tick/cooldown), 555 trait nodes, 45 racial spells across 10 races, 390 consumable buffs, 377 weapon imbues -> `Foresight/data/generated/`
+- ☑ `DATA-generated-tables` - talents, tabs, impacts, 3,520 spells, 555 trait nodes, 45 racial spells across 10 races, 390 consumable buffs, 378 weapon imbues, 4,663 statted gear items -> `Foresight/data/generated/`
 - ☑ `DATA-formula-registry` - confidence-tagged conversion math (regen, swing, coefficients, rank rule) -> `Foresight/data/formulas.lua`
 - ☑ `DATA-overrides` - curated corrections layered over generated data -> `Foresight/data/overrides.lua`
-- ◐ `DATA-items` - gear compare v0 (v0.9.0): `Impact.compareItems` nets two items' per-dimension impact (built on explainItemDelta, no forked math); item tooltip shows a "vs equipped [slot]" block via live GetItemStats. Offline ItemSparse DB deliberately deferred (addon bloat vs live reads) -> `Foresight/model/impact.lua`, `Foresight/ui/tooltips.lua`
+- ◐ `DATA-items` - gear compare (v0.9.0): `Impact.compareItems` + item tooltip "vs equipped" via live GetItemStats (exact amounts). GEAR SEED (v0.19.0): `items.lua` = 4,663 statted equippable items decoded from client ItemSparse (name/slot/ilvl/reqLevel/quality + stat TYPES; amounts stay live, no budget-system guessing); `/foresight items <stat>` browse-by-stat. Secondary stats (Dodge/Parry/Defense/ratings/pen) now first-class in the vocabulary + levers. Remaining: offline amount computation (optional), bridge notable gear into synergy -> `pipeline/generate.py`, `Foresight/data/generated/items.lua`, `Foresight/model/catalog.lua`
 - ☐ `DATA-professions` - profession recipes as modifier sources (deferred)
 - ☑ `DATA-traits` - Retail Trait DB2 (TraitNode/TraitNodeEntry/TraitNodeXTraitNodeEntry/TraitDefinition/SkillLineXTraitTree) -> `traits.lua`: 555 nodes keyed by nodeID with spellID/name/maxRank/ops (via shared build_ops) + bySpell index + tree->class. Covers ALL live nodes incl new Forever talents; adapter resolves every selection by nodeID; `Loadout:withTraitNode` folds any node's ops into the what-if model (phase 2, v0.8.3) -> `pipeline/generate.py`, `Foresight/data/generated/traits.lua`, `Foresight/model/loadout.lua`
 
@@ -53,7 +53,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 126-check selftest (in-game + headless via lupa; incl. the lever-taxonomy completeness gate) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 129-check selftest (in-game + headless via lupa; incl. the lever-taxonomy completeness gate) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal + ITEM SIGHTINGS (v0.15.0: equipped+bag item IDs scanned at login/logout - the "what's actually in game" ground truth, crowd-DB phase A; capped, IDs only) into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

@@ -74,6 +74,32 @@ AURA_LABELS = {
 }
 
 STAT_NAMES = {-1: "all stats", 0: "Strength", 1: "Agility", 2: "Stamina", 3: "Intellect", 4: "Spirit"}
+
+# ITEM_MOD_* stat-type ids (ItemSparse.StatModifier_bonusStat) -> our stat vocabulary.
+# The authoritative in-client gear-stat legend - no scraping. Secondary stats (dodge,
+# parry, defense, ratings, resistances) become first-class stat-axis levers. Unknown
+# ids fall back to "stat:N" (shown honestly, curated later).
+ITEM_MOD = {
+    0: "Mana", 1: "Health", 3: "Agility", 4: "Strength", 5: "Intellect", 6: "Spirit",
+    7: "Stamina", 12: "Defense", 13: "Dodge", 14: "Parry", 15: "Block",
+    16: "Melee Hit", 17: "Ranged Hit", 18: "Spell Hit", 19: "Melee Crit",
+    20: "Ranged Crit", 21: "Spell Crit", 28: "Melee Haste", 29: "Ranged Haste",
+    30: "Spell Haste", 31: "Hit", 32: "Crit", 35: "Resilience", 36: "Haste",
+    37: "Expertise", 38: "Attack Power", 39: "Ranged Attack Power",
+    41: "Spell Healing", 42: "Spell Damage", 43: "Mana Regen", 44: "Armor Penetration",
+    45: "Spell Power", 46: "Health Regen", 47: "Spell Penetration", 48: "Block Value",
+    49: "Mastery", 50: "Bonus Armor",
+}
+
+# InventoryType -> readable equip slot (gear catalog display).
+INV_SLOT = {
+    1: "Head", 2: "Neck", 3: "Shoulder", 4: "Shirt", 5: "Chest", 6: "Waist",
+    7: "Legs", 8: "Feet", 9: "Wrist", 10: "Hands", 11: "Finger", 12: "Trinket",
+    13: "One-Hand", 14: "Shield", 15: "Ranged", 16: "Back", 17: "Two-Hand",
+    18: "Bag", 19: "Tabard", 20: "Robe", 21: "Main Hand", 22: "Off Hand",
+    23: "Held", 25: "Thrown", 26: "Ranged", 28: "Relic",
+}
+QUALITY = {0: "Poor", 1: "Common", 2: "Uncommon", 3: "Rare", 4: "Epic", 5: "Legendary"}
 STAT_BITS = {1: "Strength", 2: "Agility", 4: "Stamina", 8: "Intellect", 16: "Spirit"}
 
 
@@ -660,6 +686,41 @@ def main() -> int:
             buffs_by_spell.setdefault(buff_sid, iid)
             break  # one buff effect per item is the consumable shape
 
+    # ---- Item catalog (DATA-items: the in-client gear DB, the authoritative seed) ----
+    # Every equippable item that carries stat mods, straight from ItemSparse - name,
+    # slot, item/required level, quality, and WHICH stats it has (by type). Exact stat
+    # AMOUNTS are intentionally omitted: they ride the item-budget system (StatPercent
+    # Editor x ilvl curve), which live GetItemStats already computes precisely for any
+    # item the player touches - so the offline catalog answers "what exists / what is it
+    # for / what has Dodge", and the live read answers "exactly how much" (no guessing).
+    item_cls = {}
+    for r in read_csv(cache, "Item"):
+        item_cls[to_int(r["ID"])] = (to_int(r["ClassID"]), to_int(r["InventoryType"]))
+    items_out = {}
+    for r in read_csv(cache, "ItemSparse"):
+        iid = to_int(r["ID"])
+        cls = item_cls.get(iid)
+        inv = cls and cls[1] or 0
+        if inv <= 0:
+            continue  # not equippable
+        stat_types = []
+        for i in range(10):
+            t = to_int(r.get(f"StatModifier_bonusStat_{i}", "") or 0)
+            if t > 0:
+                stat_types.append(ITEM_MOD.get(t, f"stat:{t}"))
+        if not stat_types:
+            continue  # only statted gear (the planning-relevant set)
+        name = r.get("Display_lang") or f"item:{iid}"
+        if "(Test)" in name or "OLD" in name or "DEPRECATED" in name.upper():
+            continue  # client scaffolding, not real gear
+        items_out[iid] = {
+            "name": name, "slot": INV_SLOT.get(inv, f"slot:{inv}"),
+            "ilvl": to_int(r.get("ItemLevel", "") or 0),
+            "reqLevel": to_int(r.get("RequiredLevel", "") or 0),
+            "quality": QUALITY.get(to_int(r.get("OverallQualityID", "") or 0), "?"),
+            "stats": stat_types,
+        }
+
     # ---- Weapon imbues (IMBUE-compare: temp weapon enchants from player spells) --
     # Chain: player spell -> SpellEffect (Effect 53/54/360, misc0 = enchantment id)
     # -> SpellItemEnchantment: type-3 EQUIP spells carry fold-able auras (Rockbiter
@@ -757,6 +818,7 @@ def main() -> int:
                 "racialSpellsNeedingCuration": len(racial_curation),
                 "consumables": len(consumables_out),
                 "imbues": len(imbues_out),
+                "items": len(items_out),
             },
             "classNames": CLASS_NAMES,
         }, out_dir, args.build),
@@ -771,6 +833,7 @@ def main() -> int:
         LuaWriter.file("consumables", {"consumables": consumables_out,
                                        "buffsBySpell": buffs_by_spell}, out_dir, args.build),
         LuaWriter.file("weapon_imbues", {"imbues": imbues_out}, out_dir, args.build),
+        LuaWriter.file("items", {"items": items_out}, out_dir, args.build),
     ]
     for path in written:
         print(f"wrote {path.relative_to(root.parent)} ({path.stat().st_size:,} bytes)")
@@ -778,7 +841,7 @@ def main() -> int:
           f"trait nodes={len(trait_nodes)} talents needing curation={needs_curation}/{len(talents_out)}\n"
           f"racial races={len(racials_out)} racial spells={len(racials_by_spell)} "
           f"racials needing curation={len(racial_curation)} consumables={len(consumables_out)} "
-          f"imbues={len(imbues_out)}")
+          f"imbues={len(imbues_out)} items={len(items_out)}")
     return 0
 
 

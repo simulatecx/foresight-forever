@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.19.0 - 2026-10-11
+
+GEAR SEED + secondary-stat vocabulary - the in-client item database, no scraping.
+
+- `data/generated/items.lua`: 4,663 equippable items with stat mods, decoded straight
+  from the client's own ItemSparse (the SAME source ForeverDB/Wowhead datamine from) -
+  name, slot, item level, required level, quality, and WHICH stats each carries. Exact
+  stat AMOUNTS are intentionally omitted: they ride the item-budget system, and live
+  GetItemStats already computes them precisely for any item the player touches. So the
+  catalog answers "what exists / what has Dodge / what's my next upgrade", the live read
+  answers "exactly how much" - neither guesses. (~600KB; trimmable by quality/level if
+  bloat matters at publish.)
+- Secondary stats are now first-class: the ITEM_MOD legend maps Dodge, Parry, Defense,
+  Block, Hit/Crit/Haste/Mastery/Expertise/Resilience ratings, Attack/Spell Power, Mana
+  Regen, Armor/Spell Penetration into the stat vocabulary; the lever taxonomy accepts
+  ANY stat name, so gear and talents touching the same secondary stat synergize like
+  primaries do.
+- `/foresight items <stat>` browses the seed ("Dodge", "Attack Power", "Intellect"),
+  sorted by required level so the nearest upgrades surface first. `/foresight catalog`
+  now counts gear too.
+- Note: items stay OUT of the talent/build synergy index (which remains focused on
+  build-defining talents/racials/buffs); gear is browsable + stat-filterable instead.
+- Selftest 129 checks (+3: gear scale, stat search + sort, secondary-stat axis).
+
+*Features:* DATA-items, CATALOG, LEVER-taxonomy, DATA-pipeline-generate, QA-selftest-harness
+
 ## 0.18.0 - 2026-10-11
 
 LEVER TAXONOMY - makes the synergy/relationship graph principled and growth-proof.

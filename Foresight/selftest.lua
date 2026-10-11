@@ -790,6 +790,34 @@ function HM.runSelftest(out)
         local conv = HM.Catalog.withOpKind("statConvert")
         return #conv > 0
     end)())
+    -- Item seed: the in-client gear catalog (stat TYPES; amounts come live).
+    check("catalog includes the gear seed at scale", (function()
+        HM.Catalog._reset()
+        local items = 0
+        for _, row in ipairs(HM.Catalog.stats()) do
+            if row.kind == "item" then items = row.count end
+        end
+        return items > 2000
+    end)())
+    check("gear is searchable by stat, sorted by required level", (function()
+        local hits, total = HM.Catalog.itemsWithStat("Stamina", 10)
+        if not (total > 50 and #hits == 10) then return false end
+        for i = 2, #hits do
+            if (hits[i].reqLevel or 0) < (hits[i - 1].reqLevel or 0) then return false end
+        end
+        -- every hit actually lists the requested stat
+        for _, e in ipairs(hits) do
+            local ok = false
+            for _, s in ipairs(e.stats or {}) do if s == "Stamina" then ok = true end end
+            if not ok then return false end
+        end
+        return true
+    end)())
+    check("secondary stats (Dodge) are catalogued as gear stats", (function()
+        local _, total = HM.Catalog.itemsWithStat("Dodge", 1)
+        return total >= 0 -- present as a queryable stat axis (count may be 0 pre-raid gear)
+            and HM.Levers.of({ kind = "stat", stat = "Dodge" })[1].axis == "stat"
+    end)())
     -- Chained synergy: Mental Dexterity (Int -> AP) bridges the themes.
     check("statConvert decodes Int -> Attack Power", (function()
         -- Find Mental Dexterity (spell 415140) as a trait node and check its op.

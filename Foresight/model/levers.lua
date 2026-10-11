@@ -56,6 +56,9 @@ function Levers.of(op, spells)
             end
             return out
         end
+        -- ANY stat name is a stat-axis lever - primaries AND secondaries (Dodge, Parry,
+        -- Defense, Crit, Hit, resistances...), so gear and talents that touch the same
+        -- secondary stat synergize just like primaries do.
         return op.stat and { { axis = "stat", key = op.stat, label = op.stat } } or {}
     elseif k == "schoolDamage" then
         return op.school and { { axis = "school", key = op.school, label = op.school .. " damage" } } or {}

@@ -56,6 +56,13 @@ function Catalog.all()
                      ref = sid, ops = e.ops or {}, confidence = e.confidence,
                      speedDamage = e.speedDamage, procs = e.procs, flatDamage = e.flatDamage })
     end
+    -- Gear (the in-client item seed): stat TYPES only; live GetItemStats fills amounts.
+    -- Empty ops keeps them out of the talent/build synergy index while fully browsable.
+    for itemId, it in pairs(gen.items or {}) do
+        add(cache, { key = "item:" .. itemId, kind = "item", name = it.name,
+                     ref = itemId, ops = {}, stats = it.stats, slot = it.slot,
+                     ilvl = it.ilvl, reqLevel = it.reqLevel, quality = it.quality })
+    end
     return cache
 end
 
@@ -105,6 +112,28 @@ function Catalog.withOpKind(opKind)
         end
     end
     return hits
+end
+
+-- Gear that carries a given stat (case-insensitive, substring) - "what has Dodge /
+-- Frost Resistance / Attack Power". Sorted by required level so the nearest upgrades
+-- surface first. The browse answer the item seed exists for.
+function Catalog.itemsWithStat(statQuery, limit)
+    local q = (statQuery or ""):lower()
+    local hits = {}
+    for _, e in ipairs(Catalog.all()) do
+        if e.kind == "item" then
+            for _, s in ipairs(e.stats or {}) do
+                if s:lower():find(q, 1, true) then hits[#hits + 1] = e; break end
+            end
+        end
+    end
+    table.sort(hits, function(a, b) return (a.reqLevel or 0) < (b.reqLevel or 0) end)
+    if limit and #hits > limit then
+        local out = {}
+        for i = 1, limit do out[i] = hits[i] end
+        return out, #hits
+    end
+    return hits, #hits
 end
 
 return Catalog

@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.18.0"
+HM.version = "0.19.0"
 
 -- Detect a stale in-client file list: /reload re-runs files but a client started
 -- before a deploy that ADDED files to the .toc never loads them until a full restart.
@@ -257,6 +257,24 @@ local function onSlash(input)
             end
             printMsg(("  total: %d catalogued - /foresight catalog <name> to search"):format(total))
         end
+    elseif cmd == "items" or cmd == "gear" then
+        -- Browse the in-client gear seed by stat: "what has Dodge / Frost Resistance".
+        if not HM.Catalog then
+            printMsg("catalog unavailable")
+            return
+        end
+        if rest == "" then
+            printMsg("usage: /foresight items <stat> (e.g. Dodge, Parry, Attack Power, Intellect)")
+            return
+        end
+        local hits, total = HM.Catalog.itemsWithStat(rest, 15)
+        printMsg(("gear with '%s': %d found%s"):format(rest, total,
+            total > 15 and " (showing 15 by required level)" or ""))
+        for _, e in ipairs(hits) do
+            printMsg(("  [%s] %s (req %d, %s) - %s"):format(
+                e.slot or "?", e.name, e.reqLevel or 0, e.quality or "?",
+                table.concat(e.stats or {}, ", ")))
+        end
     elseif cmd == "imbue" or cmd == "imbues" then
         -- IMBUE-compare: Rockbiter vs Flametongue (etc.) on YOUR weapon, as numbers.
         local snapshot = HM.Snapshot and HM.Snapshot.capture()
@@ -407,7 +425,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | catalog [name] | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

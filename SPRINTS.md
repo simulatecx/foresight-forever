@@ -82,6 +82,15 @@ deliberately deferred - shipping ~all items is megabytes of addon bloat, and liv
 GetItemStats already covers every item the player holds (the leveling use case). A
 curated/filtered item DB (for out-of-hand lookup/search) can follow if demand appears.
 Remaining: in-game verify the "vs equipped" render + slot resolution (fold into S3).
+GEAR SEED SHIPPED (v0.19.0): the offline ItemSparse DB that S8 deferred is now in as a
+stat-TYPE catalog (items.lua, 4,663 statted equippable items from the client - name/slot/
+ilvl/reqLevel/quality/stat-types; amounts stay live via GetItemStats, no budget-system
+guessing). `/foresight items <stat>` browse-by-stat (Dodge/Parry/AP/...). Secondary stats
+first-class in vocabulary + levers. Web-source note: ForeverDB/Wowhead/TheWoWDB all datamine
+the SAME beta client we fetch from wago.tools - scraping them is redundant + ToS-risky +
+gives nothing the raw client data lacks. Forever is in BETA (ends 2026-10-21, launches
+2026-11-04) so there is no mature external corpus anyway. Optional next: offline stat-amount
+computation (item-budget curves), bridge notable gear into synergy, trim catalog by quality.
 
 ### S9 - ASSIST-hud (Pillar 2) ☐
 `C_AssistedCombat.GetNextCastSpell()` (confirmed present live) -> a movable HUD showing the
