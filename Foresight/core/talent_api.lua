@@ -79,6 +79,7 @@ function TalentAPI.walkTraits(onlyPurchased)
         return nil
     end
     local idx = spellIndex()
+    local genNodes = HM.gen and HM.gen.traits and HM.gen.traits.nodes
     local out = {}
     for _, configID in ipairs(traitConfigIDs()) do
         local okC, info = pcall(Traits.GetConfigInfo, configID)
@@ -91,11 +92,16 @@ function TalentAPI.walkTraits(onlyPurchased)
                         local rank = node.ranksPurchased or 0
                         if (not onlyPurchased) or rank > 0 then
                             local spellID, oname, emax = nodeSpell(configID, node)
+                            -- Generated trait data (DATA-traits) covers EVERY node -
+                            -- new Forever nodes + baseline passives, not just classic.
+                            local tnode = genNodes and genNodes[nodeID]
                             out[#out + 1] = {
                                 nodeID = nodeID, rank = rank,
-                                maxRank = node.maxRanks or emax or 1,
-                                spellID = spellID, name = oname,
+                                maxRank = node.maxRanks or (tnode and tnode.maxRank) or emax or 1,
+                                spellID = spellID or (tnode and tnode.spellID),
+                                name = oname or (tnode and tnode.name),
                                 talentId = spellID and idx[spellID] or nil,
+                                traitKnown = tnode ~= nil,
                             }
                         end
                     end

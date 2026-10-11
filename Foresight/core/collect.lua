@@ -149,11 +149,14 @@ function Collect.verify(out)
     local adapterOk, adapterDetail = false, "no talent surface"
     if HM.TalentAPI and HM.TalentAPI.available() then
         local sel = HM.TalentAPI.captureSelected() or {}
-        local matched = 0
-        for _, t in ipairs(sel) do if t.talentId then matched = matched + 1 end end
+        local classic, traitKnown = 0, 0
+        for _, t in ipairs(sel) do
+            if t.talentId then classic = classic + 1 end
+            if t.talentId or t.traitKnown then traitKnown = traitKnown + 1 end
+        end
         adapterOk = #sel > 0
-        adapterDetail = ("mode=%s selected=%d mapped-to-generated=%d"):format(
-            tostring(HM.TalentAPI.mode() or "none-answered"), #sel, matched)
+        adapterDetail = ("mode=%s selected=%d resolved=%d (classic-mapped=%d)"):format(
+            tostring(HM.TalentAPI.mode() or "none-answered"), #sel, traitKnown, classic)
     end
     result("talent API adapter returns data", adapterOk, adapterDetail)
     result("C_SpecializationInfo present", _G.C_SpecializationInfo ~= nil)

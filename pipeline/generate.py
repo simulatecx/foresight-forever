@@ -110,6 +110,62 @@ def school_label(mask: int) -> str:
     return "/".join(names) if names else f"school:{mask}"
 
 
+def build_ops(first, effects_by_spell, class_options, family_members, player_spells):
+    """Derive impact ops from a passive/modifier spell's SpellEffect rows. Shared by
+    classic talents and Retail trait nodes - the same aura/spell-mod decoding either way.
+    Forever stores multi-rank values only on the rank-1 spell as the max-rank total."""
+    ops = []
+    fam = class_options.get(first)
+    for eff in effects_by_spell.get(first, []):
+        aura = to_int(eff["EffectAura"])
+        misc0 = to_int(eff["EffectMiscValue_0"])
+        misc1 = to_int(eff["EffectMiscValue_1"])
+        masks = tuple(to_int(eff[f"EffectSpellClassMask_{i}"]) for i in range(4))
+        op = {
+            "aura": aura,
+            "maxValue": float(eff["EffectBasePointsF"] or 0),
+            "rankRule": "linearToMax-presumed",
+        }
+        if aura in (107, 108):
+            label, _ = SPELL_MOD_OPS.get(misc0, (f"mod-op:{misc0}", "value"))
+            op["kind"] = "spellmod"
+            op["property"] = label
+            op["isPct"] = aura == 108
+            affected = []
+            if fam and any(masks):
+                for sid, smask in family_members[fam[0]]:
+                    if sid in player_spells and any(masks[i] & smask[i] for i in range(4)):
+                        affected.append(sid)
+            op["affected"] = sorted(affected)
+        elif aura == 13 or aura == 79:
+            op["kind"] = "schoolDamage"
+            op["isPct"] = aura == 79
+            op["school"] = school_label(misc0)
+        elif aura in (29, 137):
+            op["kind"] = "stat"
+            op["isPct"] = aura == 137
+            op["stat"] = stat_label(misc0, misc1)
+        elif aura == 10:
+            # SPELL_AURA_MOD_THREAT: misc0 is a school mask, value is the threat %
+            # modifier (negative = reduction). Ground-truthed against tooltips:
+            # Subtlety 72 = Nature/Arcane, Silent Resolve 2 = Holy, Frost Chan. 16 = Frost.
+            op["kind"] = "threat"
+            op["isPct"] = True
+            all_schools = misc0 != 0 and (misc0 & 126) == 126  # all magic (or +physical)
+            schools = school_label(misc0)
+            op["school"] = "all" if all_schools else schools
+            op["property"] = "threat" if all_schools else f"threat ({schools})"
+        elif aura in AURA_LABELS:
+            op["kind"] = "aura"
+            op["label"] = AURA_LABELS[aura]
+        elif aura == 0:
+            continue  # non-aura effect (e.g. learn/trigger); not a passive modifier
+        else:
+            op["kind"] = "unmapped"
+        ops.append(op)
+    return ops
+
+
 class LuaWriter:
     """Minimal Lua table serializer for our generated data shapes."""
 
@@ -238,57 +294,7 @@ def main() -> int:
         # rows), and the stored value matches the classic MAX-RANK total. Rank scaling is
         # therefore presumed linear (rank N = value * N / maxRank) until verified in-game;
         # the addon surfaces this flag and the probe/beta check confirms or corrects it.
-        ops = []
-        fam = class_options.get(first)
-        for eff in effects_by_spell.get(first, []):
-            aura = to_int(eff["EffectAura"])
-            misc0 = to_int(eff["EffectMiscValue_0"])
-            misc1 = to_int(eff["EffectMiscValue_1"])
-            masks = tuple(to_int(eff[f"EffectSpellClassMask_{i}"]) for i in range(4))
-
-            max_value = float(eff["EffectBasePointsF"] or 0)
-            op = {
-                "aura": aura,
-                "maxValue": max_value,
-                "rankRule": "linearToMax-presumed",
-            }
-            if aura in (107, 108):
-                label, _ = SPELL_MOD_OPS.get(misc0, (f"mod-op:{misc0}", "value"))
-                op["kind"] = "spellmod"
-                op["property"] = label
-                op["isPct"] = aura == 108
-                affected = []
-                if fam and any(masks):
-                    for sid, smask in family_members[fam[0]]:
-                        if sid in player_spells and any(masks[i] & smask[i] for i in range(4)):
-                            affected.append(sid)
-                op["affected"] = sorted(affected)
-            elif aura == 13 or aura == 79:
-                op["kind"] = "schoolDamage"
-                op["isPct"] = aura == 79
-                op["school"] = school_label(misc0)
-            elif aura in (29, 137):
-                op["kind"] = "stat"
-                op["isPct"] = aura == 137
-                op["stat"] = stat_label(misc0, misc1)
-            elif aura == 10:
-                # SPELL_AURA_MOD_THREAT: misc0 is a school mask, value is the threat %
-                # modifier (negative = reduction). Ground-truthed against tooltips:
-                # Subtlety 72 = Nature/Arcane, Silent Resolve 2 = Holy, Frost Chan. 16 = Frost.
-                op["kind"] = "threat"
-                op["isPct"] = True
-                all_schools = misc0 != 0 and (misc0 & 126) == 126  # all magic (or +physical)
-                schools = school_label(misc0)
-                op["school"] = "all" if all_schools else schools
-                op["property"] = "threat" if all_schools else f"threat ({schools})"
-            elif aura in AURA_LABELS:
-                op["kind"] = "aura"
-                op["label"] = AURA_LABELS[aura]
-            elif aura == 0:
-                continue  # non-aura effect (e.g. learn/trigger); not a passive modifier
-            else:
-                op["kind"] = "unmapped"
-            ops.append(op)
+        ops = build_ops(first, effects_by_spell, class_options, family_members, player_spells)
 
         if not ops or all(o.get("kind") == "unmapped" for o in ops):
             needs_curation += 1
@@ -332,6 +338,69 @@ def main() -> int:
             entry["tickMs"] = min(ticks)
         spells_out[sid] = entry
 
+    # ---- Traits (Retail node trees = the LIVE talent system on Forever) -------
+    # Chain: TraitNode -> (TraitNodeXTraitNodeEntry) -> TraitNodeEntry -> TraitDefinition
+    # -> SpellID. That SpellID is exactly what the in-game C_Traits walk returns, so this
+    # covers EVERY live node - new Forever talents and baseline passives, not just the
+    # classic-overlap talents. Impact ops come from the definition spell's SpellEffect
+    # rows via the same build_ops() used for classic talents.
+    def read_opt(name):
+        try:
+            return read_csv(cache, name)
+        except FileNotFoundError:
+            return []
+
+    trait_defs = {to_int(r["ID"]): r for r in read_opt("TraitDefinition")}
+    trait_entries = {to_int(r["ID"]): r for r in read_opt("TraitNodeEntry")}
+    node_entry_links = defaultdict(list)
+    for r in read_opt("TraitNodeXTraitNodeEntry"):
+        node_entry_links[to_int(r["TraitNodeID"])].append(
+            (to_int(r["_Index"]), to_int(r["TraitNodeEntryID"])))
+    tree_skill = {to_int(r["TraitTreeID"]): to_int(r["SkillLineID"])
+                  for r in read_opt("SkillLineXTraitTree")}
+
+    trait_nodes, trait_by_spell = {}, {}
+    trait_curation = 0
+    for r in read_opt("TraitNode"):
+        nid = to_int(r["ID"])
+        entries = []
+        for _idx, eid in sorted(node_entry_links.get(nid, [])):
+            entry = trait_entries.get(eid)
+            defrow = entry and trait_defs.get(to_int(entry["TraitDefinitionID"]))
+            sid = defrow and to_int(defrow["SpellID"])
+            if not sid:
+                continue
+            entries.append({
+                "spellID": sid,
+                "maxRank": to_int(entry["MaxRanks"]) or 1,
+                "name": (defrow.get("OverrideName_lang") or "").strip()
+                        or spell_names.get(sid, f"spell:{sid}"),
+            })
+        if not entries:
+            continue
+        primary = entries[0]
+        ops = build_ops(primary["spellID"], effects_by_spell, class_options,
+                        family_members, player_spells)
+        node = {
+            "tree": to_int(r["TraitTreeID"]), "type": to_int(r["Type"]),
+            "spellID": primary["spellID"], "name": primary["name"],
+            "maxRank": primary["maxRank"], "ops": ops,
+        }
+        if len(entries) > 1:
+            node["entries"] = entries  # choice node: multiple selectable spells
+        if not ops or all(o.get("kind") == "unmapped" for o in ops):
+            node["needsCuration"] = True
+            trait_curation += 1
+        trait_nodes[nid] = node
+        for e in entries:
+            trait_by_spell.setdefault(e["spellID"], nid)
+
+    traits_out = {
+        "nodes": trait_nodes,
+        "bySpell": trait_by_spell,
+        "trees": {t: {"skillLine": s} for t, s in tree_skill.items()},
+    }
+
     # ---- Emit ------------------------------------------------------------------
     stamp = dt.date.today().isoformat()
     written = [
@@ -343,6 +412,8 @@ def main() -> int:
                 "tabs": len(tabs_out),
                 "spells": len(spells_out),
                 "impactsNeedingCuration": needs_curation,
+                "traitNodes": len(trait_nodes),
+                "traitNodesNeedingCuration": trait_curation,
             },
             "classNames": CLASS_NAMES,
         }, out_dir, args.build),
@@ -350,11 +421,12 @@ def main() -> int:
         LuaWriter.file("talents", {"talents": talents_out}, out_dir, args.build),
         LuaWriter.file("talent_impacts", {"talentImpacts": impacts_out}, out_dir, args.build),
         LuaWriter.file("spells", {"spells": spells_out}, out_dir, args.build),
+        LuaWriter.file("traits", {"traits": traits_out}, out_dir, args.build),
     ]
     for path in written:
         print(f"wrote {path.relative_to(root.parent)} ({path.stat().st_size:,} bytes)")
     print(f"\ntalents={len(talents_out)} tabs={len(tabs_out)} spells shipped={len(spells_out)} "
-          f"talents needing curation={needs_curation}/{len(talents_out)}")
+          f"trait nodes={len(trait_nodes)} talents needing curation={needs_curation}/{len(talents_out)}")
     return 0
 
 

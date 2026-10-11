@@ -31,6 +31,12 @@ TABLES = [
     "SpellLevels",
     "SkillLineAbility",   # class/profession skill-line membership
     "SkillLine",
+    # Retail trait system = the LIVE talent system on Forever (classic globals are gone).
+    "TraitNode",               # node id, tree id, position, type
+    "TraitNodeEntry",          # entry -> definition + max ranks
+    "TraitNodeXTraitNodeEntry",# node <-> entry link (+ index)
+    "TraitDefinition",         # definition -> SpellID + override name (the spell bridge)
+    "SkillLineXTraitTree",     # tree -> class skill line
 ]
 
 BASE_URL = "https://wago.tools/db2/{table}/csv?build={build}"

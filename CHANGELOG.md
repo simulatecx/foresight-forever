@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.8.0 - 2026-10-11
+
+`DATA-traits`: full talent coverage. Foresight now has data for EVERY Forever trait node,
+not just the ones that overlap the classic trees.
+
+- Pipeline: `fetch.py` pulls the Retail Trait DB2 (TraitNode, TraitNodeEntry,
+  TraitNodeXTraitNodeEntry, TraitDefinition, SkillLineXTraitTree). `generate.py` walks
+  TraitNode -> entry -> definition -> SpellID (the same SpellID the live C_Traits walk
+  returns) and emits `traits.lua`: 555 nodes keyed by nodeID (spellID, name, maxRank,
+  impact ops) + a bySpell index + tree->class skill-line map.
+- Impact ops for trait nodes come from the definition spell's SpellEffect rows via the
+  SAME `build_ops()` now shared with the classic-talent path (extracted, no behavior
+  change - talent_impacts.lua is byte-identical).
+- The C_Traits adapter resolves EVERY selected node by nodeID (name/maxRank), so capture
+  is no longer limited to classic-overlap nodes. `/foresight verify` now reports
+  resolved vs classic-mapped counts.
+- Selftest grows to 64 (trait load + node coverage, the 16178->"Purification" bridge,
+  ops present, 50+ non-classic nodes covered).
+- Phase 2 (noted): feed new-node ops into the what-if model/dimensions; classic-mapped
+  nodes already model via talentImpacts.
+
+*Features:* DATA-traits, DATA-pipeline-fetch, DATA-pipeline-generate, DATA-generated-tables,
+CORE-talent-api, QA-verify-command, QA-selftest-harness
+
 ## 0.7.2 - 2026-10-11
 
 The C_Traits repoint is CONFIRMED LIVE, and the harvest exposed the next gap.

@@ -297,6 +297,39 @@ function HM.runSelftest(out)
     check("guards select picks nth return",
         HM.Guards.select(2, function() return 1, 42, 7 end) == 42
         and HM.Guards.select(2, nil) == nil)
+    -- DATA-traits: generated trait-node coverage (Retail trees = Forever's live talents).
+    check("trait data loaded with full node coverage", (function()
+        local tr = HM.gen and HM.gen.traits
+        return tr and tr.nodes and tr.bySpell and tr.trees
+            and HM.gen.counts.traitNodes and HM.gen.counts.traitNodes > 400
+    end)())
+    check("trait bySpell bridges the live spellID to a named node", (function()
+        local tr = HM.gen.traits
+        local nid = tr.bySpell[16178] -- Shaman Purification (also classic talent 592)
+        local node = nid and tr.nodes[nid]
+        return node and node.name == "Purification" and node.spellID == 16178
+            and node.tree == 1082 and tr.trees[1082].skillLine == 373
+    end)())
+    check("trait nodes carry impact ops from the definition spell", (function()
+        -- At least some nodes derive real ops (not all needsCuration) via build_ops.
+        local withOps = 0
+        for _, node in pairs(HM.gen.traits.nodes) do
+            if node.ops and #node.ops > 0 and not node.needsCuration then withOps = withOps + 1 end
+        end
+        return withOps > 50
+    end)())
+    check("trait data covers NON-classic Forever nodes (the gap this fills)", (function()
+        local classic = {}
+        for _, t in pairs(gen.talents) do
+            for _, s in ipairs(t.spellRanks or {}) do classic[s] = true end
+        end
+        local nonClassic = 0
+        for sid in pairs(HM.gen.traits.bySpell) do
+            if not classic[sid] then nonClassic = nonClassic + 1 end
+        end
+        return nonClassic > 50
+    end)())
+
     check("talent adapter walks C_Traits + maps spellID -> talent", (function()
         -- Mock Forever's real shape (forever-addon-kit): one purchased node whose entry
         -- definition resolves to spell 11069 = Improved Fireball rank 1 (our talent 26).

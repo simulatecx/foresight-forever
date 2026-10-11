@@ -6,12 +6,12 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## DATA - data pipeline & shipped data
 - ☑ `DATA-pipeline-fetch` - download Forever DB2 tables from wago.tools, cached per build -> `pipeline/fetch.py`
 - ☑ `DATA-pipeline-generate` - compute talent->affected-spells via class masks, emit Lua tables -> `pipeline/generate.py`
-- ☑ `DATA-generated-tables` - talents, tabs, impacts, 3,448 spells (cast/cost/tick/cooldown) -> `Foresight/data/generated/`
+- ☑ `DATA-generated-tables` - talents, tabs, impacts, 3,448 spells (cast/cost/tick/cooldown), 555 trait nodes -> `Foresight/data/generated/`
 - ☑ `DATA-formula-registry` - confidence-tagged conversion math (regen, swing, coefficients, rank rule) -> `Foresight/data/formulas.lua`
 - ☑ `DATA-overrides` - curated corrections layered over generated data -> `Foresight/data/overrides.lua`
 - ☐ `DATA-items` - item stats into the pipeline (deferred)
 - ☐ `DATA-professions` - profession recipes as modifier sources (deferred)
-- ☐ `DATA-traits` - pull the Retail Trait DB2 tables (TraitTree/TraitNode/TraitNodeEntry/TraitDefinition) so Forever's non-classic trait nodes (new talents + baseline passives) map; today only classic-overlap nodes bridge (live: 38/77, 1/7 of the pilot's selections) - triaged 2026-10-11
+- ◐ `DATA-traits` - Retail Trait DB2 (TraitNode/TraitNodeEntry/TraitNodeXTraitNodeEntry/TraitDefinition/SkillLineXTraitTree) -> `traits.lua`: 555 nodes keyed by nodeID with spellID/name/maxRank/ops (via shared build_ops) + bySpell index + tree->class. Covers ALL live nodes incl new Forever talents; adapter resolves every selection by nodeID. Shipped v0.8.0. Phase 2: feed new-node ops into the what-if model (today classic-mapped nodes model via talentImpacts) -> `pipeline/generate.py`, `Foresight/data/generated/traits.lua`
 
 ## GRAPH - impact engine
 - ☑ `GRAPH-impact-engine` - typed modifier DAG with stacking rules, breakdowns, cycle detection -> `Foresight/graph/graph.lua`
@@ -41,7 +41,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 60-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 64-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`

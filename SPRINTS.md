@@ -148,6 +148,19 @@ check readability at 1280x720 / 0.65 UI scale during the beta pass.
 - ☐ DATA-items: ItemSparse into pipeline; item stat deltas -> same loadout modelling.
   PRIORITY RAISED 2026-10-10: gear evaluation was the strongest demand signal in the
   "Layman's Oracle" community spec - schedule next after the S3 beta pass.
+- ◐ DATA-traits (built v0.8.0, 2026-10-11): pull the Retail Trait DB2 and generate full
+  node coverage. As a Forever player, I want Foresight to recognize EVERY talent I pick,
+  not just the ones that overlap the classic trees. Verdict: enhance the pipeline +
+  DATA-generated-tables (no new math path - reuses build_ops for node impacts). fetch.py
+  now pulls TraitNode/TraitNodeEntry/TraitNodeXTraitNodeEntry/TraitDefinition/
+  SkillLineXTraitTree; generate.py emits traits.lua (555 nodes keyed by nodeID:
+  spellID/name/maxRank/ops + bySpell index + tree->class skill line). The C_Traits
+  adapter resolves every selected node by nodeID (name/maxRank/traitKnown), so coverage
+  is no longer limited to classic-overlap. Selftest: trait load, the 16178->Purification
+  bridge, ops present, 50+ non-classic nodes covered. Phase 2: feed new-node ops into the
+  what-if model/dimensions (classic-mapped nodes already model via talentImpacts); verify
+  live coverage on the next harvest (adapter line now reports resolved vs classic-mapped).
+
 - ☐ DATA-professions: SkillLine/recipes -> consumables/crafted gear as modifier sources
 - ☐ PANIC-advisor: escape registry + trigger engine + button flash (DESIGN.md pillar 1)
 - ☐ ASSIST-hud: C_AssistedCombat what-to-press wrapper (DESIGN.md pillar 2)
