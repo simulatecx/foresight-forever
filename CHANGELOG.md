@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.16.0 - 2026-10-11
+
+MAX-HEALTH FIX (user report: sheet says 267, panel said 340) + the IMPACT OBSERVATORY
+(S11 phase A) - gameplay now verifies the datamined model automatically.
+
+- FIX: pool maxima (max health/mana) now read the LIVE character sheet - the classic
+  10 hp/stamina and 15 mana/int rules hold only above the ~20 base points, so deriving
+  pools from them overstated low-level characters (34 stamina -> 340 vs real 267).
+  What-if deltas still convert at the per-point rules, marginal-only - the same law
+  the AP/crit nodes already follow. Regression selftest pins the exact 267 case.
+- IMPACT OBSERVATORY: when exactly ONE known consumable buff appears or fades (and
+  gear didn't change / no level-up in the window), the live stat sheet is diffed
+  around the event and the OBSERVED impact is journaled per buff spellId
+  (`collect.observedImpacts`, capped, gain-shaped). Conservative attribution: any
+  simultaneous change discards the sample. The harvester prints each observation
+  resolved to its consumable name - the ground truth that upgrades/corrects (p) ops.
+- Selftest 116 checks (+3: the 267 regression, statDiff field selection,
+  single-change attribution incl. fade sign).
+
+*Features:* MODEL-snapshot, MODEL-loadout-whatif, QA-collector, QA-harvester, QA-selftest-harness
+
 ## 0.15.0 - 2026-10-11
 
 ITEM-SIGHTINGS JOURNAL - crowd-DB phase A (S13): each login AND logout, the addon

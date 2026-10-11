@@ -287,6 +287,21 @@ def main() -> int:
         sightings = collect.get("itemSightings") or {}
         if sightings:
             print(f"   item sightings: {len(sightings)} distinct items seen on this account")
+        observed = collect.get("observedImpacts") or {}
+        if observed:
+            def _k(d):  # id-keyed lua tables arrive with int/float/str keys
+                return {str(int(float(k))): v for k, v in d.items()}
+            bys = _k((gen.get("buffsBySpell") or {}) if gen else {})
+            cons = _k((gen.get("consumables") or {}) if gen else {})
+            print(f"   observed buff impacts ({len(observed)}) - live ground truth:")
+            for sid, e in sorted(observed.items(), key=lambda kv: str(kv[0])):
+                key = str(int(float(sid)))
+                item_id = bys.get(key)
+                entry = cons.get(str(int(float(item_id)))) if item_id is not None else None
+                name = (entry or {}).get("name") or f"spell {key}"
+                stats = e.get("stats") or {}
+                parts = ", ".join(f"{k} {v:+g}" for k, v in sorted(stats.items()))
+                print(f"     {name} (spell {key}, n={e.get('n')}): {parts}")
         if not verify and not probe:
             print("   no verify/probe data yet - run /foresight verify in-game, then log out")
 

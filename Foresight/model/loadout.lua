@@ -183,8 +183,9 @@ function Loadout:build()
     -- contributions, so these nodes apply classic conversion rates only to the
     -- MARGINAL stat change vs the snapshot (what-if deltas, talent stat boosts).
     local conv = (F.statConversions.byClass or {})[s.classToken] or {}
-    local snapStr, snapAgi, snapInt =
-        s.stats.strength or 0, s.stats.agility or 0, s.stats.intellect or 0
+    local snapStr, snapAgi, snapInt, snapSta =
+        s.stats.strength or 0, s.stats.agility or 0, s.stats.intellect or 0,
+        s.stats.stamina or 0
 
     -- Marginal crit-per-point: DERIVE it from the character's own live crit and stat
     -- (critPct / stat), which auto-scales to level and gear - far more accurate than a
@@ -225,10 +226,17 @@ function Loadout:build()
                formula = function(get) return healthFn and healthFn(get("stat.spirit")) or 0 end }
     g:addNode{ id = "mech.swingTime", kind = "mechanic",
                formula = function(get) return F.swingTime.fn(s.weaponSpeed or 2.0, get("stat.hastePct")) end }
+    -- Pool maxima: the LIVE sheet value is the base (it already contains every rule
+    -- the server applies - the classic per-point formulas overstate low levels); only
+    -- the MARGINAL stat change converts at 10 hp/stamina and 15 mana/int ((p)).
     g:addNode{ id = "stat.maxHealth", kind = "stat",
-               formula = function(get) return (s.stats.baseHealth or 0) + get("stat.stamina") * 10 end }
+               formula = function(get)
+                   return (s.stats.maxHealth or 0) + (get("stat.stamina") - snapSta) * 10
+               end }
     g:addNode{ id = "stat.maxMana", kind = "stat",
-               formula = function(get) return (s.stats.baseMana or 0) + get("stat.intellect") * 15 end }
+               formula = function(get)
+                   return (s.stats.maxMana or 0) + (get("stat.intellect") - snapInt) * 15
+               end }
     g:addNode{ id = "mech.armorMitigation", kind = "mechanic",
                formula = function(get) return F.armorMitigation.fn(get("stat.armor"), s.level or 60) end }
     g:addNode{ id = "outcome.effectiveHealth", kind = "outcome",

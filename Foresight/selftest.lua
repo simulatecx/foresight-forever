@@ -19,7 +19,7 @@ local function testSnapshot()
             strength = 30, agility = 40, stamina = 60, intellect = 150, spirit = 100,
             spellDamage = 50, healingPower = 0, attackPower = 60, rangedAttackPower = 10,
             spellCritPct = 5, meleeCritPct = 3, rangedCritPct = 2, hastePct = 0,
-            armor = 800, avoidancePct = 5, baseHealth = 1000, baseMana = 800,
+            armor = 800, avoidancePct = 5, maxHealth = 1600, maxMana = 3050,
         },
     }
 end
@@ -802,6 +802,34 @@ function HM.runSelftest(out)
         local v = HM.Collect.verify(function() end)
         return v and #v.results >= 5 and HM.db.collect and HM.db.collect.verify ~= nil
     end)())
+    -- Pool maxima read the live sheet (regression: a L10's 267 HP showed as 340
+    -- because stamina*10 overstates below the ~20-point base).
+    check("max health matches the live sheet exactly (267-vs-340 regression)", (function()
+        local snap = testSnapshot()
+        snap.stats.maxHealth, snap.stats.stamina = 267, 34
+        local lo = HM.Loadout.fromSnapshot(snap)
+        local b = lo:build()
+        if not approx(b.graph:value("stat.maxHealth", b.ctx), 267) then return false end
+        local m = lo:withStatDelta("Stamina", 10):build()
+        return approx(m.graph:value("stat.maxHealth", m.ctx), 367) -- marginal 10/pt only
+    end)())
+    -- IMPACT OBSERVATORY (S11 phase A): the pure attribution + diff helpers.
+    check("observatory statDiff picks only moved fields", (function()
+        local d = HM.Collect.statDiff(
+            { agility = 40, intellect = 150, meleeCritPct = 3, armor = 800 },
+            { agility = 65, intellect = 150, meleeCritPct = 5, armor = 800 })
+        return d.agility == 25 and d.meleeCritPct == 2
+            and d.intellect == nil and d.armor == nil
+    end)())
+    check("observatory attributes only single buff changes", (function()
+        local id1, s1 = HM.Collect.attributeBuffChange({}, { [17538] = true })
+        local id2, s2 = HM.Collect.attributeBuffChange({ [17538] = true }, {})
+        local multi = HM.Collect.attributeBuffChange({}, { [17538] = true, [17626] = true })
+        local none = HM.Collect.attributeBuffChange({ [17538] = true }, { [17538] = true })
+        return id1 == 17538 and s1 == 1 and id2 == 17538 and s2 == -1
+            and multi == nil and none == nil
+    end)())
+
     check("item sightings journal degrades headless + self-heals", (function()
         if not HM.db then return false end
         local saved = HM.db.collect and HM.db.collect.itemSightings

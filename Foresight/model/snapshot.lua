@@ -57,11 +57,12 @@ function Snapshot.capture()
             armor = Guards.number(Guards.select(2, _G.UnitArmor, "player")) or 0,
             avoidancePct = (Guards.number(Guards.call(_G.GetDodgeChance)) or 0)
                 + (Guards.number(Guards.call(_G.GetParryChance)) or 0),
-            -- Base pools minus stat-derived portion; refined once beta-verified.
-            baseHealth = math.max(0, (Guards.number(Guards.call(_G.UnitHealthMax, "player")) or 0)
-                - statIndex(3) * 10),
-            baseMana = math.max(0, (Guards.number(Guards.call(_G.UnitPowerMax, "player", 0)) or 0)
-                - statIndex(4) * 15),
+            -- Pool maxima read straight off the live sheet (beta-verified 2026-10-11:
+            -- the classic 10hp/stamina + 15mana/int rules hold only ABOVE the ~20 base
+            -- points, so deriving pools from them overstated low levels - 340 shown vs
+            -- a real 267). Deltas still use the per-point rules, marginal-only.
+            maxHealth = Guards.number(Guards.call(_G.UnitHealthMax, "player")) or 0,
+            maxMana = Guards.number(Guards.call(_G.UnitPowerMax, "player", 0)) or 0,
         },
         weaponSpeed = Guards.number(Guards.call(_G.UnitAttackSpeed, "player")) or 2.0,
         -- Main-hand damage range (UnitDamage #1/#2): the per-swing baseline the imbue

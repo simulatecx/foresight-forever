@@ -95,9 +95,14 @@ engine (HP% + drop-rate tiers, all reads secret-guarded, degrade to display-only
 instances) + button-flash overlay + top-3 panic panel. Registry + trigger logic
 pure/selftest-covered; glow/panel verified in-game. Biggest remaining build.
 
-### S11 - QA-probe ☐
-Measure own regen/swing/DoT-tick/GCD during play -> verify or flag each (p) formula;
-auto-draft mismatch reports. Upgrades confidence tags from classic-presumed to verified@build.
+### S11 - QA-probe ◐  (impact observatory phase A shipped v0.16.0)
+PHASE A DONE: buff impact observatory - single-buff-change attribution diffs the live stat
+sheet and journals observed per-spellId impacts (gain-shaped, conservative: simultaneous
+changes discarded); harvest prints each observation by consumable name. This is the "build
+our DB in-game from real content" loop: datamined ops predict, play verifies.
+REMAINING: regen/swing/DoT-tick/GCD measurement during play; automated observed-vs-generated
+comparison that upgrades (p) -> verified@build or drafts an overrides correction; equip-delta
+observation (item stat ground truth).
 
 ### S12 - Publishing train ◐  (gated on your call)
 Scaffolded: `.pkgmeta`, README front door, privacy-aware ignores. Remaining: GitHub remote

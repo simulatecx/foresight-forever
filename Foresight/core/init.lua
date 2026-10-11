@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.15.0"
+HM.version = "0.16.0"
 
 -- Detect a stale in-client file list: /reload re-runs files but a client started
 -- before a deploy that ADDED files to the .toc never loads them until a full restart.

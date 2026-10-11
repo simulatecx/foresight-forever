@@ -151,6 +151,86 @@ function Collect.scanItems()
     return seen, added
 end
 
+-- IMPACT OBSERVATORY (S11 phase A): turn real gameplay into verification data.
+-- When exactly ONE known consumable buff appears or fades - and gear did not change
+-- in the same window - the live stat sheet is diffed around the event and the
+-- OBSERVED impact is journaled per buff spellId. The harvester compares this ground
+-- truth against the generated ops, so datamined predictions get verified (or
+-- corrected) by actual play. Read-only; attribution is conservative by design.
+local OBSERVED_FIELDS = {
+    "strength", "agility", "stamina", "intellect", "spirit", "attackPower",
+    "rangedAttackPower", "spellDamage", "healingPower", "spellCritPct",
+    "meleeCritPct", "rangedCritPct", "armor", "maxHealth", "maxMana",
+}
+local MAX_OBSERVED = 60
+
+-- Pure: numeric stat fields that moved between two snapshots.
+function Collect.statDiff(before, after)
+    local out = {}
+    for _, f in ipairs(OBSERVED_FIELDS) do
+        local b, a = tonumber(before and before[f]), tonumber(after and after[f])
+        if b and a and math.abs(a - b) > 0.01 then out[f] = a - b end
+    end
+    return out
+end
+
+-- Pure: which single tracked buff changed between two id-sets (nil unless EXACTLY
+-- one, so simultaneous changes never pollute an attribution). sign: +1 gained/-1 faded.
+function Collect.attributeBuffChange(oldIds, newIds)
+    local changed, sign
+    for id in pairs(newIds or {}) do
+        if not (oldIds and oldIds[id]) then
+            if changed then return nil end
+            changed, sign = id, 1
+        end
+    end
+    for id in pairs(oldIds or {}) do
+        if not (newIds and newIds[id]) then
+            if changed then return nil end
+            changed, sign = id, -1
+        end
+    end
+    return changed, sign
+end
+
+local lastObsSnap, lastObsBuffs, gearDirty
+
+local function buffIdSet()
+    local set = {}
+    for _, b in ipairs(HM.Snapshot.captureActiveBuffs()) do set[b.spellId] = true end
+    return set
+end
+
+function Collect.observe()
+    local newBuffs = buffIdSet()
+    local snap = HM.Snapshot.capture()
+    if lastObsSnap and lastObsBuffs and not gearDirty and snap then
+        local id, sign = Collect.attributeBuffChange(lastObsBuffs, newBuffs)
+        if id then
+            local deltas = Collect.statDiff(lastObsSnap.stats, snap.stats)
+            if sign == -1 then -- a fading buff reads as losses; store the GAIN shape
+                for f, v in pairs(deltas) do deltas[f] = -v end
+            end
+            if next(deltas) then
+                local c = store()
+                if type(c.observedImpacts) ~= "table" then c.observedImpacts = {} end
+                local n = 0
+                for _ in pairs(c.observedImpacts) do n = n + 1 end
+                local e = c.observedImpacts[id]
+                if e or n < MAX_OBSERVED then
+                    e = type(e) == "table" and e or {}
+                    e.n = (tonumber(e.n) or 0) + 1
+                    e.stats = deltas
+                    e.at = now()
+                    c.observedImpacts[id] = e
+                end
+            end
+        end
+    end
+    gearDirty = nil
+    lastObsSnap, lastObsBuffs = snap, newBuffs
+end
+
 -- Live environment verification: the S3 checklist, automated. Results are both
 -- printed and persisted for the harvester.
 function Collect.verify(out)
@@ -429,17 +509,35 @@ if _G.CreateFrame then
     f:RegisterEvent("PLAYER_LOGIN")
     f:RegisterEvent("PLAYER_LEVEL_UP")
     f:RegisterEvent("PLAYER_LOGOUT")
+    pcall(f.RegisterEvent, f, "UNIT_AURA")
+    pcall(f.RegisterEvent, f, "PLAYER_EQUIPMENT_CHANGED")
+    local obsPending
     f:SetScript("OnEvent", function(_, event, arg1)
         if event == "PLAYER_LOGIN" then
             Collect.onLogin()
             -- Defer the probe pass one frame so all addons/APIs have finished loading.
             if _G.C_Timer and _G.C_Timer.After then
-                _G.C_Timer.After(1, function() pcall(Collect.autoCollect) end)
+                _G.C_Timer.After(1, function()
+                    pcall(Collect.autoCollect)
+                    pcall(Collect.observe) -- prime the observatory baseline
+                end)
             else
                 pcall(Collect.autoCollect)
             end
         elseif event == "PLAYER_LEVEL_UP" then
             Collect.onLevelUp(arg1)
+            gearDirty = true -- a level-up moves stats; never attribute that to a buff
+        elseif event == "PLAYER_EQUIPMENT_CHANGED" then
+            gearDirty = true
+        elseif event == "UNIT_AURA" and arg1 == "player" then
+            -- Settle-debounced: diff once the burst of aura events quiets down.
+            if not obsPending and _G.C_Timer and _G.C_Timer.After then
+                obsPending = true
+                _G.C_Timer.After(0.5, function()
+                    obsPending = nil
+                    pcall(Collect.observe)
+                end)
+            end
         elseif event == "PLAYER_LOGOUT" then
             -- Last write before the SavedVariables flush: the freshest sightings.
             pcall(Collect.scanItems)
