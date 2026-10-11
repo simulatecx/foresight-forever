@@ -101,6 +101,22 @@ so it won't fire on the trait UI; the trait-node tooltip hook mechanism (Tooltip
 type? C_TooltipInfo.GetTalent is present) is the next thing to identify. Talent DATA
 capture is now correct; talent-tooltip INJECTION on Forever is the remaining S2 unknown.
 
+CONFIRMED LIVE (2026-10-11 07:12, v0.7.2 after a clean logout/login flush - the prior
+"we ran it" was STALE 0.5.3 data; harvester now warns on version mismatch): the C_Traits
+walk WORKS. Shaman config 13926795, tree 1082, 77 nodes, 7 selected, adapter mode=traits.
+The spellID->talent bridge is proven: 38/77 nodes map to our generated talents (e.g.
+16178->592, 29206->1648). All 3 tooltip hooks install; discovery confirms their APIs are
+present (Enum.TooltipDataType.Item/Spell, C_Item.GetItemStats, GameTooltip.GetItem) so
+item/spell tooltips should render live. GameTooltip:SetTalent(1,1) renders 0 lines ->
+S2 talent-tooltip injection via SetTalent is dead (data capture fine; injection needs
+another hook). C_SpecializationInfo.GetTalentInfo needs a {tier=} query (vestigial 7-row
+system, returns empty) - dead end, ruled out.
+GAP FOUND -> `DATA-traits` (triaged): only 1 of the pilot's 7 selections maps, because
+Forever trait trees include NEW nodes (ids 408xxx/1223xxx) + baseline passives absent
+from our classic-Talent-derived data (fetch.py pulls Talent/TalentTab, not the Trait DB2
+tables). Full coverage needs generating from TraitTree/TraitNode/TraitNodeEntry/
+TraitDefinition. This is the honest next build for talent-capture completeness.
+
 ### S5 - ECS-style stats panel ◐
 Side panel on CharacterFrame (pattern: Extended Character Stats; mockup in DESIGN.md
 "UI map"). Model built + selftest-covered headless; renderer written. Remaining: verify

@@ -11,6 +11,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☑ `DATA-overrides` - curated corrections layered over generated data -> `Foresight/data/overrides.lua`
 - ☐ `DATA-items` - item stats into the pipeline (deferred)
 - ☐ `DATA-professions` - profession recipes as modifier sources (deferred)
+- ☐ `DATA-traits` - pull the Retail Trait DB2 tables (TraitTree/TraitNode/TraitNodeEntry/TraitDefinition) so Forever's non-classic trait nodes (new talents + baseline passives) map; today only classic-overlap nodes bridge (live: 38/77, 1/7 of the pilot's selections) - triaged 2026-10-11
 
 ## GRAPH - impact engine
 - ☑ `GRAPH-impact-engine` - typed modifier DAG with stacking rules, breakdowns, cycle detection -> `Foresight/graph/graph.lua`
@@ -27,7 +28,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## CORE - addon plumbing
 - ☑ `CORE-bootstrap` - namespace, events, slash commands (/foresight talent|stat|selftest) -> `Foresight/core/init.lua`
 - ☑ `CORE-guards` - secret-value guard layer; ALL risky reads route here -> `Foresight/core/guards.lua`
-- ◐ `CORE-talent-api` - talent API adapter: Forever talents are Retail C_Traits node trees (classic globals gone), per forever-addon-kit. Walks GetActiveConfigID -> GetConfigInfo -> GetTreeNodes -> GetNodeInfo -> GetEntryInfo -> GetDefinitionInfo.spellID, maps spellID -> our talent via spellRanks; classic globals are a fallback. Live confirmation pending next harvest (shape probe now captures the walk) -> `Foresight/core/talent_api.lua`
+- ☑ `CORE-talent-api` - talent API adapter: Forever talents are Retail C_Traits node trees (classic globals gone), per forever-addon-kit. Walks GetActiveConfigID -> GetConfigInfo -> GetTreeNodes -> GetNodeInfo -> GetEntryInfo -> GetDefinitionInfo.spellID, maps spellID -> our talent via spellRanks; classic globals are a fallback. CONFIRMED LIVE 2026-10-11 (Shaman: 77 nodes, 7 selected read, 38 classic nodes bridged to generated data) -> `Foresight/core/talent_api.lua`
 - ☑ `CORE-saveddb` - versioned SavedVariables with per-character sections -> `Foresight/core/init.lua`
 
 ## UI - surfaces

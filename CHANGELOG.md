@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.7.2 - 2026-10-11
+
+The C_Traits repoint is CONFIRMED LIVE, and the harvest exposed the next gap.
+
+- Live confirmation (Shaman, after a clean logout/login flush): the C_Traits walk works -
+  config 13926795, tree 1082, 77 nodes, 7 selected, adapter `mode=traits`. The
+  spellID->talent bridge is proven: 38/77 nodes map to our generated talents. All three
+  tooltip hooks install and their live APIs are confirmed present (TooltipDataType
+  Item/Spell, C_Item.GetItemStats, GameTooltip.GetItem). SetTalent renders 0 lines, so
+  S2 talent-tooltip injection still needs a different (trait-node) hook.
+- Harvester staleness guard: prints the newest in-game session version + file write time
+  and shouts STALE when it differs from the shipped TOC version. (A prior "we ran it"
+  turned out to be last night's 0.5.3 capture - this stops that misread recurring.)
+- Shape probe now samples ALL purchased nodes (+10 others), not the first 15, so the
+  next harvest shows exactly which talents the player has and how each maps.
+- GAP: only 1 of the pilot's 7 selections maps - Forever trait trees include new nodes
+  and baseline passives absent from our classic-Talent-derived data. Logged as the
+  triaged `DATA-traits` backlog item (pull the Trait DB2 tables for full coverage).
+
+*Features:* CORE-talent-api, QA-harvester, QA-verify-command
+
 ## 0.7.1 - 2026-10-10
 
 Repoint talent reads to C_Traits - the real Forever talent system, confirmed against a

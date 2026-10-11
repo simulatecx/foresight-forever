@@ -28,7 +28,19 @@ DEFAULT_ROOTS = [
     Path(r"C:\Program Files (x86)\World of Warcraft"),
 ]
 COLLECTED = Path(__file__).parent / "collected"
-GENERATED = Path(__file__).parent.parent / "Foresight" / "data" / "generated"
+ADDON_DIR = Path(__file__).parent.parent / "Foresight"
+GENERATED = ADDON_DIR / "data" / "generated"
+
+
+def shipped_version() -> str | None:
+    """The version currently in the source TOC - what a fresh in-game run should stamp."""
+    toc = ADDON_DIR / "Foresight.toc"
+    if not toc.exists():
+        return None
+    for line in toc.read_text(encoding="utf-8").splitlines():
+        if line.startswith("## Version:"):
+            return line.split(":", 1)[1].strip()
+    return None
 
 
 def lua_to_py(obj):
@@ -213,8 +225,16 @@ def main() -> int:
         levels = collect.get("levels") or []
         verify = collect.get("verify") or {}
         probe = collect.get("talentProbe") or {}
+        newest = sessions[-1] if sessions else {}
+        newest_ver = newest.get("addonVersion")
+        want = shipped_version()
         print(f"\n== {path}")
         print(f"   archived -> {dest.name}")
+        print(f"   file written: {stamp} | newest session: v{newest_ver} @ {newest.get('at')}")
+        if want and newest_ver and newest_ver != want:
+            print(f"   !! STALE: newest in-game session is v{newest_ver} but the shipped "
+                  f"build is v{want}. Reload/relog in-game to load + flush the current "
+                  f"version before trusting this data.")
         print(f"   sessions={len(sessions)} level-ups journaled={len(levels)} "
               f"reports={len(data.get('reports') or [])}")
         if verify:

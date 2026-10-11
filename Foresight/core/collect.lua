@@ -262,11 +262,15 @@ function Collect.probeTalentApiShape(out)
     if HM.TalentAPI and _G.C_Traits then
         local ok, nodes = pcall(HM.TalentAPI.walkTraits, false)
         if ok and type(nodes) == "table" then
-            local purchased, matched, sample = 0, 0, {}
+            local purchased, matched, sample, others = 0, 0, {}, 0
             for _, n in ipairs(nodes) do
-                if (n.rank or 0) > 0 then purchased = purchased + 1 end
+                local isPurchased = (n.rank or 0) > 0
+                if isPurchased then purchased = purchased + 1 end
                 if n.talentId then matched = matched + 1 end
-                if #sample < 15 then
+                -- Always sample purchased nodes (what the player actually has), plus a
+                -- cap of other nodes for context - so the harvest shows every selection.
+                if isPurchased or others < 10 then
+                    if not isPurchased then others = others + 1 end
                     sample[#sample + 1] = { nodeID = n.nodeID, spellID = n.spellID,
                         rank = n.rank, maxRank = n.maxRank, talentId = n.talentId, name = n.name }
                 end
