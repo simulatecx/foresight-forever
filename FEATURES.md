@@ -53,9 +53,9 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## QA - verification & feedback
 - ☑ `QA-selftest-harness` - 112-check selftest (in-game + headless via lupa) + harvest sandbox/analyze + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
-- ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
+- ☑ `QA-collector` - session + level-up stat journal + ITEM SIGHTINGS (v0.15.0: equipped+bag item IDs scanned at login/logout - the "what's actually in game" ground truth, crowd-DB phase A; capped, IDs only) into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`
-- ☑ `QA-harvester` - SavedVariables -> JSON archive + rank-rule hypothesis voting -> `pipeline/harvest.py`
+- ☑ `QA-harvester` - SavedVariables -> JSON archive + rank-rule hypothesis voting + sightings aggregation (`collected/item_sightings.json`, distinct-account counts = the k-of-n seed, consumable cross-check) -> `pipeline/harvest.py`
 - ☑ `QA-deploy` - gate-then-copy deploy to the live install -> `pipeline/deploy.py`
 - ◐ `QA-publish-train` - release/publishing infrastructure: git repo (root commit 2026-10-10) + `.pkgmeta` (BigWigsMods packager, only Foresight/ ships) + README official-channels front door + privacy-aware ignores; pending: packager CI action, CurseForge/Wago channels, branch protection (threat-model publish bindings, DATAFLOW.md 4b/4c) -> `.pkgmeta`, `README.md`, `.gitignore`
 - ☐ `QA-probe` - empirical formula verification from live gameplay (regen/swing/tick measurement)

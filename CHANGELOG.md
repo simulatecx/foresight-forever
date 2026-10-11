@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.15.0 - 2026-10-11
+
+ITEM-SIGHTINGS JOURNAL - crowd-DB phase A (S13): each login AND logout, the addon
+journals which item IDs this character actually encountered (equipped + bags; IDs and
+a seen-counter only - no quantities, no bank, no money). The logout scan is the last
+write before the SavedVariables flush, so every logout updates the local record of
+"what items are actually in game"; the harvester merges archives into
+`collected/item_sightings.json` with a distinct-ACCOUNT count per item - the k-of-n
+seed for the future backend - and cross-checks generated consumables ("sighted =
+confirmed live-obtainable"). The addon still never networks: the companion app
+(S13 phase B) is what will upload sanitized JSON for multi-user validation.
+
+- `Collect.scanItems()` (read-only container/inventory APIs, both C_Container and
+  classic shapes, capped 400 ids/account, self-heals a tampered journal); PLAYER_LOGOUT
+  wired; verify gains an "item sightings journaled" line.
+- harvest.py: per-account sightings count + `aggregate_sightings` (newest archive per
+  account wins; consumable cross-check).
+- Selftest 113 checks (+1 headless degrade + self-heal).
+
+*Features:* QA-collector, QA-harvester, QA-verify-command, QA-selftest-harness
+
 ## 0.14.0 - 2026-10-11
 
 WEAPON-IMBUE SIMULATION (S17, the user's live Rockbiter-vs-Flametongue question):

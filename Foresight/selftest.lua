@@ -802,6 +802,16 @@ function HM.runSelftest(out)
         local v = HM.Collect.verify(function() end)
         return v and #v.results >= 5 and HM.db.collect and HM.db.collect.verify ~= nil
     end)())
+    check("item sightings journal degrades headless + self-heals", (function()
+        if not HM.db then return false end
+        local saved = HM.db.collect and HM.db.collect.itemSightings
+        HM.db.collect.itemSightings = "corrupted"
+        local seen, added = HM.Collect.scanItems()
+        local healed = type(HM.db.collect.itemSightings) == "table"
+            and type(seen) == "table" and next(seen) == nil and added == 0
+        HM.db.collect.itemSightings = saved
+        return healed
+    end)())
     check("tampered SavedVariables degrade to defaults", (function()
         local saved = _G.ForesightDB
         _G.ForesightDB = "corrupted garbage"

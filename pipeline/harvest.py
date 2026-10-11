@@ -139,7 +139,8 @@ def analyze_selfcheck() -> bool:
 def load_generated() -> dict:
     lua = lupa.LuaRuntime()
     load_chunk = lua.eval("function(src, name) local c = assert(load(src, '@'..name)); return c() end")
-    for name in ("build", "talent_tabs", "talents", "talent_impacts", "spells"):
+    for name in ("build", "talent_tabs", "talents", "talent_impacts", "spells",
+                 "consumables"):
         f = GENERATED / f"{name}.lua"
         load_chunk(f.read_text(encoding="utf-8"), f.name)
     return lua_to_py(lua.globals().Foresight.gen)
@@ -283,9 +284,48 @@ def main() -> int:
                   f"presumed (untrained r1 text): {analysis['untrained_votes']}")
             for d in analysis["details"][:20]:
                 print(f"     {d}")
+        sightings = collect.get("itemSightings") or {}
+        if sightings:
+            print(f"   item sightings: {len(sightings)} distinct items seen on this account")
         if not verify and not probe:
             print("   no verify/probe data yet - run /foresight verify in-game, then log out")
+
+    aggregate_sightings(gen)
     return exit_code
+
+
+def aggregate_sightings(gen) -> None:
+    """Crowd-DB phase A (pilot scale): merge item sightings across ALL archived
+    harvests - newest archive per account wins (the journal is cumulative) - into
+    collected/item_sightings.json with a distinct-ACCOUNT count per item (the k-of-n
+    seed). Cross-checks the generated consumables table: a sighted id is live-game
+    CONFIRMED; data the crowd never sees stays datamined-only until it is."""
+    newest_per_account = {}
+    for f in sorted(COLLECTED.glob("harvest-*.json")):
+        account = f.name.rsplit("-", 2)[0]
+        newest_per_account[account] = f  # sorted() leaves the newest stamp last
+    merged = {}
+    for account, f in newest_per_account.items():
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for item_id, entry in ((data.get("collect") or {}).get("itemSightings") or {}).items():
+            m = merged.setdefault(str(item_id), {"accounts": 0, "seen": 0})
+            m["accounts"] += 1
+            m["seen"] += int(entry.get("c") or 1) if isinstance(entry, dict) else 1
+    if not merged:
+        return
+    out = COLLECTED / "item_sightings.json"
+    out.write_text(json.dumps({"items": merged, "accounts": len(newest_per_account)},
+                              indent=1), encoding="utf-8")
+    consumable_ids = set((gen.get("consumables") or {}).keys()) if gen else set()
+    confirmed = [i for i in merged if int(i) in consumable_ids or i in consumable_ids]
+    print(f"\ncrowd DB (pilot): {len(merged)} distinct items sighted across "
+          f"{len(newest_per_account)} account(s) -> {out.name}")
+    if consumable_ids:
+        print(f"   {len(confirmed)} sighted item(s) confirm generated consumable data "
+              f"as live-obtainable")
 
 
 if __name__ == "__main__":

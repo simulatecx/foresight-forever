@@ -102,6 +102,55 @@ function Collect.onLevelUp(newLevel)
     trim(c.levels, MAX_LEVELS)
 end
 
+-- ITEM-sightings (crowd-DB phase A): journal which item IDs this character actually
+-- encounters (equipped + bags), so harvested data can confirm the generated tables
+-- against the LIVE game - "this item really drops/sells here" beats datamined-only.
+-- IDs + a seen-counter only: no quantities, no bank, no money (privacy floor).
+-- Scanned at login and logout (the SavedVariables flush points). Read-only APIs.
+local MAX_SIGHTINGS = 400
+
+function Collect.scanItems()
+    local c = store()
+    if type(c.itemSightings) ~= "table" then c.itemSightings = {} end
+    local seen = {}
+    local function note(id)
+        if type(id) == "number" and id > 0 then seen[id] = true end
+    end
+    if _G.GetInventoryItemID then
+        for slot = 1, 19 do
+            local ok, id = pcall(_G.GetInventoryItemID, "player", slot)
+            if ok then note(id) end
+        end
+    end
+    local numSlots = (_G.C_Container and _G.C_Container.GetContainerNumSlots)
+        or _G.GetContainerNumSlots
+    local itemAt = (_G.C_Container and _G.C_Container.GetContainerItemID)
+        or _G.GetContainerItemID
+    if numSlots and itemAt then
+        for bag = 0, 4 do
+            local okN, n = pcall(numSlots, bag)
+            for slot = 1, ((okN and type(n) == "number") and n or 0) do
+                local ok, id = pcall(itemAt, bag, slot)
+                if ok then note(id) end
+            end
+        end
+    end
+    local total, added = 0, 0
+    for _ in pairs(c.itemSightings) do total = total + 1 end
+    local stamp = now():sub(1, 10)
+    for id in pairs(seen) do
+        local e = c.itemSightings[id]
+        if type(e) == "table" then
+            e.c = (tonumber(e.c) or 1) + 1
+            e.last = stamp
+        elseif total + added < MAX_SIGHTINGS then
+            c.itemSightings[id] = { c = 1, last = stamp }
+            added = added + 1
+        end
+    end
+    return seen, added
+end
+
 -- Live environment verification: the S3 checklist, automated. Results are both
 -- printed and persisted for the harvester.
 function Collect.verify(out)
@@ -196,6 +245,10 @@ function Collect.verify(out)
     local okBuffs, active = pcall(HM.Snapshot.captureActiveBuffs)
     result("active known buffs captured", okBuffs,
         okBuffs and (#active .. " active") or tostring(active))
+    local okScan = pcall(Collect.scanItems)
+    local sightings = 0
+    for _ in pairs(store().itemSightings or {}) do sightings = sightings + 1 end
+    result("item sightings journaled", okScan, sightings .. " distinct items seen")
 
     -- Live snapshot sanity.
     local snap = HM.Snapshot.capture()
@@ -375,6 +428,7 @@ if _G.CreateFrame then
     local f = _G.CreateFrame("Frame")
     f:RegisterEvent("PLAYER_LOGIN")
     f:RegisterEvent("PLAYER_LEVEL_UP")
+    f:RegisterEvent("PLAYER_LOGOUT")
     f:SetScript("OnEvent", function(_, event, arg1)
         if event == "PLAYER_LOGIN" then
             Collect.onLogin()
@@ -386,6 +440,9 @@ if _G.CreateFrame then
             end
         elseif event == "PLAYER_LEVEL_UP" then
             Collect.onLevelUp(arg1)
+        elseif event == "PLAYER_LOGOUT" then
+            -- Last write before the SavedVariables flush: the freshest sightings.
+            pcall(Collect.scanItems)
         end
     end)
 end

@@ -106,11 +106,17 @@ channels (slug registration), branch protection, SHA-pinned actions, data-freshn
 (poll wago.tools -> fetch/generate/gate -> release PR). Threat-model publish bindings
 (DATAFLOW 4b/4c).
 
-### S13 - Crowd scale-up ☐
-Opt-in companion uploader (reads SavedVariables, POSTs harvest JSON) + ingestion/aggregation;
-k-of-n confirmation before any overrides change; privacy-by-design pass (consent, hashing,
-retention). Phase B in DATAFLOW 4b. Full design (Cloudflare Worker + D1/R2, k-of-n via unique
-index, companion sanitize) in `docs/RESEARCH-2026-10-11.md`.
+### S13 - Crowd scale-up ◐  (phase A shipped v0.15.0)
+PHASE A DONE: item-sightings journal (equipped+bags at login/logout, IDs only, capped) +
+harvest aggregation into `collected/item_sightings.json` with distinct-account counts (the
+k-of-n seed) + consumable cross-check. The user's crowd-DB intent ("each logout updates what
+items are actually in game") lands at every flush - locally, compliantly (addon never networks).
+PHASE B remaining: opt-in companion uploader (reads SavedVariables, POSTs sanitized JSON) +
+ingestion/aggregation backend; k-of-n confirmation before any overrides change; privacy-by-
+design pass (consent, hashing, retention). Full design (Cloudflare Worker + D1/R2, k-of-n via
+unique index, companion sanitize) in `docs/RESEARCH-2026-10-11.md` C2. GATED ON: S12 publish
+decisions (users need CurseForge/Wago to exist) + the user's backend choice (Cloudflare vs
+Firebase) + companion distribution.
 
 ### S14 - Buffs & consumables impact ◐  (SHIPPED code-complete v0.12.0)
 "How does a flask/elixir/food impact me while active, and what do I lose when it expires."
