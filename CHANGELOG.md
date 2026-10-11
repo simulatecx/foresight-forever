@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.17.0 - 2026-10-11
+
+CONTENT CATALOG + CHAINED SYNERGIES + crit tooltips - the "all content in one table,
+with real relationships" build.
+
+- CATALOG (`model/catalog.lua`): one normalized table over every impact source -
+  talents, trait nodes, racials, consumables (by potion/elixir/flask/food/scroll),
+  weapon imbues - with a uniform entry shape. `/foresight catalog` prints the reference
+  table (counts + how many carry decoded impact + how many need curation);
+  `/foresight catalog <name>` searches across all kinds. Adding a source to the pipeline
+  makes it appear here (and in synergy/search) for free - clean as new content lands.
+- CHAINED SYNERGIES: new stat-conversion decode (aura 598 Attack Power, 175 Spell
+  Power, 174 Healing - each "= N% of a primary stat"; ground-truthed on Mental
+  Dexterity Int->AP 100% and Mental Quickness Int->spell power). The synergy engine now
+  bridges: querying "Attack Power" lists the converters (Mental Dexterity) AND the
+  direct sources (Flurry, Elemental Weapons, Rockbiter); querying "Intellect" shows it
+  feeds Attack Power via Mental Dexterity - the Diablo-style "what connects to what".
+  `/foresight synergy <theme>` prints a "chains (stat -> output)" section. The model
+  folds a conversion as a flat amount off your live source stat (take Mental Dexterity
+  -> "+150 Attack Power from your Intellect").
+- Thundering Strikes & crit talents: the trait tooltip now renders the crit op's value
+  ("+1% crit chance"), the for-you DPS chain, AND your CURRENT crit ("Your crit now:
+  23.4% melee, 18.1% spell") so the number reads against a real baseline.
+- Selftest 121 checks (+5: catalog unify/search/op-kinds, Int->AP decode, synergy chain
+  shape).
+
+*Features:* SYNERGY-engine, CATALOG, UI-talent-tooltip, MODEL-loadout-whatif, DATA-pipeline-generate, QA-selftest-harness
+
 ## 0.16.0 - 2026-10-11
 
 MAX-HEALTH FIX (user report: sheet says 267, panel said 340) + the IMPACT OBSERVATORY

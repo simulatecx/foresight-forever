@@ -47,12 +47,18 @@ local function playerKey(player)
         .. ":" .. table.concat(ids, ",")
 end
 
+-- statConvert output -> the mechanic theme it feeds (so converters group with the
+-- direct sources of that output; "spell damage"/"healing" join "attack power").
+local CONVERT_THEME = {
+    attackPower = "attack power", spellDamage = "spell damage", healingPower = "healing",
+}
+
 -- Build the theme index: { stat={[stat]=members}, spell={[name]=members},
--- school={[school]=members}, mechanic={[lever]=members} }.
+-- school={[school]=members}, mechanic={[lever]=members}, converts={bridges} }.
 function Synergy.build(player)
     local key = playerKey(player)
     if cache and cacheKey == key then return cache end
-    cache = { stat = {}, spell = {}, school = {}, mechanic = {} }
+    cache = { stat = {}, spell = {}, school = {}, mechanic = {}, converts = {} }
     cacheKey = key
     local spells = (HM.gen and HM.gen.spells) or {}
 
@@ -75,6 +81,16 @@ function Synergy.build(player)
                 addTo(cache.mechanic, "armor", member)
             elseif op.kind == "attackPower" or op.kind == "rangedAttackPower" then
                 addTo(cache.mechanic, "attack power", member)
+            elseif op.kind == "statConvert" then
+                -- The chained-synergy bridge: a converter scales an OUTPUT from a
+                -- primary stat. It belongs to BOTH the source-stat theme (it rewards
+                -- stacking that stat) and the output theme (it is an output source) -
+                -- and we record the bridge so a query can explain the chain.
+                local outTheme = CONVERT_THEME[op.to] or op.to
+                if op.from then addTo(cache.stat, op.from, member) end
+                addTo(cache.mechanic, outTheme, member)
+                cache.converts[#cache.converts + 1] =
+                    { member = member, from = op.from, to = outTheme }
             elseif op.kind == "spellmod" then
                 local lever = mechanicOf(op.property)
                 if lever then addTo(cache.mechanic, lever, member) end
@@ -150,6 +166,24 @@ end
 -- Resolve a free-text query to a theme and return the member names (sorted). player
 -- context (optional) folds the player's racials + active buffs into the themes.
 -- Matches a stat, a mechanic lever, a school, or a spell-name substring (in that order).
+-- Chained-synergy lines for a resolved theme: converters that bridge INTO this theme
+-- (fed by a stat) and OUT of it (this stat feeds an output). e.g. querying "Attack
+-- Power" -> "Mental Dexterity: Intellect -> attack power"; querying "Intellect" ->
+-- the same bridge from the other side. This is the Diablo-style "what connects".
+local function chainsFor(c, label)
+    local key = (label or ""):lower()
+    local chains = {}
+    for _, b in ipairs(c.converts or {}) do
+        local fromMatch = b.from and b.from:lower() == key
+        local toMatch = b.to and b.to:lower() == key
+        if fromMatch or toMatch then
+            chains[#chains + 1] = ("%s: %s -> %s"):format(memberName(b.member), b.from, b.to)
+        end
+    end
+    table.sort(chains)
+    return chains
+end
+
 function Synergy.query(q, player)
     local c = Synergy.build(player)
     q = (q or ""):lower()
@@ -160,17 +194,21 @@ function Synergy.query(q, player)
         table.sort(ns)
         return ns
     end
+    local function result(label, list)
+        return { label = label, nodes = names(list), members = list,
+                 chains = chainsFor(c, label) }
+    end
     for key, list in pairs(c.stat) do
-        if key:lower() == q then return { label = key, nodes = names(list), members = list } end
+        if key:lower() == q then return result(key, list) end
     end
     for key, list in pairs(c.mechanic) do
         if key:lower() == q or (q == "mana" and key == "cost") then
-            return { label = key, nodes = names(list), members = list }
+            return result(key, list)
         end
     end
     for key, list in pairs(c.school) do
         if key:lower():find(q, 1, true) then
-            return { label = key .. " damage", nodes = names(list), members = list }
+            return result(key .. " damage", list)
         end
     end
     -- Spell-name substring (e.g. "lightning").
@@ -180,7 +218,7 @@ function Synergy.query(q, player)
             if not best or #list > best then best = #list; matchKey = key; matchList = list end
         end
     end
-    if matchKey then return { label = matchKey, nodes = names(matchList), members = matchList } end
+    if matchKey then return result(matchKey, matchList) end
     return nil
 end
 

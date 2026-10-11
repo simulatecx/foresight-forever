@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.16.0"
+HM.version = "0.17.0"
 
 -- Detect a stale in-client file list: /reload re-runs files but a client started
 -- before a deploy that ADDED files to the .toc never loads them until a full restart.
@@ -192,6 +192,10 @@ local function onSlash(input)
             if r then
                 printMsg(("%s synergy - %d sources push this lever:"):format(r.label, #r.nodes))
                 printMsg("  " .. table.concat(r.nodes, ", "))
+                if r.chains and #r.chains > 0 then
+                    printMsg("  chains (stat -> output):")
+                    for _, ch in ipairs(r.chains) do printMsg("    " .. ch) end
+                end
                 -- SYNERGY-highlight: save the theme + glow the talent tree now/on open.
                 if HM.SynergyHighlight and HM.SynergyHighlight.apply then
                     HM.SynergyHighlight.setTheme(rest)
@@ -228,6 +232,30 @@ local function onSlash(input)
             local okd, lines = pcall(HM.Impact.buffDelta, loadout, b.itemId)
             for _, line in ipairs(okd and lines or {}) do printMsg("  " .. line) end
             printMsg("  on expiry these gains reverse")
+        end
+    elseif cmd == "catalog" or cmd == "db" then
+        -- The content reference table: counts per kind, or a search across everything.
+        if not HM.Catalog then
+            printMsg("catalog unavailable")
+            return
+        end
+        if rest ~= "" then
+            local hits = HM.Catalog.search(rest)
+            printMsg(("catalog: %d match '%s'"):format(#hits, rest))
+            for i = 1, math.min(#hits, 15) do
+                printMsg(("  [%s] %s"):format(hits[i].kind, hits[i].name))
+            end
+            if #hits > 15 then printMsg(("  ...and %d more"):format(#hits - 15)) end
+        else
+            printMsg("Foresight content catalog (impact sources we model):")
+            local total = 0
+            for _, row in ipairs(HM.Catalog.stats()) do
+                total = total + row.count
+                printMsg(("  %-10s %4d  (%d with impact%s)"):format(
+                    row.kind, row.count, row.withOps,
+                    row.needsCuration > 0 and (", " .. row.needsCuration .. " need curation") or ""))
+            end
+            printMsg(("  total: %d catalogued - /foresight catalog <name> to search"):format(total))
         end
     elseif cmd == "imbue" or cmd == "imbues" then
         -- IMBUE-compare: Rockbiter vs Flametongue (etc.) on YOUR weapon, as numbers.
@@ -379,7 +407,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | synergy [name|clear] | catalog [name] | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

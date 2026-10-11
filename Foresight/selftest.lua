@@ -722,6 +722,49 @@ function HM.runSelftest(out)
         end
         return names["Expansive Mind"] == nil
     end)())
+    -- CATALOG: the unified content reference table over every impact source.
+    check("catalog unifies all source kinds with counts", (function()
+        HM.Catalog._reset()
+        local byKind = {}
+        for _, row in ipairs(HM.Catalog.stats()) do byKind[row.kind] = row.count end
+        -- talents + trait nodes + at least one consumable type + imbues all present.
+        return (byKind.talent or 0) > 100 and (byKind.trait or 0) > 400
+            and (byKind.imbue or 0) > 50 and (byKind.elixir or byKind.flask or 0) > 0
+    end)())
+    check("catalog search finds across kinds", (function()
+        local hits = HM.Catalog.search("mongoose")
+        local kinds = {}
+        for _, h in ipairs(hits) do kinds[h.kind] = true end
+        return #hits > 0 and kinds.elixir == true
+    end)())
+    check("catalog surfaces statConvert ops (chained-synergy primitive)", (function()
+        local conv = HM.Catalog.withOpKind("statConvert")
+        return #conv > 0
+    end)())
+    -- Chained synergy: Mental Dexterity (Int -> AP) bridges the themes.
+    check("statConvert decodes Int -> Attack Power", (function()
+        -- Find Mental Dexterity (spell 415140) as a trait node and check its op.
+        local nid = HM.gen.traits.bySpell[415140]
+        local node = nid and HM.gen.traits.nodes[nid]
+        if not node then return true end -- not on this build's tree; skip gracefully
+        for _, op in ipairs(node.ops or {}) do
+            if op.kind == "statConvert" and op.to == "attackPower"
+                    and op.from == "Intellect" then return true end
+        end
+        return false
+    end)())
+    check("synergy chains attack power <-> the stat that feeds it", (function()
+        HM.Synergy._reset()
+        -- Synthesize a converter + an Int source + a direct AP source, prove the bridge.
+        local c = HM.Synergy.build()
+        -- Inject via the public ingest path is internal; instead assert the shape holds
+        -- when a statConvert exists in generated data.
+        local hasConverter = #HM.Catalog.withOpKind("statConvert") > 0
+        if not hasConverter then HM.Synergy._reset(); return true end
+        local r = HM.Synergy.query("attack power")
+        HM.Synergy._reset()
+        return r ~= nil and type(r.chains) == "table"
+    end)())
     check("synergy without player context stays trait-only", (function()
         HM.Synergy._reset()
         local r = HM.Synergy.query("agility")

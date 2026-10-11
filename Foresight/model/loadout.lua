@@ -66,14 +66,28 @@ local STAT_NODE = {
     Strength = "stat.strength", Agility = "stat.agility", Stamina = "stat.stamina",
     Intellect = "stat.intellect", Spirit = "stat.spirit",
 }
+local STAT_KEY = { -- display stat name -> snapshot.stats key (conversion source)
+    Strength = "strength", Agility = "agility", Stamina = "stamina",
+    Intellect = "intellect", Spirit = "spirit",
+}
+local CONVERT_NODE = { -- statConvert target -> graph node it adds into
+    attackPower = "stat.attackPower", spellDamage = "stat.spellDamage",
+    healingPower = "stat.healingPower",
+}
 
 -- Fold a list of impact ops (classic talent OR trait node - identical op shape) into the
 -- graph at the given rank. The one place talent/trait effects become modifiers.
-local function applyOps(graph, ops, rank, maxRank, source)
+-- snapStats (the snapshot's live stats) backs statConvert ops - "AP = N% of Intellect"
+-- folds as a flat amount off the player's current source stat.
+local function applyOps(graph, ops, rank, maxRank, source, snapStats)
     local rankValue = HM.formulas.talentRankValue.fn
     for _, op in ipairs(ops or {}) do
         local value = rankValue(op.maxValue or 0, rank, maxRank)
-        if op.kind == "stat" and STAT_NODE[op.stat] then
+        if op.kind == "statConvert" and CONVERT_NODE[op.to] then
+            local srcVal = (snapStats and STAT_KEY[op.from] and snapStats[STAT_KEY[op.from]]) or 0
+            graph:addModifier{ target = CONVERT_NODE[op.to], op = "flat",
+                               value = srcVal * value / 100, source = source }
+        elseif op.kind == "stat" and STAT_NODE[op.stat] then
             graph:addModifier{
                 target = STAT_NODE[op.stat],
                 op = op.isPct and "pctAdd" or "flat",
@@ -134,19 +148,19 @@ local function applyOps(graph, ops, rank, maxRank, source)
     end
 end
 
-local function addTalentModifiers(graph, talentId, rank, source)
+local function addTalentModifiers(graph, talentId, rank, source, snapStats)
     local impacts = HM.gen and HM.gen.talentImpacts and HM.gen.talentImpacts[talentId]
     local talent = HM.gen and HM.gen.talents and HM.gen.talents[talentId]
     if not impacts or not talent then return false end
-    applyOps(graph, impacts.ops, rank, talent.maxRank, source)
+    applyOps(graph, impacts.ops, rank, talent.maxRank, source, snapStats)
     return true
 end
 
 -- Trait-node modifiers (Forever's live talents, incl. new nodes with no classic talent).
-local function addTraitModifiers(graph, nodeId, rank, source)
+local function addTraitModifiers(graph, nodeId, rank, source, snapStats)
     local node = HM.gen and HM.gen.traits and HM.gen.traits.nodes and HM.gen.traits.nodes[nodeId]
     if not node then return false end
-    applyOps(graph, node.ops, rank, node.maxRank or 1, source)
+    applyOps(graph, node.ops, rank, node.maxRank or 1, source, snapStats)
     return true
 end
 
@@ -248,12 +262,12 @@ function Loadout:build()
     local notes = {}
     for i, d in ipairs(self.deltas) do
         if d.type == "talent" then
-            local ok = addTalentModifiers(g, d.talentId, d.rank, "talent:" .. d.talentId)
+            local ok = addTalentModifiers(g, d.talentId, d.rank, "talent:" .. d.talentId, s.stats)
             if not ok then
                 notes[#notes + 1] = "unknown talent " .. tostring(d.talentId)
             end
         elseif d.type == "trait" then
-            local ok = addTraitModifiers(g, d.nodeId, d.rank, "trait:" .. tostring(d.nodeId))
+            local ok = addTraitModifiers(g, d.nodeId, d.rank, "trait:" .. tostring(d.nodeId), s.stats)
             if not ok then
                 notes[#notes + 1] = "unknown trait node " .. tostring(d.nodeId)
             end
@@ -264,7 +278,7 @@ function Loadout:build()
             elseif not HM.Racials.classMatches(sp.classMask, s.classToken) then
                 notes[#notes + 1] = sp.name .. " does not apply to your class"
             else
-                applyOps(g, sp.ops, 1, 1, "racial:" .. tostring(d.spellID))
+                applyOps(g, sp.ops, 1, 1, "racial:" .. tostring(d.spellID), s.stats)
             end
         elseif d.type == "buff" then
             local gen = HM.gen
@@ -273,14 +287,14 @@ function Loadout:build()
                 entry = gen.consumables[gen.buffsBySpell[d.id]]
             end
             if entry then
-                applyOps(g, entry.ops, 1, 1, "buff:" .. tostring(d.id))
+                applyOps(g, entry.ops, 1, 1, "buff:" .. tostring(d.id), s.stats)
             else
                 notes[#notes + 1] = "unknown buff " .. tostring(d.id)
             end
         elseif d.type == "race" then
             local kit = HM.Racials and HM.Racials.forRace(d.raceId, s.classToken, true) or {}
             for _, sp in ipairs(kit) do
-                applyOps(g, sp.ops, 1, 1, "racial:" .. tostring(sp.spellID))
+                applyOps(g, sp.ops, 1, 1, "racial:" .. tostring(sp.spellID), s.stats)
             end
             if s.raceId then
                 -- Honest-compare caveat: your own race's passives stay baked into the

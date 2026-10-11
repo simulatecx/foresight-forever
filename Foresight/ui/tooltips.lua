@@ -240,6 +240,22 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
         for _, l in ipairs(okc and chain or {}) do
             lines[#lines + 1] = { text = "  " .. l, r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
         end
+        -- Context for crit talents (Thundering Strikes): show your CURRENT crit so
+        -- "+1% crit" reads against a real baseline, not in a vacuum.
+        local hasCrit = false
+        for _, op in ipairs(node.ops or {}) do
+            if op.kind == "critChance" or (op.kind == "spellmod" and op.property == "crit chance") then
+                hasCrit = true
+            end
+        end
+        local st = loadout.snapshot and loadout.snapshot.stats
+        if hasCrit and st then
+            lines[#lines + 1] = {
+                text = ("Your crit now: %.1f%% melee, %.1f%% spell"):format(
+                    st.meleeCritPct or 0, st.spellCritPct or 0),
+                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+            }
+        end
     end
 
     -- Synergy: other talents that push the same lever (stat / mechanic / school).

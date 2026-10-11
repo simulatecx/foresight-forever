@@ -197,8 +197,11 @@ themes include the player's racials and active consumables alongside talents - t
 TREE-HIGHLIGHT SHIPPED (v0.13.0): /foresight synergy <theme> glows member nodes (enumerator
 probe -> name-match fallback; house pulse textures, taint-free; settings.synergy.theme saved,
 auto-applies on talent-UI open; clear stops). Remaining: in-game render verify, talent-frame
-dropdown, LibCustomGlow swap at packaging (doc C1). Then: chained synergies (A boosts Int ->
-B converts Int to AP).
+dropdown, LibCustomGlow swap at packaging (doc C1). CHAINED SYNERGIES SHIPPED (v0.17.0):
+stat-conversion ops (Mental Dexterity Int->AP) bridge a stat theme to the output it feeds;
+synergy query returns a chains section. Plus CATALOG (v0.17.0): one normalized reference table
+over every impact source (`/foresight catalog`), the query spine for synergy/search/validation.
+Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 
 ## Backlog (not yet scheduled)
 - ☐ DATA-professions: SkillLine/recipes -> consumables/crafted gear as modifier sources.

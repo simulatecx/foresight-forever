@@ -2,7 +2,7 @@
 ## Title: Foresight
 ## Notes: The hardcore player's safety net: know what every talent point and stat actually does for you - before you commit.
 ## Author: SimulateCX
-## Version: 0.16.0
+## Version: 0.17.0
 ## SavedVariables: ForesightDB
 ## IconTexture: Interface\Icons\Spell_Nature_FarSight
 
@@ -27,6 +27,7 @@ model\loadout.lua
 model\impact.lua
 model\plan.lua
 model\imbues.lua
+model\catalog.lua
 model\synergy.lua
 ui\panel_model.lua
 ui\stats_panel.lua

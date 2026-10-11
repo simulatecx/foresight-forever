@@ -174,6 +174,21 @@ def build_ops(first, effects_by_spell, class_options, family_members, player_spe
             op["kind"] = "stat"
             op["isPct"] = aura == 137
             op["stat"] = stat_label(misc0, misc1)
+        elif aura in (175, 174, 598):
+            # Stat-CONVERSION auras (the chained-synergy primitive): a derived output
+            # scales from a primary stat. 175 = spell damage, 174 = spell healing,
+            # 598 = attack power; the SOURCE stat is whichever of misc0/misc1 is a
+            # valid stat index (598/175 carry it in misc0, 174 in misc1). Ground-
+            # truthed: Mental Dexterity (598, Int->AP), Mental Quickness (175, Int->
+            # spell damage). This makes "what supports Attack Power" include Intellect.
+            op["kind"] = "statConvert"
+            op["isPct"] = True
+            op["to"] = {175: "spellDamage", 174: "healingPower", 598: "attackPower"}[aura]
+            src = misc0 if misc0 in (0, 1, 2, 3, 4) else misc1
+            op["from"] = STAT_NAMES.get(src, f"stat:{src}")
+            readable = {"spellDamage": "Spell Power", "healingPower": "Healing Power",
+                        "attackPower": "Attack Power"}[op["to"]]
+            op["property"] = f"{readable} from {op['from']}"
         elif aura == 133:
             # Ground-truthed vs tooltip: "Total Health increased by $s1%" (Tauren
             # Endurance 20550). Folds into stat.maxHealth as a what-if delta.
@@ -205,6 +220,7 @@ def build_ops(first, effects_by_spell, class_options, family_members, player_spe
             else:
                 op["kind"] = "critChance"
                 op["isPct"] = True
+                op["property"] = "crit chance"
         elif aura == 178:
             # "Maximum Mana/Rage/Energy increased by $s1%" (Expansive Mind rework);
             # misc0 = power type (0 mana, 1 rage, 3 energy). Only mana folds (graph node).
