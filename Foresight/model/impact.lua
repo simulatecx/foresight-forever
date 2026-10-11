@@ -89,6 +89,27 @@ function Impact.explainStatDelta(loadout, stat, amount)
     return lines, changes
 end
 
+-- Combined stat-delta explanation for an item (or any bundle of stats): apply every
+-- delta at once, diff against the base loadout, describe the dimension moves. Reuses the
+-- diff path - the one marginal-value computation, never a second. statDeltas is keyed by
+-- snapshot stat name ({ Agility = 4, Stamina = 6, spellDamage = 10 }).
+function Impact.explainItemDelta(loadout, statDeltas)
+    local modeled, any = loadout, false
+    for stat, amount in pairs(statDeltas or {}) do
+        if type(amount) == "number" and amount ~= 0 then
+            modeled = modeled:withStatDelta(stat, amount, ("+%g %s"):format(amount, stat))
+            any = true
+        end
+    end
+    if not any then return {}, {} end
+    local changes = Impact.diff(loadout, modeled)
+    local lines = {}
+    for _, c in ipairs(changes) do
+        lines[#lines + 1] = ("%s: %+.1f%%"):format(c.label, c.pct or 0)
+    end
+    return lines, changes
+end
+
 -- MODEL-stat-advisor: rank stats by marginal value for THIS build, so gear/drop choices
 -- are obvious. Built entirely on explainStatDelta (no second value path). v0 heuristic:
 -- "value" is each stat's strongest dimension move per +1 point; the headline orders by

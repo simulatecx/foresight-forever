@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.6.1 - 2026-10-10
+
+New `UI-item-tooltip` (user ask): item tooltips now translate stats into what they do
+for YOUR character - the "+1 Agility, so what?" answer, on gear.
+
+- Item hook on the SHARED injection module (ui/tooltips.lua) - no second hook system.
+  GetItemStats -> `mapItemStats` (GetItemStats keys -> our stat names) ->
+  `Impact.explainItemDelta` (applies all the item's stat deltas at once and diffs vs
+  your current character - reuses the diff path, no forked value math) -> injected
+  "This item: +4 Agility, +6 Stamina" + colored dimension lines ("+1.8% Melee DPS").
+- Modern TooltipDataProcessor(Item) path with a legacy OnTooltipSetItem fallback;
+  per-item guard prevents re-stacking; degrades to no injection on any failure.
+- v0 covers primaries + spell/healing power (all base graph nodes); gear ratings
+  (crit/haste/hit) wait until the model converts ratings. All values (p)-tagged.
+- `/foresight verify` gains an "item tooltip injection hook" status line.
+- Selftest grows to 55 checks (mapper, line builder, explainItemDelta, empty case).
+- In-game verify (no taint, GetItemStats key shape on Forever) folds into the S3 pass.
+
+*Features:* UI-item-tooltip, MODEL-impact-diff, QA-verify-command, QA-selftest-harness
+
 ## 0.6.0 - 2026-10-10
 
 Two layman-impact features from the "Layman's Oracle" triage - what each stat is worth

@@ -185,6 +185,84 @@ function Tooltips.talentLines(talentId, currentRank, loadout)
     return lines
 end
 
+-- Item provider (layman stat impact) ------------------------------------------
+
+-- GetItemStats keys -> snapshot stat names the loadout models. v0 covers the primaries
+-- plus spell power / healing power (all base graph nodes - safe to delta); gear ratings
+-- (crit/haste/hit) wait until the model converts ratings.
+local ITEM_STAT_MAP = {
+    ITEM_MOD_STRENGTH_SHORT = "Strength",
+    ITEM_MOD_AGILITY_SHORT = "Agility",
+    ITEM_MOD_STAMINA_SHORT = "Stamina",
+    ITEM_MOD_INTELLECT_SHORT = "Intellect",
+    ITEM_MOD_SPIRIT_SHORT = "Spirit",
+    ITEM_MOD_SPELL_POWER_SHORT = "spellDamage",
+    ITEM_MOD_SPELL_DAMAGE_DONE_SHORT = "spellDamage",
+    ITEM_MOD_SPELL_HEALING_DONE_SHORT = "healingPower",
+}
+local DISPLAY_STAT = {
+    spellDamage = "Spell Power", healingPower = "Healing Power",
+}
+local STAT_ORDER = { "Strength", "Agility", "Stamina", "Intellect", "Spirit",
+                     "spellDamage", "healingPower" }
+
+-- Map a raw GetItemStats table to our stat names, summing duplicates.
+function Tooltips.mapItemStats(raw)
+    local out = {}
+    if type(raw) ~= "table" then return out end
+    for key, val in pairs(raw) do
+        local name = ITEM_STAT_MAP[key]
+        if name and type(val) == "number" then out[name] = (out[name] or 0) + val end
+    end
+    return out
+end
+
+-- Build the injected block for an item's mapped stats. Returns line list or nil.
+function Tooltips.itemLines(mapped, loadout)
+    if not loadout then return nil end
+    local parts, any = {}, false
+    for _, k in ipairs(STAT_ORDER) do
+        local v = mapped[k]
+        if v and v ~= 0 then
+            any = true
+            parts[#parts + 1] = ("%+g %s"):format(v, DISPLAY_STAT[k] or k)
+        end
+    end
+    if not any then return nil end
+
+    local ok, _, changes = pcall(Tooltips._itemDims, loadout, mapped)
+    local lines = {}
+    lines[#lines + 1] = {
+        kind = "double", left = "Foresight", right = "(p) for your character",
+        r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
+    }
+    lines[#lines + 1] = {
+        text = "|cff9d9d9dThis item:|r " .. table.concat(parts, ", "),
+        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+    }
+    if ok and changes and #changes > 0 then
+        for i = 1, math.min(#changes, 4) do
+            local c = changes[i]
+            local color = c.delta >= 0 and "|cff4ade80" or "|cfff87171"
+            lines[#lines + 1] = {
+                text = ("%s%+.1f%%|r %s"):format(color, c.pct or 0, c.label),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
+    else
+        lines[#lines + 1] = {
+            text = "no modeled dimension change for your class yet",
+            r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+        }
+    end
+    return lines
+end
+
+-- Indirection so itemLines can pcall the model without a hard upvalue on Impact.
+function Tooltips._itemDims(loadout, mapped)
+    return HM.Impact.explainItemDelta(loadout, mapped)
+end
+
 -- In-game wiring ---------------------------------------------------------------
 
 local function attach(tip, lines)
@@ -232,6 +310,65 @@ function Tooltips.install()
     return true
 end
 
-if _G.CreateFrame then Tooltips.install() end
+-- Item hook (shares attach/brand with the talent provider - one injection module) ----
+
+local function resolveItemStats(link)
+    local fn = (_G.C_Item and _G.C_Item.GetItemStats) or _G.GetItemStats
+    if not (fn and link) then return nil end
+    local ok, raw = pcall(fn, link)
+    return ok and raw or nil
+end
+
+local function injectItem(tip)
+    if type(tip.GetItem) ~= "function" then return end
+    local _, link = tip:GetItem()
+    if not link then return end
+    if tip.foresightItemLink == link then return end -- already injected this item
+    local mapped = Tooltips.mapItemStats(resolveItemStats(link))
+    local loadout
+    local snap = HM.Snapshot and HM.Snapshot.capture()
+    if snap then loadout = HM.Loadout.fromSnapshot(snap) end
+    local lines = Tooltips.itemLines(mapped, loadout)
+    if lines then
+        tip.foresightItemLink = link
+        attach(tip, lines)
+    end
+end
+
+-- Clear the per-item guard when a tooltip is hidden so re-show re-injects.
+local function clearItemGuard(tip) tip.foresightItemLink = nil end
+
+function Tooltips.installItems()
+    if Tooltips.itemsInstalled then return true end
+    local getStats = (_G.C_Item and _G.C_Item.GetItemStats) or _G.GetItemStats
+    if not getStats then return false end
+    local TDP, Enum = _G.TooltipDataProcessor, _G.Enum
+    if TDP and TDP.AddTooltipPostCall and Enum and Enum.TooltipDataType
+            and Enum.TooltipDataType.Item then
+        -- Modern path: post-call fires after the item tooltip is built.
+        TDP.AddTooltipPostCall(Enum.TooltipDataType.Item, function(tip)
+            if tip == _G.GameTooltip or tip == _G.ItemRefTooltip then pcall(injectItem, tip) end
+        end)
+        if _G.GameTooltip and _G.GameTooltip.HookScript then
+            _G.GameTooltip:HookScript("OnHide", clearItemGuard)
+        end
+        Tooltips.itemsInstalled = true
+        return true
+    end
+    -- Legacy path: direct script hook.
+    local tip = _G.GameTooltip
+    if tip and tip.HookScript then
+        tip:HookScript("OnTooltipSetItem", function(self) pcall(injectItem, self) end)
+        tip:HookScript("OnHide", clearItemGuard)
+        Tooltips.itemsInstalled = true
+        return true
+    end
+    return false
+end
+
+if _G.CreateFrame then
+    Tooltips.install()
+    Tooltips.installItems()
+end
 
 return Tooltips

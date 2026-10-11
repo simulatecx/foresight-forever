@@ -240,6 +240,26 @@ function HM.runSelftest(out)
         return text:find("needs curation", 1, true) ~= nil
     end)())
 
+    -- Item tooltip injection (layman stat impact): mapper + line builder are pure.
+    check("item stat mapper translates GetItemStats keys", (function()
+        local m = HM.Tooltips.mapItemStats({ ITEM_MOD_AGILITY_SHORT = 4,
+            ITEM_MOD_STAMINA_SHORT = 6, ITEM_MOD_SPELL_POWER_SHORT = 10, JUNK_KEY = 9 })
+        return m.Agility == 4 and m.Stamina == 6 and m.spellDamage == 10 and m.JUNK_KEY == nil
+    end)())
+    check("item lines show stats + dimension impact", (function()
+        local text = linesText(HM.Tooltips.itemLines({ Intellect = 10, Stamina = 6 }, base))
+        return text:find("This item:", 1, true) ~= nil and text:find("Intellect", 1, true) ~= nil
+            and text:find("%%") ~= nil
+    end)())
+    check("item lines nil when nothing maps", HM.Tooltips.itemLines({}, base) == nil)
+    check("explainItemDelta combines deltas via the diff path", (function()
+        local _, changes = HM.Impact.explainItemDelta(base, { Stamina = 10 })
+        for _, c in ipairs(changes) do
+            if c.id == "tankability" and c.delta > 0 then return true end
+        end
+        return false
+    end)())
+
     -- Collector + export plumbing (headless-degraded paths).
     check("guards select picks nth return",
         HM.Guards.select(2, function() return 1, 42, 7 end) == 42

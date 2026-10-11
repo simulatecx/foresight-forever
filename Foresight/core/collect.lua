@@ -163,6 +163,8 @@ function Collect.verify(out)
     result("C_TooltipInfo present", _G.C_TooltipInfo ~= nil)
     result("talent tooltip injection hook (S2)", HM.Tooltips and HM.Tooltips.installed or false,
         (HM.Tooltips and HM.Tooltips.installed) and "GameTooltip.SetTalent hooked" or "not installed")
+    result("item tooltip injection hook", HM.Tooltips and HM.Tooltips.itemsInstalled or false,
+        (HM.Tooltips and HM.Tooltips.itemsInstalled) and "GetItemStats path hooked" or "not installed")
 
     -- Live snapshot sanity.
     local snap = HM.Snapshot.capture()

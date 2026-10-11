@@ -166,3 +166,16 @@ secret-value-blind realtime calc (guards/degrade discipline is law).
   names each stat's strongest dimension move. `/foresight advisor` + panel "Stat value
   (per +1)" rows. v0 heuristic, selftest-covered. Feeds the future DATA-items gear
   compare.
+
+- ◐ UI-item-tooltip (triaged + built v0.6.1, 2026-10-10): user ask - "+1 Agility"
+  gear should say what it does for MY character. As a leveler comparing drops, I want
+  each item's tooltip to translate its stats into dimension impact. AC: injected lines
+  append without taint; reads degrade to no-injection; conversion values (p)-tagged;
+  compliance green. Fit & Overlap - UI (-> MODEL). Verdict: Net-new SURFACE but shares
+  the ONE injection module (ui/tooltips.lua) and reuses explainItemDelta over the diff
+  path - the duplicate to avoid is any second marginal-value math. Complements
+  MODEL-stat-advisor + future DATA-items. Touches: tooltips.lua, impact.lua. Built:
+  GetItemStats -> mapItemStats -> explainItemDelta -> injected block; primaries + spell/
+  healing power in v0 (gear ratings wait for rating conversion); TooltipDataProcessor
+  path with legacy OnTooltipSetItem fallback. Logic selftest-covered; in-game hook
+  pending S3 verify (no taint, GetItemStats returns expected keys on Forever).
