@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.21.1 - 2026-10-11
+
+- Impact map on the ability tooltip: hovering a spell now shows "talents affecting this"
+  - the inverse map (Improved Fireball -0.5s cast, Fire Power +10% damage...) right where
+  you decide what to press. Appends to the existing spell-power/imbue block, or stands
+  alone. Pure line builder; selftest 136 (+1).
+
+*Features:* UI-mapping-panel, UI-spell-tooltip, QA-selftest-harness
+
 ## 0.21.0 - 2026-10-11
 
 IMPACT MAP (S7b) - the Talent Impact Map's bidirectional core.

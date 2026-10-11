@@ -799,6 +799,14 @@ function HM.runSelftest(out)
         HM.Mapping._reset()
         return HM.Mapping.forSpell("Nonexistent Spell XYZ") == nil
     end)())
+    check("ability tooltip shows which talents modify it", (function()
+        -- Fireball (133) is modified by Improved Fireball - the spell tooltip surfaces it.
+        local lines = HM.Tooltips.abilityMapLines(133)
+        if not lines then return false end
+        local text = {}
+        for _, l in ipairs(lines) do text[#text + 1] = l.text or l.left or "" end
+        return table.concat(text, "\n"):find("Improved Fireball", 1, true) ~= nil
+    end)())
 
     -- CATALOG: the unified content reference table over every impact source.
     check("catalog unifies all source kinds with counts", (function()
