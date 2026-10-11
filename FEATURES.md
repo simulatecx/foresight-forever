@@ -27,6 +27,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 ## CORE - addon plumbing
 - ☑ `CORE-bootstrap` - namespace, events, slash commands (/foresight talent|stat|selftest) -> `Foresight/core/init.lua`
 - ☑ `CORE-guards` - secret-value guard layer; ALL risky reads route here -> `Foresight/core/guards.lua`
+- ◐ `CORE-talent-api` - talent API adapter: classic globals absent on Forever, so known C_SpecializationInfo conventions are pcall-probed, auto-locked, normalized to classic shape; ALL talent reads (snapshot, probe, S2 hook) route here; live convention lock pending next read-back -> `Foresight/core/talent_api.lua`
 - ☑ `CORE-saveddb` - versioned SavedVariables with per-character sections -> `Foresight/core/init.lua`
 
 ## UI - surfaces
@@ -38,7 +39,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-10.
 - ☐ `UI-mapping-panel` - talent<->skill mapping panel
 
 ## QA - verification & feedback
-- ☑ `QA-selftest-harness` - 43-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
+- ☑ `QA-selftest-harness` - 44-check selftest (in-game + headless via lupa) + harvest sandbox/analyze gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
 - ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe -> `Foresight/core/collect.lua`

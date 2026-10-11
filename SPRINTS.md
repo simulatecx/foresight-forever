@@ -61,6 +61,18 @@ First harvest read-back (2026-10-10 20:45, build 70338, v0.5.2 shipped fixes):
 - FIXED from live data: armor read 0 (UnitArmor return #3 is classic-only; now #2,
   effectiveArmor, via new Guards.select); dataBuild journaled "?" and login line
   printed "data build ?" (HM.gen.build is a string, was indexed as a table).
+Shape discovery verdict (2026-10-10 20:53, v0.5.3 shipped the response): FOUND
+C_SpecializationInfo.GetTalentInfo/GetSpecialization(Info), C_ClassTalents,
+C_Traits, C_TooltipInfo.GetTalent, TooltipDataProcessor, and GameTooltip.SetTalent
+(the S2 hook method EXISTS - only the install guard requiring the classic global
+blocked it). ABSENT: all classic globals, C_SpecializationInfo.GetNum*/GetTalentTabInfo
+enumerators, Enum.TooltipDataType.Talent. Response: new `core/talent_api.lua` adapter -
+pcall-probes known GetTalentInfo conventions (classic / spec-table / spec-positional),
+locks the first that answers, normalizes to classic shape; enumeration brute-probes
+coordinates (no GetNum* needed); snapshot capture, tooltip probe, and the S2 hook all
+rerouted through it; verify gained "talent API adapter returns data" (reports locked
+mode + sample). Next read-back confirms which convention Forever answers - possibly
+only at level 10+ if talent data is level-gated.
 
 ### S5 - ECS-style stats panel ◐
 Side panel on CharacterFrame (pattern: Extended Character Stats; mockup in DESIGN.md

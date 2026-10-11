@@ -214,6 +214,27 @@ function HM.runSelftest(out)
     check("guards select picks nth return",
         HM.Guards.select(2, function() return 1, 42, 7 end) == 42
         and HM.Guards.select(2, nil) == nil)
+    check("talent adapter: modern convention, sparse cutoff, capture", (function()
+        local savedApi = _G.C_SpecializationInfo
+        HM.TalentAPI._resetForTest()
+        -- Mock Forever's shape: table-query GetTalentInfo, only tab 1 has 2 talents.
+        _G.C_SpecializationInfo = { GetTalentInfo = function(q)
+            if type(q) == "table" and q.tabIndex == 1 and q.talentIndex <= 2 then
+                return { name = "Mock Talent " .. q.talentIndex, tier = 2, column = 3,
+                         rank = 1, maxRank = 5 }
+            end
+        end }
+        local info = HM.TalentAPI.get(1, 1)
+        local all = HM.TalentAPI.all()
+        local captured = HM.Snapshot.captureTalents()
+        local ok = info and info.name == "Mock Talent 1" and info.tier == 2
+            and info.rank == 1 and info.maxRank == 5
+            and HM.TalentAPI.mode() == "spec-table"
+            and #all == 2 and #captured == 2 and captured[1].tier == 2
+        _G.C_SpecializationInfo = savedApi
+        HM.TalentAPI._resetForTest()
+        return ok
+    end)())
     check("collect session journals the data build", (function()
         if not HM.db then return false end
         local saved = HM.db.collect

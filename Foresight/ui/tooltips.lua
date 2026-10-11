@@ -200,16 +200,16 @@ local function attach(tip, lines)
 end
 
 local function injectTalent(tip, tab, index)
-    local name, _, tier, column, rank = _G.GetTalentInfo(tab, index)
-    if not name then return end
+    local info = HM.TalentAPI.get(tab, index)
+    if not info then return end
     local _, classToken = _G.UnitClass("player")
     if not classToken then return end
-    local talentId = Tooltips.resolveTalent(classToken, tab, tier, column, name)
+    local talentId = Tooltips.resolveTalent(classToken, tab, info.tier, info.column, info.name)
     if not talentId then return end
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
-    local lines = Tooltips.talentLines(talentId, rank, loadout)
+    local lines = Tooltips.talentLines(talentId, info.rank, loadout)
     if lines then attach(tip, lines) end
 end
 
@@ -221,7 +221,7 @@ end
 function Tooltips.install()
     if Tooltips.installed then return true end
     local tip = _G.GameTooltip
-    if not (tip and _G.hooksecurefunc and _G.GetTalentInfo
+    if not (tip and _G.hooksecurefunc and HM.TalentAPI and HM.TalentAPI.available()
             and type(tip.SetTalent) == "function") then
         return false -- headless, or API moved: degrade to no injection (S3 verify surfaces it)
     end

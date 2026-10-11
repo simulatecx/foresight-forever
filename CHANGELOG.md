@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.3 - 2026-10-10
+
+Shape-discovery read-back answered S3's API question; this build is the response.
+
+- VERDICT (live, build 70338): talent info lives on C_SpecializationInfo.GetTalentInfo
+  (convention undocumented); GameTooltip.SetTalent EXISTS (the S2 hook was blocked only
+  by its install guard requiring the classic global); C_TooltipInfo.GetTalent,
+  TooltipDataProcessor, C_ClassTalents, C_Traits present. Absent: classic globals,
+  C_SpecializationInfo.GetNum* enumerators, Enum.TooltipDataType.Talent.
+- New `core/talent_api.lua`: THE talent-read adapter. Pcall-probes known conventions
+  (classic multi-return / spec table-query / spec positional), locks the first that
+  yields a sane result, normalizes to classic shape { name, tier, column, rank,
+  maxRank }; enumerates by brute coordinate probing with a consecutive-miss cutoff
+  (no GetNum* needed); selftest-reset hook so mocks never poison the live adapter.
+- Rerouted ALL talent reads through the adapter: Snapshot.captureTalents, the tooltip
+  probe (now also records adapterMode), and the S2 hook install/inject.
+- `/foresight verify` gains "talent API adapter returns data" - reports the locked
+  convention and a sample talent; this line is the next read-back's payload.
+- Selftest grows to 44 checks (adapter normalization, sparse cutoff, capture path).
+
+*Features:* CORE-talent-api, MODEL-snapshot, QA-verify-command, QA-collector,
+UI-talent-tooltip, QA-selftest-harness
+
 ## 0.5.2 - 2026-10-10
 
 First live harvest read-back (build 70338): big S3 finding plus three fixes it exposed.

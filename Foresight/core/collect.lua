@@ -112,6 +112,19 @@ function Collect.verify(out)
     end
     result("talent API shape discovery", #found > 0,
         #found > 0 and table.concat(found, ", ") or "NO candidate surface found")
+
+    -- Adapter proof: does the normalized read path actually return data (and via
+    -- which convention)? This is the line that locks the S3 answer.
+    local adapterOk, adapterDetail = false, "no talent surface"
+    if HM.TalentAPI and HM.TalentAPI.available() then
+        local sample = HM.TalentAPI.get(1, 1)
+        adapterOk = sample ~= nil
+        adapterDetail = ("mode=%s sample=%s"):format(
+            tostring(HM.TalentAPI.mode() or "none-answered"),
+            sample and ("%s r%s/%s"):format(sample.name,
+                tostring(sample.rank), tostring(sample.maxRank)) or "nil")
+    end
+    result("talent API adapter returns data", adapterOk, adapterDetail)
     result("C_SpecializationInfo present", _G.C_SpecializationInfo ~= nil)
     result("C_AssistedCombat present", _G.C_AssistedCombat ~= nil,
         _G.C_AssistedCombat and (_G.C_AssistedCombat.GetNextCastSpell and "has GetNextCastSpell" or "no GetNextCastSpell") or nil)
@@ -146,8 +159,8 @@ end
 -- authoritative numbers against generated data to settle the rank-scaling rule.
 function Collect.probeTalentTooltips(out)
     out = out or HM.print
-    if not (_G.CreateFrame and _G.GetNumTalentTabs and _G.GetNumTalents) then
-        out("talent tooltip probe needs the classic talent API (run /foresight verify first)")
+    if not (_G.CreateFrame and HM.TalentAPI and HM.TalentAPI.available()) then
+        out("talent tooltip probe needs a talent API surface (see /foresight verify)")
         return nil
     end
     local tip = _G.ForesightScanTooltip
@@ -156,29 +169,28 @@ function Collect.probeTalentTooltips(out)
         tip:SetOwner(_G.UIParent, "ANCHOR_NONE")
     end
     local probe = { at = now(), char = charInfo(), talents = {} }
-    for tab = 1, _G.GetNumTalentTabs() do
-        for i = 1, _G.GetNumTalents(tab) do
-            local name, _, tier, column, rank, maxRank = _G.GetTalentInfo(tab, i)
-            if name then
-                tip:ClearLines()
-                tip:SetTalent(tab, i)
-                local lines = {}
-                for L = 1, tip:NumLines() do
-                    local fs = _G["ForesightScanTooltipTextLeft" .. L]
-                    local text = fs and fs:GetText()
-                    if text and text ~= "" then lines[#lines + 1] = text end
-                end
-                probe.talents[#probe.talents + 1] = {
-                    tab = tab, index = i, tier = tier, column = column,
-                    name = name, rank = rank, maxRank = maxRank,
-                    tooltip = table.concat(lines, "\n"),
-                }
+    for _, t in ipairs(HM.TalentAPI.all()) do
+        local info = t.info
+        tip:ClearLines()
+        local okSet = type(tip.SetTalent) == "function" and pcall(tip.SetTalent, tip, t.tab, t.index)
+        local lines = {}
+        if okSet then
+            for L = 1, tip:NumLines() do
+                local fs = _G["ForesightScanTooltipTextLeft" .. L]
+                local text = fs and fs:GetText()
+                if text and text ~= "" then lines[#lines + 1] = text end
             end
         end
+        probe.talents[#probe.talents + 1] = {
+            tab = t.tab, index = t.index, tier = info.tier, column = info.column,
+            name = info.name, rank = info.rank, maxRank = info.maxRank,
+            tooltip = table.concat(lines, "\n"),
+        }
     end
+    probe.adapterMode = HM.TalentAPI.mode()
     store().talentProbe = probe
-    out(("talent tooltip probe: captured %d talents - log out then run the harvester")
-        :format(#probe.talents))
+    out(("talent tooltip probe: captured %d talents (adapter mode %s) - log out then run the harvester")
+        :format(#probe.talents, tostring(probe.adapterMode or "none")))
     return probe
 end
 

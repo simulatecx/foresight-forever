@@ -69,23 +69,18 @@ function Snapshot.capture()
     return snapshot
 end
 
--- Current talent allocation { [talentId] = rank }, matched to generated data by
--- (tab order, tier, column) once the Forever talent API shape is beta-verified.
+-- Current talent allocation, matched to generated data by (tab order, tier, column).
+-- All reads go through the TalentAPI adapter (classic globals are absent on Forever).
 function Snapshot.captureTalents()
     local talents = {}
-    local getNumTabs = _G.GetNumTalentTabs
-    local getNumTalents = _G.GetNumTalents
-    local getTalentInfo = _G.GetTalentInfo
-    if not (getNumTabs and getNumTalents and getTalentInfo) then
-        return talents -- headless, or API moved: verify on beta (QA-talent-api)
+    if not (HM.TalentAPI and HM.TalentAPI.available()) then
+        return talents -- headless, or no talent surface: verify tracks the API shape
     end
-    for tab = 1, getNumTabs() do
-        for i = 1, getNumTalents(tab) do
-            local name, _, tier, column, rank = getTalentInfo(tab, i)
-            if name and rank and rank > 0 then
-                talents[#talents + 1] = { tab = tab, tier = tier, column = column,
-                                          rank = rank, name = name }
-            end
+    for _, t in ipairs(HM.TalentAPI.all()) do
+        local info = t.info
+        if info.rank and info.rank > 0 then
+            talents[#talents + 1] = { tab = t.tab, tier = info.tier, column = info.column,
+                                      rank = info.rank, name = info.name }
         end
     end
     return talents
