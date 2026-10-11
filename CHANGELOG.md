@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.2 - 2026-10-10
+
+`UI-spell-tooltip`: ability tooltips now translate your gear onto the button.
+
+- `Tooltips.spellLines`: uses the client cast time + the (p) spell-coefficient formula
+  to show how much of your live Spell/Healing Power lands on a spell per cast ("Your
+  Spell Power (+250) adds about +179 to this spell per cast (71% coefficient at a
+  2.5s cast)"). Deliberately NOT a flat hit number - base spell damage per rank isn't
+  in the shipped tables yet; when DATA-items/probe add it, this upgrades to an absolute.
+- Shares the ONE injection module (TooltipDataProcessor(Spell) path + OnTooltipSetSpell
+  fallback, per-spell guard, degrade-safe). `/foresight verify` gains a spell-hook line.
+- Selftest grows to 57 checks (coefficient translation, zero-power nil case).
+- In-game hook verify folds into the S3 pass.
+
+*Features:* UI-spell-tooltip, DATA-formula-registry, QA-verify-command, QA-selftest-harness
+
 ## 0.6.1 - 2026-10-10
 
 New `UI-item-tooltip` (user ask): item tooltips now translate stats into what they do

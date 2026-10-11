@@ -260,6 +260,24 @@ function HM.runSelftest(out)
         return false
     end)())
 
+    -- UI-spell-tooltip: coefficient-based spell-power translation (pure).
+    local castSpellId
+    for id, sp in pairs(gen.spells) do
+        if sp.castMs and sp.castMs > 0 then castSpellId = id; break end
+    end
+    check("spell lines translate power via coefficient", (function()
+        if not castSpellId then return false end
+        local text = linesText(HM.Tooltips.spellLines(castSpellId, base))
+        return text:find("Spell Power", 1, true) ~= nil and text:find("coefficient", 1, true) ~= nil
+            and text:find("per cast", 1, true) ~= nil
+    end)(), castSpellId)
+    check("spell lines nil without spell/heal power", (function()
+        if not castSpellId then return false end
+        local snap = testSnapshot()
+        snap.stats.spellDamage, snap.stats.healingPower = 0, 0
+        return HM.Tooltips.spellLines(castSpellId, HM.Loadout.fromSnapshot(snap)) == nil
+    end)())
+
     -- Collector + export plumbing (headless-degraded paths).
     check("guards select picks nth return",
         HM.Guards.select(2, function() return 1, 42, 7 end) == 42

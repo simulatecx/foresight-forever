@@ -263,6 +263,42 @@ function Tooltips._itemDims(loadout, mapped)
     return HM.Impact.explainItemDelta(loadout, mapped)
 end
 
+-- Spell provider (UI-spell-tooltip) -------------------------------------------
+
+-- What a spell does for YOU, honestly, from the data we actually ship: the client cast
+-- time + the (p) coefficient formula translate your live Spell/Healing Power into "how
+-- much of your gear lands on this button per cast". We deliberately do NOT invent a
+-- flat hit number - base spell damage per rank isn't in the shipped tables yet.
+function Tooltips.spellLines(spellId, loadout)
+    if not loadout then return nil end
+    local spell = HM.gen and HM.gen.spells and HM.gen.spells[spellId]
+    if not spell then return nil end
+    local s = (loadout.snapshot and loadout.snapshot.stats) or {}
+    local sp, hp = s.spellDamage or 0, s.healingPower or 0
+    local power, powerLabel = sp, "Spell Power"
+    if hp > sp then power, powerLabel = hp, "Healing Power" end
+    if power <= 0 then return nil end -- nothing of yours to translate onto this spell yet
+    local castSec = (spell.castMs and spell.castMs > 0) and (spell.castMs / 1000) or 1.5
+    local coef = HM.formulas.spellCoefficient.fn(castSec)
+    local added = math.floor(power * coef + 0.5)
+
+    local lines = {}
+    lines[#lines + 1] = {
+        kind = "double", left = "Foresight", right = "(p) coefficient-based",
+        r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
+    }
+    lines[#lines + 1] = {
+        text = ("Your %s (+%d) adds about |cff4ade80+%d|r to this spell per cast"):format(
+            powerLabel, power, added),
+        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+    }
+    lines[#lines + 1] = {
+        text = ("(%.0f%% coefficient at a %.1fs cast)"):format(coef * 100, castSec),
+        r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+    }
+    return lines
+end
+
 -- In-game wiring ---------------------------------------------------------------
 
 local function attach(tip, lines)
@@ -366,9 +402,55 @@ function Tooltips.installItems()
     return false
 end
 
+-- Spell hook (shares attach/brand - same one injection module) ----------------
+
+local function injectSpell(tip, spellId)
+    if not spellId and type(tip.GetSpell) == "function" then
+        local _, id = tip:GetSpell()
+        spellId = id
+    end
+    if not spellId then return end
+    if tip.foresightSpellId == spellId then return end
+    local loadout
+    local snap = HM.Snapshot and HM.Snapshot.capture()
+    if snap then loadout = HM.Loadout.fromSnapshot(snap) end
+    local lines = Tooltips.spellLines(spellId, loadout)
+    if lines then
+        tip.foresightSpellId = spellId
+        attach(tip, lines)
+    end
+end
+
+local function clearSpellGuard(tip) tip.foresightSpellId = nil end
+
+function Tooltips.installSpells()
+    if Tooltips.spellsInstalled then return true end
+    local TDP, Enum = _G.TooltipDataProcessor, _G.Enum
+    if TDP and TDP.AddTooltipPostCall and Enum and Enum.TooltipDataType
+            and Enum.TooltipDataType.Spell then
+        TDP.AddTooltipPostCall(Enum.TooltipDataType.Spell, function(tip)
+            if tip == _G.GameTooltip then pcall(injectSpell, tip, nil) end
+        end)
+        if _G.GameTooltip and _G.GameTooltip.HookScript then
+            _G.GameTooltip:HookScript("OnHide", clearSpellGuard)
+        end
+        Tooltips.spellsInstalled = true
+        return true
+    end
+    local tip = _G.GameTooltip
+    if tip and tip.HookScript then
+        tip:HookScript("OnTooltipSetSpell", function(self) pcall(injectSpell, self, nil) end)
+        tip:HookScript("OnHide", clearSpellGuard)
+        Tooltips.spellsInstalled = true
+        return true
+    end
+    return false
+end
+
 if _G.CreateFrame then
     Tooltips.install()
     Tooltips.installItems()
+    Tooltips.installSpells()
 end
 
 return Tooltips

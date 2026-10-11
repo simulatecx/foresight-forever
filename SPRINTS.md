@@ -141,18 +141,17 @@ secret-value-blind realtime calc (guards/degrade discipline is law).
   panel_model.lua. Mobile: one panel row, existing templates. Languages: full-sentence
   strings. Trust: (p)-tagged, display-only. Data: none captured. Abuse: not reachable.
 
-- ☐ UI-spell-tooltip: ability-tooltip injection with layman damage lines ("with your
-  AP/SP this hits for ~X"). As a leveler comparing buttons, I want each ability's
-  tooltip to say what it actually does for MY character. AC: injected lines append
-  without taint or breaking other tooltip addons; reads route through guards and
-  degrade to no-injection (never error) when restricted; coefficient-based values
-  carry (p) until probe-verified; readable at mobile baseline; compliance green.
-  Fit & Overlap - UI (-> MODEL). Verdict: Net-new surface BUT must share ONE
-  tooltip-injection module with UI-talent-tooltip (S2) - two parallel hook systems is
-  the duplicate to avoid. Complements: S2; sequence immediately after it. Touches:
-  new shared ui/tooltips.lua, spells.lua data, impact.lua per-spell eval. Mobile:
-  game tooltip templates. Languages: full sentences. Trust: honest (p) claims.
-  Data: none. Abuse: not reachable.
+- ◐ UI-spell-tooltip (built v0.6.2, 2026-10-10): ability-tooltip injection with layman
+  lines. As a leveler comparing buttons, I want each ability's tooltip to say what it
+  does for MY character. Shipped honestly: rather than invent a flat hit number (base
+  spell damage per rank isn't in the shipped tables), it uses the client cast time +
+  the (p) coefficient formula to translate live Spell/Healing Power into "+N to this
+  spell per cast". Shares the ONE injection module (Tooltips.spellLines + spell hook,
+  TooltipDataProcessor(Spell) with OnTooltipSetSpell fallback). Logic selftest-covered;
+  in-game hook + "does the flat-hit number need base data" fold into the S3 pass.
+  Fit & Overlap - UI (-> MODEL): no second hook system; the duplicate avoided. When
+  DATA-items/probe later ship base damage per rank, upgrade the line to an absolute
+  estimate.
 
 - ☑ UI-playstyle-label (shipped v0.6.0, 2026-10-10): one-line build profile
   ("Caster-leaning - offense-focused (v0 heuristic)") from the top output dimension +

@@ -165,6 +165,8 @@ function Collect.verify(out)
         (HM.Tooltips and HM.Tooltips.installed) and "GameTooltip.SetTalent hooked" or "not installed")
     result("item tooltip injection hook", HM.Tooltips and HM.Tooltips.itemsInstalled or false,
         (HM.Tooltips and HM.Tooltips.itemsInstalled) and "GetItemStats path hooked" or "not installed")
+    result("spell tooltip injection hook", HM.Tooltips and HM.Tooltips.spellsInstalled or false,
+        (HM.Tooltips and HM.Tooltips.spellsInstalled) and "spell tooltip hooked" or "not installed")
 
     -- Live snapshot sanity.
     local snap = HM.Snapshot.capture()
