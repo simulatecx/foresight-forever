@@ -578,17 +578,26 @@ local function traitEntrySpell(cfg, entryID)
     if okD and type(def) == "table" and def.spellID then return def.spellID end
 end
 
--- Core: inject the impact block for a (configID, entryID) pair into a tooltip, and record
--- a diagnostic (which hook fired, what it resolved) for the harvester.
-local function injectTraitByEntry(tip, cfg, a, b, source)
-    -- Try (cfg,a), (cfg,b), and (activeConfig, cfg) in case the first arg was the entry id.
-    local spellID = traitEntrySpell(cfg, a) or traitEntrySpell(cfg, b)
-        or traitEntrySpell(activeConfigID(), cfg)
-    local nodeId = spellID and HM.gen and HM.gen.traits and HM.gen.traits.bySpell
-        and HM.gen.traits.bySpell[spellID]
+-- Display-name -> nodeId index. LIVE-VERIFIED: Forever's trait UI sets GameTooltip's owner
+-- to the node button, whose frame name IS the talent's name ("Ancestral Knowledge"). We
+-- match that name to our generated trait node - no SetTraitEntry/GetTraitEntry needed.
+local traitNameIndex
+local function traitNodeByName(name)
+    if type(name) ~= "string" then return nil end
+    if not traitNameIndex then
+        traitNameIndex = {}
+        local nodes = HM.gen and HM.gen.traits and HM.gen.traits.nodes
+        for nid, node in pairs(nodes or {}) do
+            if node.name and traitNameIndex[node.name] == nil then traitNameIndex[node.name] = nid end
+        end
+    end
+    return traitNameIndex[name]
+end
+
+-- Core: inject the impact block for a resolved node id, recording a diagnostic.
+local function injectNodeBlock(tip, nodeId, source)
     if HM.db and type(HM.db.collect) == "table" then
-        HM.db.collect.traitTipProbe = { source = source, cfg = tostring(cfg),
-            a = tostring(a), b = tostring(b), spellID = spellID, nodeId = nodeId, injected = false }
+        HM.db.collect.traitTipProbe = { source = source, nodeId = nodeId, injected = false }
     end
     if not nodeId or tip.foresightInjected then return end
     local loadout
@@ -602,14 +611,41 @@ local function injectTraitByEntry(tip, cfg, a, b, source)
     end
 end
 
+local function injectTraitByEntry(tip, cfg, a, b, source)
+    local spellID = traitEntrySpell(cfg, a) or traitEntrySpell(cfg, b)
+        or traitEntrySpell(activeConfigID(), cfg)
+    local nodeId = spellID and HM.gen and HM.gen.traits and HM.gen.traits.bySpell
+        and HM.gen.traits.bySpell[spellID]
+    injectNodeBlock(tip, nodeId, source)
+end
+
 function Tooltips.installTraitTooltips()
     if Tooltips.traitTipInstalled then return true end
     ensureClearHook()
     local installed = false
+    local tip = _G.GameTooltip
 
-    -- Primary: C_TooltipInfo.GetTraitEntry(configID, entryID) is the tooltip-data getter
-    -- the trait UI calls on hover. hooksecurefunc gives us the args; defer one frame so the
-    -- base tooltip is built, then append to GameTooltip (if still shown over that node).
+    -- PRIMARY: match the GameTooltip owner's frame name (= the talent name) and inject on
+    -- the next frame, once the base node tooltip is built.
+    if tip and _G.hooksecurefunc and _G.C_Timer and type(tip.SetOwner) == "function" then
+        _G.hooksecurefunc(tip, "SetOwner", function(self, owner)
+            local name = owner and owner.GetName and owner:GetName()
+            if HM.db and type(HM.db.collect) == "table" and name then
+                HM.db.collect.lastTooltipOwner = name
+            end
+            local nodeId = traitNodeByName(name)
+            if nodeId then
+                _G.C_Timer.After(0, function()
+                    if self and self.IsShown and self:IsShown() then
+                        pcall(injectNodeBlock, self, nodeId, "ownerName")
+                    end
+                end)
+            end
+        end)
+        installed = true
+    end
+
+    -- Fallbacks: the tooltip-data getter and SetTraitEntry, if a build uses them.
     local CTI = _G.C_TooltipInfo
     if _G.hooksecurefunc and _G.C_Timer and CTI and type(CTI.GetTraitEntry) == "function" then
         _G.hooksecurefunc(CTI, "GetTraitEntry", function(configID, entryID)
@@ -622,27 +658,9 @@ function Tooltips.installTraitTooltips()
         end)
         installed = true
     end
-
-    -- Fallback: GameTooltip:SetTraitEntry, if a build ever routes through it.
-    local tip = _G.GameTooltip
     if tip and _G.hooksecurefunc and type(tip.SetTraitEntry) == "function" then
         _G.hooksecurefunc(tip, "SetTraitEntry", function(self, a, b)
             pcall(injectTraitByEntry, self, activeConfigID(), a, b, "SetTraitEntry")
-        end)
-        installed = true
-    end
-
-    -- Diagnostic safety net: record the frame each tooltip anchors to. If the trait hooks
-    -- don't fire, the last-hovered talent node button's frame name tells us what to hook.
-    if tip and _G.hooksecurefunc and type(tip.SetOwner) == "function" then
-        _G.hooksecurefunc(tip, "SetOwner", function(_, owner)
-            if HM.db and type(HM.db.collect) == "table" and owner then
-                local name = (owner.GetName and owner:GetName())
-                    or (owner.GetObjectType and owner:GetObjectType()) or "?"
-                local parent = owner.GetParent and owner:GetParent()
-                local pname = parent and parent.GetName and parent:GetName()
-                HM.db.collect.lastTooltipOwner = pname and (name .. " < " .. pname) or name
-            end
         end)
     end
 

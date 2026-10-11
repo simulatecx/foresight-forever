@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.5 - 2026-10-11
+
+Talent tooltip - SOLVED via the owner-name signal. The diagnostic showed neither
+SetTraitEntry nor GetTraitEntry fires on hover, but the tooltip's owner frame is named
+exactly the talent ("Ancestral Knowledge"). So match the owner name to our trait node.
+
+- The trait-tooltip hook now matches `GameTooltip` owner's frame name against our trait
+  node names (`traitNameIndex`) and injects the impact block on the next frame once the
+  base node tooltip is built. No dependency on SetTraitEntry/GetTraitEntry (kept as
+  fallbacks). Works for every node - classic and new Forever - since names come from the
+  generated trait data.
+- Diagnostic now records `source="ownerName"` so the harvest confirms the path + inject.
+
+*Features:* UI-talent-tooltip, QA-verify-command
+
 ## 0.9.4 - 2026-10-11
 
 Safety-net diagnostic so the next harvest completes the talent tooltip regardless of

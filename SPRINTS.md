@@ -45,13 +45,13 @@ CHANGELOG 0.5.1-0.8.2. State:
   `TraitEntry` data type doesn't; now hook the method), item tooltip flash-vanish (async
   rebuild + stale guard; now `OnTooltipCleared` flag), and What-if row overlap (fixed-height
   wide rows; now sized to wrapped height).
-- **Open:** TALENT TOOLTIP still not rendering. v0.9.1 SetTraitEntry hook installed but
-  the `traitTipProbe` diagnostic came back ABSENT - SetTraitEntry is NEVER called by
-  Forever's trait UI. v0.9.3 switches to hooking `C_TooltipInfo.GetTraitEntry` (the 10.0.2
-  data getter, present on Forever) with a deferred inject; diagnostic now records which
-  hook fires + args. Next harvest's `traitTipProbe` confirms (source=GetTraitEntry) or
-  names the next mechanism. Also open: rank-scaling rule (still (p)); gear-compare
-  "vs equipped" render. Beta window closes **2026-10-21**.
+- **TALENT TOOLTIP SOLVED (v0.9.5, pending final in-game confirm):** diagnostics proved
+  neither SetTraitEntry NOR C_TooltipInfo.GetTraitEntry fires on hover, BUT the tooltip's
+  owner frame is named exactly the talent ("Ancestral Knowledge"). The hook now matches
+  GameTooltip owner's frame name -> our trait node -> inject on next frame. Works for all
+  nodes. Next harvest's `traitTipProbe {source:"ownerName", injected:true}` confirms.
+  Also open: rank-scaling rule (still (p)); gear-compare "vs equipped" render. Beta closes
+  **2026-10-21**.
   CONFIRMED WORKING in-game (v0.9.2): stat chain (`/foresight stat` + item tooltips show
   +AP/crit chain), item tooltip renders, What-if no longer overlaps, panel drag/reset.
 - **Design direction (user, 2026-10-11):** move the panel + mouseover popups toward the
