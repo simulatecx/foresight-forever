@@ -34,6 +34,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S20 Stat coaching, derived never scripted | 3 | ◐ |
 | S21 Rank-rule truth: decode first, vote second | 3 | ◐ |
 | S22 Skill-centric Matrix + pathway rows | 3 | ◐ |
+| S23 Weapon-swap honesty in the item verdict | 3 | ◐ |
 
 ## Active / next
 
@@ -379,6 +380,33 @@ nil-degrade per link, (p) propagation, wrapped FontStrings (mobile wrap) · ☑ 
 +8 across both halves · ☑ what-if AP correctness fix in abilityHit's weapon branch
 (snapshot-AP substitution; marginal AP folds on non-normalized strikes) · ☐ in-game
 render verify.
+
+### S23 - Weapon-swap honesty in the item verdict ◐  (triaged 2026-10-12, live catch)
+Fit & Overlap - Category UI -> MODEL. Verdict: Enhance tooltips.lua (scan + render),
+sim.lua (pure weaponSwap/apFromStats beside windfuryBurst), impact.lua (the ONE
+itemVerdict gains the swap term). Complements: S20's USER BINDING ("count everything
+the item brings - weapon DPS, other stats"), the Windfury weapon line (same hover).
+Avoid duplicating: ForesightScanTooltip (collect.lua's hidden frame, reused - never a
+second scanner), AP_PER_DPS/statConversions laws, the one verdict judge. Mobile:
+tooltip text (1280x720 binding). Languages: enUS parse patterns (house state; the
+parser is one localized seam). Trust: display-only, (p)-tagged, base ranges from the
+game's own rendered tooltips. Data: none new. Abuse: not externally reachable.
+
+As a melee player at the auction house, I want a weapon's verdict to count the weapon's
+own damage range - an 18-27 -> 34-52 swap is not "+4.7% Melee DPS" - so the number I
+see is the number that decides the buy.
+
+AC: ☑ Tooltips.parseWeaponTip pure (base range + speed; bonus-damage lines skipped;
+comma numbers) · ☑ Sim.weaponSwap white-DPS law (baseAvg/speed + AP/14; apDelta nets
+BOTH items' AP-equivalent stats via apFromStats) · ☑ verdict uses the swap pct for
+melee goals only; stat-less weapons still judged (block renders with the swap line) ·
+☑ swap line beneath the verdict ("~X -> ~Y per swing, ~A -> ~B white DPS (+N%) vs
+your main hand (p)"); scans both tooltips via the ONE hidden frame; nil-degrades on
+empty main hand / unscannable / same item · ☑ CAPTURE NO-DOWNGRADE LAW: trained
+talent-tooltip captures never overwritten by untrained re-hovers (the Deflection
+degradation) · ☑ selftest +5 · ☐ in-game verify on the 18-27 vs 34-52 pair. Known
+limits (honest): main-hand compare only (no offhand/ranged v1); crit/proc stats not
+in the swap pct; offline damage ranges (ItemDamage* tables) stay deferred.
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

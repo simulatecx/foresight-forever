@@ -31,6 +31,11 @@ function HM.runSelftest(out)
         checks[#checks + 1] = { name = name, ok = cond and true or false, detail = detail }
         if not cond then failed = failed + 1 end
     end
+    local function linesText(lines)
+        local parts = {}
+        for _, L in ipairs(lines or {}) do parts[#parts + 1] = L.text or L.left or "" end
+        return table.concat(parts, "\n")
+    end
 
     -- Graph core ---------------------------------------------------------------
     local g = HM.Graph.new()
@@ -256,6 +261,54 @@ function HM.runSelftest(out)
         local v = HM.Impact.itemVerdict(lo, { attackPower = 10 }, { Strength = 3 }, "meleeDps")
         return v ~= nil and v.direction == "upgrade"
     end)())
+    check("weapon swap: parser pulls base range + speed, skips bonus lines", (function()
+        local w = HM.Tooltips.parseWeaponTip({ "Wookie Slicer", "One-Hand",
+            "34 - 52 Damage", "Speed 2.60", "+1 - 5 Nature Damage", "+10 Attack Power" })
+        if not (w and w.min == 34 and w.max == 52 and approx(w.speed, 2.6)) then
+            return false
+        end
+        local big = HM.Tooltips.parseWeaponTip({ "1,234 - 2,345 Damage", "Speed 3.80" })
+        return big ~= nil and big.min == 1234 and big.max == 2345
+            and HM.Tooltips.parseWeaponTip({ "Nice Hat", "+3 Stamina" }) == nil
+    end)())
+    check("weapon swap: white-DPS law on the live catch (18-27 vs 34-52 +10 AP)", (function()
+        local snap = meleeShamanSnap() -- attackPower 300
+        local apDelta = HM.Sim.apFromStats({ attackPower = 10 }, "SHAMAN")
+            - HM.Sim.apFromStats({}, "SHAMAN")
+        local s = HM.Sim.weaponSwap(snap, { min = 34, max = 52, speed = 2.6 },
+            { min = 18, max = 27, speed = 2.6 }, apDelta)
+        if not s then return false end
+        local cur = 22.5 / 2.6 + 300 / 14
+        local new = 43 / 2.6 + 310 / 14
+        return approx(s.curDps, cur, 1e-9) and approx(s.newDps, new, 1e-9)
+            and approx(s.pct, (new - cur) / cur * 100, 1e-9) and s.pct > 20
+    end)())
+    check("weapon swap: verdict uses the swap pct for melee goals only", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local swap = { pct = 57.3 }
+        local melee = HM.Impact.itemVerdict(lo, { attackPower = 10 }, nil, "meleeDps", swap)
+        local caster = HM.Impact.itemVerdict(lo, { attackPower = 10 }, nil, "spellcasting", swap)
+        return melee ~= nil and approx(melee.pct, 57.3) and melee.direction == "upgrade"
+            and caster ~= nil and not approx(caster.pct, 57.3)
+    end)())
+    check("weapon swap: a stat-less weapon still gets the block + swap line", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local swap = HM.Sim.weaponSwap(lo.snapshot, { min = 34, max = 52, speed = 2.6 },
+            { min = 18, max = 27, speed = 2.6 }, 0)
+        local lines = HM.Tooltips.itemLines({}, lo, nil, { weaponSwap = swap })
+        local text = linesText(lines or {})
+        return text:find("white DPS", 1, true) ~= nil
+            and text:find("per swing", 1, true) ~= nil
+            and HM.Tooltips.itemLines({}, lo, nil, nil) == nil -- stat-less non-weapon: nothing
+    end)())
+    check("capture no-downgrade: trained tooltip never overwritten by untrained", (function()
+        local S = HM.Tooltips.shouldReplaceCapture
+        return S(nil, { rank = nil }) == true
+            and S({ rank = 2 }, { rank = nil }) == false
+            and S({ rank = 2 }, { rank = 3 }) == true
+            and S({ rank = nil }, { rank = 1 }) == true
+            and S({ rank = nil }, { rank = nil }) == true
+    end)())
     check("coaching: verdict headline unchanged and above the attribution", (function()
         local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
         local mapped = { Agility = 10, Stamina = 2 }
@@ -317,11 +370,6 @@ function HM.runSelftest(out)
     end)())
 
     -- Tooltip injection module (S2): resolver + line builders are pure, fully testable.
-    local function linesText(lines)
-        local parts = {}
-        for _, L in ipairs(lines or {}) do parts[#parts + 1] = L.text or L.left or "" end
-        return table.concat(parts, "\n")
-    end
     local impFB = gen and gen.talents and gen.talents[26]
     local fireTabIndex = 1
     if impFB then

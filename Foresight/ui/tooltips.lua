@@ -393,6 +393,43 @@ local INVSLOT = {
     INVTYPE_RANGEDRIGHT = { 18 }, INVTYPE_THROWN = { 18 }, INVTYPE_RELIC = { 18 },
 }
 
+-- Pure (weapon-swap honesty): pull base damage range + speed out of an item
+-- tooltip's text lines ("18 - 27 Damage" left, "Speed 2.60" right; enUS house
+-- state). Bonus-damage lines ("+1 - 5 Nature Damage") don't match the anchored
+-- pattern - only the weapon's own range is claimed. nil when not a weapon.
+function Tooltips.parseWeaponTip(lines)
+    local dmin, dmax, speed
+    for _, t in ipairs(lines or {}) do
+        if type(t) == "string" then
+            if not dmin then
+                local a, b = t:match("^%s*([%d,]+)%s*%-%s*([%d,]+)%s+Damage")
+                if a then
+                    dmin = tonumber((a:gsub(",", "")))
+                    dmax = tonumber((b:gsub(",", "")))
+                end
+            end
+            if not speed then
+                local s = t:match("Speed%s+([%d%.]+)")
+                if s then speed = tonumber(s) end
+            end
+        end
+    end
+    if dmin and dmax and speed and speed > 0 then
+        return { min = dmin, max = dmax, speed = speed }
+    end
+    return nil
+end
+
+-- Pure (capture no-downgrade law): a TRAINED talent-tooltip capture (rank known) is
+-- rank-scaling ground truth - a later untrained hover must never overwrite it (live
+-- catch 2026-10-12: Deflection's trained capture degraded to a weak untrained vote
+-- after a re-hover). Newer trained captures always win.
+function Tooltips.shouldReplaceCapture(old, new)
+    if not old then return true end
+    if old.rank ~= nil and not (new and new.rank ~= nil) then return false end
+    return true
+end
+
 -- SIM-engine "Pro highlight": hovering a WEAPON while a Windfury-style imbue is
 -- known - slower weapons raise the proc's bonus-AP term. Honest scope: compares the
 -- AP term only (the hovered weapon's base damage isn't in the offline data; the
@@ -429,7 +466,9 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
             parts[#parts + 1] = ("%+g %s"):format(v, DISPLAY_STAT[k] or k)
         end
     end
-    if not any then return nil end
+    -- A stat-less WEAPON still gets judged - its damage range IS the item (the S20
+    -- user binding: count everything the item brings, weapon DPS included).
+    if not any and not (ctx and ctx.weaponSwap) then return nil end
 
     local ok, _, changes = pcall(Tooltips._itemDims, loadout, mapped)
     local lines = {}
@@ -439,7 +478,8 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
     }
     -- Headline verdict (the Pawn-style at-a-glance answer, judged for your gearing goal).
     local goal = HM.gearGoal and HM.gearGoal() or "auto"
-    local okv, verdict = pcall(HM.Impact.itemVerdict, loadout, mapped, comparedStats, goal)
+    local okv, verdict = pcall(HM.Impact.itemVerdict, loadout, mapped, comparedStats,
+        goal, ctx and ctx.weaponSwap)
     if okv and verdict then
         local word, color
         if verdict.direction == "upgrade" then word, color = "Upgrade", "|cff4ade80"
@@ -450,6 +490,16 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
         lines[#lines + 1] = {
             text = ("%s%s|r for %s%s%s"):format(color, word, verdict.label, pctText,
                 verdict.compared and "" or " |cff9d9d9d(added)|r"),
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+        }
+    end
+    -- Weapon-swap line (the honest A->B of equipping this weapon): base ranges from
+    -- both tooltips + your AP, through Sim.weaponSwap. Beneath the verdict it feeds.
+    if ctx and ctx.weaponSwap then
+        local w = ctx.weaponSwap
+        lines[#lines + 1] = {
+            text = ("|cff9d9d9dWeapon swap:|r ~%.0f -> ~%.0f per swing, ~%.1f -> ~%.1f white DPS (%+.0f%%) vs your main hand (p)")
+                :format(w.curSwing, w.newSwing, w.curDps, w.newDps, w.pct),
             r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
         }
     end
@@ -482,10 +532,12 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
             }
         end
     end
-    lines[#lines + 1] = {
-        text = "|cff9d9d9dThis item:|r " .. table.concat(parts, ", "),
-        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
-    }
+    if any then
+        lines[#lines + 1] = {
+            text = "|cff9d9d9dThis item:|r " .. table.concat(parts, ", "),
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+        }
+    end
     -- Concrete derived gains (the "+1 Agility -> +X% crit, +Y AP per swing" answer).
     local okd, derived = pcall(HM.Impact.itemDerivedLines, loadout, mapped)
     for _, l in ipairs(okd and derived or {}) do
@@ -819,6 +871,50 @@ local function journalConsumableTip(itemId, link, injected)
         at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?" }
 end
 
+-- Scan a weapon link's BASE damage/speed off its rendered tooltip via the house
+-- hidden scan frame (same one collect.lua probes with - never a second scanner).
+-- Base range, not UnitDamage: UnitDamage already folds AP in.
+local function weaponFacts(link)
+    if not (link and _G.CreateFrame) then return nil end
+    local tip = _G.ForesightScanTooltip
+    if not tip then
+        tip = _G.CreateFrame("GameTooltip", "ForesightScanTooltip", nil, "GameTooltipTemplate")
+    end
+    tip:SetOwner(_G.UIParent, "ANCHOR_NONE")
+    tip:ClearLines()
+    if not pcall(tip.SetHyperlink, tip, link) then return nil end
+    local texts = {}
+    for i = 1, (tip:NumLines() or 0) do
+        for _, side in ipairs({ "Left", "Right" }) do
+            local fs = _G["ForesightScanTooltipText" .. side .. i]
+            local t = fs and fs:GetText()
+            if t and t ~= "" then texts[#texts + 1] = t end
+        end
+    end
+    return Tooltips.parseWeaponTip(texts)
+end
+
+local SWAP_EQUIP_LOC = {
+    INVTYPE_WEAPON = true, INVTYPE_2HWEAPON = true, INVTYPE_WEAPONMAINHAND = true,
+}
+
+-- Weapon-swap context for a hovered MELEE weapon: both base ranges scanned, the two
+-- stat bundles' AP-equivalents netted, composed by pure Sim.weaponSwap. nil-degrades
+-- whenever any input is missing (empty main hand, unscannable tooltip, same item).
+local function weaponSwapFor(link, mapped, loadout)
+    if not (loadout and HM.Sim and HM.Sim.weaponSwap and _G.GetItemInfo) then return nil end
+    local equipLoc = select(9, _G.GetItemInfo(link))
+    if not (equipLoc and SWAP_EQUIP_LOC[equipLoc]) then return nil end
+    local eqLink = _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", 16)
+    if not eqLink or eqLink == link then return nil end
+    local hov, eq = weaponFacts(link), weaponFacts(eqLink)
+    if not (hov and eq) then return nil end
+    local classToken = loadout.snapshot.classToken
+    local apDelta = HM.Sim.apFromStats(mapped, classToken)
+        - HM.Sim.apFromStats(Tooltips.mapItemStats(resolveItemStats(eqLink)), classToken)
+    return HM.Sim.weaponSwap(loadout.snapshot, hov, eq, apDelta)
+end
+
 -- The Windfury-style imbue the player knows, cached per session (IsPlayerSpell over
 -- the imbue table is too heavy per hover; new ranks land on the next /reload).
 local wfKnownCache
@@ -846,6 +942,12 @@ local function injectItem(tip)
     local genItem = itemId and HM.gen and HM.gen.items and HM.gen.items[itemId]
     if genItem and genItem.speedMs then
         ctx = { itemId = itemId, speedMs = genItem.speedMs, wfImbue = knownWindfury() }
+    end
+    -- Weapon-swap honesty: the hovered weapon's own damage range vs your main hand.
+    local okSwap, swap = pcall(weaponSwapFor, link, mapped, loadout)
+    if okSwap and swap then
+        ctx = ctx or {}
+        ctx.weaponSwap = swap
     end
     local lines = Tooltips.itemLines(mapped, loadout, compared, ctx)
     if not lines then
@@ -1054,6 +1156,11 @@ local function journalTalentTooltip(tip, nodeId, snap)
     local node = HM.gen and HM.gen.traits and HM.gen.traits.nodes and HM.gen.traits.nodes[nodeId]
     local c = HM.db.collect
     if type(c.talentTooltips) ~= "table" then c.talentTooltips = {} end
+    -- No-downgrade law: a trained capture (rank known) is ground truth - a later
+    -- untrained hover never overwrites it (live catch: Deflection, 2026-10-12).
+    if not Tooltips.shouldReplaceCapture(c.talentTooltips[nodeId], { rank = rank }) then
+        return
+    end
     local n = 0
     for _ in pairs(c.talentTooltips) do n = n + 1 end
     if c.talentTooltips[nodeId] or n < 300 then

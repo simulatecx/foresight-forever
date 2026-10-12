@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.32.0 - 2026-10-12
+
+WEAPON-SWAP HONESTY (S23, live catch #3): an 18-27 weapon vs a 34-52 weapon showed
+"+4.7% Melee DPS" - the stat bundle's contribution only, because a weapon's own damage
+range was never part of the compare. The verdict now counts the thing the weapon IS.
+
+- `Sim.weaponSwap` (pure): white DPS = baseAvg/speed + AP/14 (the one AP law), both
+  weapons' BASE ranges scanned off their rendered tooltips (never UnitDamage - it
+  already folds AP), and `Sim.apFromStats` nets BOTH items' AP-equivalent stats
+  (flat AP + Str/Agi through statConversions) into the swap.
+- The ONE `itemVerdict` judge gains the swap term: for a MELEE gearing goal the
+  white-DPS swap pct replaces the stat-only lens pct; other goals keep the lens math.
+  A stat-less weapon now still gets judged - its damage range IS the item (the S20
+  user binding, honored: count everything the item brings).
+- Tooltip renders the full A->B beneath the verdict: "Weapon swap: ~43 -> ~61 per
+  swing, ~15.1 -> ~23.7 white DPS (+57%) vs your main hand (p)". Scans reuse the
+  house ForesightScanTooltip (one hidden frame, both text columns); pure parser
+  skips bonus-damage lines and handles comma numbers; nil-degrades on empty main
+  hand / unscannable / hovering your own weapon.
+- CAPTURE NO-DOWNGRADE LAW: a trained talent-tooltip capture (rank known) is ground
+  truth and is never overwritten by a later untrained hover - today's harvest showed
+  Deflection's trained capture degraded to a weak untrained vote after a re-hover.
+  Selftest-pinned.
+- SECOND RANK-RULE PROMOTION ROUND (human-reviewed, same trained-capture standard as
+  round one): Improved Revenge/Malice/Ruthlessness/Shield Specialization = maxTotal;
+  Lethality/Nature's Focus/Naturalist = perRank. Corpus now 300 captured tooltips,
+  227 voting, 129 decided, 10 trained-backed; 5 contradictions held (4 weak
+  untrained splits + Destructive Reach's trained split).
+- Known limits (stated, not hidden): main-hand compare only (offhand/ranged later);
+  crit/proc stats don't enter the swap pct; offline damage ranges need the
+  ItemDamage* tables (deferred with DATA-items).
+- Selftest 217 (+5).
+
+*Features:* UI-item-tooltip, SIM-engine, MODEL-impact-diff, DATA-overrides, QA-probe,
+QA-selftest-harness
+
 ## 0.31.4 - 2026-10-12
 
 LIVE CATCH #2 (auction-house pass): a "+10 Attack Power" item showed NO melee impact

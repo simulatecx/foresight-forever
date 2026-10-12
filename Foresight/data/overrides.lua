@@ -46,9 +46,20 @@ HM.overrides = {
         -- tooltip text at a known rank, not statistical votes. Weak untrained-r1
         -- lines and the contradicted Destructive Reach (964) stay held.
         [37] = "perRank",   -- Improved Frostbolt (inspected mage, r4/5 text)
-        [130] = "perRank",  -- Deflection (trained capture)
+        [130] = "perRank",  -- Deflection (trained capture 2026-10-12; a later untrained
+                            -- re-hover overwrote the stored capture - the no-downgrade
+                            -- law now prevents that; vote direction never conflicted)
         [613] = "perRank",  -- Thundering Strikes (pilot shaman, r2/5 text)
         [614] = "maxTotal", -- Ancestral Knowledge (pilot shaman, r1/5 text)
+        -- Second promotion round 2026-10-12 (inspect pass; all trained-backed, same
+        -- user-set standard as round one):
+        [147] = "maxTotal", -- Improved Revenge (trained A=1)
+        [269] = "perRank",  -- Lethality (trained B=1)
+        [270] = "maxTotal", -- Malice (trained A=1)
+        [273] = "maxTotal", -- Ruthlessness (trained A=1)
+        [823] = "perRank",  -- Nature's Focus (trained B=1)
+        [824] = "perRank",  -- Naturalist (trained B=2)
+        [1601] = "maxTotal", -- Shield Specialization (trained A=2)
     },
 }
 

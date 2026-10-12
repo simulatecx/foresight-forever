@@ -266,6 +266,39 @@ function Sim.abilityHitDelta(loadout, spellId, selected, nodeId, rank)
              presumed = before.presumed or after.presumed }
 end
 
+-- AP-equivalent of an item's mapped stat bundle (flat AP + Str/Agi through the class
+-- conversion rates). Feeds the weapon-swap compare so a +Strength weapon and a
+-- +Attack Power weapon are judged in the same unit.
+function Sim.apFromStats(mapped, classToken)
+    local conv = ((HM.formulas.statConversions.byClass or {})[classToken]) or {}
+    local m = mapped or {}
+    return (m.attackPower or 0)
+        + (m.Strength or 0) * (conv.apPerStr or 0)
+        + (m.Agility or 0) * (conv.apPerAgi or 0)
+end
+
+-- Weapon-swap honesty (live catch 2026-10-12): a weapon's own damage range is the
+-- DOMINANT term of a melee swap - stats alone called an 18-27 -> 34-52 upgrade
+-- "+4.7%". White DPS = baseAvg/speed + AP/14 (the one AP law); apDelta is the net
+-- AP-equivalent change between the two items' stat bundles. Pure; both weapons'
+-- BASE ranges come from their tooltips (never UnitDamage, which already folds AP).
+function Sim.weaponSwap(snapshot, hovered, equipped, apDelta)
+    if not (snapshot and hovered and equipped) then return nil end
+    if (hovered.speed or 0) <= 0 or (equipped.speed or 0) <= 0 then return nil end
+    local curAvg = ((equipped.min or 0) + (equipped.max or 0)) / 2
+    local newAvg = ((hovered.min or 0) + (hovered.max or 0)) / 2
+    if curAvg <= 0 or newAvg <= 0 then return nil end
+    local ap = (snapshot.stats and snapshot.stats.attackPower) or 0
+    local cur = curAvg / equipped.speed + ap / AP_PER_DPS
+    local new = newAvg / hovered.speed + (ap + (apDelta or 0)) / AP_PER_DPS
+    if cur <= 0 then return nil end
+    return {
+        curDps = cur, newDps = new, pct = (new - cur) / cur * 100,
+        curSwing = curAvg + ap / AP_PER_DPS * equipped.speed,
+        newSwing = newAvg + (ap + (apDelta or 0)) / AP_PER_DPS * hovered.speed,
+    }
+end
+
 -- The crit-haste engine (Flurry family) among the player's selected trait nodes.
 -- selected: TalentAPI.walkTraits-shaped list ({spellID, rank}). Data: gen.critHaste.
 function Sim.flurryFor(selected)

@@ -141,7 +141,11 @@ end
 -- upgrade for the dimension you're gearing for? Uses the real diff (net swap vs equipped,
 -- or marginal add when there's nothing to compare), never a one-directional stat weight.
 -- goalId = a dimension id, or "auto"/nil to use the build's primary output lens.
-function Impact.itemVerdict(loadout, mapped, comparedStats, goalId)
+-- weaponSwap (optional, Sim.weaponSwap result): for a MELEE goal the scanned white-DPS
+-- swap delta - which already folds both items' AP-equivalent stats - replaces the
+-- stat-only lens pct (the dominant term of a weapon swap; stats alone once called an
+-- 18-27 -> 34-52 weapon "+4.7%"). Still the ONE judge; other goals keep the lens math.
+function Impact.itemVerdict(loadout, mapped, comparedStats, goalId, weaponSwap)
     local goal = goalId
     if not goal or goal == "auto" then goal = Impact.primaryDimension(loadout) end
     local pct
@@ -156,6 +160,9 @@ function Impact.itemVerdict(loadout, mapped, comparedStats, goalId)
         end
     end
     pct = pct or 0
+    if goal == "meleeDps" and weaponSwap and type(weaponSwap.pct) == "number" then
+        pct = weaponSwap.pct
+    end
     local dim = HM.dimensions.byId(goal)
     local direction = (pct > 0.05 and "upgrade")
         or (pct < -0.05 and "downgrade") or "sidegrade"
