@@ -374,6 +374,16 @@ function HM.runSelftest(out)
             and text:find("Attack Power", 1, true) ~= nil
             and lines ~= nil and (lines[1].right or ""):find("buff chain", 1, true) ~= nil
     end)())
+    check("itemKey: identity survives volatile link fields (equipped +2.8 catch)", (function()
+        -- Same physical item, different linkLevel/context tail -> SAME key.
+        local a = "|cffffffff|Hitem:12345:0:0:0:0:0:0:777:12:0:0|h[Axe]|h|r"
+        local b = "|cffffffff|Hitem:12345:0:0:0:0:0:0:777:60:5:9|h[Axe]|h|r"
+        -- A different COPY (uniqueID differs) -> different key.
+        local c = "|cffffffff|Hitem:12345:0:0:0:0:0:0:778:12:0:0|h[Axe]|h|r"
+        local K = HM.Tooltips.itemKey
+        return K(a) ~= nil and K(a) == K(b) and K(a) ~= K(c)
+            and K("not a link") == nil and K(nil) == nil
+    end)())
     check("baseline law: your equipped item claims no verdict or % gain", (function()
         local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
         local mapped = { attackPower = 10, Stamina = 5 }

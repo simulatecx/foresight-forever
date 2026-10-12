@@ -431,6 +431,30 @@ function Tooltips.parseWeaponTip(lines)
     return nil
 end
 
+-- Pure (baseline-detection fix, live catch 2026-10-12: an EQUIPPED weapon still
+-- showed "+2.8" because exact link-string equality fails - WoW item links carry
+-- volatile trailing fields like linkLevel that differ between the paper-doll hover
+-- and GetInventoryItemLink for the SAME item). The stable identity = the first 8
+-- payload fields (itemID:enchant:gems x4:suffix:uniqueID); everything after is
+-- context, not identity.
+function Tooltips.itemKey(link)
+    if type(link) ~= "string" then return nil end
+    local payload = link:match("item:([%-%d:]*)")
+    if not payload then return nil end
+    local fields = {}
+    for f in (payload .. ":"):gmatch("([^:]*):") do
+        fields[#fields + 1] = f
+        if #fields >= 8 then break end
+    end
+    if not fields[1] or fields[1] == "" then return nil end
+    return table.concat(fields, ":")
+end
+
+local function sameItem(linkA, linkB)
+    local a, b = Tooltips.itemKey(linkA), Tooltips.itemKey(linkB)
+    return a ~= nil and a == b
+end
+
 -- Pure (prevalidation audit): pull the "X to Y" damage/heal range out of a rendered
 -- SPELL tooltip's text lines (enUS: "...for 25 to 30 Nature damage.", "...heals ...
 -- for 40 to 47."). First range wins; comma numbers handled; nil when no range shows.
@@ -929,7 +953,7 @@ local function equippedCompareStats(link)
     if not (slots and _G.GetInventoryItemLink) then return nil end
     for _, slot in ipairs(slots) do
         local eqLink = _G.GetInventoryItemLink("player", slot)
-        if eqLink and eqLink ~= link then
+        if eqLink and not sameItem(eqLink, link) then
             return Tooltips.mapItemStats(resolveItemStats(eqLink))
         end
     end
@@ -1047,7 +1071,7 @@ local function weaponSwapFor(link, mapped, loadout, hovFacts)
     if not (equipLoc and SWAP_EQUIP_LOC[equipLoc]) then return nil end
     local eqLink = _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", 16)
     if not eqLink then return nil, "no main-hand weapon equipped to compare against" end
-    if eqLink == link then return nil end -- your own weapon: baseline mode covers it
+    if sameItem(eqLink, link) then return nil end -- your own weapon: baseline mode covers it
     local hov = hovFacts or weaponFacts(link)
     if not hov then return nil, "couldn't read this weapon's damage line" end
     local eq = weaponFacts(eqLink)
@@ -1115,11 +1139,13 @@ local function injectItem(tip)
     end
     -- BASELINE LAW: hovering an item you're WEARING switches to baseline mode - its
     -- stats are already inside every number, so no verdict/% is ever claimed for it.
+    -- Identity by itemKey, never raw link equality (live catch: linkLevel drift made
+    -- the equipped weapon read as a different item and claim "+2.8").
     local okEq, equippedSelf = pcall(function()
         local equipLoc = _G.GetItemInfo and select(9, _G.GetItemInfo(link))
         for _, slot in ipairs((equipLoc and INVSLOT[equipLoc]) or {}) do
             if _G.GetInventoryItemLink
-                    and _G.GetInventoryItemLink("player", slot) == link then
+                    and sameItem(_G.GetInventoryItemLink("player", slot), link) then
                 return true
             end
         end

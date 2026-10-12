@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.34.3 - 2026-10-12
+
+ITEM IDENTITY FIX (live catch: the EQUIPPED weapon still claimed "+2.8" after a full
+relog). Nothing was cached - the equipped-detection compared raw link STRINGS, and
+WoW links carry volatile tail fields (linkLevel/context) that differ between a
+paper-doll hover and GetInventoryItemLink for the SAME physical item, so baseline
+mode silently never fired.
+
+- `Tooltips.itemKey`: stable identity = the first 8 link payload fields
+  (itemID:enchant:gems:suffix:uniqueID); the volatile tail is context, not identity.
+  All three compare sites now use it: equipped-self detection (baseline mode), the
+  weapon-swap same-item check, and the equipped-stats compare slot skip.
+- Selftest 225 (+1): same item across differing tails -> same key; a different COPY
+  (uniqueID) -> different key; garbage -> nil.
+- For the record: tooltip blocks are recomputed on every hover - no session caching
+  exists to go stale; logout/login fully reloads the addon from disk.
+
+*Features:* UI-item-tooltip, QA-selftest-harness
+
 ## 0.34.2 - 2026-10-12
 
 COMPOSE, DON'T DUPLICATE (user binding): the game already prints the component diffs
