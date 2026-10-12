@@ -171,6 +171,24 @@ local function layout(model)
     basis:SetText(model.bars.basis)
     y = y - math.max(12, basis:GetStringHeight() + 2) - 8
 
+    -- Goal pathways: your best unspent talent points for the dimension you're
+    -- building toward (computed on talent changes, not every refresh).
+    if model.path then
+        local ph = acquireFS("ARTWORK", "GameFontNormalSmall")
+        ph:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
+        ph:SetWidth(innerW)
+        ph:SetText(("|cff9d9d9dBest next points -|r %s"):format(model.path.label or ""))
+        y = y - math.max(14, ph:GetStringHeight() + 2)
+        for i, row in ipairs(model.path.rows) do
+            local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
+            f:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 6, y)
+            f:SetWidth(innerW - 12)
+            f:SetText(("%d. %s  |cff4ade80%+.1f%%|r"):format(i, row.label, row.pct))
+            y = y - math.max(13, f:GetStringHeight() + 1)
+        end
+        y = y - 8
+    end
+
     -- Ecosystem map (mockup component 2): goal row + the three tagged cards.
     if model.eco then
         local goal = acquireFS("ARTWORK", "GameFontNormalSmall")
@@ -242,12 +260,45 @@ end
 local MatrixPanel = {}
 HM.MatrixPanel = MatrixPanel
 
+-- Goal pathways are one graph evaluate PER open talent node - too heavy for every
+-- aura tick, so the result is cached and recomputed only when talents change
+-- (invalidated by the talent events below) or the panel first shows.
+local cachedPath
+local function computePathways(loadout)
+    if not (HM.TalentAPI and HM.TalentAPI.walkTraits and HM.Sim) then return nil end
+    local walk = HM.TalentAPI.walkTraits(false)
+    if not walk or #walk == 0 then return nil end
+    local candidates = {}
+    for _, n in ipairs(walk) do
+        if (n.rank or 0) < (n.maxRank or 1) and n.nodeID then
+            candidates[#candidates + 1] = {
+                label = ("%s %d/%d"):format(n.name or ("node " .. n.nodeID),
+                    (n.rank or 0) + 1, n.maxRank or 1),
+                what = loadout:withTraitNode(n.nodeID, (n.rank or 0) + 1),
+            }
+        end
+    end
+    if #candidates == 0 then return nil end
+    local dim = HM.gearGoal and HM.gearGoal() or "auto"
+    if dim == "auto" then dim = HM.Impact.primaryDimension(loadout) end
+    local ok, path = pcall(HM.Sim.goalPathways, loadout, dim, candidates, 4)
+    return (ok and path) or nil
+end
+
+function MatrixPanel.invalidatePathways()
+    cachedPath = nil
+end
+
 function MatrixPanel.refresh()
     if not panel or not panel:IsShown() then return end
     local snapshot = HM.Snapshot.capture()
     if not snapshot then return end
     local loadout = HM.Loadout.fromSnapshot(snapshot)
-    local ok, model = pcall(HM.PanelModel.matrixModel, loadout, uiState().loop)
+    if cachedPath == nil then
+        cachedPath = computePathways(loadout) or false -- false = computed, none found
+    end
+    local ok, model = pcall(HM.PanelModel.matrixModel, loadout, uiState().loop,
+        cachedPath or nil)
     if ok and model then
         panel.model = model
         layout(model)
@@ -365,9 +416,16 @@ local function createPanel()
                           "CHARACTER_POINTS_CHANGED" }) do
         pcall(events.RegisterEvent, events, ev)
     end
+    local TALENT_EVENTS = { TRAIT_CONFIG_UPDATED = true, PLAYER_TALENT_UPDATE = true,
+                            CHARACTER_POINTS_CHANGED = true }
     local pending
-    events:SetScript("OnEvent", function(_, _, unit)
-        if unit ~= nil and unit ~= "player" then return end
+    events:SetScript("OnEvent", function(_, event, unit)
+        if TALENT_EVENTS[event] then
+            -- talent events carry a configID/points arg, not a unit - never unit-gate them
+            MatrixPanel.invalidatePathways()
+        elseif unit ~= nil and unit ~= "player" then
+            return
+        end
         if not panel:IsShown() or pending then return end
         pending = true
         local function run() pending = nil; MatrixPanel.refresh() end

@@ -80,9 +80,12 @@ Make the talent map whole now that C_Traits coverage exists.
   dimension bars (FILL-BASIS DECISION: relative WITHIN groups, strongest output lens =
   full bar, basis printed on the panel - never fake absolutes), Enabler/Engine/Payoff
   cards + insight box, title-click loop cycling, draggable + validated position,
-  user-modifiable opacity (/foresight matrix opacity, validated). Remaining: in-game
-  render verify (incl. mobile binding 1280x720 @ 0.65), skill-centric mode (click an
-  ability -> dim tree + glow modifiers), pathway rows on the panel.
+  user-modifiable opacity (/foresight matrix opacity, validated). SKILL-CENTRIC MODE
+  SHIPPED (v0.27.0): `/foresight affects <ability> show` dims the tree + glows the
+  modifiers (enumerator path dims, name-scan fallback glows only; alphas restored on
+  clear/close). PATHWAY ROWS SHIPPED (v0.27.0): "Best next points - <goal>" top-4 on
+  the Matrix, cached + recomputed on talent events only. Remaining: in-game render
+  verify (incl. mobile binding 1280x720 @ 0.65).
 
 ### S8 - DATA-items + gear compare ◐  (strongest community demand)
 v0 SHIPPED (v0.9.0): `Impact.compareItems` nets two items' per-dimension impact (reuses
@@ -136,11 +139,16 @@ would pollute number extraction), and feeds the real description text into the
 rank-rule voting. First live run over the user's 141-node capture (own tree + inspected
 org players, incl. a warlock + a mage): 8 trained-rank captures -> trained votes A=2
 B=4 none=5; untrained-r1 A=50 B=32 either=10 none=45. VERDICT: the rank rule is
-PER-TALENT on Forever (mixed evidence is real, not noise). NEXT: per-talent rank-rule
-resolution - store each talent's winning hypothesis from votes and have
-talentRankValue consult it (overrides-style table, harvest-drafted).
+PER-TALENT on Forever (mixed evidence is real, not noise).
+PER-TALENT RANK RULES SHIPPED (v0.27.0): overrides.rankRules consulted by
+talentRankValueFor through every value path (loadout folding incl. trait bridge,
+summaries, tooltip next-point); verified talents drop the (p) (green header). Harvest
+drafts the table per talent (trained votes authoritative; unanimous untrained = weak +
+"hover it trained" flag; contradictions surfaced, never averaged) ->
+collected/rank_rules_draft.lua. First run: 108 voted, 62 decided (4 trained-backed),
+1 contradicted. More inspect-scans = more trained votes.
 REMAINING: regen/swing/DoT-tick/GCD measurement during play; equip-delta observation
-(item stat ground truth); per-talent rank-rule table (above).
+(item stat ground truth); paste reviewed rankRules entries after more trained captures.
 
 ### S12 - Publishing train ◐  (repo LIVE v0.23.1; CurseForge/Wago registration remains)
 DONE: `.pkgmeta` + README + privacy ignores; CI workflows (gate / packager-on-tag /

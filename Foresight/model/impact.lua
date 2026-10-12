@@ -338,7 +338,7 @@ function Impact.talentSummary(talentId, rank)
         local entry = {
             kind = op.kind, property = op.property or op.label or op.stat or op.school,
             isPct = op.isPct, maxValue = op.maxValue,
-            value = HM.formulas.talentRankValue.fn(op.maxValue or 0, rank, talent.maxRank),
+            value = HM.formulas.talentRankValueFor(talentId, op.maxValue or 0, rank, talent.maxRank),
             rankRule = op.rankRule,
             affectedNames = {},
         }

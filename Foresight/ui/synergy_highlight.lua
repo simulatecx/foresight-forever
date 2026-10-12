@@ -33,6 +33,25 @@ function Highlight.traitMembers(query, player)
     return ids, names, r.label
 end
 
+-- Pure: the trait nodes that MODIFY an ability (skill-centric mode, S7b) - resolved
+-- through the impact map, source names matched back to tree nodes.
+function Highlight.abilityMembers(query)
+    local r = HM.Mapping and HM.Mapping.forSpell(query)
+    if not r then return nil end
+    local wanted = {}
+    for _, s in ipairs(r.sources or {}) do wanted[s.name] = true end
+    local ids, names, any = {}, {}, false
+    for nid, node in pairs((HM.gen and HM.gen.traits and HM.gen.traits.nodes) or {}) do
+        if node.name and wanted[node.name] then
+            ids[nid] = true
+            names[node.name] = true
+            any = true
+        end
+    end
+    if not any then return nil end
+    return ids, names, r.spell
+end
+
 if not _G.CreateFrame then return Highlight end -- headless: pure selector only
 
 local BRAND = { r = 0.2, g = 1, b = 0.6 }
@@ -73,18 +92,26 @@ end
 
 -- Locate the node buttons for a member set. Probe the official enumerator first;
 -- fall back to a bounded descendant scan matching frame names against node names.
-local function collectButtons(ids, names)
-    local hits = {}
+-- wantOthers: also return non-member node buttons (enumerator path only - the name
+-- scan can't tell node buttons from other frames, so dimming degrades off honestly).
+local function collectButtons(ids, names, wantOthers)
+    local hits, others = {}, {}
     local tf = talentFrame()
-    if not tf then return hits end
+    if not tf then return hits, others end
     if type(tf.EnumerateAllTalentButtons) == "function" then
         pcall(function()
             for button in tf:EnumerateAllTalentButtons() do
                 local okId, nid = pcall(function() return button:GetNodeID() end)
-                if okId and nid and ids[nid] then hits[#hits + 1] = button end
+                if okId and nid then
+                    if ids[nid] then
+                        hits[#hits + 1] = button
+                    elseif wantOthers then
+                        others[#others + 1] = button
+                    end
+                end
             end
         end)
-        if #hits > 0 then return hits end
+        if #hits > 0 then return hits, others end
     end
     local seen = 0
     local function scan(frame, depth)
@@ -97,14 +124,36 @@ local function collectButtons(ids, names)
         end
     end
     pcall(scan, tf, 1)
-    return hits
+    return hits, {}
 end
+
+local dimmed = {} -- buttons we lowered; restored on clear (visual-only, taint-free)
 
 function Highlight.clear()
     for _, o in pairs(overlays) do
         if o.pulse then o.pulse:Stop() end
         o:Hide()
     end
+    for _, b in ipairs(dimmed) do
+        pcall(b.SetAlpha, b, 1)
+    end
+    dimmed = {}
+end
+
+local function applySets(ids, names, dimOthers)
+    local buttons, others = collectButtons(ids, names, dimOthers)
+    for _, b in ipairs(buttons) do
+        local o = overlayFor(b)
+        o:Show()
+        if o.pulse then o.pulse:Play() end
+    end
+    if dimOthers then
+        for _, b in ipairs(others) do
+            pcall(b.SetAlpha, b, 0.35)
+            dimmed[#dimmed + 1] = b
+        end
+    end
+    return #buttons
 end
 
 -- Apply a theme's glow to whatever talent buttons exist right now. Returns the
@@ -113,13 +162,16 @@ function Highlight.apply(query)
     Highlight.clear()
     local ids, names, label = Highlight.traitMembers(query, Highlight.playerContext())
     if not ids then return nil end
-    local buttons = collectButtons(ids, names)
-    for _, b in ipairs(buttons) do
-        local o = overlayFor(b)
-        o:Show()
-        if o.pulse then o.pulse:Play() end
-    end
-    return #buttons, label
+    return applySets(ids, names, false), label
+end
+
+-- Skill-centric mode (S7b): the tree DIMS and the ability's modifier talents glow.
+-- Transient by design (not saved) - a look, not a mode you get stuck in.
+function Highlight.applyAbility(query)
+    Highlight.clear()
+    local ids, names, spell = Highlight.abilityMembers(query)
+    if not ids then return nil end
+    return applySets(ids, names, true), spell
 end
 
 function Highlight.playerContext()

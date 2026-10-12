@@ -79,10 +79,11 @@ local CONVERT_NODE = { -- statConvert target -> graph node it adds into
 -- graph at the given rank. The one place talent/trait effects become modifiers.
 -- snapStats (the snapshot's live stats) backs statConvert ops - "AP = N% of Intellect"
 -- folds as a flat amount off the player's current source stat.
-local function applyOps(graph, ops, rank, maxRank, source, snapStats)
-    local rankValue = HM.formulas.talentRankValue.fn
+local function applyOps(graph, ops, rank, maxRank, source, snapStats, talentId)
+    -- talentId (optional) routes through the PER-TALENT rank rule when the crowd has
+    -- verified one (overrides.rankRules); nil falls back to the global default.
     for _, op in ipairs(ops or {}) do
-        local value = rankValue(op.maxValue or 0, rank, maxRank)
+        local value = HM.formulas.talentRankValueFor(talentId, op.maxValue or 0, rank, maxRank)
         if op.kind == "statConvert" and CONVERT_NODE[op.to] then
             local srcVal = (snapStats and STAT_KEY[op.from] and snapStats[STAT_KEY[op.from]]) or 0
             graph:addModifier{ target = CONVERT_NODE[op.to], op = "flat",
@@ -152,7 +153,7 @@ local function addTalentModifiers(graph, talentId, rank, source, snapStats)
     local impacts = HM.gen and HM.gen.talentImpacts and HM.gen.talentImpacts[talentId]
     local talent = HM.gen and HM.gen.talents and HM.gen.talents[talentId]
     if not impacts or not talent then return false end
-    applyOps(graph, impacts.ops, rank, talent.maxRank, source, snapStats)
+    applyOps(graph, impacts.ops, rank, talent.maxRank, source, snapStats, talentId)
     return true
 end
 
@@ -160,7 +161,12 @@ end
 local function addTraitModifiers(graph, nodeId, rank, source, snapStats)
     local node = HM.gen and HM.gen.traits and HM.gen.traits.nodes and HM.gen.traits.nodes[nodeId]
     if not node then return false end
-    applyOps(graph, node.ops, rank, node.maxRank or 1, source, snapStats)
+    -- Bridge to the classic talent id (when one exists) so a crowd-verified per-talent
+    -- rank rule applies to the trait-node what-if path too.
+    local talentId = HM.TalentAPI and HM.TalentAPI.talentForSpell
+        and node.spellID and HM.TalentAPI.talentForSpell(node.spellID) or nil
+    applyOps(graph, node.ops, rank, node.maxRank or 1, source, snapStats,
+        tonumber(talentId))
     return true
 end
 

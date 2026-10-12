@@ -34,6 +34,14 @@ HM.overrides = {
         -- [itemId] = { name=..., buffSpellId=..., durationMs=..., type=...,
         --              ops = {...}, curatedBy = "REQ-###", note = "why" },
     },
+    -- PER-TALENT rank rules (S11, v0.27.0): which scaling hypothesis each talent's
+    -- stored value follows, resolved by captured-tooltip votes (real in-game text,
+    -- own tree + inspected players). Entries arrive ONLY from the harvest draft
+    -- (collected/rank_rules_draft.lua) after human review. Consulted by
+    -- formulas.talentRankValueFor; a listed talent drops its "(p) rank rule" mark.
+    rankRules = {
+        -- [talentId] = "maxTotal" | "perRank",
+    },
 }
 
 -- Apply overrides on top of generated data. Factored + idempotent so the selftest can

@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.26.0"
+HM.version = "0.27.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -295,14 +295,27 @@ local function onSlash(input)
             return
         end
         if rest == "" then
-            printMsg("usage: /foresight affects <ability>  (e.g. Fireball, Lightning Bolt)")
+            printMsg("usage: /foresight affects <ability> [show]  (show = dim the tree, glow its modifiers)")
             return
         end
-        local r = HM.Mapping.forSpell(rest)
+        -- Skill-centric mode: "affects <ability> show" dims the talent tree and glows
+        -- the modifiers (transient; /foresight synergy clear stops it).
+        local query = rest:match("^(.-)%s+show$") or rest
+        local r = HM.Mapping.forSpell(query)
         if r then
             printMsg(("%s is modified by %d source(s):"):format(r.spell, #r.sources))
             for _, s in ipairs(r.sources) do
                 printMsg(("  [%s] %s: %s"):format(s.kind, s.name, HM.Mapping.describeOp(s.op)))
+            end
+            if rest:match("%s+show$") and HM.SynergyHighlight
+                    and HM.SynergyHighlight.applyAbility then
+                local lit = HM.SynergyHighlight.applyAbility(query)
+                if lit and lit > 0 then
+                    printMsg(("%d modifier node(s) glowing, rest of the tree dimmed "
+                        .. "(/foresight synergy clear to stop)"):format(lit))
+                else
+                    printMsg("open the talent frame, then run this again to see the glow")
+                end
             end
         else
             -- Maybe they named a talent - show the forward direction.

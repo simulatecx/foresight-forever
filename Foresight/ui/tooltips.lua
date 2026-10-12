@@ -123,11 +123,15 @@ function Tooltips.talentLines(talentId, currentRank, loadout)
     local maxRank = summary.maxRank or 1
     local lines = {}
 
-    local presumed = F.presumedMark(F.talentRankValue) ~= ""
+    -- Per-talent honesty: a crowd-verified rank rule (overrides.rankRules) drops the
+    -- presumed mark for THIS talent and says so in green.
+    local verified = F.rankRuleMark and F.rankRuleMark(talentId) == ""
     lines[#lines + 1] = {
         kind = "double", left = "Foresight",
-        right = presumed and "(p) rank rule presumed" or nil,
-        r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
+        right = verified and "rank rule crowd-verified" or "(p) rank rule presumed",
+        r = BRAND.r, g = BRAND.g, b = BRAND.b,
+        r2 = verified and 0.29 or GREY.r, g2 = verified and 0.87 or GREY.g,
+        b2 = verified and 0.50 or GREY.b,
     }
 
     local affected = {}
@@ -147,7 +151,7 @@ function Tooltips.talentLines(talentId, currentRank, loadout)
 
     for _, op in ipairs(summary.ops) do
         if op.property and op.maxValue then
-            local valueAt = function(r) return F.talentRankValue.fn(op.maxValue, r, maxRank) end
+            local valueAt = function(r) return F.talentRankValueFor(talentId, op.maxValue, r, maxRank) end
             local text
             if maxRank <= 1 then
                 text = ("%s %s"):format(fmtValue(valueAt(1), op.isPct, op.property), op.property)

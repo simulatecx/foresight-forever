@@ -94,7 +94,10 @@ end
 -- basis is stated on the panel. Never fake absolutes.
 local OUTPUT_IDS = { spellcasting = true, meleeDps = true, rangedDps = true, healing = true }
 
-function PanelModel.matrixModel(loadout, activeLoopId)
+-- pathways (optional): a Sim.goalPathways result - the renderer computes it on talent
+-- changes only (one evaluate per open node is too heavy for every aura tick) and
+-- passes it through; the model stays pure.
+function PanelModel.matrixModel(loadout, activeLoopId, pathways)
     local results = HM.Impact.evaluate(loadout)
     local snapshot = loadout.snapshot or {}
     local stats = snapshot.stats or {}
@@ -161,6 +164,8 @@ function PanelModel.matrixModel(loadout, activeLoopId)
             basis = "bars relative to your strongest lens per group (p)",
             rows = bars,
         },
+        path = (pathways and pathways.rows and #pathways.rows > 0) and
+            { label = pathways.label, rows = pathways.rows } or nil,
         eco = eco,
         loopCount = #loops,
     }

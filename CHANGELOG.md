@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.27.0 - 2026-10-12
+
+PER-TALENT RANK RULES + SKILL-CENTRIC MODE + MATRIX PATHWAYS (the three groomed asks).
+
+- PER-TALENT RANK RULE (S11): Forever re-authored talent values talent-by-talent, so
+  the scaling hypothesis is now resolved per talent. `overrides.rankRules[talentId] =
+  "maxTotal"|"perRank"`, consulted by new `formulas.talentRankValueFor` through EVERY
+  value path (loadout op folding incl. trait-node bridging, talent summaries, tooltip
+  next-point math). A verified talent drops its "(p)" - the tooltip header turns green
+  "rank rule crowd-verified". Harvest drafts the table: per-talent vote tallies
+  (trained authoritative, unanimous untrained = weak + flagged), contradictions
+  surfaced never averaged -> `collected/rank_rules_draft.lua` (human review, never
+  auto-applied). First real run: 108 talents voted, 62 decided (4 trained-backed),
+  1 contradicted. Gate-covered end to end.
+- SKILL-CENTRIC MODE (S7b): `/foresight affects <ability> show` - the talent tree
+  DIMS and the ability's modifier nodes glow (impact map -> tree nodes; enumerator
+  path dims, name-scan fallback glows only - honest degrade; alphas restored on
+  clear/close). Transient by design.
+- MATRIX PATHWAYS: the Matrix panel now shows "Best next points - <your goal>" - the
+  top 4 unspent talent steps ranked by marginal goal impact. Computed only on talent
+  changes (cached; one evaluate per open node is too heavy for aura ticks).
+- Selftest 177 (+7). Pipeline selfcheck extended (per-talent verdict + draft render).
+
+*Features:* QA-probe, QA-harvester, DATA-overrides, MODEL-loadout-whatif,
+UI-talent-tooltip, SYNERGY-highlight, UI-matrix-panel, QA-selftest-harness
+
 ## 0.26.0 - 2026-10-12
 
 THE FORESIGHT MATRIX (S7b renderer): the class-ecology dashboard from the user's

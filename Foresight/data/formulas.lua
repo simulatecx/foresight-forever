@@ -96,6 +96,29 @@ F.talentRankValue = {
     end,
 }
 
+-- PER-TALENT rank rule (S11): captured-tooltip votes proved Forever re-authored
+-- values talent by talent (trained votes split A=2/B=4 on 2026-10-12) - so the rule
+-- is resolved per talent. overrides.rankRules[talentId] = "maxTotal" (stored value is
+-- the max-rank total; rank N shows value*N/maxRank) | "perRank" (value*N). Entries
+-- arrive ONLY from the harvest draft (collected/rank_rules_draft.lua) after human
+-- review. Absent -> the global default above, still tagged (p).
+function F.talentRankValueFor(talentId, maxValue, rank, maxRank)
+    local rules = HM.overrides and HM.overrides.rankRules
+    local rule = talentId and rules and rules[talentId]
+    if rule == "perRank" then
+        return (maxValue or 0) * (rank or 0)
+    end
+    return F.talentRankValue.fn(maxValue or 0, rank or 0, maxRank or 1)
+end
+
+-- The honesty mark for a specific talent's rank scaling: crowd-verified talents drop
+-- the (p); everything else keeps the global presumed mark.
+function F.rankRuleMark(talentId)
+    local rules = HM.overrides and HM.overrides.rankRules
+    if talentId and rules and rules[talentId] then return "" end
+    return F.presumedMark(F.talentRankValue)
+end
+
 -- Threat model (GRAPH-threat). v0 is own-state only: a 100% baseline modified by the
 -- character's own talent threat % effects (mapped from SPELL_AURA_MOD_THREAT in client
 -- data). Stance/form multipliers (Defensive Stance, Bear, Righteous Fury) and per-ability

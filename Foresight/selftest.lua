@@ -811,6 +811,56 @@ function HM.runSelftest(out)
         local m = HM.PanelModel.matrixModel(base, "tampered-loop-id")
         return m.eco ~= nil and m.eco.id == "shatter"
     end)())
+    check("matrix carries pathway rows when provided", (function()
+        local candidates = {
+            { label = "Int step 1/5", what = base:withStatDelta("intellect", 10, "+10 int") },
+        }
+        local path = HM.Sim.goalPathways(base, "spellcasting", candidates)
+        local m = HM.PanelModel.matrixModel(base, nil, path)
+        return m.path ~= nil and #m.path.rows == 1
+            and m.path.rows[1].label == "Int step 1/5"
+            and m.path.label == "Spellcasting"
+    end)())
+
+    -- Per-talent rank rules (S11): captured votes resolve each talent's scaling.
+    check("per-talent rank rule defaults to the global hypothesis", (function()
+        return approx(HM.formulas.talentRankValueFor(26, -500, 2, 5), -200)
+            and approx(HM.formulas.talentRankValueFor(nil, -500, 2, 5), -200)
+    end)())
+    check("a crowd-verified perRank rule flips the scaling for that talent only", (function()
+        HM.overrides.rankRules[26] = "perRank"
+        local flipped = HM.formulas.talentRankValueFor(26, -500, 2, 5)
+        local other = HM.formulas.talentRankValueFor(27, -500, 2, 5)
+        HM.overrides.rankRules[26] = nil
+        return approx(flipped, -1000) and approx(other, -200)
+    end)())
+    check("rank-rule mark drops the (p) only for verified talents", (function()
+        HM.overrides.rankRules[26] = "maxTotal"
+        local verified = HM.formulas.rankRuleMark(26)
+        local presumed = HM.formulas.rankRuleMark(27)
+        HM.overrides.rankRules[26] = nil
+        return verified == "" and presumed == " (p)"
+    end)())
+    check("talent tooltip header goes green for a verified rank rule", (function()
+        HM.overrides.rankRules[26] = "maxTotal"
+        local lines = HM.Tooltips.talentLines(26, 1, base)
+        HM.overrides.rankRules[26] = nil
+        return lines ~= nil
+            and (lines[1].right or ""):find("crowd%-verified") ~= nil
+    end)())
+
+    -- Skill-centric mode (S7b): dim the tree, glow an ability's modifiers.
+    check("ability members resolve tree nodes for a modified spell", (function()
+        local ids, names, spell = HM.SynergyHighlight.abilityMembers("Fireball")
+        if not ids then return false end
+        local count = 0
+        for _ in pairs(ids) do count = count + 1 end
+        return count > 0 and names["Improved Fireball"] == true
+            and spell == "Fireball"
+    end)())
+    check("ability members return nil for unknown abilities (no false glow)", (function()
+        return HM.SynergyHighlight.abilityMembers("Totally Fake Spell") == nil
+    end)())
 
     -- WHATIF-planner: persistent future-build plan over the one delta stack.
     check("plan validates typed deltas and drops garbage", (function()

@@ -149,7 +149,19 @@ def analyze_selfcheck() -> bool:
             or "F6" in t[0]["tooltip"]:
         return False
     tip_analysis = analyze_rank_rule(tip_probe, gen)
-    return tip_analysis["votes"]["B"] == 1 and tip_analysis["votes"]["none"] == 0
+    if not (tip_analysis["votes"]["B"] == 1 and tip_analysis["votes"]["none"] == 0):
+        return False
+    # Per-talent rank-rule path: the tally must land on Concussion's id, decide
+    # "perRank" from the trained vote, and render into the review draft.
+    by_talent = tip_analysis["byTalent"]
+    tid = next(iter(by_talent))
+    if by_talent[tid]["trained"]["B"] != 1:
+        return False
+    rule, basis = decide_rank_rule(by_talent[tid])
+    if rule != "perRank" or "trained" not in basis:
+        return False
+    draft = render_rank_rules_draft(by_talent, "testbuild", 1)
+    return f'[{tid}] = "perRank"' in draft and "Concussion" in draft
 
 
 def load_generated() -> dict:
@@ -223,6 +235,7 @@ def analyze_rank_rule(probe: dict, gen: dict) -> dict:
 
     votes = {"A": 0, "B": 0, "either": 0, "none": 0}
     untrained = {"A": 0, "B": 0, "either": 0, "none": 0}
+    by_talent: dict = {}
     details = []
     for entry in probe.get("talents", []):
         rank = entry.get("rank") or 0
@@ -232,9 +245,16 @@ def analyze_rank_rule(probe: dict, gen: dict) -> dict:
         tid, talent = match
         impacts = (gen.get("talentImpacts") or {}).get(tid) or {}
         tooltip_nums = {float(n) for n in NUM_RE.findall(entry.get("tooltip", ""))}
-        box = votes if rank > 0 else untrained
-        eff_rank = rank if rank > 0 else 1
-        tag = "" if rank > 0 else " (untrained r1 text)"
+        trained = rank > 0
+        box = votes if trained else untrained
+        slot = by_talent.setdefault(str(tid), {
+            "name": entry["name"],
+            "trained": {"A": 0, "B": 0, "either": 0, "none": 0},
+            "untrained": {"A": 0, "B": 0, "either": 0, "none": 0},
+        })
+        tbox = slot["trained"] if trained else slot["untrained"]
+        eff_rank = rank if trained else 1
+        tag = "" if trained else " (untrained r1 text)"
         for op in impacts.get("ops", []):
             v = abs(op.get("maxValue") or 0)
             if v == 0 or not tooltip_nums:
@@ -246,20 +266,126 @@ def analyze_rank_rule(probe: dict, gen: dict) -> dict:
             hit_b = bool(pred_b & tooltip_nums)
             if hit_a and hit_b:
                 box["either"] += 1
+                tbox["either"] += 1
             elif hit_a:
                 box["A"] += 1
+                tbox["A"] += 1
                 details.append(f"A: {entry['name']} r{eff_rank}/{max_rank} v={v}{tag}")
             elif hit_b:
                 box["B"] += 1
+                tbox["B"] += 1
                 details.append(f"B: {entry['name']} r{eff_rank}/{max_rank} v={v}{tag}")
             else:
                 box["none"] += 1
-    return {"votes": votes, "untrained_votes": untrained, "details": details}
+                tbox["none"] += 1
+    return {"votes": votes, "untrained_votes": untrained, "details": details,
+            "byTalent": by_talent}
 
 
 def _idkey(k) -> str:
     """Normalize a Lua-sourced id key ('12175', 12175, 12175.0) to one string form."""
     return str(int(float(k)))
+
+
+def merge_by_talent(target: dict, add: dict) -> dict:
+    """Accumulate per-talent vote tallies across probes/accounts."""
+    for tid, slot in (add or {}).items():
+        t = target.setdefault(tid, {
+            "name": slot.get("name"),
+            "trained": {"A": 0, "B": 0, "either": 0, "none": 0},
+            "untrained": {"A": 0, "B": 0, "either": 0, "none": 0},
+        })
+        for box in ("trained", "untrained"):
+            for k in ("A", "B", "either", "none"):
+                t[box][k] += (slot.get(box) or {}).get(k, 0)
+    return target
+
+
+RULE_NAME = {"A": "maxTotal", "B": "perRank"}
+
+
+def decide_rank_rule(slot: dict):
+    """One talent's verdict from its tallies: (rule, basis) or (None, reason).
+    Trained votes are authoritative; untrained r1 text decides only when unanimous
+    and is tagged as the weaker basis. Contradictions are surfaced, never averaged."""
+    tr, un = slot["trained"], slot["untrained"]
+    if tr["A"] > 0 and tr["B"] > 0:
+        return None, "contradicted (trained votes split)"
+    if tr["A"] > 0 or tr["B"] > 0:
+        side = "A" if tr["A"] > 0 else "B"
+        return RULE_NAME[side], f"trained A={tr['A']} B={tr['B']}"
+    if (un["A"] > 0) != (un["B"] > 0):
+        side = "A" if un["A"] > 0 else "B"
+        return RULE_NAME[side], f"untrained r1 text only (A={un['A']} B={un['B']})"
+    if un["A"] > 0 and un["B"] > 0:
+        return None, "contradicted (untrained votes split)"
+    return None, "no discriminating votes"
+
+
+def render_rank_rules_draft(by_talent: dict, build: str, accounts: int) -> str:
+    """Human-review draft for overrides.rankRules - fully commented-out Lua. The
+    review law is stated in the file; nothing is ever auto-applied."""
+    lines = [
+        f"-- DRAFT per-talent rank rules from captured tooltips (build {build}, "
+        f"{accounts} account(s)).",
+        "-- NEVER auto-applied. Human review (prefer more trained captures) before any",
+        "-- line moves into overrides.rankRules in Foresight/data/overrides.lua.",
+        '-- "maxTotal": stored value is the max-rank total (rank N = value*N/maxRank).',
+        '-- "perRank":  stored value is per rank (rank N = value*N).',
+        "",
+        "-- decided:",
+    ]
+    undecided = []
+    for tid, slot in sorted(by_talent.items(), key=lambda kv: int(kv[0])):
+        rule, basis = decide_rank_rule(slot)
+        if rule:
+            weak = "untrained" in basis
+            lines.append(f"--   [{tid}] = \"{rule}\", -- {slot['name']} ({basis})"
+                         + ("  -- WEAK: hover it trained to confirm" if weak else ""))
+        elif "contradicted" in (basis or ""):
+            undecided.append(f"--   {slot['name']} (id {tid}): {basis} - "
+                             f"trained {slot['trained']} untrained {slot['untrained']}")
+    lines.append("")
+    lines.append("-- contradicted (needs more trained captures before any call):")
+    lines.extend(undecided or ["--   (none)"])
+    return "\n".join(lines) + "\n"
+
+
+def aggregate_rank_rules(gen) -> None:
+    """Merge per-talent rank-rule votes across archived harvests (newest per account,
+    captured tooltips + the legacy probe) and write collected/rank_rules_draft.lua."""
+    newest = {}
+    for f in sorted(COLLECTED.glob("harvest-*.json")):
+        newest[f.name.rsplit("-", 2)[0]] = f
+    merged: dict = {}
+    accounts = 0
+    for account, f in newest.items():
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        collect = data.get("collect") or {}
+        contributed = False
+        for probe in (probe_from_tooltips(collect.get("talentTooltips") or {}),
+                      collect.get("talentProbe") or {}):
+            if probe.get("talents"):
+                merge_by_talent(merged, analyze_rank_rule(probe, gen)["byTalent"])
+                contributed = True
+        if contributed:
+            accounts += 1
+    if not merged:
+        return
+    build = str(gen.get("build") or "?")
+    draft = render_rank_rules_draft(merged, build, accounts)
+    (COLLECTED / "rank_rules_draft.lua").write_text(draft, encoding="utf-8")
+    verdicts = [decide_rank_rule(s) for s in merged.values()]
+    decided = sum(1 for rule, _ in verdicts if rule)
+    trained_backed = sum(1 for rule, basis in verdicts
+                         if rule and "untrained" not in basis)
+    contradicted = sum(1 for _, basis in verdicts if "contradicted" in (basis or ""))
+    print(f"\nper-talent rank rules: {decided} decided ({trained_backed} trained-backed), "
+          f"{contradicted} contradicted, {len(merged)} voted total -> "
+          f"rank_rules_draft.lua (human review)")
 
 
 # S11 observed-vs-generated: op kind -> snapshot field with a predicted flat value.
@@ -584,6 +710,7 @@ def main() -> int:
 
     aggregate_sightings(gen)
     aggregate_observed(gen)
+    aggregate_rank_rules(gen)
     return exit_code
 
 
