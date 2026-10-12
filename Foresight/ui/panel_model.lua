@@ -67,7 +67,11 @@ function PanelModel.playstyleLabel(results, snapshot)
         elseif off > sta * 1.15 then lean = " - offense-focused"
         else lean = " - balanced" end
     end
-    return ("%s-leaning%s (v0 heuristic)"):format(arch.word, lean)
+    -- SIM-engine standing: the plain-English name leads, the lean detail follows.
+    local standing = HM.Sim and HM.Sim.standing(results, stats)
+    local prefix = (standing and standing.name and standing.name ~= "Unmeasured")
+        and (standing.name .. " | ") or ""
+    return ("%s%s-leaning%s (v0 heuristic)"):format(prefix, arch.word, lean)
 end
 
 -- Build the full panel model for a loadout.

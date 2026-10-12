@@ -650,6 +650,133 @@ function HM.runSelftest(out)
             and text:find("slower weapon = bigger hits", 1, true) ~= nil
     end)())
 
+    -- SIM-engine (S18): Tier-2 simulation - normalization, proc engines, resource
+    -- economy, standings, pathways, and the curated class loops.
+    check("weapon normalization constants + AP math", (function()
+        local F = HM.formulas.weaponNormalization
+        return F.constants.dagger == 1.7 and F.constants.twoHand == 3.3
+            and approx(F.fn(700, "twoHand"), 700 / 14 * 3.3)
+    end)())
+    check("flurry uptime steady-state math", (function()
+        local u = HM.formulas.flurryUptime.fn(30, 3)
+        return approx(u, 1 - 0.7 ^ 3, 1e-9)
+    end)())
+    check("generated crit-haste decode (Flurry +10% for 3 swings)", (function()
+        local sh = gen and gen.critHaste and gen.critHaste[16256]
+        return sh ~= nil and sh.hastePct == 10 and sh.swings == 3
+    end)())
+    check("generated Windfury decode (20%, 2 extra attacks, rank AP)", (function()
+        local wf = gen and gen.imbues and gen.imbues[8232]
+        return wf ~= nil and wf.chance == 20 and wf.extraAttacks ~= nil
+            and wf.extraAttacks.count == 2 and wf.extraAttacks.bonusAp == 46
+    end)())
+    check("windfury burst EV scales with the slow weapon", (function()
+        local snap = { weaponSpeed = 3.8, weaponDamageMin = 80, weaponDamageMax = 120 }
+        local wf = HM.Sim.windfuryBurst(snap, gen.imbues[16362]) -- rank 4: +333 AP
+        local per = 100 + 333 / 14 * 3.8
+        return wf ~= nil and approx(wf.burst, 2 * per, 0.01)
+            and approx(wf.evPerSwing, 0.4 * per, 0.01)
+    end)())
+    check("imbue compare folds the Windfury expected value", (function()
+        local snap = { weaponSpeed = 3.8, weaponDamageMin = 80, weaponDamageMax = 120 }
+        local rows = HM.Imbues.compare(snap, { 16362 })
+        local r = rows and rows[1]
+        return r ~= nil and r.perSwing > 0
+            and (r.notes[1] or ""):find("extra attacks", 1, true) ~= nil
+    end)())
+    check("melee cascade chains crit -> Flurry -> Windfury honestly", (function()
+        local snap = testSnapshot()
+        snap.weaponSpeed, snap.weaponDamageMin, snap.weaponDamageMax = 3.8, 80, 120
+        snap.stats.meleeCritPct = 20
+        local c = HM.Sim.meleeCascade(HM.Loadout.fromSnapshot(snap), {
+            flurry = { name = "Flurry", hastePct = 10, swings = 3 },
+            imbue = gen.imbues[16362],
+        })
+        local text = table.concat(c.steps, "\n")
+        return c.dps > 0 and c.effSpeed < 3.8
+            and text:find("uptime", 1, true) ~= nil
+            and text:find("extra attacks", 1, true) ~= nil
+            and text:find("(p)", 1, true) ~= nil
+    end)())
+    check("time-to-OOM: chain-cast math + five-second-rule honesty", (function()
+        local oom = HM.Sim.timeToOOM(base,
+            { name = "Test", cost = 100, castMs = 2000, powerType = 0 })
+        return oom ~= nil and oom.casts == 30 and approx(oom.seconds, 60)
+            and (oom.notes[1] or ""):find("five%-second rule") ~= nil
+    end)())
+    check("time-to-OOM resolves a real spell by name", (function()
+        local sid = HM.Sim.resolveSpellByName("Frostbolt")
+        local oom = sid and HM.Sim.timeToOOM(base, sid)
+        return oom ~= nil and oom.casts == math.floor(3050 / oom.cost)
+    end)())
+    check("non-mana spells honestly decline the OOM model", (function()
+        return HM.Sim.timeToOOM(base, { cost = 10, powerType = 1 }) == nil
+    end)())
+    check("spell tooltip carries the chain-cast OOM line", (function()
+        local sid = HM.Sim.resolveSpellByName("Frostbolt")
+        local text = linesText(HM.Tooltips.spellLines(sid, base))
+        return text:find("Chain%-cast") ~= nil
+    end)())
+    check("standing: offense caster reads Glass Cannon", (function()
+        local st = HM.Sim.standing(HM.Impact.evaluate(base), base.snapshot.stats)
+        return st.name == "Glass Cannon" and st.lean == "offense"
+    end)())
+    check("standing flips to Endurance on a Stamina frame", (function()
+        local snap = testSnapshot()
+        snap.stats.stamina = 300
+        local lo = HM.Loadout.fromSnapshot(snap)
+        local st = HM.Sim.standing(HM.Impact.evaluate(lo), snap.stats)
+        return st.name == "Endurance Caster" and st.lean == "survival"
+    end)())
+    check("standing shift detected on a frame-changing swap", (function()
+        local shift = HM.Sim.standingShift(base, { Stamina = 200 }, { Intellect = 100 })
+        return shift ~= nil and shift.from == "Glass Cannon" and shift.to ~= shift.from
+    end)())
+    check("item tooltip flags the build shift", (function()
+        local lines = HM.Tooltips.itemLines({ Stamina = 200 }, base, { Intellect = 100 })
+        for _, L in ipairs(lines or {}) do
+            if (L.text or ""):find("Shifts your build", 1, true) then return true end
+        end
+        return false
+    end)())
+    check("windfury weapon line: slower hover = bigger proc burst", (function()
+        local snap = { weaponSpeed = 1.8, weaponDamageMin = 10, weaponDamageMax = 20 }
+        local line = HM.Tooltips.windfuryWeaponLine(snap, gen.imbues[16362], 3.8)
+        -- AP-term delta = 333/14 * (3.8 - 1.8) * 2 attacks = ~95
+        return line ~= nil and line:find("adds ~%+95") ~= nil
+    end)())
+    check("goal pathways rank the right talent first and drop noise", (function()
+        local candidates = {
+            { label = "Int step", what = base:withStatDelta("intellect", 10, "+10 int") },
+            { label = "Str step", what = base:withStatDelta("strength", 10, "+10 str") },
+        }
+        local path = HM.Sim.goalPathways(base, "spellcasting", candidates)
+        return path ~= nil and path.rows[1] ~= nil
+            and path.rows[1].label == "Int step"
+            and (path.rows[2] == nil or path.rows[1].pct >= path.rows[2].pct)
+    end)())
+    check("class loops: every named member resolves in shipped data", (function()
+        local bad = HM.validateLoops()
+        return type(bad) == "table" and #bad == 0
+    end)(), table.concat(HM.validateLoops(), "; "))
+    check("shatter loop computes the frozen-crit answer honestly", (function()
+        local l = HM.loopById("shatter")
+        local text = table.concat(l and l.compute(base) or {}, "\n")
+        return text:find("55.0%", 1, true) ~= nil
+            and text:find("(p)", 1, true) ~= nil
+            and text:find("not in the shipped data", 1, true) ~= nil
+    end)())
+    check("windfury loop cascade runs headless (engines resolve from data)", (function()
+        local l = HM.loopById("windfury")
+        local lines = l and l.compute(base)
+        return lines ~= nil and #lines >= 2
+            and (lines[#lines] or ""):find("first%-order") ~= nil
+    end)())
+    check("playstyle label leads with the standing", (function()
+        local label = HM.PanelModel.playstyleLabel(HM.Impact.evaluate(base), base.snapshot)
+        return label:find("Glass Cannon | ", 1, true) ~= nil
+    end)())
+
     -- WHATIF-planner: persistent future-build plan over the one delta stack.
     check("plan validates typed deltas and drops garbage", (function()
         local clean, dropped = HM.Plan.validate({

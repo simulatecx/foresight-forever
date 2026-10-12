@@ -329,9 +329,33 @@ local INVSLOT = {
     INVTYPE_RANGEDRIGHT = { 18 }, INVTYPE_THROWN = { 18 }, INVTYPE_RELIC = { 18 },
 }
 
+-- SIM-engine "Pro highlight": hovering a WEAPON while a Windfury-style imbue is
+-- known - slower weapons raise the proc's bonus-AP term. Honest scope: compares the
+-- AP term only (the hovered weapon's base damage isn't in the offline data; the
+-- label says "AP term" so no larger claim is made).
+function Tooltips.windfuryWeaponLine(snapshot, imbueEntry, hoverSpeedSec)
+    if not (snapshot and imbueEntry and imbueEntry.extraAttacks and hoverSpeedSec) then
+        return nil
+    end
+    local cur = snapshot.weaponSpeed or 2.0
+    if math.abs(hoverSpeedSec - cur) < 0.05 then return nil end
+    local x = imbueEntry.extraAttacks
+    local per = (x.bonusAp or 0) / 14 * (hoverSpeedSec - cur) * (x.count or 1)
+    if per >= 0.5 then
+        return ("Windfury engine: at %.1fs this weapon adds ~+%.0f to each proc burst vs your %.1fs weapon (AP term) (p)")
+            :format(hoverSpeedSec, per, cur)
+    elseif per <= -0.5 then
+        return ("Windfury engine: at %.1fs this weapon gives up ~%.0f per proc burst vs your %.1fs weapon (AP term) (p)")
+            :format(hoverSpeedSec, -per, cur)
+    end
+    return nil
+end
+
 -- Build the injected block for an item's mapped stats. Returns line list or nil.
 -- comparedStats (optional): the equipped item's mapped stats, for a "vs equipped" block.
-function Tooltips.itemLines(mapped, loadout, comparedStats)
+-- ctx (optional): { itemId, speedMs, wfImbue } - offline weapon context for the
+-- Windfury-engine synergy line.
+function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
     if not loadout then return nil end
     local parts, any = {}, false
     for _, k in ipairs(STAT_ORDER) do
@@ -364,6 +388,29 @@ function Tooltips.itemLines(mapped, loadout, comparedStats)
                 verdict.compared and "" or " |cff9d9d9d(added)|r"),
             r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
         }
+    end
+    -- Archetype shift (SIM-engine): when the swap changes the plain-English standing
+    -- of the whole build, say so prominently - that is a bigger call than +x%.
+    if HM.Sim then
+        local oks, shift = pcall(HM.Sim.standingShift, loadout, mapped, comparedStats)
+        if oks and shift then
+            lines[#lines + 1] = {
+                text = ("|cfffbbf24Shifts your build:|r %s -> %s (p)")
+                    :format(shift.from, shift.to),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
+    end
+    -- Windfury-engine weapon synergy (SIM-engine): offline speed from the gear DB.
+    if ctx and ctx.speedMs and ctx.wfImbue then
+        local wline = Tooltips.windfuryWeaponLine(loadout.snapshot, ctx.wfImbue,
+            ctx.speedMs / 1000)
+        if wline then
+            lines[#lines + 1] = {
+                text = "|cff4ade80" .. wline .. "|r",
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
     end
     lines[#lines + 1] = {
         text = "|cff9d9d9dThis item:|r " .. table.concat(parts, ", "),
@@ -529,6 +576,16 @@ function Tooltips.spellLines(spellId, loadout)
         text = ("(%.0f%% coefficient at a %.1fs cast)"):format(coef * 100, castSec),
         r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
     }
+    -- Resource economy (SIM-engine): what chain-casting this does to your mana pool.
+    local okO, oom
+    if HM.Sim then okO, oom = pcall(HM.Sim.timeToOOM, loadout, spellId) end
+    if okO and oom then
+        lines[#lines + 1] = {
+            text = ("Chain-cast: ~%d casts, empty mana in ~%ds (p)")
+                :format(oom.casts, oom.seconds),
+            r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+        }
+    end
     return lines
 end
 
@@ -655,6 +712,16 @@ local function journalConsumableTip(itemId, link, injected)
         at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?" }
 end
 
+-- The Windfury-style imbue the player knows, cached per session (IsPlayerSpell over
+-- the imbue table is too heavy per hover; new ranks land on the next /reload).
+local wfKnownCache
+local function knownWindfury()
+    if wfKnownCache ~= nil then return wfKnownCache or nil end
+    local known = HM.Imbues and HM.Imbues.known() or {}
+    wfKnownCache = (HM.Sim and HM.Sim.windfuryFor(known)) or false
+    return wfKnownCache or nil
+end
+
 local function injectItem(tip)
     if tip.foresightInjected then return end
     if type(tip.GetItem) ~= "function" then return end
@@ -667,8 +734,13 @@ local function injectItem(tip)
     local compared
     local okc, c = pcall(equippedCompareStats, link)
     if okc then compared = c end
-    local lines = Tooltips.itemLines(mapped, loadout, compared)
     local itemId = tonumber(type(link) == "string" and link:match("item:(%d+)") or nil)
+    local ctx
+    local genItem = itemId and HM.gen and HM.gen.items and HM.gen.items[itemId]
+    if genItem and genItem.speedMs then
+        ctx = { itemId = itemId, speedMs = genItem.speedMs, wfImbue = knownWindfury() }
+    end
+    local lines = Tooltips.itemLines(mapped, loadout, compared, ctx)
     if not lines then
         -- No gear stats: consumables carry their impact as a generated buff block.
         if itemId then

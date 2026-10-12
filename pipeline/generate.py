@@ -729,6 +729,12 @@ def main() -> int:
             "quality": QUALITY.get(quality, "?"),
             "stats": stat_types,
         }
+        # Weapon swing speed (SIM-engine): proc engines (Windfury burst, poison
+        # application) scale with it, so gear hover can say "slower = bigger procs"
+        # with a real number. Weapons only (ClassID 2) - armor has no delay.
+        delay = to_int(r.get("ItemDelay", "") or 0)
+        if cls and cls[0] == 2 and delay > 0:
+            items_out[iid]["speedMs"] = delay
 
     # ---- Weapon imbues (IMBUE-compare: temp weapon enchants from player spells) --
     # Chain: player spell -> SpellEffect (Effect 53/54/360, misc0 = enchantment id)
@@ -804,10 +810,56 @@ def main() -> int:
                         "per100Speed": bp, "basisSpellID": basis,
                         "school": school_label(to_int(bm["SchoolMask"])) if bm else "Fire",
                     }
+            # Windfury-style extra-attack payload (SIM-engine): the tooltip macro names
+            # the basis spell ("$8233s2 extra attacks with $8233s1 extra melee attack
+            # power") - s1 = bonus AP (aura 99), s2 = attack count (effect 19). Ground-
+            # truthed on this build: r1-r4 = +46/119/249/333 AP, always 2 attacks, the
+            # on-hit chance rides the enchant (entry["chance"]).
+            xa_ref = re.search(r"\$(\d+)s2 extra \$lattack", spell_desc.get(sid) or "")
+            if xa_ref:
+                basis = to_int(xa_ref.group(1))
+                bonus_ap, count = 0.0, 0.0
+                for pe in effects_by_spell.get(basis, []):
+                    bp = float(pe["EffectBasePointsF"] or 0)
+                    if to_int(pe["Effect"]) == 6 and to_int(pe["EffectAura"]) == 99:
+                        bonus_ap = bp
+                    elif to_int(pe["Effect"]) == 19:
+                        count = bp
+                if count:
+                    entry["extraAttacks"] = {"count": count, "bonusAp": bonus_ap,
+                                             "basisSpellID": basis}
             if entry.get("ops") or entry.get("procs") or entry.get("speedDamage") \
                     or entry.get("chance") or entry.get("flatDamage"):
                 imbues_out[sid] = entry
             break  # one enchant effect per imbue spell
+
+    # ---- Crit-triggered haste engines (SIM-engine: the Flurry family) ------------
+    # The talent spell's own effect is a dummy; the real payload is the triggered buff
+    # the tooltip macro names ("for your next $16257n swings"): aura 319 (melee haste)
+    # bp on that buff + its ProcCharges = the swing count. Per-rank scaling is
+    # UNRESOLVED on this build (the talent dummy carries bp=1 at maxRank 5) - the
+    # decoded value is the rank-1 buff's, tagged unverified; the talent-tooltip
+    # capture upgrades or corrects it.
+    aura_opts = {to_int(r["SpellID"]): r for r in read_csv(cache, "SpellAuraOptions")
+                 if to_int(r["DifficultyID"]) == 0}
+    crit_haste = {}
+    for sid, desc in spell_desc.items():
+        m = re.search(r"attack speed by \$m1% for your next \$(\d+)n swings", desc or "")
+        if not m:
+            continue
+        buff = to_int(m.group(1))
+        haste = 0.0
+        for pe in effects_by_spell.get(buff, []):
+            if to_int(pe["Effect"]) == 6 and to_int(pe["EffectAura"]) == 319:
+                haste = float(pe["EffectBasePointsF"] or 0)
+        opts_row = aura_opts.get(buff)
+        charges = to_int(opts_row["ProcCharges"]) if opts_row else 0
+        if haste and charges:
+            crit_haste[sid] = {
+                "name": spell_names.get(sid, f"spell:{sid}"),
+                "hastePct": haste, "swings": charges, "buffSpellID": buff,
+                "confidence": "forever-new-unverified",
+            }
 
     # ---- Emit ------------------------------------------------------------------
     stamp = dt.date.today().isoformat()
@@ -829,6 +881,7 @@ def main() -> int:
                 "consumables": len(consumables_out),
                 "imbues": len(imbues_out),
                 "items": len(items_out),
+                "critHasteProcs": len(crit_haste),
             },
             "classNames": CLASS_NAMES,
         }, out_dir, args.build),
@@ -844,6 +897,7 @@ def main() -> int:
                                        "buffsBySpell": buffs_by_spell}, out_dir, args.build),
         LuaWriter.file("weapon_imbues", {"imbues": imbues_out}, out_dir, args.build),
         LuaWriter.file("items", {"items": items_out}, out_dir, args.build),
+        LuaWriter.file("sim_procs", {"critHaste": crit_haste}, out_dir, args.build),
     ]
     for path in written:
         print(f"wrote {path.relative_to(root.parent)} ({path.stat().st_size:,} bytes)")

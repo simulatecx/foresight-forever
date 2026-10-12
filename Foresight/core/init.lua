@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.24.0"
+HM.version = "0.25.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -497,6 +497,113 @@ local function onSlash(input)
         else
             printMsg("stats panel is in-game only")
         end
+    elseif cmd == "sim" then
+        -- SIM-engine: the crit -> Flurry -> swing speed -> Windfury cascade on YOUR
+        -- numbers, plus your build standing. Out-of-combat command, display-only.
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not snapshot then
+            printMsg("no character snapshot available")
+            return
+        end
+        local loadout = HM.Loadout.fromSnapshot(snapshot)
+        local sel = HM.TalentAPI.walkTraits and HM.TalentAPI.walkTraits(true)
+        local known = HM.Imbues and HM.Imbues.known() or {}
+        local cascade = HM.Sim.meleeCascade(loadout, {
+            flurry = HM.Sim.flurryFor(sel),
+            imbue = HM.Sim.windfuryFor(known),
+        })
+        local standing = HM.Sim.standing(HM.Impact.evaluate(loadout), snapshot.stats)
+        printMsg(("melee simulation - %s (%s):"):format(standing.name, standing.detail))
+        for _, s in ipairs(cascade.steps) do printMsg("  " .. s) end
+    elseif cmd == "oom" then
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not snapshot then
+            printMsg("no character snapshot available")
+            return
+        end
+        if rest == "" then
+            printMsg("usage: /foresight oom <spell name> - the chain-cast mana answer")
+            return
+        end
+        local loadout = HM.Loadout.fromSnapshot(snapshot)
+        local sid = HM.Sim.resolveSpellByName(rest)
+        local oom = sid and HM.Sim.timeToOOM(loadout, sid)
+        if not oom then
+            printMsg(("no mana-costing spell named '%s' in the data"):format(rest))
+            return
+        end
+        printMsg(("%s: %d mana per %.1fs cast = %.0f mana/s drain"):format(
+            oom.name, oom.cost, oom.castSec, oom.drainPerSec))
+        printMsg(("  chain-casting empties your pool in ~%ds (~%d casts)"):format(
+            oom.seconds, oom.casts))
+        for _, n in ipairs(oom.notes) do printMsg("  " .. n) end
+    elseif cmd == "path" then
+        -- Goal pathways: rank your UNSPENT talent steps by what they do for a
+        -- dimension (default: your gearing goal / primary output).
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not snapshot then
+            printMsg("no character snapshot available")
+            return
+        end
+        local loadout = HM.Loadout.fromSnapshot(snapshot)
+        local dimId = rest ~= "" and rest or (HM.gearGoal and HM.gearGoal() or "auto")
+        if dimId == "auto" then dimId = HM.Impact.primaryDimension(loadout) end
+        local walk = HM.TalentAPI.walkTraits and HM.TalentAPI.walkTraits(false)
+        if not walk or #walk == 0 then
+            printMsg("talent tree unavailable - open the talent frame once, then retry")
+            return
+        end
+        local candidates = {}
+        for _, n in ipairs(walk) do
+            if (n.rank or 0) < (n.maxRank or 1) and n.nodeID then
+                candidates[#candidates + 1] = {
+                    label = ("%s %d/%d"):format(n.name or ("node " .. n.nodeID),
+                        (n.rank or 0) + 1, n.maxRank or 1),
+                    what = loadout:withTraitNode(n.nodeID, (n.rank or 0) + 1),
+                }
+            end
+        end
+        local path, err = HM.Sim.goalPathways(loadout, dimId, candidates)
+        if not path then
+            printMsg("pathways: " .. (err or "unavailable"))
+            return
+        end
+        printMsg(("best next talent points for %s (%d candidates considered):"):format(
+            path.label, path.considered))
+        if #path.rows == 0 then
+            printMsg("  none of your open talent steps move this dimension in the data")
+        end
+        for i, r in ipairs(path.rows) do
+            printMsg(("  %d. %s  %+.1f%%"):format(i, r.label, r.pct))
+        end
+    elseif cmd == "loop" or cmd == "loops" then
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        local classToken = snapshot and snapshot.classToken
+        if rest == "" then
+            local avail = HM.loopsForClass(classToken)
+            if #avail == 0 then avail = HM.loops end
+            printMsg("class loops - /foresight loop <id>:")
+            for _, l in ipairs(avail) do
+                printMsg(("  %s - %s (%s)"):format(l.id, l.name, l.classToken))
+            end
+            return
+        end
+        local l = HM.loopById(rest)
+        if not l then
+            printMsg("no loop named '" .. rest .. "'")
+            return
+        end
+        printMsg(("%s (%s, %s):"):format(l.name, l.classToken, l.confidence))
+        printMsg("  enablers: " .. table.concat(l.enablers, ", "))
+        printMsg("  engine:   " .. table.concat(l.engine, ", "))
+        printMsg("  payoffs:  " .. table.concat(l.payoffs, ", "))
+        printMsg("  " .. l.insight)
+        if snapshot and l.compute then
+            local okc, computed = pcall(l.compute, HM.Loadout.fromSnapshot(snapshot))
+            for _, line in ipairs(okc and computed or {}) do
+                printMsg("  " .. line)
+            end
+        end
     elseif cmd == "verify" then
         HM.Collect.verify(printMsg)
         HM.Collect.probeTalentApiShape(printMsg)
@@ -509,7 +616,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | path [dimension] | loop [id] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

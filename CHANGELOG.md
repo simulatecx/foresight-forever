@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.25.0 - 2026-10-12
+
+SIM-ENGINE (S18): the simulation tier - the math behind the class, on your numbers.
+Design record + PRD corrections: `docs/SIM-ENGINE-2026-10-12.md`.
+
+- NEW `model/sim.lua` (pure, out-of-combat surfaces only):
+  - melee cascade: crit -> Flurry uptime (steady-state 1-(1-c)^N) -> effective swing
+    speed -> Windfury burst/EV -> first-order sustained DPS. `/foresight sim`.
+  - time-to-OOM: chain-cast drain vs your pool with five-second-rule honesty
+    (`/foresight oom <spell>`, plus a "Chain-cast: ~N casts, empty in ~Xs (p)" line on
+    ability tooltips).
+  - standings: plain-English build identity (Glass Cannon/Bruiser, Endurance,
+    Primal Hybrid, Threat Anchor) - ratio-honest (stat-space, not cross-index); leads
+    the panel subtitle; item tooltips flag "Shifts your build: X -> Y" on swaps that
+    change it.
+  - goal pathways: `/foresight path [dimension]` ranks your unspent trait steps by
+    marginal impact on the dimension you're building toward.
+- NEW `data/loops.lua`: curated Enabler -> Engine -> Payoff class loops (The Shatter
+  Loop, The Windfury Engine, The Flurry Engine) with live computed lines
+  (`/foresight loop`); every named member is selftest-gated against shipped data so
+  renames can't rot it.
+- PIPELINE decodes (never hand-copied): Windfury `extraAttacks` via tooltip-macro
+  chase (20% on hit, 2 extra attacks, +46/119/249/333 AP by rank); Flurry-family
+  `critHaste` via the $Nn macro -> trigger buff aura 319 (+10% x 3 swings, Shaman r1;
+  per-rank scaling tagged unverified); weapon `speedMs` on all 4,621 gear items.
+- Imbue compare now folds the Windfury expected value on YOUR weapon (slow weapon =
+  bigger burst); gear hover shows the Windfury-engine AP-term delta for other speeds.
+- Formula registry: weapon normalization constants (dagger 1.7 / 1H 2.4 / 2H 3.3 /
+  ranged 2.8, classic-presumed) + flurry steady-state uptime (model-presumed).
+- Snapshot captures main-hand weapon class (dagger/oneHand/twoHand) for normalization.
+- Selftest 165 (+21). PRD claims the data refuted are recorded, not shipped (Instant
+  Poison is flat 20% not PPM; Int doesn't bend coefficients; WF rides actual speed).
+
+*Features:* SIM-engine, DATA-loops, IMBUE-compare, UI-item-tooltip, UI-spell-tooltip,
+UI-playstyle-label, DATA-generated-tables, MODEL-snapshot, QA-selftest-harness
+
 ## 0.24.0 - 2026-10-11
 
 OBSERVED-VS-GENERATED auto-compare (S11 phase B): real play now grades the datamined data.

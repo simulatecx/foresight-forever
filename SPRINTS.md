@@ -29,6 +29,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S11 QA-probe: empirical formula verification from live play | - | ☐ |
 | S12 Publishing train: GitHub remote + packager CI + CurseForge/Wago | - | ◐ |
 | S13 Crowd scale-up: companion uploader + ingestion + privacy pass | - | ☐ |
+| S18 SIM-engine: simulation & synergy math core (PRD trio) | 3 | ◐ |
 
 ## Active / next
 
@@ -211,7 +212,49 @@ AC: ☑ weapon_imbues.lua generated (377 temp enchants incl. item-applied poison
 poisons are ClassID-0 subclass-8 items here, not skill-line spells) · ☑ Imbues.compare pure +
 selftest (per-swing/per-sec, rank dedupe, speed scaling, honest unknown proc rates) ·
 ☑ /foresight imbue on the live weapon speed · ☑ imbue block on the apply-spell tooltip ·
-☐ in-game verify · ☐ Windfury extra-attack EV (weapon-damage baseline now in the snapshot).
+☐ in-game verify · ☑ Windfury extra-attack EV (v0.25.0, S18: extraAttacks decode + burst/EV
+on the live weapon through Sim.windfuryBurst; folded into Imbues.compare).
+
+### S18 - SIM-engine: simulation & synergy math core ◐  (triaged 2026-10-12, PRD trio)
+Source: three user PRDs (simulation architecture / demystification / class formulas), folded
+into one sprint; design mapping + corrections in `docs/SIM-ENGINE-2026-10-12.md`.
+Fit & Overlap - Category MODEL -> UI (secondary DATA). Verdict: Net-new `model/sim.lua` (Tier-2
+engine) + Enhance formulas.lua (normalization, flurry uptime), imbues.lua (Windfury EV),
+tooltips.lua (OOM line, standing-shift flag, Windfury weapon line), panel_model.lua (standing),
+generate.py (extraAttacks / critHaste / gear speedMs decodes). Complements: IMBUE-compare (one
+AP->DPS law), MODEL-impact-diff (standings/pathways ride Impact.evaluate - no second value
+path), WHATIF-planner (pathway candidates are the same what-if loadouts), SYNERGY (loops = the
+curated why-layer). Avoid duplicating: hand-copied constants - Windfury AP/count and Flurry
+haste are DECODED from client data via tooltip-macro chase; only normalization constants + the
+FSR law are community formulas, tagged classic-presumed. Mobile: chat + tooltip text (passes
+1280x720 @ 0.65). Languages: enUS house state. Trust: display-only, every model line carries
+(p), missing data said out loud (no invented proc rates or hit numbers). Data: no new stored
+data. Abuse: not externally reachable.
+
+As a player new or old, I want the game's hidden math - proc engines, mana economy, weapon
+speed scaling, build identity - explained on my own numbers, so gear/talent/imbue choices are
+informed decisions instead of folklore.
+
+AC: ☑ Tier-1: weapon normalization constants + flurry steady-state uptime in the formula
+registry (tagged) · ☑ pipeline decodes: Windfury extraAttacks (20% / 2 attacks / +46..333 AP by
+rank), Flurry critHaste (+10% for 3 swings via the $Nn macro chase), weapon `speedMs` on gear ·
+☑ melee cascade crit -> Flurry uptime -> effective speed -> Windfury burst/EV -> first-order
+DPS (`/foresight sim`) · ☑ time-to-OOM chain-cast model with five-second-rule honesty
+(`/foresight oom <spell>` + ability-tooltip line) · ☑ standings (stat-space ratios, honest:
+Glass Cannon/Bruiser, Endurance, Primal Hybrid, Threat Anchor) on the panel subtitle + item
+tooltip "Shifts your build" flag · ☑ Windfury-engine weapon-hover line (AP-term delta from
+offline speed) · ☑ goal pathways ranking unspent trait steps per dimension (`/foresight path`)
+· ☑ class-loops registry (Shatter / Windfury / Flurry; Enabler -> Engine -> Payoff;
+selftest-gated name resolution; `/foresight loop`) · ☑ selftest 165 (+21) · ☐ in-game render
+verify (next session) · ☐ Matrix side-panel UI consuming loops + pathways (S7b renderer, next
+build).
+
+PRD corrections recorded (the data wins): Instant Poison is a flat 20% in client data, not
+PPM · Intellect does not alter spell coefficients (cast-time law) · Windfury extra attacks
+keep ACTUAL weapon speed (normalization governs instant yellow abilities) · %-threshold
+archetypes replaced with within-character ratios (dimension indices are not cross-comparable) ·
+Flurry per-rank scaling UNRESOLVED in data (rank-1 buff decoded; talent-tooltip capture
+upgrades it).
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

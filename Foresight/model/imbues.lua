@@ -77,6 +77,18 @@ function Imbues.compare(snapshot, ids)
                     curation = true
                 end
             end
+            -- Windfury family (SIM-engine): extra attacks at bonus AP, expected value
+            -- on YOUR weapon's speed and damage (slow weapon = bigger burst).
+            if e.extraAttacks and e.chance and HM.Sim then
+                local wf = HM.Sim.windfuryBurst(snapshot, e)
+                if wf then
+                    perSwing = perSwing + wf.evPerSwing
+                    perSec = perSec + (speed > 0 and wf.evPerSwing / speed or 0)
+                    notes[#notes + 1] = ("%d%% on hit: %d extra attacks at +%d AP = ~%.0f burst (~%.1f per swing%s)")
+                        :format(wf.chance, wf.count, wf.bonusAp, wf.burst, wf.evPerSwing,
+                            wf.baseKnown and "" or "; weapon damage unknown here")
+                end
+            end
             if e.chance and perSwing == 0 and #notes == 0 then
                 notes[#notes + 1] = ("%d%% on hit: extra effect (see the spell tooltip)"):format(e.chance)
                 curation = true

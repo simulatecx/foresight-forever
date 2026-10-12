@@ -129,6 +129,36 @@ F.statConversions = {
     },
 }
 
+-- Weapon normalization (classic 1.8+ combat rule): instant yellow attacks apply
+-- Attack Power at a NORMALIZED weapon speed so ultra-slow weapons don't scale
+-- infinitely. White swings - and Windfury extra attacks - keep the ACTUAL speed.
+F.weaponNormalization = {
+    unit = "bonus damage an instant attack gains from Attack Power",
+    source = "classic 1.8 combat change (community-documented constants)",
+    confidence = "classic-presumed",
+    constants = { dagger = 1.7, oneHand = 2.4, twoHand = 3.3, ranged = 2.8 },
+    fn = function(ap, weaponType)
+        local c = F.weaponNormalization.constants[weaponType or "oneHand"] or 2.4
+        return (ap or 0) / 14 * c
+    end,
+}
+
+-- Flurry-family steady-state uptime: with crit chance c per swing and a buff that
+-- lasts N swings, the chance any given swing is hasted ~ 1 - (1-c)^N. First-order
+-- model (ignores refresh overlap and proc-of-proc crits) - tagged, never silent.
+F.flurryUptime = {
+    unit = "fraction of swings under the crit-triggered haste buff",
+    source = "steady-state model over per-swing crit chance",
+    confidence = "model-presumed",
+    fn = function(critPct, swings)
+        local c = (critPct or 0) / 100
+        if c < 0 then c = 0 elseif c > 1 then c = 1 end
+        local miss = 1
+        for _ = 1, (swings or 3) do miss = miss * (1 - c) end
+        return 1 - miss
+    end,
+}
+
 -- Registry-wide helpers -------------------------------------------------------
 
 -- The honesty mark: " (p)" for any formula not yet verified on Forever. One definition

@@ -77,6 +77,19 @@ function Snapshot.capture()
     snapshot.raceToken = type(raceToken) == "string" and raceToken or nil
     snapshot.raceId = Guards.number(Guards.select(3, _G.UnitRace, "player"))
         or (HM.Racials and HM.Racials.raceIdForToken(snapshot.raceToken)) or nil
+    -- Main-hand weapon class for instant-attack normalization (SIM-engine): dagger /
+    -- oneHand / twoHand. Reading your own equipped item id is never secret; nil when
+    -- unavailable (headless) - consumers fall back to actual speed and say so.
+    local mhId = Guards.number(Guards.call(_G.GetInventoryItemID, "player", 16))
+    if mhId and _G.GetItemInfo then
+        local equipLoc = Guards.select(9, _G.GetItemInfo, mhId)
+        local classID = Guards.number(Guards.select(12, _G.GetItemInfo, mhId))
+        local subclassID = Guards.number(Guards.select(13, _G.GetItemInfo, mhId))
+        if classID == 2 then
+            snapshot.weaponType = (subclassID == 15 and "dagger")
+                or (equipLoc == "INVTYPE_2HWEAPON" and "twoHand") or "oneHand"
+        end
+    end
     return snapshot
 end
 
