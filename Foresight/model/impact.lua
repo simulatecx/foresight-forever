@@ -74,15 +74,18 @@ function Impact.explainStatDelta(loadout, stat, amount)
                 lines[#lines + 1] = ("~1 extra %s every %s min of downtime regen")
                     :format(spell.name, round(minutesPerCast))
             end
-        elseif c.id == "survivability" then
-            -- Lead with the % (the panel already shows the index); short enough to
-            -- read in one panel row (live catch 2026-10-12: rows ellipsized).
-            lines[#lines + 1] = ("Survivability %+.1f%%"):format(c.pct or 0)
         else
-            local b, unit = HM.dimensions.humanValue(c.id, c.before)
+            -- One display law (dimensions.humanValue): real-unit lenses show the
+            -- before -> after; index lenses read as a bare % change (live catch
+            -- 2026-10-12: raw index soup made the summary look broken).
+            local b, unit, real = HM.dimensions.humanValue(c.id, c.before)
             local a = HM.dimensions.humanValue(c.id, c.after)
-            lines[#lines + 1] = ("%s %+.1f%% (%s -> %s%s)")
-                :format(c.label, c.pct or 0, round(b), round(a), unit)
+            if real then
+                lines[#lines + 1] = ("%s %+.1f%% (%s -> %s%s)")
+                    :format(c.label, c.pct or 0, round(b), round(a), unit)
+            else
+                lines[#lines + 1] = ("%s %+.1f%%"):format(c.label, c.pct or 0)
+            end
         end
     end
     if #lines == 0 then

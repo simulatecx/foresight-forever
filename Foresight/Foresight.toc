@@ -2,13 +2,14 @@
 ## Title: Foresight
 ## Notes: The hardcore player's safety net: know what every talent point and stat actually does for you - before you commit.
 ## Author: SimulateCX
-## Version: 0.35.0
+## Version: 0.36.0
 ## SavedVariables: ForesightDB
 ## IconTexture: Interface\Icons\Spell_Nature_FarSight
 ## X-License: MIT
 ## X-Website: https://github.com/simulatecx/foresight-forever
 
 core\guards.lua
+core\client.lua
 core\talent_api.lua
 graph\graph.lua
 graph\dimensions.lua

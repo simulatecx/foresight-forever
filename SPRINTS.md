@@ -35,6 +35,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S21 Rank-rule truth: decode first, vote second | 3 | ◐ |
 | S22 Skill-centric Matrix + pathway rows | 3 | ◐ |
 | S23 Weapon-swap honesty in the item verdict | 3 | ◐ |
+| S24 Modular split + Retail validation fork program | all | ◐ |
 
 ## Active / next
 
@@ -410,6 +411,31 @@ talent-tooltip captures never overwritten by untrained re-hovers (the Deflection
 degradation) · ☑ selftest +5 · ☐ in-game verify on the 18-27 vs 34-52 pair. Known
 limits (honest): main-hand compare only (no offhand/ranged v1); crit/proc stats not
 in the swap pct; offline damage ranges (ItemDamage* tables) stay deferred.
+
+### S24 - Modular split + Retail validation fork program ◐  (user directive 2026-10-12)
+Fit & Overlap - Category CORE/QA -> program. Verdict: AUDIT first (measured, not
+asserted: the engine layer has ZERO client-API coupling; all _G touches concentrate
+in 8 adapter/surface files - census in docs/ARCHITECTURE-AUDIT-2026-10-12.md), then
+Enhance: new `core/client.lua` (the ONE item-API namespacing swap point; tooltips +
+snapshot delegate), docs/RETAIL-FORK-HANDOFF.md (the fork procedure, what retail CAN
+validate - decode laws, composition, envelope, audit loop, plumbing - vs what must
+NEVER port back - formula values, data/, loops). Avoid duplicating: a folder-level
+engine/ restructure (the TOC order IS the module system; churn resets beta
+verification for zero behavioral gain). Trust: both forks keep the same gate +
+compliance + taint laws. Data: none new. Abuse: not externally reachable.
+
+As the product owner, I want the engine validated against RETAIL's fully-known live
+data before 2026-11-04, so the Forever launch starts with proven math and
+crowdsourcing opens on day one.
+
+AC: ☑ measured architecture audit (module map, data inventory, coupling census) ·
+☑ core/client.lua extracted + delegations (selftest-pinned nil-safe) · ☑ fork
+handoff with validation protocol (/foresight verify -> audit -> hit -> swap hovers)
+and the port-back law (engine/pipeline cherry-picks only; data and formula VALUES
+never cross) · ☐ execute the fork (new repo, retail build fetch/generate, re-pin
+data gates to retail ground truth) · ☐ retail in-game validation to audit
+mismatch=0 · ☐ port-back + Forever launch-build regen on 2026-11-04 + flip channel
+to live + open crowdsourcing.
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

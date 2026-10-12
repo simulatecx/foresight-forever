@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.36.0 - 2026-10-12
+
+THE MODULAR SPLIT PASS + THE SUMMARY DISPLAY LAW (S24 kickoff + live catch #8).
+
+- ARCHITECTURE AUDIT (docs/ARCHITECTURE-AUDIT-2026-10-12.md): measured, not asserted
+  - the _G census proves the ENTIRE engine layer (graph, model, data structures,
+  pure UI models) has zero client-API coupling; all coupling concentrates in 8
+  adapter/surface files. Full data-element inventory (every generated table shape,
+  formula registry, SavedVariables, pipeline artifacts) + the modularization action
+  list.
+- RETAIL FORK HANDOFF (docs/RETAIL-FORK-HANDOFF.md): the program to validate the
+  calculation engine on live RETAIL (fully-known data) before 2026-11-04 - fork
+  procedure, what retail CAN validate (decode laws, composition, display envelope,
+  audit loop, plumbing, harness) vs what must NEVER port back (formula VALUES,
+  data/, loops), the in-game validation protocol, and the port-back law
+  (engine/pipeline cherry-picks only, gate green on both forks).
+- `core/client.lua`: the ONE item-API namespacing swap point extracted (C_Item-first
+  resolvers); tooltips + snapshot delegate - a fork or client migration edits one
+  file.
+- SUMMARY DISPLAY LAW (user catch: the Dimensions summary mixed real units with raw
+  indices - "Melee DPS 15.4 DPS" next to "Ranged DPS 102.6" read as broken):
+  `D.display` is now the one renderer - real units where they exist (15.4 DPS, 467
+  EHP, 672/min, 100%), "+X.X% vs base" for the 100-floor output indices
+  (spellcasting/ranged/healing), survivability stays the labeled composite. Used by
+  the FS panel dimensions, Matrix bars; what-if lines show before -> after only for
+  real-unit lenses.
+- Selftest 229 (+2): the display law string-for-string; HM.Client nil-safe headless.
+
+*Features:* CORE-client, GRAPH-dimensions, UI-stats-panel, UI-matrix-panel,
+MODEL-stat-advisor, QA-selftest-harness
+
 ## 0.35.0 - 2026-10-12
 
 THE GETITEMINFO AMBUSH + THE PANEL CLEANUP + TWO PERMANENT TRIPWIRES. Both user

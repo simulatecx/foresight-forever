@@ -198,10 +198,9 @@ function PanelModel.matrixModel(loadout, activeLoopId, pathways, focus)
     for _, row in ipairs(rows) do
         local max = groupMax[row.group]
         local fill = (max > 0) and (row.score / max) or 0
-        local hv, unit = HM.dimensions.humanValue(row.id, row.score)
         bars[#bars + 1] = {
             id = row.id, label = row.label, group = row.group,
-            value = ((hv >= 100) and ("%.0f%s") or ("%.1f%s")):format(hv, unit),
+            value = HM.dimensions.display(row.id, row.score),
             fill = fill, top = fill >= 0.999,
         }
     end
@@ -264,15 +263,14 @@ function PanelModel.build(loadout)
 
     local sections = {}
 
-    -- Dimensions: the seven outcome lenses (lens values through the ONE human
-    -- transform - Melee DPS reads as real DPS, never the x10 index).
+    -- Dimensions: the seven outcome lenses, every value through the ONE display law
+    -- (real units where they exist; "+X% vs base" for the 100-floor indices).
     local dimRows = {}
     for _, dim in ipairs(HM.dimensions.list) do
         local r = results[dim.id]
-        local hv, unit = HM.dimensions.humanValue(dim.id, r and r.score)
         dimRows[#dimRows + 1] = {
             label = dim.label,
-            value = r and (fmt(hv) .. unit) or "-",
+            value = HM.dimensions.display(dim.id, r and r.score),
             tooltip = dim.unit,
         }
     end

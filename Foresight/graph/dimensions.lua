@@ -106,14 +106,35 @@ function D.byId(id)
     end
 end
 
--- Human display transform per lens: the melee score is real white DPS x10 (the
--- cross-lens display band), so humans read score/10 with the unit said out loud.
--- Every surface showing a lens VALUE routes through this - never the raw score.
+-- THE ONE DISPLAY LAW for lens values (user catch 2026-10-12: a summary mixing real
+-- units and raw indices read as broken). Real-unit lenses say their unit; the
+-- 100-floor output indices show "+X% vs base" (score minus the no-gear floor);
+-- survivability stays the one composite index (tooltip carries its definition).
+local HUNDRED_FLOOR = { spellcasting = true, rangedDps = true, healing = true }
+
+-- (number, unitSuffix, isRealUnit) - what-if lines show before -> after only for
+-- real units; index lenses read as a bare % change.
 function D.humanValue(id, score)
-    if id == "meleeDps" and type(score) == "number" then
-        return score / 10, " DPS"
+    if type(score) ~= "number" then return score, "", false end
+    if id == "meleeDps" then return score / 10, " DPS", true end
+    if id == "tankability" then return score, " EHP", true end
+    if id == "sustain" then return score, "/min", true end
+    if id == "threat" then return score, "%", true end
+    return score, "", false
+end
+
+-- The full display string every value surface uses (panel dims, Matrix bars).
+function D.display(id, score)
+    if type(score) ~= "number" then return "-" end
+    if HUNDRED_FLOOR[id] then
+        return ("%+.1f%% vs base"):format(score - 100)
     end
-    return score, ""
+    local v, unit = D.humanValue(id, score)
+    local body
+    if v >= 1000 then body = ("%.1fk"):format(v / 1000)
+    elseif v >= 100 then body = ("%.0f"):format(v)
+    else body = ("%.1f"):format(v) end
+    return body .. unit
 end
 
 return D

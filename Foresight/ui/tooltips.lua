@@ -937,26 +937,19 @@ end
 
 -- Item hook (shares attach/brand with the talent provider - one injection module) ----
 
+-- All item-API access rides HM.Client (core/client.lua) - the ONE namespacing swap
+-- point (the GetItemInfo live catch, 2026-10-12).
 local function resolveItemStats(link)
-    local fn = (_G.C_Item and _G.C_Item.GetItemStats) or _G.GetItemStats
-    if not (fn and link) then return nil end
-    local ok, raw = pcall(fn, link)
+    if not link then return nil end
+    local ok, raw = pcall(HM.Client.getItemStats, link)
     return ok and raw or nil
 end
 
--- 12.x namespacing (the C_Item migration, live catch 2026-10-12): the classic
--- GetItemInfo GLOBAL can be absent on Forever - and its absence silently disabled
--- baseline mode, the equipped compare AND the weapon swap (every equip-location
--- lookup degraded to nil). Resolve C_Item first, exactly like GetItemStats above.
 local function getItemInfo(...)
-    local fn = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
-    if not fn then return nil end
-    return fn(...)
+    return HM.Client.getItemInfo(...)
 end
 local function getItemInfoInstant(...)
-    local fn = (_G.C_Item and _G.C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
-    if not fn then return nil end
-    return fn(...)
+    return HM.Client.getItemInfoInstant(...)
 end
 
 -- Mapped stats of the item currently equipped where a hovered item would go (live only,

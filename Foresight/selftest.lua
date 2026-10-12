@@ -399,6 +399,23 @@ function HM.runSelftest(out)
         local normal = linesText(HM.Tooltips.itemLines(mapped, lo, nil, nil) or {})
         return normal:find("for ", 1, true) ~= nil
     end)())
+    check("lens display law: real units + vs-base indices (summary coherence)", (function()
+        local D = HM.dimensions
+        return D.display("meleeDps", 154) == "15.4 DPS"
+            and D.display("spellcasting", 108.8) == "+8.8% vs base"
+            and D.display("rangedDps", 102.6) == "+2.6% vs base"
+            and D.display("tankability", 466.6) == "467 EHP"
+            and D.display("sustain", 672) == "672/min"
+            and D.display("threat", 100) == "100%"
+            and D.display("survivability", 1676) == "1.7k"
+            and D.display("meleeDps", nil) == "-"
+    end)())
+    check("HM.Client is the one item-API swap point (nil-safe headless)", (function()
+        return HM.Client ~= nil
+            and type(HM.Client.getItemInfo) == "function"
+            and HM.Client.getItemInfo("item:123") == nil -- no client APIs headless
+            and HM.Client.getItemStats("item:123") == nil
+    end)())
     check("API watchlist probes dotted paths (the GetItemInfo-class tripwire)", (function()
         if not (HM.Collect and HM.Collect.apiWatch) then return false end
         local probe = HM.Collect.apiWatch({ "math.floor", "no.such.api", "string" })

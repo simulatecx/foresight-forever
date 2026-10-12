@@ -81,13 +81,12 @@ function Snapshot.capture()
     -- oneHand / twoHand. Reading your own equipped item id is never secret; nil when
     -- unavailable (headless) - consumers fall back to actual speed and say so.
     local mhId = Guards.number(Guards.call(_G.GetInventoryItemID, "player", 16))
-    -- 12.x namespacing: the GetItemInfo GLOBAL can be absent on Forever (C_Item is
-    -- the canonical home) - resolve like tooltips.lua does (live catch 2026-10-12).
-    local itemInfoFn = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
-    if mhId and itemInfoFn then
-        local equipLoc = Guards.select(9, itemInfoFn, mhId)
-        local classID = Guards.number(Guards.select(12, itemInfoFn, mhId))
-        local subclassID = Guards.number(Guards.select(13, itemInfoFn, mhId))
+    -- Item info rides HM.Client (core/client.lua) - the ONE namespacing swap point
+    -- (the GetItemInfo live catch, 2026-10-12).
+    if mhId and HM.Client then
+        local equipLoc = Guards.select(9, HM.Client.getItemInfo, mhId)
+        local classID = Guards.number(Guards.select(12, HM.Client.getItemInfo, mhId))
+        local subclassID = Guards.number(Guards.select(13, HM.Client.getItemInfo, mhId))
         if classID == 2 then
             snapshot.weaponType = (subclassID == 15 and "dagger")
                 or (equipLoc == "INVTYPE_2HWEAPON" and "twoHand") or "oneHand"
