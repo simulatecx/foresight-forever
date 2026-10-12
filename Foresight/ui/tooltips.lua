@@ -345,9 +345,11 @@ end
 
 -- Item provider (layman stat impact) ------------------------------------------
 
--- GetItemStats keys -> snapshot stat names the loadout models. v0 covers the primaries
--- plus spell power / healing power (all base graph nodes - safe to delta); gear ratings
--- (crit/haste/hit) wait until the model converts ratings.
+-- GetItemStats keys -> snapshot stat names the loadout models: primaries, spell/healing
+-- power, and flat attack power (all base graph nodes - safe to delta; live catch
+-- 2026-10-12: a +10 AP auction item showed NO melee impact while +3 Strength did,
+-- because AP was unmapped). Gear RATINGS (crit/haste/hit) still wait until the model
+-- converts ratings.
 local ITEM_STAT_MAP = {
     ITEM_MOD_STRENGTH_SHORT = "Strength",
     ITEM_MOD_AGILITY_SHORT = "Agility",
@@ -357,12 +359,15 @@ local ITEM_STAT_MAP = {
     ITEM_MOD_SPELL_POWER_SHORT = "spellDamage",
     ITEM_MOD_SPELL_DAMAGE_DONE_SHORT = "spellDamage",
     ITEM_MOD_SPELL_HEALING_DONE_SHORT = "healingPower",
+    ITEM_MOD_ATTACK_POWER_SHORT = "attackPower",
+    ITEM_MOD_RANGED_ATTACK_POWER_SHORT = "rangedAttackPower",
 }
 local DISPLAY_STAT = {
     spellDamage = "Spell Power", healingPower = "Healing Power",
+    attackPower = "Attack Power", rangedAttackPower = "Ranged Attack Power",
 }
 local STAT_ORDER = { "Strength", "Agility", "Stamina", "Intellect", "Spirit",
-                     "spellDamage", "healingPower" }
+                     "spellDamage", "healingPower", "attackPower", "rangedAttackPower" }
 
 -- Map a raw GetItemStats table to our stat names, summing duplicates.
 function Tooltips.mapItemStats(raw)

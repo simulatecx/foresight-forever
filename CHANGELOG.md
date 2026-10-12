@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.31.4 - 2026-10-12
+
+LIVE CATCH #2 (auction-house pass): a "+10 Attack Power" item showed NO melee impact
+while a "+3 Strength" item of the same slot showed the full chain - so the one
+question the tooltip exists to answer ("which do I buy?") was unanswerable. Root
+cause: flat Attack Power was missing from the item stat map; the model itself
+(stat.attackPower graph node, chain explainer, verdict) handles it generically.
+
+- ITEM_MOD_ATTACK_POWER_SHORT and ITEM_MOD_RANGED_ATTACK_POWER_SHORT now map into
+  the pipeline: "+10 Attack Power" renders the derived chain ("+10 Attack Power ->
+  ~+1.9 damage per main-hand swing"), moves the dimension deltas, joins the
+  vs-equipped compare, and the verdict judges it - a +10 AP item correctly beats a
+  +3 Str item (= +6 AP for a Shaman) for Melee DPS.
+- Incident-to-gate: a selftest pins the exact buy question (mapping, chain line,
+  +10 AP > +3 Str on the melee lens, head-to-head verdict = upgrade).
+- Gear RATINGS (crit/haste/hit) remain honestly unmapped until the model converts
+  ratings; AP is a direct stat, not a rating.
+- Selftest 212 (+1).
+
+*Features:* UI-item-tooltip, MODEL-impact-diff, QA-selftest-harness
+
 ## 0.31.3 - 2026-10-12
 
 FIRST RANK-RULE PROMOTIONS (S21 operational step, human-reviewed). The post-reload

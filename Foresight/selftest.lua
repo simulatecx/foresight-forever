@@ -237,6 +237,25 @@ function HM.runSelftest(out)
         return type(hit) == "string" and hit:find("Agility", 1, true) ~= nil
             and miss == nil
     end)())
+    check("item mapper: +10 AP shows the melee chain and beats +3 Str (live catch)", (function()
+        -- Live catch 2026-10-12: a +10 Attack Power auction item showed NO melee
+        -- impact while +3 Strength did - AP was missing from the item stat map.
+        local mapped = HM.Tooltips.mapItemStats({ ITEM_MOD_ATTACK_POWER_SHORT = 10 })
+        if mapped.attackPower ~= 10 then return false, "unmapped" end
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local text = table.concat(HM.Impact.itemDerivedLines(lo, { attackPower = 10 }), "\n")
+        if text:find("per main%-hand swing") == nil then return false, "no chain" end
+        local _, apChanges = HM.Impact.explainItemDelta(lo, { attackPower = 10 })
+        local _, strChanges = HM.Impact.explainItemDelta(lo, { Strength = 3 })
+        local apMelee, strMelee = 0, 0
+        for _, c in ipairs(apChanges) do if c.id == "meleeDps" then apMelee = c.pct end end
+        for _, c in ipairs(strChanges) do if c.id == "meleeDps" then strMelee = c.pct end end
+        -- +10 AP > +3 Str (= +6 AP at the Shaman's 2 AP/Str) - the buy answer.
+        if not (apMelee > strMelee and strMelee > 0) then return false, apMelee end
+        -- and the head-to-head verdict calls the AP item the upgrade for melee
+        local v = HM.Impact.itemVerdict(lo, { attackPower = 10 }, { Strength = 3 }, "meleeDps")
+        return v ~= nil and v.direction == "upgrade"
+    end)())
     check("coaching: verdict headline unchanged and above the attribution", (function()
         local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
         local mapped = { Agility = 10, Stamina = 2 }
