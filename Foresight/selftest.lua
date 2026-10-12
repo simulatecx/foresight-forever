@@ -885,8 +885,10 @@ function HM.runSelftest(out)
             { selected = { { nodeId = dmgNodeId, rank = 1 } } })
         local r2 = HM.Sim.abilityHit(base, 133,
             { selected = { { nodeId = dmgNodeId, rank = 2 } } })
-        local v1 = HM.formulas.talentRankValueFor(tid, dmgNodeOp.maxValue, 1, node.maxRank)
-        local v2 = HM.formulas.talentRankValueFor(tid, dmgNodeOp.maxValue, 2, node.maxRank)
+        local v1 = HM.formulas.talentRankValueFor(tid, dmgNodeOp.maxValue, 1,
+            node.maxRank, dmgNodeOp.values)
+        local v2 = HM.formulas.talentRankValueFor(tid, dmgNodeOp.maxValue, 2,
+            node.maxRank, dmgNodeOp.values)
         return plain ~= nil and r1 ~= nil and r2 ~= nil
             and approx(r1.min, plain.min * (1 + v1 / 100), 0.01)
             and approx(r2.min, plain.min * (1 + v2 / 100), 0.01)
@@ -1001,6 +1003,71 @@ function HM.runSelftest(out)
         HM.overrides.rankRules[26] = nil
         return lines ~= nil
             and (lines[1].right or ""):find("crowd%-verified") ~= nil
+    end)())
+
+    -- Rank-rule truth (S21): datamined per-rank values outrank the rule system.
+    -- Find a generated talent whose ops carry values arrays (31 decoded this build).
+    local valTalentId, valOp
+    local valTalents = 0
+    for tid, imp in pairs(gen.talentImpacts) do
+        local hasValues = false
+        for _, op in ipairs(imp.ops or {}) do
+            if op.values then
+                hasValues = true
+                if not valTalentId and (op.property or op.stat) and op.maxValue then
+                    valTalentId, valOp = tid, op
+                end
+            end
+        end
+        if hasValues then valTalents = valTalents + 1 end
+    end
+    check("per-rank values decoded at scale (counts gate)", (function()
+        return valTalents >= 25 and gen.counts.talentsWithRankValues == valTalents
+    end)(), valTalents)
+    check("values array length matches the talent's maxRank", (function()
+        if not valTalentId then return false end
+        local t = gen.talents[valTalentId]
+        return t ~= nil and valOp.values ~= nil and #valOp.values == t.maxRank
+    end)(), valTalentId)
+    check("datamined values return the exact per-rank value", (function()
+        if not valTalentId then return false end
+        local t = gen.talents[valTalentId]
+        for r = 1, t.maxRank do
+            local got = HM.formulas.talentRankValueFor(valTalentId, valOp.maxValue,
+                r, t.maxRank, valOp.values)
+            if got ~= valOp.values[r] then return false, r end
+        end
+        return true
+    end)())
+    check("resolution order: values beat override beats default", (function()
+        local vals = { 7, 13, 21, 30, 40 }
+        local fromValues = HM.formulas.talentRankValueFor(26, 100, 2, 5, vals)
+        HM.overrides.rankRules[26] = "perRank"
+        local stillValues = HM.formulas.talentRankValueFor(26, 100, 2, 5, vals)
+        local fromOverride = HM.formulas.talentRankValueFor(26, 100, 2, 5, nil)
+        HM.overrides.rankRules[26] = nil
+        local fromDefault = HM.formulas.talentRankValueFor(26, 100, 2, 5, nil)
+        return approx(fromValues, 13) and approx(stillValues, 13)
+            and approx(fromOverride, 200) and approx(fromDefault, 40)
+    end)())
+    check("datamined values drop the (p); missing values keep it", (function()
+        local marked = HM.formulas.rankRuleMark(nil, { { maxValue = 100, values = { 1, 2 } } })
+        local unmarked = HM.formulas.rankRuleMark(nil, { { maxValue = 100 } })
+        local header
+        if valTalentId then
+            local lines = HM.Tooltips.talentLines(valTalentId, 1, base)
+            header = lines and lines[1].right or ""
+        end
+        return marked == "" and unmarked == " (p)"
+            and (not valTalentId or header:find("datamined", 1, true) ~= nil)
+    end)(), valTalentId)
+    check("values bridge reaches the live trait-node path", (function()
+        for _, node in pairs(gen.traits.nodes) do
+            for _, op in ipairs(node.ops or {}) do
+                if op.values then return true end
+            end
+        end
+        return false
     end)())
 
     -- Skill-centric mode (S7b): dim the tree, glow an ability's modifiers.

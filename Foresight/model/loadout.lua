@@ -81,9 +81,11 @@ local CONVERT_NODE = { -- statConvert target -> graph node it adds into
 -- folds as a flat amount off the player's current source stat.
 local function applyOps(graph, ops, rank, maxRank, source, snapStats, talentId)
     -- talentId (optional) routes through the PER-TALENT rank rule when the crowd has
-    -- verified one (overrides.rankRules); nil falls back to the global default.
+    -- verified one (overrides.rankRules); op.values (S21 datamined per-rank decode)
+    -- outranks both; nil falls back to the global default.
     for _, op in ipairs(ops or {}) do
-        local value = HM.formulas.talentRankValueFor(talentId, op.maxValue or 0, rank, maxRank)
+        local value = HM.formulas.talentRankValueFor(talentId, op.maxValue or 0, rank,
+            maxRank, op.values)
         if op.kind == "statConvert" and CONVERT_NODE[op.to] then
             local srcVal = (snapStats and STAT_KEY[op.from] and snapStats[STAT_KEY[op.from]]) or 0
             graph:addModifier{ target = CONVERT_NODE[op.to], op = "flat",

@@ -338,8 +338,10 @@ function Impact.talentSummary(talentId, rank)
         local entry = {
             kind = op.kind, property = op.property or op.label or op.stat or op.school,
             isPct = op.isPct, maxValue = op.maxValue,
-            value = HM.formulas.talentRankValueFor(talentId, op.maxValue or 0, rank, talent.maxRank),
+            value = HM.formulas.talentRankValueFor(talentId, op.maxValue or 0, rank,
+                talent.maxRank, op.values),
             rankRule = op.rankRule,
+            values = op.values, -- S21 datamined per-rank array (flows to surfaces)
             affectedNames = {},
         }
         for _, sid in ipairs(op.affected or {}) do

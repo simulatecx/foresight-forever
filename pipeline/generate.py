@@ -427,8 +427,15 @@ def main() -> int:
         }
 
     # ---- Talents + impact computation ----------------------------------------
+    # Per-rank op alignment signature (S21): the same logical op across rank spells.
+    def op_signature(op):
+        return (op.get("kind"), op.get("property"), op.get("isPct"),
+                op.get("school"), op.get("stat"), op.get("to"), op.get("from"),
+                tuple(op.get("affected") or ()))
+
     talents_out, impacts_out = {}, {}
     needs_curation = 0
+    values_decoded, values_skipped = 0, 0
     for r in read_csv(cache, "Talent"):
         tid = to_int(r["ID"])
         ranks = [to_int(r[f"SpellRank_{i}"]) for i in range(9)]
@@ -453,13 +460,38 @@ def main() -> int:
             "prereqs": prereqs,
         }
 
-        # Impact ops from the rank-1 spell. Forever stores effect values ONLY on rank 1
-        # (verified against the client data: rank-2+ talent spells have no SpellEffect
-        # rows), and the stored value matches the classic MAX-RANK total. Rank scaling is
-        # therefore presumed linear (rank N = value * N / maxRank) until verified in-game;
-        # the addon surfaces this flag and the probe/beta check confirms or corrects it.
+        # Impact ops from the rank-1 spell. MOST multi-rank talents (300/347 this build)
+        # store effect values ONLY on rank 1 as the max-rank total - rank scaling stays
+        # presumed (rank N = value * N / maxRank) until the crowd verifies it. But 44
+        # talents DO carry SpellEffect rows on every rank spell: for those, decode the
+        # TRUE per-rank values (S21) so no rule is needed at all. Ops are matched across
+        # ranks by signature; any mismatch skips the values array for the whole talent
+        # (honest degrade - maxValue + rule path remain, never a guess).
         ops = build_ops(first, effects_by_spell, class_options, family_members, player_spells,
                         equipped_items)
+
+        if ops and len(ranks) > 1 and all(effects_by_spell.get(s) for s in ranks):
+            rank_ops = [build_ops(s, effects_by_spell, class_options, family_members,
+                                  player_spells, equipped_items) for s in ranks]
+            decorated, aligned = [], True
+            for op in ops:
+                s0 = op_signature(op)
+                vals = []
+                for ro in rank_ops:
+                    matches = [o for o in ro if op_signature(o) == s0]
+                    if len(matches) != 1:
+                        aligned = False
+                        break
+                    vals.append(matches[0].get("maxValue", 0.0))
+                if not aligned:
+                    break
+                decorated.append(vals)
+            if aligned and decorated:
+                for op, vals in zip(ops, decorated):
+                    op["values"] = vals
+                values_decoded += 1
+            else:
+                values_skipped += 1
 
         if not ops or all(o.get("kind") == "unmapped" for o in ops):
             needs_curation += 1
@@ -564,6 +596,8 @@ def main() -> int:
     n_heal = sum(1 for s in spells_out.values() if "heal" in s)
     n_wpn = sum(1 for s in spells_out.values() if "wpn" in s)
     print(f"ability decode: damage={n_dmg} weapon={n_wpn} heal={n_heal}")
+    print(f"per-rank values: {values_decoded} talents decoded, "
+          f"{values_skipped} skipped (op misalignment)")
     if multi_damage:
         print(f"multi-damage-row spells: {len(multi_damage)}")
     if multi_heal:
@@ -594,6 +628,15 @@ def main() -> int:
 
     trait_nodes, trait_by_spell = {}, {}
     trait_curation = 0
+    # S21 values bridge: a classic-overlap node's definition spell is ONE of the
+    # talent's rank spells (usually rank 1, sometimes higher), and the talent-loop
+    # alignment already proved its ops signature-match across ranks - copy the
+    # talent's datamined per-rank values onto signature-matching ops so the LIVE
+    # talent path (node.ops via C_Traits) sees them too.
+    talent_by_rank_spell = {}
+    for t_id, t in talents_out.items():
+        for s in t["spellRanks"]:
+            talent_by_rank_spell.setdefault(s, t_id)
     for r in read_opt("TraitNode"):
         nid = to_int(r["ID"])
         entries = []
@@ -614,6 +657,12 @@ def main() -> int:
         primary = entries[0]
         ops = build_ops(primary["spellID"], effects_by_spell, class_options,
                         family_members, player_spells, equipped_items)
+        bridged = talent_by_rank_spell.get(primary["spellID"])
+        bimp = bridged and impacts_out.get(bridged)
+        if bimp and bimp["ops"] and len(bimp["ops"]) == len(ops):
+            for op, top in zip(ops, bimp["ops"]):
+                if "values" in top and op_signature(op) == op_signature(top):
+                    op["values"] = top["values"]
         node = {
             "tree": to_int(r["TraitTreeID"]), "type": to_int(r["Type"]),
             "spellID": primary["spellID"], "name": primary["name"],
@@ -938,6 +987,7 @@ def main() -> int:
             "generated": stamp,
             "counts": {
                 "talents": len(talents_out),
+                "talentsWithRankValues": values_decoded,
                 "tabs": len(tabs_out),
                 "spells": len(spells_out),
                 "spellsWithDamage": n_dmg,

@@ -123,12 +123,18 @@ function Tooltips.talentLines(talentId, currentRank, loadout)
     local maxRank = summary.maxRank or 1
     local lines = {}
 
-    -- Per-talent honesty: a crowd-verified rank rule (overrides.rankRules) drops the
-    -- presumed mark for THIS talent and says so in green.
-    local verified = F.rankRuleMark and F.rankRuleMark(talentId) == ""
+    -- Per-talent honesty: datamined per-rank values (S21) or a crowd-verified rank
+    -- rule (overrides.rankRules) drop the presumed mark for THIS talent, in green.
+    local datamined = true
+    for _, op in ipairs(summary.ops) do
+        if not op.values then datamined = false end
+    end
+    datamined = datamined and #summary.ops > 0
+    local verified = F.rankRuleMark and F.rankRuleMark(talentId, summary.ops) == ""
     lines[#lines + 1] = {
         kind = "double", left = "Foresight",
-        right = verified and "rank rule crowd-verified" or "(p) rank rule presumed",
+        right = (verified and datamined and "rank values datamined")
+            or (verified and "rank rule crowd-verified") or "(p) rank rule presumed",
         r = BRAND.r, g = BRAND.g, b = BRAND.b,
         r2 = verified and 0.29 or GREY.r, g2 = verified and 0.87 or GREY.g,
         b2 = verified and 0.50 or GREY.b,
@@ -151,7 +157,9 @@ function Tooltips.talentLines(talentId, currentRank, loadout)
 
     for _, op in ipairs(summary.ops) do
         if op.property and op.maxValue then
-            local valueAt = function(r) return F.talentRankValueFor(talentId, op.maxValue, r, maxRank) end
+            local valueAt = function(r)
+                return F.talentRankValueFor(talentId, op.maxValue, r, maxRank, op.values)
+            end
             local text
             if maxRank <= 1 then
                 text = ("%s %s"):format(fmtValue(valueAt(1), op.isPct, op.property), op.property)
@@ -199,7 +207,11 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
     local F = HM.formulas
     local maxRank = node.maxRank or 1
     local lines = {}
-    local presumed = F.presumedMark(F.talentRankValue) ~= ""
+    -- Honesty header via the ONE mark: datamined per-rank values (S21) or a verified
+    -- rank rule (bridged through the classic talent id) drop the (p).
+    local bridgedTalent = HM.TalentAPI and HM.TalentAPI.talentForSpell and node.spellID
+        and tonumber(HM.TalentAPI.talentForSpell(node.spellID)) or nil
+    local presumed = F.rankRuleMark(bridgedTalent, node.ops) ~= ""
     lines[#lines + 1] = {
         kind = "double", left = "Foresight",
         right = presumed and "(p) rank rule presumed" or nil,
@@ -233,7 +245,8 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
         if prop and op.maxValue then
             lines[#lines + 1] = {
                 text = ("At max: %s %s"):format(
-                    fmtValue(F.talentRankValue.fn(op.maxValue, maxRank, maxRank), op.isPct, op.property), prop),
+                    fmtValue(F.talentRankValueFor(bridgedTalent, op.maxValue, maxRank,
+                        maxRank, op.values), op.isPct, op.property), prop),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
         end

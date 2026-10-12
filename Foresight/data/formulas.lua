@@ -127,13 +127,19 @@ F.talentRankValue = {
     end,
 }
 
--- PER-TALENT rank rule (S11): captured-tooltip votes proved Forever re-authored
--- values talent by talent (trained votes split A=2/B=4 on 2026-10-12) - so the rule
--- is resolved per talent. overrides.rankRules[talentId] = "maxTotal" (stored value is
--- the max-rank total; rank N shows value*N/maxRank) | "perRank" (value*N). Entries
--- arrive ONLY from the harvest draft (collected/rank_rules_draft.lua) after human
--- review. Absent -> the global default above, still tagged (p).
-function F.talentRankValueFor(talentId, maxValue, rank, maxRank)
+-- PER-TALENT rank value - THE one resolution path (S11 + S21), in order:
+--   (1) op.values[rank] - datamined per-rank spell decode (S21), the truth, no rule;
+--   (2) overrides.rankRules[talentId] - crowd-verified rule ("maxTotal" = value*N/maxRank,
+--       "perRank" = value*N); entries arrive ONLY from the harvest draft
+--       (collected/rank_rules_draft.lua) after human review;
+--   (3) the global presumed default above, still tagged (p).
+-- `values` is the generated per-op array (present only where every rank spell carried
+-- aligned effect rows); callers pass op.values through - never a second math path.
+function F.talentRankValueFor(talentId, maxValue, rank, maxRank, values)
+    if type(values) == "table" then
+        local v = values[rank or 0]
+        if type(v) == "number" then return v end
+    end
     local rules = HM.overrides and HM.overrides.rankRules
     local rule = talentId and rules and rules[talentId]
     if rule == "perRank" then
@@ -142,9 +148,18 @@ function F.talentRankValueFor(talentId, maxValue, rank, maxRank)
     return F.talentRankValue.fn(maxValue or 0, rank or 0, maxRank or 1)
 end
 
--- The honesty mark for a specific talent's rank scaling: crowd-verified talents drop
--- the (p); everything else keeps the global presumed mark.
-function F.rankRuleMark(talentId)
+-- The honesty mark for a specific talent's rank scaling: datamined per-rank values
+-- (every op carries a values array) drop the (p), crowd-verified talents drop it too;
+-- everything else keeps the global presumed mark. ops optional (the generated op list
+-- for this talent/node).
+function F.rankRuleMark(talentId, ops)
+    if type(ops) == "table" and #ops > 0 then
+        local all = true
+        for _, op in ipairs(ops) do
+            if type(op) ~= "table" or not op.values then all = false end
+        end
+        if all then return "" end
+    end
     local rules = HM.overrides and HM.overrides.rankRules
     if talentId and rules and rules[talentId] then return "" end
     return F.presumedMark(F.talentRankValue)

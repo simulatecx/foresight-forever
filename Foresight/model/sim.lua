@@ -129,10 +129,12 @@ local function selectedSpellMods(spellId, selected, extraNode)
                     if sid == spellId then hits = true break end
                 end
                 if hits then
-                    local v = F.talentRankValueFor(talentId, op.maxValue or 0, rank, maxRank)
+                    local v = F.talentRankValueFor(talentId, op.maxValue or 0, rank,
+                        maxRank, op.values)
                     if op.isPct then pct = pct + v else flat = flat + v end
                     names[#names + 1] = name
-                    if F.rankRuleMark(talentId) ~= "" then presumed = true end
+                    -- Per-op honesty: datamined values or a verified rule drop the (p).
+                    if F.rankRuleMark(talentId, { op }) ~= "" then presumed = true end
                 end
             end
         end

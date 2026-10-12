@@ -31,6 +31,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S13 Crowd scale-up: companion uploader + ingestion + privacy pass | - | ☐ |
 | S18 SIM-engine: simulation & synergy math core (PRD trio) | 3 | ◐ |
 | S19 MODEL-ability-outcomes: what this button actually hits for | 3 | ◐ |
+| S21 Rank-rule truth: decode first, vote second | 3 | ◐ |
 
 ## Active / next
 
@@ -307,6 +308,26 @@ nil degrade · ☑ spellLines absolute line + datamined-coefficient upgrade ·
 ☑ nodeImpactLines before->after deltas (<=3 lines) · ☑ Shatter loop claims level-capped
 numbers, fallback retained · ☑ /foresight hit · ☑ selftest >= 189 (shipped 191) ·
 ☐ in-game verify >= 3 abilities vs rendered tooltips before 2026-10-21.
+
+### S21 - Rank-rule truth: decode first, vote second ◐  (triaged 2026-10-12, handoff spec)
+Fit & Overlap - Category DATA -> MODEL. Verdict: Enhance generate.py (per-rank op
+decode via spellRanks + trait-node values bridge), formulas.lua (talentRankValueFor
+resolution order), selftest. The per-talent rank-rule SYSTEM (overrides.rankRules +
+harvest voting + honesty marks) is ALREADY SHIPPED (v0.27.0) - do not rebuild it; this
+story feeds it datamined per-rank values so the rule is only needed where rank spells
+don't exist (single-spell trait nodes). Avoid duplicating: the ONE talentRankValue
+resolution path. Trust: datamined values drop (p); fallbacks keep it; nothing invented
+on misalignment. Data: generated shape change (shared-spine law). Abuse: not
+externally reachable.
+
+AC: ☑ per-op values arrays for aligned classic talents (31 decoded, 13 skipped on op
+misalignment, skip-count printed) + counts in build.lua + bridge onto classic-overlap
+trait nodes (live path) · ☑ resolution order values > override > presumed, ONE
+function (loadout/impact/tooltips/sim all pass op.values) · ☑ rankRuleMark "" for
+datamined values ("rank values datamined" header) · ☑ selftest +6 (exact per-rank
+value, (p) drop, missing-values fallback, order, counts gate, bridge gate; legacy
+override checks green) · ☐ operational: review collected/rank_rules_draft.lua ->
+promote k-of-n lines to overrides.rankRules before 2026-10-21 (human review - user).
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

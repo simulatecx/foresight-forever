@@ -5,5 +5,5 @@ HM.gen = HM.gen or {}
 HM.gen.build = "1.60.1.70338"
 HM.gen.channel = "beta"
 HM.gen.generated = "2026-10-12"
-HM.gen.counts = {consumables=390,critHasteProcs=2,imbues=378,impactsNeedingCuration=158,items=4621,racialRaces=10,racialSpells=45,racialSpellsNeedingCuration=29,spells=3520,spellsWithDamage=509,spellsWithHeal=145,spellsWithWeaponHit=158,tabs=27,talents=432,traitNodes=555,traitNodesNeedingCuration=231}
+HM.gen.counts = {consumables=390,critHasteProcs=2,imbues=378,impactsNeedingCuration=158,items=4621,racialRaces=10,racialSpells=45,racialSpellsNeedingCuration=29,spells=3520,spellsWithDamage=509,spellsWithHeal=145,spellsWithWeaponHit=158,tabs=27,talents=432,talentsWithRankValues=31,traitNodes=555,traitNodesNeedingCuration=231}
 HM.gen.classNames = {[1]="Warrior",[11]="Druid",[2]="Paladin",[3]="Hunter",[4]="Rogue",[5]="Priest",[7]="Shaman",[8]="Mage",[9]="Warlock"}

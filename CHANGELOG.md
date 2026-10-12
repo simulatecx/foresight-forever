@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.29.0 - 2026-10-12
+
+RANK-RULE TRUTH (S21): decode first, vote second. Where classic talents carry per-rank
+spell IDs with real effect rows, the true per-rank values are now datamined directly -
+no rule, no guess, no (p).
+
+- PIPELINE: for every multi-rank talent whose rank spells ALL carry SpellEffect rows
+  (44 candidates this build), ops are matched across ranks by signature (kind +
+  property + school/stat + affected set) and gain a datamined `values = {v1..vMax}`
+  array - 31 talents decoded, 13 skipped on op misalignment (printed count, honest
+  degrade to the rule path). The arrays bridge onto classic-overlap trait nodes (the
+  definition spell is one of the talent's rank spells), so the LIVE C_Traits what-if
+  path sees them too. `talentsWithRankValues` lands in build.lua counts.
+- RESOLUTION ORDER: `F.talentRankValueFor` is still the ONE path, now (1) op.values
+  [rank] datamined -> (2) overrides.rankRules crowd-verified -> (3) global presumed
+  rule. `rankRuleMark` returns "" for datamined ops too; the talent tooltip header
+  reads "rank values datamined". loadout/impact/tooltips/sim all pass op.values
+  through - no second math path anywhere.
+- KNOCK-ON: S19 ability-hit talent-mod portions drop their (p) automatically wherever
+  values arrays landed; the remaining 300 rank-1-only talents keep the crowd pipeline
+  (harvest voting -> rank_rules_draft.lua -> human-reviewed overrides) as before.
+- Selftest 197 (+6): counts gate, maxRank-length gate, exact per-rank resolution,
+  values > override > default order, (p) drop + fallback, trait-bridge gate.
+
+*Features:* DATA-pipeline-generate, DATA-formula-registry, DATA-generated-tables,
+MODEL-loadout-whatif, UI-talent-tooltip, QA-selftest-harness
+
 ## 0.28.0 - 2026-10-12
 
 MODEL-ABILITY-OUTCOMES (S19): the translator now covers the thing you actually press -
