@@ -1,0 +1,8 @@
+# Keeps the SHA-pinned action refs in .github/workflows/ fresh via reviewed PRs
+# (the pins are the security control; this is how they get updated, never by hand).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.23.1 - 2026-10-11
+
+S12 publish train ACTIVATED: the repo is live at github.com/simulatecx/foresight-forever.
+
+- GitHub remote created (PUBLIC - user decision 2026-10-11; code+datamined tables only,
+  the crowd-harvested `pipeline/collected/` corpus stays local/gitignored, never published).
+- All workflow action refs SHA-pinned (checkout/setup-python/BigWigsMods-packager);
+  `.github/dependabot.yml` added so pins update by reviewed PR, never by hand.
+- Branch protection on `main`: CI gate required on PRs, force-push/deletion blocked
+  (owner direct-push allowed - solo-dev flow until community PRs arrive).
+- TOC X-Website now points at the real repo URL.
+- Remaining for full S12: CurseForge + Wago slug registration and API-token secrets
+  (user account actions), then the first `vX.Y.Z` tag ships via the packager.
+
+*Features:* QA-publish-train
+
 ## 0.23.0 - 2026-10-11
 
 Gear verdict + gearing goal (borrowing Pawn's best UX, done honestly).

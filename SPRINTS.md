@@ -118,12 +118,16 @@ REMAINING: regen/swing/DoT-tick/GCD measurement during play; automated observed-
 comparison that upgrades (p) -> verified@build or drafts an overrides correction; equip-delta
 observation (item stat ground truth).
 
-### S12 - Publishing train ◐  (gated on your call)
-Scaffolded: `.pkgmeta`, README front door, privacy-aware ignores. Remaining: GitHub remote
-(public vs private - YOUR decision), BigWigsMods packager CI action, CurseForge + Wago
-channels (slug registration), branch protection, SHA-pinned actions, data-freshness CI
-(poll wago.tools -> fetch/generate/gate -> release PR). Threat-model publish bindings
-(DATAFLOW 4b/4c).
+### S12 - Publishing train ◐  (repo LIVE v0.23.1; CurseForge/Wago registration remains)
+DONE: `.pkgmeta` + README + privacy ignores; CI workflows (gate / packager-on-tag /
+data-freshness); PUBLIC GitHub remote `simulatecx/foresight-forever` (decision 2026-10-11:
+public - the crowd-harvested `pipeline/collected/` corpus is gitignored and never
+publishes, so "our data stays ours"); action refs SHA-pinned + dependabot; branch
+protection (CI gate required on PRs, force-push/deletion blocked, owner direct-push kept
+for the solo-dev flow). Remaining (user account actions): register CurseForge + Wago
+project slugs, add `CF_API_TOKEN`/`WAGO_API_TOKEN` repo secrets, project IDs in the TOC
+(or slug-resolve), then tag the first release. Threat-model publish bindings (DATAFLOW
+4b/4c).
 
 ### S13 - Crowd scale-up ◐  (phase A shipped v0.15.0)
 PHASE A DONE: item-sightings journal (equipped+bags at login/logout, IDs only, capped) +
