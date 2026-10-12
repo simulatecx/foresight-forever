@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.34.0 - 2026-10-12
+
+THE MELEE LENS TELLS THE TRUTH + TOTEM BUFF CHAINS (live catches #6 and the
+Strength-of-Earth ask).
+
+- MELEE LENS FIX: the FS-tab Melee DPS read 47.9 with an 11.9-DPS weapon (sheet
+  82-101) and 54 with a 7-DPS fast weapon - INVERTED, because the old index was
+  (100 + AP-term) / swing time: weapon damage wasn't in the formula at all and
+  faster always won. The lens now rides a new mech.whiteDps graph node - your real
+  sheet range per hasted swing, marginal what-if AP folded by the one substitution
+  law - so score/10 = your actual white DPS including crit, and a better weapon
+  ALWAYS scores higher (inversion selftest-gated with the live numbers). rangedDps
+  keeps the old shape for now (no ranged weapon range in the snapshot - noted).
+- TOTEM BUFF CHASE (user ask: "7 Strength is X AP is Y DPS - short and simple"):
+  "X Totem" summons a creature whose aura is the spell named "X"; the creature hop
+  isn't in DB2 tables we ship, so generate.py pairs them by NAME at the SAME
+  SpellLevel (rank-exact: totem 8075 L10 <-> buff 8076 L10). 17 totems decoded;
+  grants land on the cast spell. The spell tooltip now renders the chain on the
+  button that drops it: "Its buff gives you: +7 Strength" -> "+14 Attack Power,
+  ~+1.3 damage per swing" via statImpactDetail (the ONE stat-chain path); non-stat
+  grants use the shared describeOp line; no match = no claim.
+- Confirmed working as designed (user observation): dropping Strength of Earth
+  raises the FS-tab melee number while SHRINKING the weapon tooltip's marginal
+  impact - the baseline law doing its job (the buff grew your base).
+- Selftest 224 (+3): lens inversion gate with the live weapon pair + exact
+  whiteDps-x10 formula check; totem grant decode rank-alignment gate (r1 +7 via
+  8076, r2 +14 via 8162); the tooltip chain render.
+
+*Features:* GRAPH-dimensions, MODEL-loadout-whatif, DATA-generated-tables,
+UI-spell-tooltip, QA-selftest-harness
+
 ## 0.33.2 - 2026-10-12
 
 TAINT ISOLATION HARDENING. A live "Foresight has been blocked from an action only

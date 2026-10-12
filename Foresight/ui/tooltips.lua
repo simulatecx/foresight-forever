@@ -733,7 +733,9 @@ function Tooltips.spellLines(spellId, loadout)
             { selected = loadout.snapshot and loadout.snapshot.talents })
         hit = okH and h or nil
     end
-    if not hit and power <= 0 then return nil end -- nothing of yours to translate yet
+    if not hit and power <= 0 and not spell.grants then
+        return nil -- nothing of yours to translate yet
+    end
     local castSec = (spell.castMs and spell.castMs > 0) and (spell.castMs / 1000) or 1.5
     -- Prefer the datamined coefficient when the decode carries one; else the (p) formula.
     local coef = (hit and hit.coef) or HM.formulas.spellCoefficient.fn(castSec)
@@ -742,11 +744,41 @@ function Tooltips.spellLines(spellId, loadout)
     local lines = {}
     local headerRight = "(p) coefficient-based"
     if hit and hit.coefSource == "data" then headerRight = "datamined coefficient"
-    elseif hit and hit.kind == "weapon" then headerRight = "(p) with your weapon" end
+    elseif hit and hit.kind == "weapon" then headerRight = "(p) with your weapon"
+    elseif not hit and spell.grants then headerRight = "(p) buff chain" end
     lines[#lines + 1] = {
         kind = "double", left = "Foresight", right = headerRight,
         r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
     }
+    -- Buff-granting abilities (totems, v0.34.0 user ask): the chain from the buff's
+    -- stats to YOUR numbers - "+7 Strength -> +14 Attack Power -> ~+1.3 per swing" -
+    -- short and simple, on the button that drops it. Rides statImpactDetail (the ONE
+    -- stat-chain path); non-stat grants get the shared describeOp line.
+    if spell.grants then
+        for _, op in ipairs(spell.grants) do
+            if op.kind == "stat" and op.stat and not op.isPct and (op.maxValue or 0) > 0 then
+                lines[#lines + 1] = {
+                    text = ("|cff9d9d9dIts buff gives you:|r +%g %s"):format(
+                        op.maxValue, op.stat),
+                    r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+                }
+                local okc, chain = pcall(HM.Impact.statImpactDetail, loadout,
+                    op.stat, op.maxValue)
+                for i = 1, math.min(#(okc and chain or {}), 3) do
+                    lines[#lines + 1] = { text = "  " .. chain[i],
+                        r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
+                end
+            else
+                local desc = describeOp(op)
+                if desc then
+                    lines[#lines + 1] = {
+                        text = "|cff9d9d9dIts buff gives you:|r " .. desc,
+                        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+                    }
+                end
+            end
+        end
+    end
     if hit then
         -- Widest integer envelope (floor min, ceil max) - matches the game's own
         -- rendering, live-verified on Lightning Bolt r2 (25 to 30).

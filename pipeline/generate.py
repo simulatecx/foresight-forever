@@ -505,8 +505,14 @@ def main() -> int:
         sid for imp in impacts_out.values() for op in imp["ops"] for sid in op.get("affected", [])
     }
     ship_spells = (player_spells | talent_spells | affected_spells) & set(spell_names)
+    # Name index for the totem-pattern buff chase (only consulted for "... Totem"
+    # ship spells, built once).
+    ids_by_name = defaultdict(list)
+    for nid, nm in spell_names.items():
+        ids_by_name[nm].append(nid)
     spells_out = {}
     multi_damage, multi_heal, scaling_flagged = [], [], set()
+    totem_links = 0
     for sid in sorted(ship_spells):
         m = misc.get(sid)
         entry = {"name": spell_names[sid]}
@@ -590,6 +596,30 @@ def main() -> int:
             bl = to_int(lv["BaseLevel"])
             if bl != entry.get("level", 0):
                 entry["baseLevel"] = bl
+
+        # Totem-pattern buff chase (user ask 2026-10-12: "Strength of Earth should say
+        # 7 Strength -> X AP -> Y DPS"): "X Totem" summons a creature (Effect 28) whose
+        # aura is the spell named exactly "X" - the creature hop isn't in our tables,
+        # so pair by NAME at the SAME SpellLevel (rank-exact in this data: totem 8075
+        # L10 <-> buff 8076 L10, etc.). Decoded ops land as entry["grants"]; no match
+        # or unmapped ops = no claim.
+        if entry["name"].endswith(" Totem") \
+                and any(to_int(e["Effect"]) == 28 for e in effects_by_spell.get(sid, [])):
+            cast_level = entry.get("level") or 0
+            best_id, best_level, best_ops = None, -1, None
+            for cid in sorted(ids_by_name.get(entry["name"][:-6], [])):
+                lv_c = levels.get(cid)
+                c_level = to_int(lv_c["SpellLevel"]) if lv_c else 0
+                if c_level <= cast_level and c_level > best_level:
+                    c_ops = build_ops(cid, effects_by_spell, class_options,
+                                      family_members, player_spells, equipped_items)
+                    c_ops = [o for o in c_ops if o.get("kind") and o["kind"] != "unmapped"]
+                    if c_ops:
+                        best_id, best_level, best_ops = cid, c_level, c_ops
+            if best_id:
+                entry["grants"] = best_ops
+                entry["grantsFrom"] = best_id
+                totem_links += 1
         spells_out[sid] = entry
 
     n_dmg = sum(1 for s in spells_out.values() if "dmg" in s)
@@ -598,6 +628,7 @@ def main() -> int:
     print(f"ability decode: damage={n_dmg} weapon={n_wpn} heal={n_heal}")
     print(f"per-rank values: {values_decoded} talents decoded, "
           f"{values_skipped} skipped (op misalignment)")
+    print(f"totem buff links: {totem_links}")
     if multi_damage:
         print(f"multi-damage-row spells: {len(multi_damage)}")
     if multi_heal:

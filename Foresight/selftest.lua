@@ -326,6 +326,38 @@ function HM.runSelftest(out)
         if not (hl == 1234 and hh == 2345) then return false end
         return HM.Tooltips.parseSpellRange({ "Increases your armor by 240." }) == nil
     end)())
+    check("melee lens: a better-but-slower weapon scores HIGHER (inversion gate)", (function()
+        -- Live catch 2026-10-12: 11.9-DPS weapon read 47.9 while a 7-DPS fast weapon
+        -- read 54 - the old lens divided by swing time with no damage term. The lens
+        -- now rides real white DPS, so weapon quality must order the score.
+        local slowGood, fastWeak = meleeShamanSnap(), meleeShamanSnap()
+        slowGood.weaponSpeed, slowGood.weaponDamageMin, slowGood.weaponDamageMax = 2.9, 82, 101
+        fastWeak.weaponSpeed, fastWeak.weaponDamageMin, fastWeak.weaponDamageMax = 1.9, 36, 54
+        local a = HM.Impact.evaluate(HM.Loadout.fromSnapshot(slowGood)).meleeDps.score
+        local b = HM.Impact.evaluate(HM.Loadout.fromSnapshot(fastWeak)).meleeDps.score
+        if not (a and b and a > b) then return false, (a or 0) .. " vs " .. (b or 0) end
+        -- and the score is the REAL number: whiteDps x 10 x crit
+        local expect = ((82 + 101) / 2 / 2.9) * 10 * (1 + slowGood.stats.meleeCritPct / 100)
+        return approx(a, expect, 0.01)
+    end)())
+    check("totem buff chase: Strength of Earth grants +7 Str, rank-aligned by level", (function()
+        local t1 = gen.spells[8075] -- rank 1 totem (L10)
+        local t2 = gen.spells[8160] -- rank 2 totem (L24)
+        if not (t1 and t1.grants and t1.grants[1]) then return false, "r1 missing" end
+        local op = t1.grants[1]
+        return op.kind == "stat" and op.stat == "Strength" and op.maxValue == 7
+            and t1.grantsFrom == 8076
+            and t2 ~= nil and t2.grants ~= nil and t2.grants[1].maxValue == 14
+            and t2.grantsFrom == 8162
+    end)())
+    check("totem tooltip: the 7 Str -> AP -> swing chain renders", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local lines = HM.Tooltips.spellLines(8075, lo)
+        local text = linesText(lines or {})
+        return text:find("+7 Strength", 1, true) ~= nil
+            and text:find("Attack Power", 1, true) ~= nil
+            and lines ~= nil and (lines[1].right or ""):find("buff chain", 1, true) ~= nil
+    end)())
     check("baseline law: your equipped item claims no verdict or % gain", (function()
         local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
         local mapped = { attackPower = 10, Stamina = 5 }

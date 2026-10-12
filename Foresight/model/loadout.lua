@@ -248,6 +248,20 @@ function Loadout:build()
                formula = function(get) return healthFn and healthFn(get("stat.spirit")) or 0 end }
     g:addNode{ id = "mech.swingTime", kind = "mechanic",
                formula = function(get) return F.swingTime.fn(s.weaponSpeed or 2.0, get("stat.hastePct")) end }
+    -- Real white DPS on the live weapon (v0.34.0 lens fix): the sheet range already
+    -- contains the snapshot AP's term at actual speed, so only MARGINAL what-if AP
+    -- folds back in (the one substitution law, 14 AP = 1 DPS), swung at the hasted
+    -- rate. This is what the Melee DPS lens reads - weapon damage finally counts.
+    local wAvg = ((s.weaponDamageMin or 0) + (s.weaponDamageMax or 0)) / 2
+    g:addNode{ id = "mech.whiteDps", kind = "mechanic",
+               formula = function(get)
+                   local swing = get("mech.swingTime")
+                   if swing <= 0 then swing = 2.0 end
+                   local avg = wAvg + (get("stat.attackPower") - (s.stats.attackPower or 0))
+                       / 14 * (s.weaponSpeed or 2.0)
+                   if avg < 0 then avg = 0 end
+                   return avg / swing
+               end }
     -- Pool maxima: the LIVE sheet value is the base (it already contains every rule
     -- the server applies - the classic per-point formulas overstate low levels); only
     -- the MARGINAL stat change converts at 10 hp/stamina and 15 mana/int ((p)).

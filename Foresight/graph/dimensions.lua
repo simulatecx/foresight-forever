@@ -25,14 +25,17 @@ D.list = {
     {
         id = "meleeDps",
         label = "Melee DPS",
-        unit = "throughput index",
+        unit = "white-DPS index: score/10 = your real swing DPS incl. crit (p)",
         score = function(get)
-            local ap = get("stat.attackPower")
+            -- v0.34.0 lens fix (live catch: the old (100 + AP)/swing index INVERTED
+            -- weapon swaps - a better-but-slower weapon scored LOWER because weapon
+            -- damage wasn't in the formula at all). Now rides mech.whiteDps: the real
+            -- sheet range per hasted swing, marginal what-if AP folded by the one
+            -- substitution law. x10 keeps the index in the cross-lens display band.
+            local white = get("mech.whiteDps")
             local crit = get("stat.meleeCritPct")
-            local swing = get("mech.swingTime")
             local throughput = get("agg.meleeThroughputPct")
-            if swing <= 0 then swing = 2.0 end
-            return (100 + ap / 14 * 10) / swing * (1 + crit / 100) * (1 + throughput / 100)
+            return white * 10 * (1 + crit / 100) * (1 + throughput / 100)
         end,
     },
     {
