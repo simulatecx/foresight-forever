@@ -432,7 +432,8 @@ Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
   resolved via the level-capped resolver) - instead of typing /foresight focus. Rides
   the existing focus plumbing (setFocus/applyAbility/focusModel) end to end; UI only.
   Candidate home: Matrix focused-skill block header -> search row (title-click
-  precedent). Mobile binding applies.
+  precedent). Mobile binding applies. ALSO (user ask, same date): a one-click REPORT
+  button on the panels riding the shipped /foresight report plumbing (v0.35.0).
 - ☐ DATA-professions: SkillLine/recipes -> consumables/crafted gear as modifier sources.
 - ☐ GRAPH-rotation-weights: fold cast-time/cost/cooldown mods into throughput via per-spell
   rotation weights (today they surface via tooltips only).

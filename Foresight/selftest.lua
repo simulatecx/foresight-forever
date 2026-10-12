@@ -399,6 +399,24 @@ function HM.runSelftest(out)
         local normal = linesText(HM.Tooltips.itemLines(mapped, lo, nil, nil) or {})
         return normal:find("for ", 1, true) ~= nil
     end)())
+    check("API watchlist probes dotted paths (the GetItemInfo-class tripwire)", (function()
+        if not (HM.Collect and HM.Collect.apiWatch) then return false end
+        local probe = HM.Collect.apiWatch({ "math.floor", "no.such.api", "string" })
+        return probe["math.floor"] == true and probe["no.such.api"] == false
+            and probe["string"] == true
+    end)())
+    check("/foresight report journals a reviewable bundle", (function()
+        if not (HM.db and HM.onSlash) then return false end
+        local before = (type(HM.db.collect) == "table"
+            and type(HM.db.collect.reports) == "table") and #HM.db.collect.reports or 0
+        HM.onSlash("report the weapon math looks off")
+        local reports = HM.db.collect.reports
+        if not (type(reports) == "table" and #reports == before + 1) then return false end
+        local rpt = reports[#reports]
+        local ok = rpt.note == "the weapon math looks off" and rpt.version == HM.version
+        table.remove(reports) -- leave no test residue in the store
+        return ok
+    end)())
     check("capture no-downgrade: trained tooltip never overwritten by untrained", (function()
         local S = HM.Tooltips.shouldReplaceCapture
         return S(nil, { rank = nil }) == true

@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.34.3"
+HM.version = "0.35.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -374,6 +374,39 @@ local function onSlash(input)
             printMsg("open the talent frame to see the tree light up; the Matrix shows the pathway")
         end
         if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
+    elseif cmd == "report" then
+        -- One-command calc-issue report (user binding 2026-10-12): bundle the live
+        -- context, take a screenshot (official API), journal it - the next harvest
+        -- surfaces pending reports for review. Display-only; nothing leaves the
+        -- machine except via the user's own harvest.
+        if not HM.db then
+            printMsg("saved variables unavailable")
+            return
+        end
+        -- Self-initialize: a fresh install's FIRST command may precede any journaling.
+        if type(HM.db.collect) ~= "table" then
+            HM.db.collect = { sessions = {}, levels = {} }
+        end
+        local c = HM.db.collect
+        if type(c.reports) ~= "table" then c.reports = {} end
+        while #c.reports >= 20 do table.remove(c.reports, 1) end
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        c.reports[#c.reports + 1] = {
+            at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?",
+            note = rest ~= "" and rest:sub(1, 200) or nil,
+            version = HM.version,
+            build = (HM.gen and HM.gen.build) or "?",
+            level = snapshot and snapshot.level or nil,
+            classToken = snapshot and snapshot.classToken or nil,
+            mainHand = _G.GetInventoryItemLink
+                and _G.GetInventoryItemLink("player", 16) or nil,
+            stats = snapshot and snapshot.stats or nil,
+            lastTooltipOwner = c.lastTooltipOwner,
+        }
+        if _G.Screenshot then _G.Screenshot() end
+        printMsg(("report #%d captured%s - it reaches review on your next logout or /reload"
+            .. (rest == "" and "; add context next time: /foresight report <what looks wrong>" or ""))
+            :format(#c.reports, _G.Screenshot and " with screenshot" or ""))
     elseif cmd == "audit" then
         -- PREVALIDATION (S19 verification, automated): compare the GAME'S OWN rendered
         -- spell tooltips against our composed claims for every known decoded spell -
@@ -813,7 +846,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | audit | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | audit | report [note] | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

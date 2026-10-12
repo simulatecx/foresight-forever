@@ -400,9 +400,54 @@ function Collect.verify(out)
         result("snapshot captures stats", false, "capture returned nil")
     end
 
+    -- API DRIFT WATCHLIST (user binding 2026-10-12, after the GetItemInfo ambush):
+    -- presence of every API path we depend on, journaled each login so the harvest
+    -- flags any that MOVE between builds - a global-to-C_ migration at live launch
+    -- becomes a report, not a silent feature outage.
+    v.apiWatch = Collect.apiWatch()
+    local absent = {}
+    for path, present in pairs(v.apiWatch) do
+        if not present then absent[#absent + 1] = path end
+    end
+    table.sort(absent)
+    result("API watchlist journaled", true, #absent == 0 and "all present"
+        or (#absent .. " absent: " .. table.concat(absent, ", ")))
+
     store().verify = v
     out("verify results saved - log out (or /reload) then run the harvester")
     return v
+end
+
+-- The watchlist: every external API path the addon calls, probed for PRESENCE only
+-- (never called here). Both the legacy global and the C_ namespace are listed where
+-- a migration pair exists. paths (optional) overrides for the selftest.
+local API_WATCH = {
+    "GetItemInfo", "GetItemStats", "GetItemInfoInstant",
+    "C_Item.GetItemInfo", "C_Item.GetItemStats", "C_Item.GetItemInfoInstant",
+    "GetInventoryItemLink", "GetInventoryItemID",
+    "UnitStat", "UnitAttackSpeed", "UnitDamage", "UnitArmor", "UnitAttackPower",
+    "UnitRangedAttackPower", "UnitHealthMax", "UnitPowerMax", "UnitRace", "UnitClass",
+    "UnitLevel", "GetSpellBonusDamage", "GetSpellBonusHealing", "GetSpellCritChance",
+    "GetCritChance", "GetRangedCritChance", "GetHaste", "GetDodgeChance",
+    "GetParryChance",
+    "IsPlayerSpell", "C_ClassTalents.GetActiveConfigID", "C_Traits.GetNodeInfo",
+    "C_Traits.GetEntryInfo", "C_Traits.GetDefinitionInfo",
+    "C_SpecializationInfo.GetTalentInfo",
+    "C_UnitAuras.GetPlayerAuraBySpellID", "C_TooltipInfo.GetTraitEntry",
+    "TooltipDataProcessor.AddTooltipPostCall", "Enum.TooltipDataType",
+    "C_Timer.After", "hooksecurefunc", "Screenshot",
+}
+
+function Collect.apiWatch(paths)
+    local out = {}
+    for _, path in ipairs(paths or API_WATCH) do
+        local node = _G
+        for part in path:gmatch("[^%.]+") do
+            node = (type(node) == "table") and node[part] or nil
+        end
+        out[path] = node ~= nil
+    end
+    return out
 end
 
 -- Raw talent-API shape capture. The discovery proved C_SpecializationInfo.GetTalentInfo

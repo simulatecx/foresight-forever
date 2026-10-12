@@ -944,11 +944,26 @@ local function resolveItemStats(link)
     return ok and raw or nil
 end
 
+-- 12.x namespacing (the C_Item migration, live catch 2026-10-12): the classic
+-- GetItemInfo GLOBAL can be absent on Forever - and its absence silently disabled
+-- baseline mode, the equipped compare AND the weapon swap (every equip-location
+-- lookup degraded to nil). Resolve C_Item first, exactly like GetItemStats above.
+local function getItemInfo(...)
+    local fn = (_G.C_Item and _G.C_Item.GetItemInfo) or _G.GetItemInfo
+    if not fn then return nil end
+    return fn(...)
+end
+local function getItemInfoInstant(...)
+    local fn = (_G.C_Item and _G.C_Item.GetItemInfoInstant) or _G.GetItemInfoInstant
+    if not fn then return nil end
+    return fn(...)
+end
+
 -- Mapped stats of the item currently equipped where a hovered item would go (live only,
 -- no shipped item DB). nil if the slot is empty or the item isn't equippable gear.
 local function equippedCompareStats(link)
     local equipLoc
-    if _G.GetItemInfo then equipLoc = select(9, _G.GetItemInfo(link)) end
+    equipLoc = select(9, getItemInfo(link))
     local slots = equipLoc and INVSLOT[equipLoc]
     if not (slots and _G.GetInventoryItemLink) then return nil end
     for _, slot in ipairs(slots) do
@@ -979,8 +994,7 @@ local function journalConsumableTip(itemId, link, injected)
         while #c.buffTipLog > 15 do table.remove(c.buffTipLog, 1) end
         return
     end
-    if not _G.GetItemInfoInstant then return end
-    local ok, _, _, _, _, _, classID, subClassID = pcall(_G.GetItemInfoInstant, itemId)
+    local ok, _, _, _, _, _, classID, subClassID = pcall(getItemInfoInstant, itemId)
     if not ok or classID ~= 0 then return end -- only consumables are data gaps
     if type(c.missedConsumables) ~= "table" then c.missedConsumables = {} end
     local entry = c.missedConsumables[itemId]
@@ -1066,8 +1080,8 @@ end
 -- AP-equivalents netted, composed by pure Sim.weaponSwap. Second return: an HONEST
 -- reason when a weapon hover can't be compared (shown grey, never silent).
 local function weaponSwapFor(link, mapped, loadout, hovFacts)
-    if not (loadout and HM.Sim and HM.Sim.weaponSwap and _G.GetItemInfo) then return nil end
-    local equipLoc = select(9, _G.GetItemInfo(link))
+    if not (loadout and HM.Sim and HM.Sim.weaponSwap) then return nil end
+    local equipLoc = select(9, getItemInfo(link))
     if not (equipLoc and SWAP_EQUIP_LOC[equipLoc]) then return nil end
     local eqLink = _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", 16)
     if not eqLink then return nil, "no main-hand weapon equipped to compare against" end
@@ -1142,7 +1156,7 @@ local function injectItem(tip)
     -- Identity by itemKey, never raw link equality (live catch: linkLevel drift made
     -- the equipped weapon read as a different item and claim "+2.8").
     local okEq, equippedSelf = pcall(function()
-        local equipLoc = _G.GetItemInfo and select(9, _G.GetItemInfo(link))
+        local equipLoc = select(9, getItemInfo(link))
         for _, slot in ipairs((equipLoc and INVSLOT[equipLoc]) or {}) do
             if _G.GetInventoryItemLink
                     and sameItem(_G.GetInventoryItemLink("player", slot), link) then

@@ -147,17 +147,22 @@ local function layout(model)
                 f.stripe:SetColorTexture(1, 1, 1, zebra and 0.04 or 0)
                 zebra = not zebra
                 if row.wide then
-                    -- Wide rows hold a full sentence; anchor the label to the top and let
-                    -- it wrap, then size the row to the wrapped height so rows never overlap.
+                    -- Wide rows hold a full sentence; anchor the label to the top and
+                    -- let it wrap, then size the row to the wrapped height so rows
+                    -- never overlap. Wrap must be EXPLICIT (live catch 2026-10-12: the
+                    -- 12.x client ellipsized what-if rows to one line otherwise).
                     f.label:ClearAllPoints()
                     f.label:SetPoint("TOPLEFT", f, "TOPLEFT", 6, -1)
                     f.label:SetPoint("RIGHT", f, "RIGHT", -6, 0)
                     f.label:SetJustifyH("LEFT")
+                    f.label:SetWordWrap(true)
+                    if f.label.SetMaxLines then f.label:SetMaxLines(0) end
                     f.label:SetText(("|cff%02x%02x%02x%s|r  %s"):format(
                         r * 255, g * 255, b * 255, row.label, colorizeDeltas(row.value)))
                     f.value:SetText("")
                 else
                     f.label:ClearAllPoints()
+                    f.label:SetWordWrap(false)
                     f.label:SetPoint("LEFT", f, "LEFT", 6, 0)
                     f.label:SetPoint("RIGHT", f.value, "LEFT", -4, 0)
                     f.label:SetText(row.label)

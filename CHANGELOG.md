@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.35.0 - 2026-10-12
+
+THE GETITEMINFO AMBUSH + THE PANEL CLEANUP + TWO PERMANENT TRIPWIRES. Both user
+screenshots (equipped axe claiming "+2.8 (added)", bag axe with no weapon compare and
+no why-line) trace to ONE root cause: the classic GetItemInfo GLOBAL is absent on
+Forever's 12.x client - C_Item is the canonical home (the same migration pattern as
+talents, and the codebase had already shimmed GetItemStats but missed GetItemInfo).
+Every equip-location lookup silently returned nil, disabling baseline mode, the
+equipped compare, AND the weapon swap at once.
+
+- FIX: C_Item-first resolvers for GetItemInfo/GetItemInfoInstant in tooltips.lua and
+  snapshot.lua (weaponType read included) - all bare-global call sites converted.
+- PANEL FIXES (the "what-if / future build need fixing" ask): wide rows now set
+  SetWordWrap(true) + unlimited lines EXPLICITLY (the 12.x client was ellipsizing
+  instead of wrapping); what-if lines humanized and shortened ("Melee DPS +3.3%
+  (27.4 -> 28.3 DPS)" instead of raw index soup; "Survivability +1.9%" instead of
+  "survivability index 1676.4 -> ..."); and lens VALUES route through the ONE human
+  transform - Melee DPS displays as real DPS (score/10) on the FS panel dimensions
+  AND the Matrix bars, so the number finally relates to your weapon.
+- API DRIFT WATCHLIST (user binding: "a compare to what may change so we can quickly
+  change these values"): ~40 API paths the addon depends on (legacy globals + C_
+  namespaces) presence-probed at every login, journaled, surfaced by the harvest with
+  absent-list AND a drift diff vs the previous harvest (collected/api_watch_last.json)
+  - at live launch, a moved API is a printed report, never a silent outage.
+- /foresight report [note] (user binding: one-click issue submission): bundles
+  version/build/level/class/main-hand/stats/last-tooltip context, takes a screenshot
+  via the official Screenshot() API, journals (capped 20, self-initializing store) -
+  the harvest prints pending USER REPORTS for review after the next logout/reload.
+  The clickable button form is groomed with the UI skill-picker backlog item.
+- Selftest 227 (+2): dotted-path watchlist probe; report journaling round-trip
+  (residue-free).
+
+*Features:* UI-item-tooltip, MODEL-snapshot, UI-stats-panel, GRAPH-dimensions,
+MODEL-stat-advisor, QA-verify-command, QA-collector, QA-harvester,
+QA-selftest-harness
+
 ## 0.34.3 - 2026-10-12
 
 ITEM IDENTITY FIX (live catch: the EQUIPPED weapon still claimed "+2.8" after a full

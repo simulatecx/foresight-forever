@@ -673,6 +673,37 @@ def main() -> int:
                   f"presumed (untrained r1 text): {analysis['untrained_votes']}")
             for d in analysis["details"][:20]:
                 print(f"     {d}")
+        reports = collect.get("reports") or {}
+        if reports:
+            rrows = list(reports.values()) if isinstance(reports, dict) else reports
+            print(f"   USER REPORTS ({len(rrows)}) pending review (/foresight report):")
+            for rpt in rrows:
+                if isinstance(rpt, dict):
+                    print(f"      {rpt.get('at')} v{rpt.get('version')} "
+                          f"L{rpt.get('level')} {rpt.get('classToken')}: "
+                          f"{rpt.get('note') or '(no note - check Screenshots folder)'}")
+        vr = collect.get("verify") or {}
+        watch = vr.get("apiWatch") if isinstance(vr, dict) else None
+        if watch:
+            absent = sorted(k for k, present in watch.items() if not present)
+            if absent:
+                print("   API WATCH - absent on this client: " + ", ".join(absent))
+            # Drift vs the previous harvest: the live-launch tripwire (the GetItemInfo
+            # class - a build moving an API must be a report, never a silent outage).
+            last_path = COLLECTED / "api_watch_last.json"
+            if last_path.exists():
+                try:
+                    prev = json.loads(last_path.read_text(encoding="utf-8"))
+                except (ValueError, OSError):
+                    prev = {}
+                drift = [f"{k}: {prev[k]} -> {watch[k]}"
+                         for k in sorted(watch) if k in prev and prev[k] != watch[k]]
+                if drift:
+                    print("   !! API DRIFT since the last harvest (update the shims):")
+                    for d in drift:
+                        print(f"      {d}")
+            last_path.write_text(json.dumps(watch, indent=1, sort_keys=True),
+                                 encoding="utf-8")
         taints = collect.get("taintEvents") or {}
         if taints:
             rows = list(taints.values()) if isinstance(taints, dict) else taints

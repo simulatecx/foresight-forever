@@ -75,11 +75,14 @@ function Impact.explainStatDelta(loadout, stat, amount)
                     :format(spell.name, round(minutesPerCast))
             end
         elseif c.id == "survivability" then
-            lines[#lines + 1] = ("survivability index %s -> %s (%s%%)")
-                :format(round(c.before), round(c.after), round(c.pct or 0, 2))
+            -- Lead with the % (the panel already shows the index); short enough to
+            -- read in one panel row (live catch 2026-10-12: rows ellipsized).
+            lines[#lines + 1] = ("Survivability %+.1f%%"):format(c.pct or 0)
         else
-            lines[#lines + 1] = ("%s: %s -> %s (%+.2f%%)")
-                :format(c.label, round(c.before), round(c.after), c.pct or 0)
+            local b, unit = HM.dimensions.humanValue(c.id, c.before)
+            local a = HM.dimensions.humanValue(c.id, c.after)
+            lines[#lines + 1] = ("%s %+.1f%% (%s -> %s%s)")
+                :format(c.label, c.pct or 0, round(b), round(a), unit)
         end
     end
     if #lines == 0 then

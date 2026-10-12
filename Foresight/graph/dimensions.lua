@@ -106,4 +106,14 @@ function D.byId(id)
     end
 end
 
+-- Human display transform per lens: the melee score is real white DPS x10 (the
+-- cross-lens display band), so humans read score/10 with the unit said out loud.
+-- Every surface showing a lens VALUE routes through this - never the raw score.
+function D.humanValue(id, score)
+    if id == "meleeDps" and type(score) == "number" then
+        return score / 10, " DPS"
+    end
+    return score, ""
+end
+
 return D
