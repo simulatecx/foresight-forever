@@ -539,17 +539,22 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
         -- silently falls back to stat-only rows.
         if ctx and ctx.weaponSwap then
             local w = ctx.weaponSwap
+            local net = w.newDps - w.curDps
             local color = (w.pct >= 0.5 and "|cff4ade80")
                 or (w.pct <= -0.5 and "|cfff87171") or "|cff9d9d9d"
             lines[#lines + 1] = {
-                text = ("|cff9d9d9dMelee DPS change:|r %s%.1f -> %.1f (%+.0f%%)|r (p)")
-                    :format(color, w.curDps, w.newDps, w.pct),
+                text = ("|cff9d9d9dMelee DPS change:|r %s%.1f -> %.1f (%+.1f DPS, %+.0f%%)|r (p)")
+                    :format(color, w.curDps, w.newDps, net, w.pct),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
+            -- The explain layer (user binding 2026-10-12): the game already prints the
+            -- component diffs - we COMPOSE them: weapon term + stat term = the net.
             lines[#lines + 1] = {
-                text = ("~%.0f -> ~%.0f per swing, vs your main hand, with your %d AP folded in")
-                    :format(w.curSwing, w.newSwing,
-                        (loadout.snapshot.stats and loadout.snapshot.stats.attackPower) or 0),
+                text = (math.abs(w.apDelta or 0) >= 0.5)
+                    and ("= weapon %+.1f DPS; its stats are worth %+.0f AP = %+.1f DPS (14 AP = 1 DPS for you (p))")
+                        :format(w.weaponDpsDelta, w.apDelta, w.statDpsDelta)
+                    or ("= weapon %+.1f DPS (no stat difference between them)")
+                        :format(w.weaponDpsDelta),
                 r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
             }
         elseif ctx and ctx.weaponSwapWhy then

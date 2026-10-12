@@ -296,6 +296,11 @@ function Sim.weaponSwap(snapshot, hovered, equipped, apDelta)
         curDps = cur, newDps = new, pct = (new - cur) / cur * 100,
         curSwing = curAvg + ap / AP_PER_DPS * equipped.speed,
         newSwing = newAvg + (ap + (apDelta or 0)) / AP_PER_DPS * hovered.speed,
+        -- Decomposition (the explain layer): the game's own diffs re-composed - the
+        -- weapon's DPS term and the stat bundle's AP-equivalent term sum to the net.
+        weaponDpsDelta = newAvg / hovered.speed - curAvg / equipped.speed,
+        statDpsDelta = (apDelta or 0) / AP_PER_DPS,
+        apDelta = apDelta or 0,
     }
 end
 

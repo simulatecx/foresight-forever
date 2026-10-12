@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.34.2 - 2026-10-12
+
+COMPOSE, DON'T DUPLICATE (user binding): the game already prints the component diffs
+(-4.9 damage per second, +10 Attack Power) - Foresight's job is putting them together
+and explaining the character impact. The weapon block is now two rows:
+
+- "Melee DPS change: 33.1 -> 28.9 (-4.2 DPS, -13%)" - from, to, absolute net and
+  percent, red on a loss.
+- "= weapon -4.9 DPS; its stats are worth +10 AP = +0.7 DPS (14 AP = 1 DPS for you
+  (p))" - the decomposition: the weapon term plus the stat bundle's AP-equivalent
+  term sum EXACTLY to the net (selftest-pinned identity), with the AP law stated so
+  a Shaman knows what Attack Power does. No-stat-difference weapons say so. The
+  per-swing row (duplicative) is retired.
+- Direction flip after equipping is confirmed automatic: everything nets vs the
+  current main hand, so the better item in the bag reads positive with the same
+  explanation.
+- Selftest 224 (updated): decomposition sums to the net; explanation + AP law + loss
+  color render; why-line and non-weapon silence unchanged.
+
+*Features:* UI-item-tooltip, SIM-engine, QA-selftest-harness
+
 ## 0.34.1 - 2026-10-12
 
 WEAPON COMPARE: FROM -> TO, AND NEVER SILENT. The bag-vs-equipped weapon readout

@@ -291,16 +291,23 @@ function HM.runSelftest(out)
         return melee ~= nil and approx(melee.pct, 57.3) and melee.direction == "upgrade"
             and caster ~= nil and not approx(caster.pct, 57.3)
     end)())
-    check("weapon swap: from -> to rows, red on a loss, honest when unavailable", (function()
+    check("weapon swap: from -> to + composed explanation, honest when unavailable", (function()
         local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
-        -- The downgrade direction (the user's bag weapon): must read negative/red.
+        -- The downgrade direction (the user's bag weapon): negative/red, and the
+        -- decomposition must SUM to the net (weapon term + stat term = change).
         local down = HM.Sim.weaponSwap(lo.snapshot, { min = 18, max = 27, speed = 2.6 },
-            { min = 34, max = 52, speed = 2.6 }, 0)
+            { min = 34, max = 52, speed = 2.6 }, 10)
         if not (down and down.pct < 0) then return false, "downgrade not negative" end
+        if not approx(down.weaponDpsDelta + down.statDpsDelta,
+                down.newDps - down.curDps, 1e-9) then
+            return false, "decomposition does not sum to the net"
+        end
         local text = linesText(HM.Tooltips.itemLines({}, lo, nil, { weaponSwap = down }) or {})
-        if not (text:find("Melee DPS change:", 1, true) and text:find("per swing", 1, true)
+        if not (text:find("Melee DPS change:", 1, true)
+                and text:find("= weapon", 1, true)
+                and text:find("14 AP = 1 DPS", 1, true)
                 and text:find("fff87171")) then
-            return false, "missing from->to rows or loss color"
+            return false, "missing from->to row, explanation, or loss color"
         end
         -- A weapon hover that can't compare says WHY instead of silence.
         local whyText = linesText(HM.Tooltips.itemLines({ attackPower = 4 }, lo, nil,
