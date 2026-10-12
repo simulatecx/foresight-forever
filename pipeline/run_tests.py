@@ -69,6 +69,13 @@ def main() -> int:
         return 1
     print("harvest analyze green: synthetic probe votes as expected (A+B, trained+untrained)")
 
+    # Observed-vs-generated gate: the play-verification compare must verdict
+    # confirmed/mismatch/learned correctly and render a reviewable draft.
+    if not harvest.observed_selfcheck():
+        print("OBSERVED COMPARE RED - verdicts or the overrides draft broke")
+        return 1
+    print("observed compare green: confirmed/mismatch/learned verdicts + draft render")
+
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     load_chunk = lua.eval(
         """

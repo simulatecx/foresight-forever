@@ -109,14 +109,20 @@ engine (HP% + drop-rate tiers, all reads secret-guarded, degrade to display-only
 instances) + button-flash overlay + top-3 panic panel. Registry + trigger logic
 pure/selftest-covered; glow/panel verified in-game. Biggest remaining build.
 
-### S11 - QA-probe ◐  (impact observatory phase A shipped v0.16.0)
+### S11 - QA-probe ◐  (phase A v0.16.0; phase B auto-compare v0.24.0)
 PHASE A DONE: buff impact observatory - single-buff-change attribution diffs the live stat
 sheet and journals observed per-spellId impacts (gain-shaped, conservative: simultaneous
-changes discarded); harvest prints each observation by consumable name. This is the "build
-our DB in-game from real content" loop: datamined ops predict, play verifies.
-REMAINING: regen/swing/DoT-tick/GCD measurement during play; automated observed-vs-generated
-comparison that upgrades (p) -> verified@build or drafts an overrides correction; equip-delta
-observation (item stat ground truth).
+changes discarded). PHASE B DONE (v0.24.0): observed-vs-generated AUTO-COMPARE - harvest
+verdicts every observation per stat field (confirmed/mismatch/learned), aggregates across
+accounts, and drafts `collected/overrides_draft.lua` (verifiedBuffs candidates upgrade the
+tooltip "(p)" to green "play-verified <build>"; correction leads propose consumableImpacts
+replacements) - k-of-n (>=3 accounts) + human review, never auto-applied; new ship-gate
+selfcheck. FIRST LIVE CATCH: Oil of Olaf +50 armor confirmed; Goretusk Liver Pie observed
++1 Str vs generated +3 (n=2) - suspected Forever LEVEL-SCALED Well-Fed values; needs
+observations at more levels before a correction is drafted (if confirmed, the fix is a
+scaling rule in generate.py, not a flat override).
+REMAINING: regen/swing/DoT-tick/GCD measurement during play; equip-delta observation
+(item stat ground truth).
 
 ### S12 - Publishing train ◐  (repo LIVE v0.23.1; CurseForge/Wago registration remains)
 DONE: `.pkgmeta` + README + privacy ignores; CI workflows (gate / packager-on-tag /

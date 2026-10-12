@@ -465,11 +465,18 @@ function Tooltips.buffLines(itemId, loadout)
     end
     if #parts == 0 then return nil end
 
+    -- Play verification (S11): a k-of-n + human-reviewed overrides entry upgrades the
+    -- presumed tag - real gameplay confirmed these numbers at that build.
+    local verified = HM.overrides and HM.overrides.verifiedBuffs
+        and HM.overrides.verifiedBuffs[itemId]
     local lines = {}
     lines[#lines + 1] = {
         kind = "double", left = "Foresight",
-        right = "(p) " .. (entry.confidence or "classic-presumed"),
-        r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
+        right = verified and ("play-verified " .. (verified.build or ""))
+            or ("(p) " .. (entry.confidence or "classic-presumed")),
+        r = BRAND.r, g = BRAND.g, b = BRAND.b,
+        r2 = verified and 0.29 or GREY.r, g2 = verified and 0.87 or GREY.g,
+        b2 = verified and 0.50 or GREY.b,
     }
     lines[#lines + 1] = {
         text = ("|cff9d9d9dWhile active:|r %s%s"):format(table.concat(parts, ", "),

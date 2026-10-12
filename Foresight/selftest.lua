@@ -556,6 +556,35 @@ function HM.runSelftest(out)
         local found = HM.Snapshot.captureActiveBuffs()
         return type(found) == "table" and #found == 0
     end)())
+    check("play-verified overrides upgrade the buff tooltip tag", (function()
+        local before = HM.Tooltips.buffLines(13452, base)
+        if not before or not (before[1].right or ""):find("(p)", 1, true) then
+            return false
+        end
+        HM.overrides.verifiedBuffs[13452] = { build = "1.60.1.70338", accounts = 3,
+            fields = { agility = 25 } }
+        local after = HM.Tooltips.buffLines(13452, base)
+        HM.overrides.verifiedBuffs[13452] = nil
+        return after ~= nil
+            and (after[1].right or ""):find("play-verified 1.60.1.70338", 1, true) ~= nil
+    end)())
+    check("consumableImpacts override replaces generated + relinks the aura index", (function()
+        local gen = HM.gen
+        local orig = gen.consumables[10305] -- Scroll of Protection IV
+        if not orig then return false end
+        local corrected = { name = orig.name, buffSpellId = 999001,
+            durationMs = orig.durationMs, type = orig.type,
+            ops = { { kind = "armor", maxValue = 200, rankRule = "verified" } },
+            curatedBy = "TEST", note = "selftest round-trip" }
+        HM.overrides.consumableImpacts[10305] = corrected
+        HM.overrides.apply()
+        local replaced, linked = gen.consumables[10305], gen.buffsBySpell[999001]
+        HM.overrides.consumableImpacts[10305] = nil
+        gen.consumables[10305] = orig
+        gen.buffsBySpell[999001] = nil
+        return replaced == corrected and replaced.ops[1].maxValue == 200
+            and linked == 10305
+    end)())
 
     -- IMBUE-compare: the "Rockbiter or Flametongue on my 2H axe" simulation (S17).
     check("imbue data decodes the shaman chains", (function()

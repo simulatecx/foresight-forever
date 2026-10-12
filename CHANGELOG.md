@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.24.0 - 2026-10-11
+
+OBSERVED-VS-GENERATED auto-compare (S11 phase B): real play now grades the datamined data.
+
+- harvest.py compares every journaled buff observation against the generated ops and
+  verdicts each stat field: OK confirmed / !! mismatch / ?? learned (percent and
+  statConvert ops predict no flat number - never guessed; melee/ranged crit are
+  at-least checks because stat ops add derived crit on top).
+- Cross-account aggregation (newest harvest per account) -> `collected/
+  observed_impacts.json` + a human-review draft `collected/overrides_draft.lua`
+  (fully commented-out Lua - never loadable by accident) holding verifiedBuffs
+  candidates and correction leads, with the k-of-n (>= 3 accounts) + human-review
+  law stated in the file. Nothing is ever auto-applied.
+- `overrides.lua` grows `verifiedBuffs` (consumable tooltip header upgrades grey
+  "(p) presumed" to green "play-verified <build>") and `consumableImpacts` (a
+  reviewed correction fully replaces the generated entry and relinks the live-aura
+  index). Override application factored into `HM.overrides.apply()`.
+- New ship-gate step: observed-compare selfcheck (verdict paths + draft render on
+  real generated data). Selftest 144 (+2: verified-tag upgrade, correction round-trip).
+- FIRST REAL RESULTS (pilot account): Oil of Olaf +50 armor play-CONFIRMED vs
+  datamined; Goretusk Liver Pie FLAGGED - observed +1 Strength vs generated +3
+  (n=2), suspected Forever level-scaled Well-Fed values; lead journaled in the draft.
+
+*Features:* QA-probe, QA-harvester, DATA-overrides, CONSUME-buffs, QA-selftest-harness
+
 ## 0.23.1 - 2026-10-11
 
 S12 publish train ACTIVATED: the repo is live at github.com/simulatecx/foresight-forever.

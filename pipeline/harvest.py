@@ -200,6 +200,212 @@ def analyze_rank_rule(probe: dict, gen: dict) -> dict:
     return {"votes": votes, "untrained_votes": untrained, "details": details}
 
 
+def _idkey(k) -> str:
+    """Normalize a Lua-sourced id key ('12175', 12175, 12175.0) to one string form."""
+    return str(int(float(k)))
+
+
+# S11 observed-vs-generated: op kind -> snapshot field with a predicted flat value.
+# Mirrors Collect.claimedFields in core/collect.lua - keep the two in sync.
+OBS_STAT_FIELDS = {"Strength": "strength", "Agility": "agility", "Stamina": "stamina",
+                   "Intellect": "intellect", "Spirit": "spirit"}
+
+
+def predicted_fields(ops) -> dict:
+    """field -> {"value", "exact"}: what the generated ops claim the stat sheet moves.
+    Percent-based and statConvert ops predict no flat number (their base is
+    per-character) - they are deliberately absent, never guessed. Melee/ranged crit
+    are at-least predictions (exact=False): a stat op in the same buff (e.g. +Agility)
+    adds derived crit on top of the flat critChance op."""
+    out: dict = {}
+
+    def add(field, value, exact=True):
+        cur = out.setdefault(field, {"value": 0.0, "exact": True})
+        cur["value"] += float(value)
+        cur["exact"] = cur["exact"] and exact
+
+    for op in ops or []:
+        kind, v = op.get("kind"), op.get("maxValue") or 0
+        if op.get("isPct"):
+            continue
+        if kind == "stat" and op.get("stat") in OBS_STAT_FIELDS:
+            add(OBS_STAT_FIELDS[op["stat"]], v)
+        elif kind == "armor":
+            add("armor", v)
+        elif kind == "attackPower":
+            add("attackPower", v)
+        elif kind == "rangedAttackPower":
+            add("rangedAttackPower", v)
+        elif kind == "maxHealth":
+            add("maxHealth", v)
+        elif kind == "maxPower" and (op.get("powerType") or 0) == 0:
+            add("maxMana", v)
+        elif kind == "critChance":
+            add("spellCritPct", v)
+            add("meleeCritPct", v, exact=False)
+            add("rangedCritPct", v, exact=False)
+        elif kind == "schoolDamage":
+            add("spellDamage", v)
+    return out
+
+
+OBS_TOLERANCE = 0.5
+
+
+def compare_observed(observed: dict, gen: dict) -> list[dict]:
+    """Per observed buff, verdict each stat field against the generated prediction:
+    confirmed = play agrees with the datamined op (within tolerance; at-least for
+    derived-topped melee/ranged crit) · mismatch = play disagrees (correction evidence)
+    · learned = play moved a field we had no claim for (an unknown buff teaching us)."""
+    bys = {_idkey(k): v for k, v in (gen.get("buffsBySpell") or {}).items()}
+    cons = {_idkey(k): v for k, v in (gen.get("consumables") or {}).items()}
+    verdicts = []
+    for sid, e in sorted(observed.items(), key=lambda kv: _idkey(kv[0])):
+        key = _idkey(sid)
+        item_id = bys.get(key)
+        item_key = _idkey(item_id) if item_id is not None else None
+        entry = cons.get(item_key) if item_key else None
+        predicted = predicted_fields((entry or {}).get("ops"))
+        fields = {}
+        for f, ov in sorted((e.get("stats") or {}).items()):
+            ov = float(ov)
+            p = predicted.get(f)
+            if p is None:
+                fields[f] = {"observed": ov, "verdict": "learned"}
+            elif p["exact"]:
+                ok = abs(ov - p["value"]) <= OBS_TOLERANCE
+                fields[f] = {"observed": ov, "predicted": p["value"],
+                             "verdict": "confirmed" if ok else "mismatch"}
+            else:
+                ok = ov >= p["value"] - 0.01
+                fields[f] = {"observed": ov, "predicted": p["value"],
+                             "verdict": "confirmed" if ok else "mismatch",
+                             "note": "flat + stat-derived (at-least)"}
+        verdicts.append({"spellId": key, "itemId": item_key,
+                         "name": (entry or {}).get("name") or f"spell {key}",
+                         "n": int(e.get("n") or 1), "fields": fields})
+    return verdicts
+
+
+K_OF_N = 3  # distinct accounts that must agree before a draft line is paste-eligible
+
+
+def render_overrides_draft(agg: dict, accounts: int, build: str) -> str:
+    """The human-review draft: fully commented-out Lua, never loadable by accident.
+    Confirmations become overrides.verifiedBuffs candidates; mismatches become
+    consumableImpacts correction leads. The k-of-n + human-review law is stated in
+    the file itself so a copy-paste can't outrun the doctrine."""
+    lines = [
+        f"-- DRAFT overrides from observed-vs-generated (build {build}, "
+        f"{accounts} account(s) harvested).",
+        f"-- NEVER auto-applied. Law: k-of-n (>= {K_OF_N} distinct accounts) + human",
+        "-- review before any line moves into Foresight/data/overrides.lua.",
+        "",
+        "-- verifiedBuffs candidates (play CONFIRMED the generated values):",
+    ]
+    corrections = []
+    for sid, per_field in sorted(agg.items()):
+        confirmed, item_id, name = {}, None, f"spell {sid}"
+        for f, slot in sorted(per_field.items()):
+            item_id, name = slot.get("itemId") or item_id, slot.get("name") or name
+            if slot["mismatch"] == 0 and slot["confirm"] >= 1:
+                confirmed[f] = slot["observed"][-1]
+            elif slot["mismatch"] >= 1:
+                corrections.append(
+                    f"--   item {item_id or '?'} {name} field {f}: generated "
+                    f"{slot.get('predicted')}, observed {slot['observed']} "
+                    f"({slot['confirm'] + slot['mismatch']} account(s))")
+        if confirmed and item_id:
+            n = max(s["confirm"] for s in per_field.values())
+            tag = "" if n >= K_OF_N else f"  -- n<{K_OF_N}: pilot evidence only"
+            fields = ", ".join(f"{f} = {v:g}" for f, v in sorted(confirmed.items()))
+            lines.append(f"--   [{item_id}] = {{ build = \"{build}\", accounts = {n}, "
+                         f"fields = {{ {fields} }} }}, -- {name}{tag}")
+    lines.append("")
+    lines.append("-- consumableImpacts correction leads (play DISAGREED - investigate,")
+    lines.append("-- then draft a replacement entry with the observed numbers):")
+    lines.extend(corrections or ["--   (none)"])
+    return "\n".join(lines) + "\n"
+
+
+def aggregate_observed(gen) -> None:
+    """Merge observedImpacts across archived harvests (newest per account), compare
+    against generated predictions, and write collected/observed_impacts.json plus the
+    human-review draft collected/overrides_draft.lua. Nothing is ever auto-applied."""
+    newest = {}
+    for f in sorted(COLLECTED.glob("harvest-*.json")):
+        newest[f.name.rsplit("-", 2)[0]] = f
+    agg: dict = {}
+    harvested = 0
+    for account, f in newest.items():
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        obs = (data.get("collect") or {}).get("observedImpacts") or {}
+        if not obs:
+            continue
+        harvested += 1
+        for v in compare_observed(obs, gen):
+            for fname, fv in v["fields"].items():
+                slot = agg.setdefault(v["spellId"], {}).setdefault(fname, {
+                    "name": v["name"], "itemId": v["itemId"],
+                    "confirm": 0, "mismatch": 0, "learned": 0,
+                    "predicted": fv.get("predicted"), "observed": []})
+                key = {"confirmed": "confirm", "mismatch": "mismatch",
+                       "learned": "learned"}[fv["verdict"]]
+                slot[key] += 1
+                slot["observed"].append(fv["observed"])
+    if not agg:
+        return
+    build = str(gen.get("build") or "?")
+    (COLLECTED / "observed_impacts.json").write_text(
+        json.dumps({"build": build, "accounts": harvested, "spells": agg}, indent=1),
+        encoding="utf-8")
+    draft = render_overrides_draft(agg, harvested, build)
+    (COLLECTED / "overrides_draft.lua").write_text(draft, encoding="utf-8")
+    n_confirm = sum(1 for pf in agg.values() for s in pf.values()
+                    if s["mismatch"] == 0 and s["confirm"] >= 1)
+    n_mismatch = sum(1 for pf in agg.values() for s in pf.values() if s["mismatch"] >= 1)
+    n_learned = sum(1 for pf in agg.values() for s in pf.values() if s["learned"] >= 1)
+    print(f"\nobserved-vs-generated: {len(agg)} buff(s) across {harvested} account(s) -> "
+          f"{n_confirm} field(s) confirmed, {n_mismatch} mismatch(es), "
+          f"{n_learned} learned -> overrides_draft.lua (k-of-n + human review)")
+
+
+def observed_selfcheck() -> bool:
+    """Prove observed-vs-generated end-to-end on real generated data: an observation
+    matching the datamined ops reads confirmed, a skewed one mismatch, an unknown
+    spell learned - and the draft renderer emits both sections. Called by
+    run_tests.py; a regression here blocks the ship."""
+    gen = load_generated()
+    entry = (gen.get("consumables") or {}).get("10305")  # Scroll of Protection IV
+    if not entry or not entry.get("buffSpellId"):
+        return False
+    sid = _idkey(entry["buffSpellId"])
+    armor = entry["ops"][0]["maxValue"]
+    verdicts = {v["spellId"]: v for v in compare_observed({
+        sid: {"stats": {"armor": armor}, "n": 2},
+        "999999999": {"stats": {"spirit": 9}, "n": 1},
+    }, gen)}
+    if verdicts[sid]["fields"]["armor"]["verdict"] != "confirmed":
+        return False
+    if verdicts["999999999"]["fields"]["spirit"]["verdict"] != "learned":
+        return False
+    bad = compare_observed({sid: {"stats": {"armor": armor - 100}, "n": 1}}, gen)[0]
+    if bad["fields"]["armor"]["verdict"] != "mismatch":
+        return False
+    agg = {sid: {"armor": {"name": entry["name"], "itemId": "10305", "confirm": 1,
+                           "mismatch": 0, "learned": 0, "predicted": float(armor),
+                           "observed": [float(armor)]}},
+           "2": {"spirit": {"name": "spell 2", "itemId": None, "confirm": 0,
+                            "mismatch": 1, "learned": 0, "predicted": 5.0,
+                            "observed": [9.0]}}}
+    draft = render_overrides_draft(agg, 1, str(gen.get("build") or "?"))
+    return ("[10305]" in draft and "pilot evidence" in draft
+            and "field spirit: generated 5.0, observed [9.0]" in draft)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wow-root", action="append", type=Path, default=None)
@@ -298,23 +504,22 @@ def main() -> int:
                     print(f"     {e.get('name') or nid} r{e.get('rank')}/{e.get('maxRank')}: {first!r}")
         observed = collect.get("observedImpacts") or {}
         if observed:
-            def _k(d):  # id-keyed lua tables arrive with int/float/str keys
-                return {str(int(float(k))): v for k, v in d.items()}
-            bys = _k((gen.get("buffsBySpell") or {}) if gen else {})
-            cons = _k((gen.get("consumables") or {}) if gen else {})
-            print(f"   observed buff impacts ({len(observed)}) - live ground truth:")
-            for sid, e in sorted(observed.items(), key=lambda kv: str(kv[0])):
-                key = str(int(float(sid)))
-                item_id = bys.get(key)
-                entry = cons.get(str(int(float(item_id)))) if item_id is not None else None
-                name = (entry or {}).get("name") or f"spell {key}"
-                stats = e.get("stats") or {}
-                parts = ", ".join(f"{k} {v:+g}" for k, v in sorted(stats.items()))
-                print(f"     {name} (spell {key}, n={e.get('n')}): {parts}")
+            print(f"   observed buff impacts ({len(observed)}) - live ground truth "
+                  f"vs generated:")
+            marks = {"confirmed": "OK", "mismatch": "!!", "learned": "??"}
+            for v in compare_observed(observed, gen):
+                parts = []
+                for f, fv in sorted(v["fields"].items()):
+                    pred = ("" if fv.get("predicted") is None
+                            else f" (gen {fv['predicted']:+g})")
+                    parts.append(f"{marks[fv['verdict']]} {f} {fv['observed']:+g}{pred}")
+                print(f"     {v['name']} (spell {v['spellId']}, n={v['n']}): "
+                      f"{', '.join(parts)}")
         if not verify and not probe:
             print("   no verify/probe data yet - run /foresight verify in-game, then log out")
 
     aggregate_sightings(gen)
+    aggregate_observed(gen)
     return exit_code
 
 
