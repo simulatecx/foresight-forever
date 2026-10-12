@@ -31,6 +31,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S13 Crowd scale-up: companion uploader + ingestion + privacy pass | - | ☐ |
 | S18 SIM-engine: simulation & synergy math core (PRD trio) | 3 | ◐ |
 | S19 MODEL-ability-outcomes: what this button actually hits for | 3 | ◐ |
+| S20 Stat coaching, derived never scripted | 3 | ◐ |
 | S21 Rank-rule truth: decode first, vote second | 3 | ◐ |
 
 ## Active / next
@@ -308,6 +309,29 @@ nil degrade · ☑ spellLines absolute line + datamined-coefficient upgrade ·
 ☑ nodeImpactLines before->after deltas (<=3 lines) · ☑ Shatter loop claims level-capped
 numbers, fallback retained · ☑ /foresight hit · ☑ selftest >= 189 (shipped 191) ·
 ☐ in-game verify >= 3 abilities vs rendered tooltips before 2026-10-21.
+
+### S20 - Stat coaching, derived never scripted (enhance MODEL-stat-advisor) ◐  (triaged 2026-10-12, handoff spec)
+Fit & Overlap - Category MODEL -> UI. Verdict: Enhance impact.lua rankStats surface +
+panel_model statvalue + tooltips itemLines. Complements: MODEL-stat-advisor,
+UI-item-tooltip. Avoid duplicating: any per-class string registry (rejected-on-record:
+hardcoded math) - the line is composed from statConversions zeros + rankStats
+marginals + the live graph's crit derivation only. USER BINDING: never
+anti-flexibility - the net-swap verdict stays the headline; coaching is attribution
+("what carries this item"), never judgment. Mobile: text lines. Languages: enUS full
+sentences. Trust: display-only, (p) tags. Data: none. Abuse: not externally reachable.
+
+As a leveling Shaman, I want Foresight to explain that Agility does nothing for my
+melee power - with the mechanism and live numbers - while still judging any item by
+its honest net impact, so I understand my scaling without the addon policing my
+choices.
+
+AC: ☑ Impact.coachingLine derives trigger (dead focus marginal + conversion-table
+zero), names mechanism + winner with live marginals (crit/pt read off the graph) ·
+☑ max ONE line, threshold-gated (display-gate constants, relative deadness because
+crit leaks into the melee lens) · ☑ surfaces: advisor, panel statvalue footer, item
+tooltip only when the dead stat dominates AND beneath an unchanged verdict ·
+☑ selftest +5 incl. the anti-registry numbers-move check · ☑ no string registry
+anywhere · ☐ in-game render verify.
 
 ### S21 - Rank-rule truth: decode first, vote second ◐  (triaged 2026-10-12, handoff spec)
 Fit & Overlap - Category DATA -> MODEL. Verdict: Enhance generate.py (per-rank op

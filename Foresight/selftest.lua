@@ -190,6 +190,68 @@ function HM.runSelftest(out)
         return ranked[1].stat == "Intellect"
     end)())
 
+    -- S20 stat coaching: derived mechanism attribution, never a registry, never a judge.
+    local function meleeShamanSnap()
+        return {
+            classToken = "SHAMAN", level = 20, weaponSpeed = 2.6,
+            weaponDamageMin = 30, weaponDamageMax = 45,
+            stats = { strength = 60, agility = 35, stamina = 55, intellect = 40,
+                spirit = 45, spellDamage = 0, healingPower = 0, attackPower = 300,
+                rangedAttackPower = 0, spellCritPct = 3, meleeCritPct = 4,
+                rangedCritPct = 0, hastePct = 0, armor = 500, avoidancePct = 4,
+                maxHealth = 800, maxMana = 600 },
+        }
+    end
+    check("coaching: dead Agility on a melee Shaman names mechanism + live numbers", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local line = HM.Impact.coachingLine(lo)
+        return type(line) == "string"
+            and line:find("Agility adds no Attack Power for a Shaman", 1, true) ~= nil
+            and line:find("(p)", 1, true) ~= nil
+            and line:find("only adds crit", 1, true) ~= nil
+            and line:find("Strength carries your Melee DPS", 1, true) ~= nil
+            and line:find("\n") == nil -- ONE line, always
+    end)())
+    check("coaching: no line for a caster's Intellect (not dead)", (function()
+        return HM.Impact.coachingLine(base) == nil
+    end)())
+    check("coaching: anti-registry - mutate statConversions and the line moves", (function()
+        local conv = HM.formulas.statConversions.byClass.SHAMAN
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local before = HM.Impact.coachingLine(lo)
+        conv.apPerAgi = 1 -- Agility now feeds AP: the mechanism claim must vanish
+        local mutated = HM.Impact.coachingLine(lo)
+        conv.apPerAgi = 0
+        local restored = HM.Impact.coachingLine(lo)
+        -- and the crit number is live-derived: more agility per crit% moves it down
+        local snap = meleeShamanSnap()
+        snap.stats.agility = 50
+        local diluted = HM.Impact.coachingLine(HM.Loadout.fromSnapshot(snap))
+        return before ~= nil and mutated == nil and restored == before
+            and diluted ~= nil and diluted ~= before
+    end)())
+    check("coaching: item line only when the dead stat dominates", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local hit = HM.Impact.coachingItemLine(lo, { Agility = 10, Stamina = 2 })
+        local miss = HM.Impact.coachingItemLine(lo, { Stamina = 10, Agility = 2 })
+        return type(hit) == "string" and hit:find("Agility", 1, true) ~= nil
+            and miss == nil
+    end)())
+    check("coaching: verdict headline unchanged and above the attribution", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local mapped = { Agility = 10, Stamina = 2 }
+        local v = HM.Impact.itemVerdict(lo, mapped, nil, "auto")
+        local lines = HM.Tooltips.itemLines(mapped, lo)
+        if not (v and lines) then return false end
+        local verdictAt, coachAt
+        for i, L in ipairs(lines) do
+            local t = L.text or ""
+            if t:find("for " .. v.label, 1, true) then verdictAt = verdictAt or i end
+            if t:find("only adds crit", 1, true) then coachAt = coachAt or i end
+        end
+        return verdictAt ~= nil and coachAt ~= nil and verdictAt < coachAt
+    end)())
+
     -- UI-playstyle-label: one-line build profile from dimension scores (v0 heuristic).
     check("playstyle label classifies the caster build", (function()
         local results = HM.Impact.evaluate(base)

@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.29.0"
+HM.version = "0.30.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -173,8 +173,11 @@ local function onSlash(input)
             return
         end
         local loadout = HM.Loadout.fromSnapshot(snapshot)
-        local sentence, ranked = HM.Impact.statPrioritySentence(loadout)
+        local sentence, ranked, focus = HM.Impact.statPrioritySentence(loadout)
         printMsg(sentence)
+        -- S20 coaching: one derived attribution line when a stat is dead by mechanism.
+        local okCoach, coach = pcall(HM.Impact.coachingLine, loadout, ranked, focus)
+        if okCoach and coach then printMsg(coach) end
         for _, r in ipairs(ranked) do
             printMsg(("  %s: %s"):format(r.stat,
                 r.bestLabel and ("%+.1f%% %s"):format(r.bestPct, r.bestLabel)

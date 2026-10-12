@@ -448,6 +448,12 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
             r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
         }
     end
+    -- S20 coaching attribution, BENEATH the verdict it never alters: fires only when
+    -- the item's largest stat is the mechanism-dead stat for the focus lens.
+    local okCoach, coach = pcall(HM.Impact.coachingItemLine, loadout, mapped)
+    if okCoach and coach then
+        lines[#lines + 1] = { text = coach, r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
+    end
     -- Archetype shift (SIM-engine): when the swap changes the plain-English standing
     -- of the whole build, say so prominently - that is a bigger call than +x%.
     if HM.Sim then

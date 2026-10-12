@@ -267,7 +267,7 @@ function PanelModel.build(loadout)
 
     -- Stat value: each stat's strongest impact per +1 point (MODEL-stat-advisor).
     local statRows = {}
-    local ok, ranked = pcall(HM.Impact.rankStats, loadout)
+    local ok, ranked, focus = pcall(HM.Impact.rankStats, loadout)
     for _, r in ipairs(ok and ranked or {}) do
         statRows[#statRows + 1] = {
             label = r.stat,
@@ -275,6 +275,14 @@ function PanelModel.build(loadout)
                 or "no modeled effect",
             wide = true,
         }
+    end
+    -- S20 coaching footer: one derived mechanism line when a stat is dead for the
+    -- focus lens (attribution, never judgment - the verdict logic is untouched).
+    if ok then
+        local okc, coach = pcall(HM.Impact.coachingLine, loadout, ranked, focus)
+        if okc and coach then
+            statRows[#statRows + 1] = { label = "", value = coach, wide = true }
+        end
     end
     sections[#sections + 1] = { id = "statvalue", title = "Stat value (per +1)", rows = statRows }
 

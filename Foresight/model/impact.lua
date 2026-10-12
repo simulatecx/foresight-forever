@@ -223,6 +223,93 @@ function Impact.statPrioritySentence(loadout, stats)
         dim and dim.label or "build", table.concat(names, " > ")), ranked, focus
 end
 
+-- S20 stat coaching: EXPLAIN a dead stat's mechanism, never judge a choice. The line
+-- is DERIVED on every call - the trigger reads a statConversions zero (mutate the
+-- table and the line moves/vanishes: selftest-pinned) and every number is a live
+-- marginal (rankStats focus pcts; the dead stat's crit from the built graph). The
+-- net-swap verdict (itemVerdict) remains the only judge of items; this is attribution
+-- beneath it. USER BINDING (2026-10-12): math-derived, but never anti-flexibility.
+--
+-- Display gates (presentation thresholds, not game math): the focus leader must carry
+-- >= LEAD_MIN %/pt, and a stat is "coachably dead" when its focus marginal is
+-- <= DEAD_ABS or <= DEAD_FRACTION of the leader's (relative, because crit still leaks
+-- a little of the dead stat into the melee lens).
+local DEAD_ABS, DEAD_FRACTION, LEAD_MIN = 0.005, 0.25, 0.01
+-- Which conversion-table zero EXPLAINS a dead stat per focus lens. Structure only -
+-- the magnitudes live in F.statConversions and the live graph, never here.
+local DEAD_MECHANISM = {
+    meleeDps = {
+        Agility = { key = "apPerAgi", noun = "Attack Power", critNode = "stat.meleeCritPct" },
+        Strength = { key = "apPerStr", noun = "Attack Power", critNode = "stat.meleeCritPct" },
+    },
+    rangedDps = {
+        Agility = { key = "rapPerAgi", noun = "ranged Attack Power", critNode = "stat.rangedCritPct" },
+    },
+}
+
+local function titleClass(token)
+    token = tostring(token or "")
+    return token:sub(1, 1):upper() .. token:sub(2):lower()
+end
+
+-- Returns (line, info) or nil. At most ONE line, neutral wording, no emoji.
+function Impact.coachingLine(loadout, ranked, focus)
+    if not ranked then ranked, focus = Impact.rankStats(loadout) end
+    local mech = focus and DEAD_MECHANISM[focus]
+    local top = ranked and ranked[1]
+    if not (mech and top and (top.focusPct or 0) >= LEAD_MIN) then return nil end
+    local conv = ((HM.formulas.statConversions.byClass or {})[loadout.snapshot.classToken]) or {}
+    local gate = math.max(DEAD_ABS, (top.focusPct or 0) * DEAD_FRACTION)
+    for _, r in ipairs(ranked) do
+        local m = mech[r.stat]
+        if m and r.stat ~= top.stat and math.abs(r.focusPct or 0) <= gate
+                and (conv[m.key] or 0) == 0 then
+            -- What the dead stat actually adds, read off the live graph (one path).
+            local critPt
+            local okc, d = pcall(function()
+                local bb = loadout:build()
+                local ab = loadout:withStatDelta(r.stat, 1, "+1 " .. r.stat):build()
+                return ab.graph:value(m.critNode, ab.ctx, {})
+                    - bb.graph:value(m.critNode, bb.ctx, {})
+            end)
+            if okc and type(d) == "number" and d > 1e-6 then critPt = d end
+            local dim = HM.dimensions.byId(focus)
+            local mark = HM.formulas.presumedMark(HM.formulas.statConversions)
+            local line = ("%s adds no %s for a %s%s%s. %s carries your %s (%+.2f%%/pt).")
+                :format(r.stat, m.noun, titleClass(loadout.snapshot.classToken), mark,
+                    critPt and (" - it only adds crit (%+.2f%%/pt)"):format(critPt)
+                        or " - it adds nothing measurable here",
+                    top.stat, dim and dim.label or focus, top.focusPct)
+            return line, { deadStat = r.stat, noun = m.noun, critPerPt = critPt,
+                           topStat = top.stat, topPct = top.focusPct, focus = focus }
+        end
+    end
+    return nil
+end
+
+-- Item-tooltip attribution (beneath the verdict, which it NEVER alters or suppresses):
+-- only when the hovered item's LARGEST mapped stat is the coachably-dead stat.
+function Impact.coachingItemLine(loadout, mapped)
+    local _, info = Impact.coachingLine(loadout)
+    if not info then return nil end
+    local domStat, domVal, others = nil, nil, 0
+    for stat, v in pairs(mapped or {}) do
+        if type(v) == "number" and v > 0 then
+            if not domVal or v > domVal then domStat, domVal = stat, v end
+            others = others + 1
+        end
+    end
+    if domStat ~= info.deadStat then return nil end
+    local mark = HM.formulas.presumedMark(HM.formulas.statConversions)
+    local adds = info.critPerPt
+        and ("crit (%+.2f%%/pt)"):format(info.critPerPt) or "little here"
+    if others > 1 then
+        return ("its other stats carry this - the %s only adds %s for you%s")
+            :format(info.deadStat, adds, mark)
+    end
+    return ("the %s here only adds %s for you%s"):format(info.deadStat, adds, mark)
+end
+
 -- The CHAIN view (shared): given a base loadout and a modeled one (one stat added, or one
 -- talent taken), describe the derived stats it moves (AP + per-swing damage, crit%, mana)
 -- and the net dimension deltas - reading the graph's intermediate nodes, not just the

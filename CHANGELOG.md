@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.30.0 - 2026-10-12
+
+STAT COACHING, DERIVED NEVER SCRIPTED (S20): when a stat does nothing for your focus
+by MECHANISM, Foresight explains why - with live numbers - and never argues with the
+item verdict. USER BINDING honored: math-derived, never anti-flexibility.
+
+- `Impact.coachingLine`: fires only when the focus leader carries a real marginal, a
+  ranked stat sits under the dead gate (relative to the leader - crit leaks a little
+  of a dead stat into the melee lens, so absolute-zero would never fire), AND a
+  statConversions ZERO confirms the mechanism (SHAMAN apPerAgi == 0 names it:
+  "Agility adds no Attack Power for a Shaman (p) - it only adds crit (+0.11%/pt).
+  Strength carries your Melee DPS (+0.45%/pt)."). The crit number is read off the
+  built graph (the same live derivation the model folds), the dimension numbers are
+  rankStats marginals - no per-class string registry anywhere (anti-registry
+  selftest: mutate the conversion table and the line moves/vanishes).
+- Surfaces: `/foresight advisor` (after the priority sentence), the panel "Stat value
+  (per +1)" footer row, and item tooltips - attribution ONLY when the hovered item's
+  largest stat is the dead stat, placed beneath the verdict headline, which is never
+  altered or suppressed ("its other stats carry this - the Agility only adds crit
+  for you (p)").
+- Max ONE line per surface, threshold constants documented as display gates.
+- Selftest 202 (+5): mechanism line fires on the melee-Shaman fixture, no line for a
+  caster's Intellect, anti-registry numbers-move, item dominance gating, verdict
+  unchanged and above the attribution.
+
+*Features:* MODEL-stat-advisor, UI-item-tooltip, UI-stats-panel, QA-selftest-harness
+
 ## 0.29.0 - 2026-10-12
 
 RANK-RULE TRUTH (S21): decode first, vote second. Where classic talents carry per-rank
