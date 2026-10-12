@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.25.1"
+HM.version = "0.26.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -27,7 +27,7 @@ end
 -- Checks that every module this code generation expects actually loaded.
 function HM.staleCodeCheck()
     local missing = {}
-    for _, m in ipairs({ "Plan", "SynergyHighlight", "Racials" }) do
+    for _, m in ipairs({ "Plan", "SynergyHighlight", "Racials", "Sim", "MatrixPanel" }) do
         if not HM[m] then missing[#missing + 1] = m end
     end
     for _, g in ipairs({ "consumables", "racials" }) do
@@ -604,6 +604,21 @@ local function onSlash(input)
                 printMsg("  " .. line)
             end
         end
+    elseif cmd == "matrix" then
+        -- The Matrix dashboard (S7b): standing badge + dimension bars + the class's
+        -- Enabler -> Engine -> Payoff loops. Modifiable: opacity + drag position.
+        local sub, arg = rest:match("^(%S*)%s*(.-)$")
+        if not HM.MatrixPanel then
+            printMsg("matrix panel is in-game only")
+        elseif sub == "opacity" then
+            local a = HM.MatrixPanel.setOpacity(arg)
+            printMsg(("matrix background opacity set to %.2f (0.2 - 1.0)"):format(a))
+        elseif sub == "reset" then
+            HM.MatrixPanel.resetPosition()
+            printMsg("matrix position reset to center")
+        else
+            HM.MatrixPanel.toggle()
+        end
     elseif cmd == "verify" then
         HM.Collect.verify(printMsg)
         HM.Collect.probeTalentApiShape(printMsg)
@@ -616,7 +631,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | path [dimension] | loop [id] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

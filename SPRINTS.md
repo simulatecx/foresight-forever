@@ -75,15 +75,14 @@ Make the talent map whole now that C_Traits coverage exists.
 - **S7b UI-mapping-panel** (◐, model shipped v0.21.0): `model/mapping.lua` - bidirectional
   talent<->ability map (inverse "what modifies Fireball" + forward "what Improved Fireball
   touches") off shared affected-spell edges; `/foresight affects`; pure + selftest-covered.
-  Remaining: the visual MATRIX renderer (in-game), now spec'd by the user's mockup
-  `mockups/foresight-matrix-2026-10-12.html` (2026-10-12): three components - stats panel
-  w/ archetype badge + dimension bars, Synergy Matrix (goal dropdown -> blue Enabler /
-  yellow Engine / green Payoff cards -> actionable-insight box), ✨-styled tooltip
-  injection. ALL data layers exist (Sim.standing, loops.lua, mapping, goalPathways,
-  windfuryWeaponLine). FILL-BASIS DECISION (the honest-bars question): bars are relative
-  WITHIN groups - each output lens fills vs the strongest output lens (=100%), defensive/
-  sustain lenses scale within their own group - and the panel labels the basis ("of your
-  strongest lens"), never fake absolutes.
+  MATRIX RENDERER SHIPPED (v0.26.0): `ui/matrix_panel.lua` + pure `matrixModel` build
+  the mockup (`mockups/foresight-matrix-2026-10-12.html`) - standing badge, honest
+  dimension bars (FILL-BASIS DECISION: relative WITHIN groups, strongest output lens =
+  full bar, basis printed on the panel - never fake absolutes), Enabler/Engine/Payoff
+  cards + insight box, title-click loop cycling, draggable + validated position,
+  user-modifiable opacity (/foresight matrix opacity, validated). Remaining: in-game
+  render verify (incl. mobile binding 1280x720 @ 0.65), skill-centric mode (click an
+  ability -> dim tree + glow modifiers), pathway rows on the panel.
 
 ### S8 - DATA-items + gear compare ◐  (strongest community demand)
 v0 SHIPPED (v0.9.0): `Impact.compareItems` nets two items' per-dimension impact (reuses

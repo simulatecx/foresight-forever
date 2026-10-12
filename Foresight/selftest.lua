@@ -777,6 +777,41 @@ function HM.runSelftest(out)
         return label:find("Glass Cannon | ", 1, true) ~= nil
     end)())
 
+    -- MATRIX panel model (S7b renderer spec: mockups/foresight-matrix-2026-10-12.html).
+    check("matrix opacity validates untrusted values", (function()
+        local N = HM.PanelModel.normalizeOpacity
+        return N("garbage") == 0.92 and N(nil) == 0.92
+            and N(0.05) == 0.2 and N(5) == 1.0 and N(0.5) == 0.5
+    end)())
+    check("matrix model: standing badge + honest bar basis", (function()
+        local m = HM.PanelModel.matrixModel(base)
+        return m.header.standing.name == "Glass Cannon"
+            and m.bars.basis:find("relative", 1, true) ~= nil
+            and m.bars.basis:find("(p)", 1, true) ~= nil
+    end)())
+    check("matrix bars fill relative within groups", (function()
+        local m = HM.PanelModel.matrixModel(base)
+        local tops = { output = 0, defense = 0 }
+        for _, bar in ipairs(m.bars.rows) do
+            if bar.fill > 1.0001 or bar.fill < 0 then return false end
+            if bar.top then tops[bar.group] = tops[bar.group] + 1 end
+        end
+        return tops.output == 1 and tops.defense == 1
+    end)())
+    check("matrix eco maps the class loop with tagged cards", (function()
+        local m = HM.PanelModel.matrixModel(base) -- MAGE -> the Shatter loop
+        if not m.eco or m.eco.id ~= "shatter" or #m.eco.nodes ~= 3 then return false end
+        local tags = {}
+        for _, n in ipairs(m.eco.nodes) do tags[n.tag] = n.title end
+        return tags.Enabler ~= nil and tags.Engine ~= nil and tags.Payoff ~= nil
+            and (tags.Engine or ""):find("Shatter", 1, true) ~= nil
+            and #m.eco.computed >= 1
+    end)())
+    check("matrix eco falls back when the saved loop id is garbage", (function()
+        local m = HM.PanelModel.matrixModel(base, "tampered-loop-id")
+        return m.eco ~= nil and m.eco.id == "shatter"
+    end)())
+
     -- WHATIF-planner: persistent future-build plan over the one delta stack.
     check("plan validates typed deltas and drops garbage", (function()
         local clean, dropped = HM.Plan.validate({

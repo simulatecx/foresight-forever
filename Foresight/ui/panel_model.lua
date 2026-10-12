@@ -74,6 +74,98 @@ function PanelModel.playstyleLabel(results, snapshot)
     return ("%s%s-leaning%s (v0 heuristic)"):format(prefix, arch.word, lean)
 end
 
+-- Matrix opacity setting (untrusted-input law): clamp to a readable range, garbage
+-- falls back to the default. Pure so the selftest covers it.
+local OPACITY_DEFAULT, OPACITY_MIN, OPACITY_MAX = 0.92, 0.2, 1.0
+function PanelModel.normalizeOpacity(v)
+    local a = tonumber(v)
+    if not a then return OPACITY_DEFAULT end
+    if a < OPACITY_MIN then return OPACITY_MIN end
+    if a > OPACITY_MAX then return OPACITY_MAX end
+    return a
+end
+
+-- The Matrix panel model (S7b, mockups/foresight-matrix-2026-10-12.html): header with
+-- the plain-English standing badge, dimension BARS, and the class's Enabler -> Engine
+-- -> Payoff loops. Pure - the renderer draws, this decides.
+-- FILL-BASIS LAW (the honest-bars decision): dimension scores are per-lens indices on
+-- different scales, so each bar fills RELATIVE WITHIN ITS GROUP (your strongest output
+-- lens = full bar; defensive/economy lenses scale within their own group) and the
+-- basis is stated on the panel. Never fake absolutes.
+local OUTPUT_IDS = { spellcasting = true, meleeDps = true, rangedDps = true, healing = true }
+
+function PanelModel.matrixModel(loadout, activeLoopId)
+    local results = HM.Impact.evaluate(loadout)
+    local snapshot = loadout.snapshot or {}
+    local stats = snapshot.stats or {}
+    local standing = HM.Sim and HM.Sim.standing(results, stats)
+        or { name = "?", detail = "" }
+
+    -- Dimension bars, grouped for an honest relative fill.
+    local groupMax = { output = 0, defense = 0 }
+    local rows = {}
+    for _, dim in ipairs(HM.dimensions.list) do
+        local r = results[dim.id]
+        if r and r.score then
+            local group = OUTPUT_IDS[dim.id] and "output" or "defense"
+            if r.score > groupMax[group] then groupMax[group] = r.score end
+            rows[#rows + 1] = { id = dim.id, label = dim.label, score = r.score,
+                                group = group }
+        end
+    end
+    local bars = {}
+    for _, row in ipairs(rows) do
+        local max = groupMax[row.group]
+        local fill = (max > 0) and (row.score / max) or 0
+        bars[#bars + 1] = {
+            id = row.id, label = row.label, group = row.group,
+            value = (row.score >= 100) and ("%.0f"):format(row.score)
+                or ("%.1f"):format(row.score),
+            fill = fill, top = fill >= 0.999,
+        }
+    end
+
+    -- Class loops (the ecosystem map). The active one feeds the card list; the rest
+    -- are cycle targets for the goal row.
+    local loops = HM.loopsForClass and HM.loopsForClass(snapshot.classToken) or {}
+    local active
+    for _, l in ipairs(loops) do
+        if l.id == activeLoopId then active = l end
+    end
+    active = active or loops[1]
+    local eco
+    if active then
+        local okc, computed = pcall(active.compute, loadout)
+        eco = {
+            id = active.id, name = active.name, insight = active.insight,
+            confidence = active.confidence,
+            computed = okc and computed or {},
+            nodes = {
+                { tag = "Enabler", title = table.concat(active.enablers, " / "),
+                  desc = "Turns the engine on - without this the loop is off." },
+                { tag = "Engine", title = table.concat(active.engine, " / "),
+                  desc = "The multiplier this loop exists for." },
+                { tag = "Payoff", title = table.concat(active.payoffs, " / "),
+                  desc = "Cash it in right after an enabler lands." },
+            },
+        }
+    end
+
+    return {
+        header = {
+            name = snapshot.name, classToken = snapshot.classToken,
+            level = snapshot.level, raceToken = snapshot.raceToken,
+            standing = standing,
+        },
+        bars = {
+            basis = "bars relative to your strongest lens per group (p)",
+            rows = bars,
+        },
+        eco = eco,
+        loopCount = #loops,
+    }
+end
+
 -- Build the full panel model for a loadout.
 -- Returns { sections = { { id, title, rows = { { label, value, tooltip? } } } } }
 function PanelModel.build(loadout)

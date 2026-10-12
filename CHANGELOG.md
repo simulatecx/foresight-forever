@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.26.0 - 2026-10-12
+
+THE FORESIGHT MATRIX (S7b renderer): the class-ecology dashboard from the user's
+mockup (`mockups/foresight-matrix-2026-10-12.html`), WoW-native and user-modifiable.
+
+- NEW `ui/matrix_panel.lua` + pure `PanelModel.matrixModel`: character header with the
+  class-colored STANDING BADGE ("PRIMAL HYBRID"), dimension BARS, and the class's
+  Enabler -> Engine -> Payoff ecosystem cards (blue/yellow/green accent strips) with
+  the actionable-insight box fed by the loop's live computed lines.
+- HONEST BARS (the fill-basis decision, recorded in S7b): each bar fills RELATIVE
+  WITHIN ITS GROUP (strongest output lens = full; defense/economy lenses scale in
+  their own group) and the basis is printed on the panel - never fake absolutes.
+- MODIFIABLE baseline: `/foresight matrix opacity <0.2-1.0>` (validated via pure
+  `normalizeOpacity` - garbage falls back to 0.92), draggable with per-character
+  validated saved position, `/foresight matrix reset`. Title click cycles the active
+  loop (the mockup's goal dropdown, taint-free).
+- Live refresh on the debounced gear/stats/talents/buffs event set; house code-drawn
+  skin (no art assets); close button; `/foresight matrix` toggles.
+- Stale-file check now expects Sim + MatrixPanel (a /reload can't load newly added
+  TOC files - the check tells the player to restart).
+- Selftest 170 (+5: opacity validation, standing badge + basis honesty, within-group
+  fills, tagged eco cards, garbage loop-id fallback).
+
+*Features:* UI-matrix-panel, UI-mapping-panel, DATA-loops, SIM-engine, QA-selftest-harness
+
 ## 0.25.1 - 2026-10-12
 
 Captured talent tooltips now VOTE (the user's in-game scans become rank-rule evidence).
