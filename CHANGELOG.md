@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.25.1 - 2026-10-12
+
+Captured talent tooltips now VOTE (the user's in-game scans become rank-rule evidence).
+
+- harvest.py `probe_from_tooltips`: parses the "Rank N/M" line off every captured
+  tooltip (recovers ranks on INSPECTED players' trees, where the journal field can't),
+  strips chrome (the rank line + beta "Press F6" footer would pollute number
+  extraction), and feeds the real descriptions into the existing rank-rule voting.
+  Gate-covered in analyze_selfcheck (rank parse + chrome strip + identical vote).
+- First live run over the 141-node capture (own Shaman tree + inspected Orgrimmar
+  players): trained votes A=2 B=4 none=5 (incl. an inspected mage's Improved Frostbolt
+  r4); untrained-r1 A=50 B=32 either=10 none=45. VERDICT: Forever's rank rule is
+  PER-TALENT - next step is a harvest-drafted per-talent rank-rule table.
+- `mockups/foresight-matrix-2026-10-12.html`: the user's Matrix UI spec versioned into
+  the repo; S7b carries the render binding + the honest fill-basis decision
+  (within-group relative bars, basis labeled).
+
+*Features:* QA-harvester, QA-probe, UI-mapping-panel
+
 ## 0.25.0 - 2026-10-12
 
 SIM-ENGINE (S18): the simulation tier - the math behind the class, on your numbers.

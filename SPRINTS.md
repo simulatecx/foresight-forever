@@ -75,7 +75,15 @@ Make the talent map whole now that C_Traits coverage exists.
 - **S7b UI-mapping-panel** (◐, model shipped v0.21.0): `model/mapping.lua` - bidirectional
   talent<->ability map (inverse "what modifies Fireball" + forward "what Improved Fireball
   touches") off shared affected-spell edges; `/foresight affects`; pure + selftest-covered.
-  Remaining: the visual panel renderer (in-game).
+  Remaining: the visual MATRIX renderer (in-game), now spec'd by the user's mockup
+  `mockups/foresight-matrix-2026-10-12.html` (2026-10-12): three components - stats panel
+  w/ archetype badge + dimension bars, Synergy Matrix (goal dropdown -> blue Enabler /
+  yellow Engine / green Payoff cards -> actionable-insight box), ✨-styled tooltip
+  injection. ALL data layers exist (Sim.standing, loops.lua, mapping, goalPathways,
+  windfuryWeaponLine). FILL-BASIS DECISION (the honest-bars question): bars are relative
+  WITHIN groups - each output lens fills vs the strongest output lens (=100%), defensive/
+  sustain lenses scale within their own group - and the panel labels the basis ("of your
+  strongest lens"), never fake absolutes.
 
 ### S8 - DATA-items + gear compare ◐  (strongest community demand)
 v0 SHIPPED (v0.9.0): `Impact.compareItems` nets two items' per-dimension impact (reuses
@@ -122,8 +130,18 @@ selfcheck. FIRST LIVE CATCH: Oil of Olaf +50 armor confirmed; Goretusk Liver Pie
 +1 Str vs generated +3 (n=2) - suspected Forever LEVEL-SCALED Well-Fed values; needs
 observations at more levels before a correction is drafted (if confirmed, the fix is a
 scaling rule in generate.py, not a flat override).
+CAPTURED-TOOLTIP VOTING SHIPPED (v0.25.1): harvest now parses the "Rank N/M" line off
+every captured talent tooltip (recovers ranks even on INSPECTED players' trees, where
+the journal's rank field can't resolve), strips chrome (rank line + the beta F6 footer
+would pollute number extraction), and feeds the real description text into the
+rank-rule voting. First live run over the user's 141-node capture (own tree + inspected
+org players, incl. a warlock + a mage): 8 trained-rank captures -> trained votes A=2
+B=4 none=5; untrained-r1 A=50 B=32 either=10 none=45. VERDICT: the rank rule is
+PER-TALENT on Forever (mixed evidence is real, not noise). NEXT: per-talent rank-rule
+resolution - store each talent's winning hypothesis from votes and have
+talentRankValue consult it (overrides-style table, harvest-drafted).
 REMAINING: regen/swing/DoT-tick/GCD measurement during play; equip-delta observation
-(item stat ground truth).
+(item stat ground truth); per-talent rank-rule table (above).
 
 ### S12 - Publishing train ◐  (repo LIVE v0.23.1; CurseForge/Wago registration remains)
 DONE: `.pkgmeta` + README + privacy ignores; CI workflows (gate / packager-on-tag /

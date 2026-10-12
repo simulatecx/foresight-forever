@@ -132,8 +132,24 @@ def analyze_selfcheck() -> bool:
          "tooltip": "Reduces the casting time of your Fireball and Frostfire Bolt spells by 0.2 sec."},
     ]}
     analysis = analyze_rank_rule(probe, gen)
-    return (analysis["untrained_votes"]["B"] == 1 and analysis["votes"]["B"] == 1
-            and analysis["votes"]["A"] == 1)
+    if not (analysis["untrained_votes"]["B"] == 1 and analysis["votes"]["B"] == 1
+            and analysis["votes"]["A"] == 1):
+        return False
+    # Captured-tooltip path (real in-game text incl. inspected players): the Rank
+    # line must recover the rank, chrome must be stripped (its numbers would pollute
+    # the vote), and the cleaned description must vote identically.
+    tip_probe = probe_from_tooltips({"104753": {
+        "name": "Concussion", "rank": None, "maxRank": 5,
+        "text": "Concussion\nRank |cffffffff2|r/5\n \nIncreases the damage done by "
+                "your Lightning Bolt, Chain Lightning, and Earth Shock spells by 2%."
+                "\n \n|c0042b1fePress F6 to submit an issue for this Spell",
+    }})
+    t = tip_probe["talents"]
+    if len(t) != 1 or t[0]["rank"] != 2 or "Rank" in t[0]["tooltip"] \
+            or "F6" in t[0]["tooltip"]:
+        return False
+    tip_analysis = analyze_rank_rule(tip_probe, gen)
+    return tip_analysis["votes"]["B"] == 1 and tip_analysis["votes"]["none"] == 0
 
 
 def load_generated() -> dict:
@@ -147,6 +163,47 @@ def load_generated() -> dict:
 
 
 NUM_RE = re.compile(r"(\d+\.?\d*)")
+# Matches "Rank 0/2" and the color-coded "Rank |cffffffff0|r/2" alike.
+TIP_RANK_RE = re.compile(r"Rank \D*?(\d+)\D*?/(\d+)")
+
+
+def clean_tip_text(text: str) -> str:
+    """Strip tooltip chrome before number extraction: the name line, the 'Rank N/M'
+    line (its numbers would pollute the vote), and the beta 'Press F6' footer."""
+    lines = (text or "").split("\n")
+    kept = []
+    for i, ln in enumerate(lines):
+        if i == 0:
+            continue  # the talent name line
+        if "Rank " in ln and TIP_RANK_RE.search(ln):
+            continue
+        if "Press F6" in ln:
+            continue
+        kept.append(ln)
+    return "\n".join(kept)
+
+
+def probe_from_tooltips(tips: dict) -> dict:
+    """Convert captured talentTooltips (REAL in-game text - including INSPECTED
+    players' trees, where the journal's rank field can't resolve) into the rank-rule
+    probe shape. The tooltip's own 'Rank N/M' line recovers the rank; the cleaned
+    description text carries the vote."""
+    talents = []
+    for _, e in sorted(tips.items(), key=lambda kv: str(kv[0])):
+        if not isinstance(e, dict):
+            continue
+        text = e.get("text") or ""
+        rank = 0
+        m = TIP_RANK_RE.search(text)
+        if m:
+            rank = int(m.group(1))
+        elif e.get("rank"):
+            rank = int(e["rank"])
+        name = e.get("name") or (text.split("\n")[0] if text else "")
+        body = clean_tip_text(text)
+        if name and body.strip():
+            talents.append({"name": name, "rank": rank, "tooltip": body})
+    return {"talents": talents}
 
 
 def analyze_rank_rule(probe: dict, gen: dict) -> dict:
@@ -495,13 +552,20 @@ def main() -> int:
             print(f"   item sightings: {len(sightings)} distinct items seen on this account")
         tips = collect.get("talentTooltips") or {}
         if tips:
-            ranked = sum(1 for e in tips.values() if isinstance(e, dict) and e.get("rank"))
+            tip_probe = probe_from_tooltips(tips)
+            trained = sum(1 for t in tip_probe["talents"] if t["rank"] > 0)
             print(f"   talent tooltips captured (real in-game text): {len(tips)} nodes "
-                  f"({ranked} at a trained rank - rank-scaling ground truth)")
+                  f"({trained} at a trained rank via the Rank-line parse - "
+                  f"rank-scaling ground truth)")
             for nid, e in list(tips.items())[:4]:
                 if isinstance(e, dict):
                     first = (e.get("text") or "").split("\n")[0]
                     print(f"     {e.get('name') or nid} r{e.get('rank')}/{e.get('maxRank')}: {first!r}")
+            analysis = analyze_rank_rule(tip_probe, gen)
+            print(f"   captured-tooltip rank-rule votes: trained {analysis['votes']}; "
+                  f"presumed (untrained r1 text) {analysis['untrained_votes']}")
+            for d in analysis["details"][:12]:
+                print(f"     {d}")
         observed = collect.get("observedImpacts") or {}
         if observed:
             print(f"   observed buff impacts ({len(observed)}) - live ground truth "

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foresight - WoW UI Mockups</title>
+    <style>
+        :root {
+            /* Core UI Colors */
+            --bg-base: rgba(15, 15, 18, 0.95);
+            --bg-panel: rgba(30, 32, 38, 0.85);
+            --border-light: rgba(255, 255, 255, 0.1);
+            --border-focus: rgba(51, 255, 153, 0.5);
+            
+            /* Text Colors */
+            --text-main: #e0e0e0;
+            --text-muted: #8b8b99;
+            --text-highlight: #ffffff;
+            
+            /* Foresight Semantic Colors */
+            --fs-brand: #33FF99; /* Signature Emerald */
+            --fs-blue: #4da6ff;  /* Enablers */
+            --fs-yellow: #ffd166; /* Engines */
+            --fs-green: #33FF99; /* Payoffs / Positive */
+            
+            /* Class Colors */
+            --class-shaman: #0070de;
+            --class-mage: #3fc7eb;
+            
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: #111 url('https://wow.zamimg.com/images/wow/bg-baked.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            justify-content: center;
+        }
+
+        /* Generic Window Frame (Mimics WoW Frame) */
+        .wow-frame {
+            background: var(--bg-base);
+            border: 1px solid #333;
+            border-radius: 6px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .frame-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.05), transparent);
+        }
+
+        .frame-title {
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--fs-brand);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .frame-title::before { content: "👁"; font-size: 16px; }
+
+        /* ==========================================
+           COMPONENT 1: CHARACTER STATS PANEL
+           ========================================== */
+        .character-panel { width: 340px; }
+        
+        .char-header {
+            padding: 16px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .char-name { font-size: 20px; font-weight: bold; color: var(--class-shaman); }
+        .char-desc { font-size: 12px; color: var(--text-muted); margin: 4px 0 12px 0; }
+        
+        .archetype-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(0, 112, 222, 0.15);
+            border: 1px solid var(--class-shaman);
+            color: var(--class-shaman);
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .dimensions-grid {
+            padding: 16px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .dim-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .dim-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+
+        .dim-track {
+            height: 6px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .dim-fill {
+            height: 100%;
+            background: var(--fs-brand);
+            border-radius: 3px;
+        }
+
+        /* ==========================================
+           COMPONENT 2: TALENT SYNERGY MATRIX
+           ========================================== */
+        .matrix-panel { width: 400px; }
+        
+        .matrix-body { padding: 16px; }
+
+        .dropdown-mock {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border-light);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: var(--text-highlight);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .ecosystem-map {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            padding-left: 20px;
+            border-left: 2px dashed rgba(255,255,255,0.1);
+            margin-left: 10px;
+        }
+
+        .eco-node {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-light);
+            padding: 12px;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .eco-node::before {
+            content: '';
+            position: absolute;
+            left: -22px;
+            top: 50%;
+            width: 20px;
+            height: 2px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .eco-node.enabler { border-left: 3px solid var(--fs-blue); }
+        .eco-node.engine { border-left: 3px solid var(--fs-yellow); }
+        .eco-node.payoff { border-left: 3px solid var(--fs-green); }
+
+        .node-tag {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .enabler .node-tag { color: var(--fs-blue); }
+        .engine .node-tag { color: var(--fs-yellow); }
+        .payoff .node-tag { color: var(--fs-green); }
+
+        .node-title { font-size: 14px; font-weight: bold; color: #fff; margin-bottom: 4px; }
+        .node-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+
+        .summary-box {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(51, 255, 153, 0.05);
+            border: 1px solid rgba(51, 255, 153, 0.2);
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #ccc;
+        }
+
+        /* ==========================================
+           COMPONENT 3: "PRO" TOOLTIP INJECTION
+           ========================================== */
+        .tooltip-panel { width: 320px; }
+
+        .tooltip-body { padding: 16px; font-size: 13px; line-height: 1.4; }
+        .item-name { color: #a335ee; font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+        .item-type { display: flex; justify-content: space-between; color: #fff; margin-bottom: 8px; }
+        .item-stats { color: #fff; margin-bottom: 12px; }
+        .item-speed { display: flex; justify-content: space-between; }
+        
+        .fs-injection {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-focus);
+            position: relative;
+        }
+
+        .fs-injection-title {
+            color: var(--fs-brand);
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .fs-injection-title::before { content: "✨"; }
+
+        .fs-insight {
+            color: var(--text-main);
+            font-size: 12.5px;
+        }
+        
+        .fs-highlight { color: var(--fs-brand); font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+    <!-- COMPONENT 1: Character Stats Panel -->
+    <div class="wow-frame character-panel">
+        <div class="frame-header">
+            <div class="frame-title">Foresight Matrix</div>
+        </div>
+        <div class="char-header">
+            <div class="char-name">Thrall</div>
+            <div class="char-desc">Level 60 Orc Shaman</div>
+            <div class="archetype-badge">Primal Hybrid</div>
+        </div>
+        <div class="dimensions-grid">
+            <div class="dim-row">
+                <div class="dim-labels"><span>Melee Burst</span> <span style="color:var(--fs-brand)">85%</span></div>
+                <div class="dim-track"><div class="dim-fill" style="width: 85%;"></div></div>
+            </div>
+            <div class="dim-row">
+                <div class="dim-labels"><span>Spellcasting</span> <span style="color:var(--text-main)">60%</span></div>
+                <div class="dim-track"><div class="dim-fill" style="background: var(--text-muted); width: 60%;"></div></div>
+            </div>
+            <div class="dim-row">
+                <div class="dim-labels"><span>Sustain (OOM)</span> <span style="color:var(--text-main)">40%</span></div>
+                <div class="dim-track"><div class="dim-fill" style="background: var(--text-muted); width: 40%;"></div></div>
+            </div>
+            <div class="dim-row">
+                <div class="dim-labels"><span>Survivability</span> <span style="color:var(--text-main)">55%</span></div>
+                <div class="dim-track"><div class="dim-fill" style="background: var(--text-muted); width: 55%;"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPONENT 2: Talent Synergy Matrix -->
+    <div class="wow-frame matrix-panel">
+        <div class="frame-header">
+            <div class="frame-title">Synergy Matrix</div>
+        </div>
+        <div class="matrix-body">
+            <div class="dropdown-mock">
+                <span>Goal: Frost Shatter Combo</span>
+                <span>▼</span>
+            </div>
+
+            <div class="ecosystem-map">
+                <!-- Enabler -->
+                <div class="eco-node enabler">
+                    <div class="node-tag">Step 1: The Enabler</div>
+                    <div class="node-title">Frost Nova / Frostbite</div>
+                    <div class="node-desc">Applies the [Frozen] status to the target. Without this, your engine is turned off.</div>
+                </div>
+                
+                <!-- Engine -->
+                <div class="eco-node engine">
+                    <div class="node-tag">Step 2: The Engine</div>
+                    <div class="node-title">[Talent] Shatter</div>
+                    <div class="node-desc">Multiplies your Critical Strike chance by 50% against frozen targets.</div>
+                </div>
+
+                <!-- Payoff -->
+                <div class="eco-node payoff">
+                    <div class="node-tag">Step 3: The Payoff</div>
+                    <div class="node-title">Ice Lance / Frostbolt</div>
+                    <div class="node-desc">Use immediately after an Enabler. Guaranteed to hit for massive critical damage.</div>
+                </div>
+            </div>
+
+            <div class="summary-box">
+                <strong style="color: var(--fs-brand);">Actionable Insight:</strong> Your next Ice Lance is currently guaranteed a <strong>65% chance</strong> to critically strike for <strong>840 damage</strong>. Always follow a Freeze with a Lance!
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPONENT 3: "Pro" Hover Tooltip -->
+    <div class="wow-frame tooltip-panel">
+        <div class="tooltip-body">
+            <div class="item-name">Earthshaker</div>
+            <div class="item-type">
+                <span>Two-Hand</span>
+                <span>Mace</span>
+            </div>
+            <div class="item-stats">
+                <div class="item-speed"><span>175 - 264 Damage</span> <span>Speed 3.80</span></div>
+                <div>(57.8 damage per second)</div>
+            </div>
+            <div style="color: #1eff00; margin-bottom: 12px;">+22 Strength</div>
+            <div style="color: #ffd100;">Requires Level 60</div>
+            
+            <!-- The Foresight Injection -->
+            <div class="fs-injection">
+                <div class="fs-injection-title">Foresight Synergy: Windfury Engine</div>
+                <div class="fs-insight">
+                    This weapon has a massive top-end damage range (264). Equipping this will increase your expected Windfury proc burst from 420 damage to <span class="fs-highlight">980 damage</span>.<br><br>
+                    <em style="color: var(--text-muted);">Insight: Slower weapons (3.8s) allow your Attack Power to hit significantly harder during instant attacks and procs.</em>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
