@@ -326,6 +326,21 @@ function HM.runSelftest(out)
         if not (hl == 1234 and hh == 2345) then return false end
         return HM.Tooltips.parseSpellRange({ "Increases your armor by 240." }) == nil
     end)())
+    check("baseline law: your equipped item claims no verdict or % gain", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local mapped = { attackPower = 10, Stamina = 5 }
+        local text = linesText(HM.Tooltips.itemLines(mapped, lo, nil, { equipped = true }) or {})
+        if text:find("Upgrade", 1, true) or text:find("Sidegrade", 1, true)
+                or text:find("Downgrade", 1, true) or text:find("%%") then
+            return false, "gain claim on equipped gear"
+        end
+        if not (text:find("baseline", 1, true) and text:find("Giving you:", 1, true)) then
+            return false, "baseline framing missing"
+        end
+        -- the same item NOT equipped still gets the verdict path
+        local normal = linesText(HM.Tooltips.itemLines(mapped, lo, nil, nil) or {})
+        return normal:find("for ", 1, true) ~= nil
+    end)())
     check("capture no-downgrade: trained tooltip never overwritten by untrained", (function()
         local S = HM.Tooltips.shouldReplaceCapture
         return S(nil, { rank = nil }) == true
@@ -466,9 +481,20 @@ function HM.runSelftest(out)
         end
         return spell and spell > 0 and tank and tank < 0
     end)())
-    check("item lines render a vs-equipped block when compared", (function()
+    check("item lines render vs-equipped net rows when compared", (function()
         local text = linesText(HM.Tooltips.itemLines({ Intellect = 20 }, base, { Stamina = 20 }))
-        return text:find("vs equipped:", 1, true) ~= nil
+        return text:find("vs equipped", 1, true) ~= nil
+    end)())
+    check("swap-relative: a worse item reads NEGATIVE vs what you wear now", (function()
+        -- User binding 2026-10-12: assess vs what is on your character at the time -
+        -- never as an add to an empty slot. Hover +4 AP while wearing +10 AP: the
+        -- derived chain must read -6 AP and the verdict must be a downgrade.
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local text = linesText(HM.Tooltips.itemLines({ attackPower = 4 }, lo,
+            { attackPower = 10 }))
+        return text:find("-6 Attack Power", 1, true) ~= nil
+            and text:find("vs equipped", 1, true) ~= nil
+            and text:find("Downgrade", 1, true) ~= nil
     end)())
     -- Gear verdict (Pawn-style headline) + gearing goal.
     check("item verdict calls an Int item an upgrade for a caster's spellcasting", (function()

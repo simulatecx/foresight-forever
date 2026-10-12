@@ -426,6 +426,13 @@ over every impact source (`/foresight catalog`), the query spine for synergy/sea
 Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 
 ## Backlog (not yet scheduled)
+- ☐ UI skill picker for focus mode (user ask 2026-10-12, after the first live focus
+  render): an in-UI way to enter skill-centric mode - click an ability on the Matrix /
+  type-to-search among the CHARACTER'S known spells (IsPlayerSpell over gen.spells,
+  resolved via the level-capped resolver) - instead of typing /foresight focus. Rides
+  the existing focus plumbing (setFocus/applyAbility/focusModel) end to end; UI only.
+  Candidate home: Matrix focused-skill block header -> search row (title-click
+  precedent). Mobile binding applies.
 - ☐ DATA-professions: SkillLine/recipes -> consumables/crafted gear as modifier sources.
 - ☐ GRAPH-rotation-weights: fold cast-time/cost/cooldown mods into throughput via per-spell
   rotation weights (today they surface via tooltips only).

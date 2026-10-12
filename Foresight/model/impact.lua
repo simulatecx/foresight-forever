@@ -371,8 +371,17 @@ end
 
 -- The derived stats a bundle of item stats grants (crit%, AP + per-swing, mana) - the
 -- concrete "what +1 Agility actually gives you" for an item tooltip. No dimension lines.
-function Impact.itemDerivedLines(loadout, statDeltas)
+-- removedStats (optional): the EQUIPPED item's bundle - deltas then read NET OF THE
+-- SWAP (user binding 2026-10-12: assess vs what is on your character at the time,
+-- never as if the slot were empty).
+function Impact.itemDerivedLines(loadout, statDeltas, removedStats)
     local modeled, any = loadout, false
+    for stat, amount in pairs(removedStats or {}) do
+        if type(amount) == "number" and amount ~= 0 then
+            modeled = modeled:withStatDelta(stat, -amount, ("-%g %s"):format(amount, stat))
+            any = true
+        end
+    end
     for stat, amount in pairs(statDeltas or {}) do
         if type(amount) == "number" and amount ~= 0 then
             modeled = modeled:withStatDelta(stat, amount, ("+%g %s"):format(amount, stat))

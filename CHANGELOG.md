@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.33.1 - 2026-10-12
+
+THE BASELINE LAW (live catches #4 and #5, same principle, user-stated): "once it's on
+your character it's the new base." Two violations fixed:
+
+- EQUIPPED = BASELINE: hovering an item you are WEARING no longer claims any gain -
+  its stats are already inside every number, so re-adding them double-counts. The
+  block switches to baseline mode: header "equipped - your baseline", no verdict, no
+  % lines, no standing-shift/swap claims; stats render as "Giving you:" with the
+  derived chain in absolute units (the contribution).
+- SWAP-RELATIVE DELTAS: when you wear something comparable, every number on a hover
+  now nets the swap instead of adding to the base - the derived chain subtracts the
+  equipped item's bundle before adding the hovered one (a +4 AP weapon while wearing
+  +10 AP reads "-6 Attack Power, ~-1.1 damage per swing"), and the per-dimension
+  block shows compareItems' NET rows tagged "(vs equipped)" instead of add-marginals
+  (the old weapon no longer shows "+melee damage" while a better one is equipped).
+  Items with no equipped counterpart keep the add-marginal view with the "(added)"
+  verdict tag.
+- Groomed (user ask): in-UI skill picker for focus mode - click/search a known
+  ability instead of typing /foresight focus; rides the existing focus plumbing
+  (backlog).
+- Selftest 221 (+2): equipped-baseline (no verdict/% on worn gear; normal path
+  unchanged), swap-relative negativity (worse item reads negative + Downgrade).
+
+*Features:* UI-item-tooltip, MODEL-impact-diff, QA-selftest-harness
+
 ## 0.33.0 - 2026-10-12
 
 STAT COVERAGE FOR ALL TYPES + THE SELF-AUDIT (prevalidation so the pilot doesn't

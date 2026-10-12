@@ -498,38 +498,50 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
     -- user binding: count everything the item brings, weapon DPS included).
     if not any and not (ctx and ctx.weaponSwap) then return nil end
 
+    local equipped = ctx and ctx.equipped
     local ok, _, changes = pcall(Tooltips._itemDims, loadout, mapped)
     local lines = {}
     lines[#lines + 1] = {
-        kind = "double", left = "Foresight", right = "(p) for your character",
+        kind = "double", left = "Foresight",
+        right = equipped and "equipped - your baseline" or "(p) for your character",
         r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
     }
-    -- Headline verdict (the Pawn-style at-a-glance answer, judged for your gearing goal).
-    local goal = HM.gearGoal and HM.gearGoal() or "auto"
-    local okv, verdict = pcall(HM.Impact.itemVerdict, loadout, mapped, comparedStats,
-        goal, ctx and ctx.weaponSwap)
-    if okv and verdict then
-        local word, color
-        if verdict.direction == "upgrade" then word, color = "Upgrade", "|cff4ade80"
-        elseif verdict.direction == "downgrade" then word, color = "Downgrade", "|cfff87171"
-        else word, color = "Sidegrade", "|cff9d9d9d" end
-        local pctText = (verdict.direction == "sidegrade") and ""
-            or (" (%+.1f%%)"):format(verdict.pct)
+    if equipped then
+        -- BASELINE LAW (user binding 2026-10-12): once an item is ON the character it
+        -- IS the base - its stats are already in every number we show, so claiming a
+        -- "+%" for it would double-count. Show what it contributes, never a gain.
         lines[#lines + 1] = {
-            text = ("%s%s|r for %s%s%s"):format(color, word, verdict.label, pctText,
-                verdict.compared and "" or " |cff9d9d9d(added)|r"),
-            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            text = "You're wearing this - it's your baseline. Hover alternatives to compare.",
+            r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
         }
-    end
-    -- Weapon-swap line (the honest A->B of equipping this weapon): base ranges from
-    -- both tooltips + your AP, through Sim.weaponSwap. Beneath the verdict it feeds.
-    if ctx and ctx.weaponSwap then
-        local w = ctx.weaponSwap
-        lines[#lines + 1] = {
-            text = ("|cff9d9d9dWeapon swap:|r ~%.0f -> ~%.0f per swing, ~%.1f -> ~%.1f white DPS (%+.0f%%) vs your main hand (p)")
-                :format(w.curSwing, w.newSwing, w.curDps, w.newDps, w.pct),
-            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
-        }
+    else
+        -- Headline verdict (the Pawn-style at-a-glance answer, judged for your goal).
+        local goal = HM.gearGoal and HM.gearGoal() or "auto"
+        local okv, verdict = pcall(HM.Impact.itemVerdict, loadout, mapped, comparedStats,
+            goal, ctx and ctx.weaponSwap)
+        if okv and verdict then
+            local word, color
+            if verdict.direction == "upgrade" then word, color = "Upgrade", "|cff4ade80"
+            elseif verdict.direction == "downgrade" then word, color = "Downgrade", "|cfff87171"
+            else word, color = "Sidegrade", "|cff9d9d9d" end
+            local pctText = (verdict.direction == "sidegrade") and ""
+                or (" (%+.1f%%)"):format(verdict.pct)
+            lines[#lines + 1] = {
+                text = ("%s%s|r for %s%s%s"):format(color, word, verdict.label, pctText,
+                    verdict.compared and "" or " |cff9d9d9d(added)|r"),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
+        -- Weapon-swap line (the honest A->B of equipping this weapon): base ranges
+        -- from both tooltips + your AP, through Sim.weaponSwap. Beneath the verdict.
+        if ctx and ctx.weaponSwap then
+            local w = ctx.weaponSwap
+            lines[#lines + 1] = {
+                text = ("|cff9d9d9dWeapon swap:|r ~%.0f -> ~%.0f per swing, ~%.1f -> ~%.1f white DPS (%+.0f%%) vs your main hand (p)")
+                    :format(w.curSwing, w.newSwing, w.curDps, w.newDps, w.pct),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
     end
     -- S20 coaching attribution, BENEATH the verdict it never alters: fires only when
     -- the item's largest stat is the mechanism-dead stat for the focus lens.
@@ -539,7 +551,8 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
     end
     -- Archetype shift (SIM-engine): when the swap changes the plain-English standing
     -- of the whole build, say so prominently - that is a bigger call than +x%.
-    if HM.Sim then
+    -- (Suppressed for your own equipped item: re-adding its stats is a false shift.)
+    if HM.Sim and not equipped then
         local oks, shift = pcall(HM.Sim.standingShift, loadout, mapped, comparedStats)
         if oks and shift then
             lines[#lines + 1] = {
@@ -562,16 +575,37 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
     end
     if any then
         lines[#lines + 1] = {
-            text = "|cff9d9d9dThis item:|r " .. table.concat(parts, ", "),
+            text = (equipped and "|cff9d9d9dGiving you:|r " or "|cff9d9d9dThis item:|r ")
+                .. table.concat(parts, ", "),
             r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
         }
     end
-    -- Concrete derived gains (the "+1 Agility -> +X% crit, +Y AP per swing" answer).
-    local okd, derived = pcall(HM.Impact.itemDerivedLines, loadout, mapped)
+    -- Concrete derived lines (the "+1 Agility -> +X% crit, +Y AP per swing" answer).
+    -- SWAP-RELATIVE when something comparable is equipped (user binding 2026-10-12:
+    -- assess vs what is on your character at the time - a worse weapon must read
+    -- NEGATIVE, never as an add to an empty slot). For an equipped item they read as
+    -- the current CONTRIBUTION (absolute units, no % claim).
+    local okd, derived = pcall(HM.Impact.itemDerivedLines, loadout, mapped,
+        (not equipped) and comparedStats or nil)
     for _, l in ipairs(okd and derived or {}) do
         lines[#lines + 1] = { text = l, r = BODY.r, g = BODY.g, b = BODY.b, wrap = true }
     end
-    if ok and changes and #changes > 0 then
+    if equipped then
+        -- No % dimension lines on your own gear: it is the base, not a change.
+        local _ = nil
+    elseif comparedStats then
+        -- The NET swap per dimension IS the primary block when you wear a comparable.
+        local okc, cmp = pcall(HM.Impact.compareItems, loadout, mapped, comparedStats)
+        for i = 1, math.min(#(okc and cmp or {}), 4) do
+            local c = cmp[i]
+            local color = c.net >= 0 and "|cff4ade80" or "|cfff87171"
+            lines[#lines + 1] = {
+                text = ("%s%+.1f%%|r %s |cff9d9d9d(vs equipped)|r"):format(
+                    color, c.net, c.label),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
+    elseif ok and changes and #changes > 0 then
         for i = 1, math.min(#changes, 4) do
             local c = changes[i]
             local color = c.delta >= 0 and "|cff4ade80" or "|cfff87171"
@@ -585,23 +619,6 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
             text = "no modeled dimension change for your class yet",
             r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
         }
-    end
-
-    -- vs equipped (DATA-items gear compare): net dimension swing of equipping this.
-    if comparedStats then
-        local okc, cmp = pcall(HM.Impact.compareItems, loadout, mapped, comparedStats)
-        if okc and cmp and #cmp > 0 then
-            local segs = {}
-            for i = 1, math.min(#cmp, 3) do
-                local c = cmp[i]
-                local color = c.net >= 0 and "|cff4ade80" or "|cfff87171"
-                segs[#segs + 1] = ("%s%+.1f%%|r %s"):format(color, c.net, c.label)
-            end
-            lines[#lines + 1] = {
-                text = "|cff9d9d9dvs equipped:|r " .. table.concat(segs, ", "),
-                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
-            }
-        end
     end
     return lines
 end
@@ -1017,6 +1034,24 @@ local function injectItem(tip)
     if okSwap and swap then
         ctx = ctx or {}
         ctx.weaponSwap = swap
+    end
+    -- BASELINE LAW: hovering an item you're WEARING switches to baseline mode - its
+    -- stats are already inside every number, so no verdict/% is ever claimed for it.
+    local okEq, equippedSelf = pcall(function()
+        local equipLoc = _G.GetItemInfo and select(9, _G.GetItemInfo(link))
+        for _, slot in ipairs((equipLoc and INVSLOT[equipLoc]) or {}) do
+            if _G.GetInventoryItemLink
+                    and _G.GetInventoryItemLink("player", slot) == link then
+                return true
+            end
+        end
+        return false
+    end)
+    if okEq and equippedSelf then
+        compared = nil
+        ctx = ctx or {}
+        ctx.equipped = true
+        ctx.weaponSwap = nil
     end
     local lines = Tooltips.itemLines(mapped, loadout, compared, ctx)
     if not lines then
