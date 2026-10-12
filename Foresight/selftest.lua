@@ -1132,6 +1132,107 @@ function HM.runSelftest(out)
         return false
     end)())
 
+    -- Skill-centric Matrix (S22a): classified reverse lookup + dual highlight sets.
+    check("classifiedForSpell: direct + statFeeder buckets (Fireball, Mage)", (function()
+        local c = HM.Mapping.classifiedForSpell(133, { classToken = "MAGE" })
+        if not c then return false end
+        local hasDirect, hasIntFeeder = false, false
+        for _, e in ipairs(c.direct) do
+            if e.name == "Improved Fireball" then hasDirect = true end
+        end
+        for _, e in ipairs(c.statFeeders) do
+            if e.nodeId == 104756 then hasIntFeeder = true end -- the Intellect% node
+        end
+        -- buckets are disjoint (priority dedupe)
+        local seen = {}
+        for _, list in ipairs({ c.direct, c.school, c.statFeeders }) do
+            for _, e in ipairs(list) do
+                if seen[e.nodeId] then return false, "node in two buckets" end
+                seen[e.nodeId] = true
+            end
+        end
+        return hasDirect and hasIntFeeder
+    end)())
+    check("classifiedForSpell: school bucket matches the spell's school mask", (function()
+        -- Data-driven: find a schoolDamage% node, then a shipped damage spell of that
+        -- school - the node must land in its school bucket (capped probes for speed).
+        local SCHOOL_BIT = { Physical = 1, Holy = 2, Fire = 4, Nature = 8,
+                             Frost = 16, Shadow = 32, Arcane = 64 }
+        local nodesTried = 0
+        for nid, node in pairs(gen.traits.nodes) do
+            if nodesTried >= 5 then break end
+            for _, op in ipairs(node.ops or {}) do
+                local bit = op.kind == "schoolDamage" and op.isPct and op.school
+                    and not op.school:find("/") and SCHOOL_BIT[op.school]
+                if bit then
+                    nodesTried = nodesTried + 1
+                    local spellsTried = 0
+                    for sid, sp in pairs(gen.spells) do
+                        if spellsTried >= 5 then break end
+                        if sp.school and math.floor(sp.school / bit) % 2 == 1 and sp.dmg then
+                            spellsTried = spellsTried + 1
+                            local c = HM.Mapping.classifiedForSpell(sid, {})
+                            for _, e in ipairs(c and c.school or {}) do
+                                if e.nodeId == nid then return true end
+                            end
+                        end
+                    end
+                    break
+                end
+            end
+        end
+        return false
+    end)())
+    check("classifiedForSpell: unknown spell returns nil (no false claims)", (function()
+        return HM.Mapping.classifiedForSpell(999999999, { classToken = "MAGE" }) == nil
+    end)())
+    check("highlight selector returns direct + indirect sets separately", (function()
+        local dIds, iIds = HM.SynergyHighlight.abilityClassified("Fireball",
+            { classToken = "MAGE", level = 60 })
+        if not dIds then return false end
+        local nd, ni = 0, 0
+        for k in pairs(dIds) do
+            nd = nd + 1
+            if iIds[k] then return false, "sets overlap" end
+        end
+        for _ in pairs(iIds) do ni = ni + 1 end
+        return nd > 0 and ni > 0
+    end)())
+
+    -- Pathway rows (S22b): the cascade from existing computed data, nil-degrade per link.
+    check("pathway: weapon cascade consistent with abilityHit (Stormstrike)", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local p = HM.PanelModel.pathwayModel(lo, 17364)
+        if not (p and #p.segments == 4) then return false, p and #p.segments end
+        local b = HM.Sim.abilityHit(lo, 17364, {})
+        local a = HM.Sim.abilityHit(lo:withStatDelta("Strength", 10, "+10"), 17364, {})
+        return p.segments[1] == "+10 Strength"
+            and p.segments[2]:find("+20 Attack Power", 1, true) ~= nil
+            and approx(p.hitDelta, a.avg - b.avg, 1e-6)
+            and p.hitDelta > 0 and p.presumed == true
+    end)())
+    check("pathway: caster chain = probe power x coefficient (Fireball)", (function()
+        local p = HM.PanelModel.pathwayModel(base, 133)
+        if not (p and #p.segments == 2) then return false end
+        return p.segments[1] == "+10 Spell Power"
+            and approx(p.hitDelta, 10 * gen.spells[133].dmg.coef, 0.01)
+    end)())
+    check("pathway: no decoded endpoint -> no cascade (nil-degrade)", (function()
+        local plainId
+        for id, sp in pairs(gen.spells) do
+            if not (sp.dmg or sp.heal or sp.wpn) then plainId = id break end
+        end
+        return plainId ~= nil and HM.PanelModel.pathwayModel(base, plainId) == nil
+    end)())
+    check("focus model feeds the Matrix (classes + pathway + passthrough)", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local fm = HM.PanelModel.focusModel(lo, "Stormstrike")
+        if not (fm and fm.spell == "Stormstrike" and fm.pathway) then return false end
+        if #fm.classes == 0 then return false, "no classes" end
+        local m = HM.PanelModel.matrixModel(lo, nil, nil, fm)
+        return m.focus == fm
+    end)())
+
     -- Skill-centric mode (S7b): dim the tree, glow an ability's modifiers.
     check("ability members resolve tree nodes for a modified spell", (function()
         local ids, names, spell = HM.SynergyHighlight.abilityMembers("Fireball")

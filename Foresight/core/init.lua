@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.30.0"
+HM.version = "0.31.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -333,6 +333,47 @@ local function onSlash(input)
                 printMsg("nothing modifies '" .. rest .. "' in the data (try an ability or talent name)")
             end
         end
+    elseif cmd == "focus" then
+        -- Skill-centric mode (S22a): persistently study ONE ability - the talent tree
+        -- lights its modifiers (gold direct / blue indirect, rest overlay-dimmed) and
+        -- the Matrix insight block shows the classes + the cascade chip row.
+        if not (HM.SynergyHighlight and HM.SynergyHighlight.setFocus) then
+            printMsg("focus mode unavailable")
+            return
+        end
+        if rest == "" or rest == "clear" then
+            HM.SynergyHighlight.setFocus(nil)
+            pcall(HM.SynergyHighlight.clear)
+            if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
+            printMsg(rest == "clear" and "skill focus cleared"
+                or "usage: /foresight focus <ability> (or clear)")
+            return
+        end
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        local level = snapshot and snapshot.level
+        local sid, spell = HM.Sim.resolveSpellLevelCapped(rest, level)
+        if not sid then
+            printMsg("no ability named '" .. rest .. "' in the shipped data")
+            return
+        end
+        HM.SynergyHighlight.setFocus(spell.name)
+        local c = HM.Mapping and HM.Mapping.classifiedForSpell
+            and HM.Mapping.classifiedForSpell(sid,
+                { classToken = snapshot and snapshot.classToken })
+        if c then
+            printMsg(("focused on %s: %d direct, %d school, %d stat-feeder modifier(s)")
+                :format(c.spell, #c.direct, #c.school, #c.statFeeders))
+        else
+            printMsg("focused on " .. spell.name)
+        end
+        local okh, n = pcall(HM.SynergyHighlight.applyAbility, spell.name)
+        if okh and type(n) == "number" and n > 0 then
+            printMsg(("%d node(s) lit - gold direct, blue indirect; rest dimmed "
+                .. "(/foresight focus clear to stop)"):format(n))
+        else
+            printMsg("open the talent frame to see the tree light up; the Matrix shows the pathway")
+        end
+        if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
     elseif cmd == "hit" then
         -- MODEL-ability-outcomes: the composed absolute answer for one ability with
         -- every step shown - the in-game verification lever for the decode.
@@ -703,7 +744,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

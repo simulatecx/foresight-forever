@@ -52,9 +52,39 @@ function Highlight.abilityMembers(query)
     return ids, names, r.spell
 end
 
+-- Pure (S22a): the CLASSIFIED member sets for an ability - direct modifiers (gold
+-- solid) vs indirect ones (school + stat feeders; blue pulse) - via
+-- Mapping.classifiedForSpell. ctx optional { classToken, level } (headless-friendly).
+-- Returns directIds, indirectIds, directNames, indirectNames, spellName; nil when the
+-- ability is unknown (no false glow).
+function Highlight.abilityClassified(query, ctx)
+    if not (HM.Mapping and HM.Mapping.classifiedForSpell and HM.Sim) then return nil end
+    local sid = HM.Sim.resolveSpellLevelCapped
+        and HM.Sim.resolveSpellLevelCapped(query, ctx and ctx.level)
+    local c = sid and HM.Mapping.classifiedForSpell(sid, ctx)
+    if not c then return nil end
+    local dIds, dNames, iIds, iNames, any = {}, {}, {}, {}, false
+    for _, e in ipairs(c.direct) do
+        dIds[e.nodeId], any = true, true
+        if e.name then dNames[e.name] = true end
+    end
+    for _, list in ipairs({ c.school, c.statFeeders }) do
+        for _, e in ipairs(list) do
+            if not dIds[e.nodeId] then
+                iIds[e.nodeId], any = true, true
+                if e.name then iNames[e.name] = true end
+            end
+        end
+    end
+    if not any then return nil end
+    return dIds, iIds, dNames, iNames, c.spell
+end
+
 if not _G.CreateFrame then return Highlight end -- headless: pure selector only
 
-local BRAND = { r = 0.2, g = 1, b = 0.6 }
+local BRAND = { r = 0.2, g = 1, b = 0.6 }   -- theme glow (synergy)
+local GOLD  = { r = 1, g = 0.82, b = 0.2 }  -- direct modifiers (solid)
+local BLUE  = { r = 0.35, g = 0.65, b = 1 } -- indirect: school + stat feeders (pulse)
 local overlays = {} -- [button] = our overlay frame (pooled per button, reused)
 
 local function overlayFor(button)
@@ -65,14 +95,15 @@ local function overlayFor(button)
     o:SetFrameLevel((button.GetFrameLevel and button:GetFrameLevel() or 1) + 5)
     local fill = o:CreateTexture(nil, "OVERLAY", nil, -1)
     fill:SetAllPoints()
-    fill:SetColorTexture(BRAND.r, BRAND.g, BRAND.b, 0.12)
+    o.fill = fill
+    o.edges = {}
     for _, e in ipairs({ { "TOPLEFT", "TOPRIGHT", nil, 2 }, { "BOTTOMLEFT", "BOTTOMRIGHT", nil, 2 },
                          { "TOPLEFT", "BOTTOMLEFT", 2, nil }, { "TOPRIGHT", "BOTTOMRIGHT", 2, nil } }) do
         local t = o:CreateTexture(nil, "OVERLAY")
         t:SetPoint(e[1])
         t:SetPoint(e[2])
         if e[3] then t:SetWidth(e[3]) else t:SetHeight(e[4]) end
-        t:SetColorTexture(BRAND.r, BRAND.g, BRAND.b, 0.9)
+        o.edges[#o.edges + 1] = t
     end
     local ag = o:CreateAnimationGroup()
     ag:SetLooping("BOUNCE")
@@ -83,6 +114,34 @@ local function overlayFor(button)
     o.pulse = ag
     overlays[button] = o
     return o
+end
+
+-- Restyle a pooled overlay: color + solid vs pulsing (gold direct / blue indirect /
+-- brand theme).
+local function styleOverlay(o, c, pulse)
+    o.fill:SetColorTexture(c.r, c.g, c.b, 0.12)
+    for _, t in ipairs(o.edges) do t:SetColorTexture(c.r, c.g, c.b, 0.9) end
+    o:SetAlpha(1)
+    if pulse then o.pulse:Play() else o.pulse:Stop() end
+end
+
+-- DIM LAW (S22a): dimming is an OVERLAY too - a dark semi-transparent house texture
+-- parented to the node button. We NEVER mutate Blizzard button properties (no
+-- SetAlpha/SetDesaturated on their frames) - the same taint discipline as the glow.
+-- (Replaces the v0.27.0 SetAlpha dim.)
+local dims = {} -- [button] = our dim frame (pooled, reused)
+
+local function dimFor(button)
+    local d = dims[button]
+    if d then return d end
+    d = _G.CreateFrame("Frame", nil, button)
+    d:SetAllPoints()
+    d:SetFrameLevel((button.GetFrameLevel and button:GetFrameLevel() or 1) + 4)
+    local fill = d:CreateTexture(nil, "OVERLAY", nil, -2)
+    fill:SetAllPoints()
+    fill:SetColorTexture(0, 0, 0, 0.62)
+    dims[button] = d
+    return d
 end
 
 local function talentFrame()
@@ -127,31 +186,23 @@ local function collectButtons(ids, names, wantOthers)
     return hits, {}
 end
 
-local dimmed = {} -- buttons we lowered; restored on clear (visual-only, taint-free)
-
 function Highlight.clear()
     for _, o in pairs(overlays) do
         if o.pulse then o.pulse:Stop() end
         o:Hide()
     end
-    for _, b in ipairs(dimmed) do
-        pcall(b.SetAlpha, b, 1)
-    end
-    dimmed = {}
+    for _, d in pairs(dims) do d:Hide() end
 end
 
-local function applySets(ids, names, dimOthers)
+local function applySets(ids, names, dimOthers, color, pulse)
     local buttons, others = collectButtons(ids, names, dimOthers)
     for _, b in ipairs(buttons) do
         local o = overlayFor(b)
+        styleOverlay(o, color or BRAND, pulse ~= false)
         o:Show()
-        if o.pulse then o.pulse:Play() end
     end
     if dimOthers then
-        for _, b in ipairs(others) do
-            pcall(b.SetAlpha, b, 0.35)
-            dimmed[#dimmed + 1] = b
-        end
+        for _, b in ipairs(others) do dimFor(b):Show() end
     end
     return #buttons
 end
@@ -162,16 +213,35 @@ function Highlight.apply(query)
     Highlight.clear()
     local ids, names, label = Highlight.traitMembers(query, Highlight.playerContext())
     if not ids then return nil end
-    return applySets(ids, names, false), label
+    return applySets(ids, names, false, BRAND, true), label
 end
 
--- Skill-centric mode (S7b): the tree DIMS and the ability's modifier talents glow.
--- Transient by design (not saved) - a look, not a mode you get stuck in.
+-- Skill-centric mode (S7b/S22a): the tree DIMS (overlay law above) while the
+-- ability's DIRECT modifiers glow gold solid and its indirect ones (school damage +
+-- stat feeders) pulse blue. Falls back to the single-style member set when the
+-- classified lookup can't resolve the ability.
 function Highlight.applyAbility(query)
     Highlight.clear()
-    local ids, names, spell = Highlight.abilityMembers(query)
+    local ctx
+    local snap = HM.Snapshot and HM.Snapshot.capture()
+    if snap then ctx = { classToken = snap.classToken, level = snap.level } end
+    local dIds, iIds, dNames, iNames, spell = Highlight.abilityClassified(query, ctx)
+    if dIds then
+        local lit = applySets(dIds, dNames, false, GOLD, false)
+        lit = lit + applySets(iIds, iNames, false, BLUE, true)
+        -- Dim everything OUTSIDE the union (enumerator path only - honest degrade).
+        local union, unionNames = {}, {}
+        for k in pairs(dIds) do union[k] = true end
+        for k in pairs(iIds) do union[k] = true end
+        for k in pairs(dNames) do unionNames[k] = true end
+        for k in pairs(iNames) do unionNames[k] = true end
+        local _, others = collectButtons(union, unionNames, true)
+        for _, b in ipairs(others) do dimFor(b):Show() end
+        return lit, spell
+    end
+    local ids, names, resolved = Highlight.abilityMembers(query)
     if not ids then return nil end
-    return applySets(ids, names, true), spell
+    return applySets(ids, names, true, GOLD, false), resolved
 end
 
 function Highlight.playerContext()
@@ -200,8 +270,21 @@ function Highlight.setTheme(query) -- nil clears
     if s then s.theme = query end
 end
 
--- Re-apply the saved theme whenever the talent UI opens (it is load-on-demand, so
--- hook once Blizzard_PlayerSpells exists); clear our overlays when it hides.
+-- Saved skill focus (S22a): the ability name the player is studying. Validated on
+-- read like the theme (untrusted-input law). Focus outranks the theme on tree open.
+function Highlight.savedFocus()
+    local s = synergySettings()
+    local f = s and s.focus
+    return (type(f) == "string" and f ~= "" and #f <= 40) and f or nil
+end
+
+function Highlight.setFocus(query) -- nil clears
+    local s = synergySettings()
+    if s then s.focus = query end
+end
+
+-- Re-apply the saved focus (first) or theme whenever the talent UI opens (it is
+-- load-on-demand, so hook once Blizzard_PlayerSpells exists); clear overlays on hide.
 local hooked
 local function hookTalentUI()
     if hooked then return end
@@ -209,9 +292,16 @@ local function hookTalentUI()
     if not (psf and psf.HookScript) then return end
     hooked = true
     psf:HookScript("OnShow", function()
+        local focus = Highlight.savedFocus()
         local theme = Highlight.savedTheme()
-        if theme and _G.C_Timer and _G.C_Timer.After then
-            _G.C_Timer.After(0.3, function() pcall(Highlight.apply, theme) end)
+        if (focus or theme) and _G.C_Timer and _G.C_Timer.After then
+            _G.C_Timer.After(0.3, function()
+                if focus then
+                    pcall(Highlight.applyAbility, focus)
+                else
+                    pcall(Highlight.apply, theme)
+                end
+            end)
         end
     end)
     psf:HookScript("OnHide", function() pcall(Highlight.clear) end)

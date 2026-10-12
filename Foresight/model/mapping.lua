@@ -82,6 +82,104 @@ function Mapping.forSpell(query)
     return nil
 end
 
+-- School mask legend (client SchoolMask bits; generated op.school labels come from the
+-- same legend in generate.py's school_label).
+local SCHOOL_BITS = {
+    [1] = "Physical", [2] = "Holy", [4] = "Fire", [8] = "Nature",
+    [16] = "Frost", [32] = "Shadow", [64] = "Arcane",
+}
+
+-- S22a: classified reverse lookup - the three modifier classes for ONE ability.
+--   direct:      tree nodes with an op whose affected list contains this spell
+--                (the existing forSpell edges, reused).
+--   school:      pct schoolDamage ops whose school matches the spell's school mask.
+--   statFeeders: character-level ops whose LEVERS feed the spell's scaling input -
+--                AP/melee-crit (+ Str/Agi where the class conversion is nonzero) for
+--                weapon instants; spell damage/healing/crit (+ Int where
+--                intPerSpellCrit exists) for casters. Rides Levers.of - never a
+--                second stat-chain walker.
+-- ctx (optional): { classToken } gates the primary-stat feeders; absent -> those are
+-- honestly skipped. Pure; returns nil for an unknown spell (no false claims).
+-- Priority dedupe: direct > school > statFeeders (a node lands in ONE bucket).
+function Mapping.classifiedForSpell(spellId, ctx)
+    local spells = (HM.gen and HM.gen.spells) or {}
+    local spell = spells[spellId]
+    if not spell then return nil end
+    local nodes = (HM.gen and HM.gen.traits and HM.gen.traits.nodes) or {}
+    local conv = (ctx and ctx.classToken and HM.formulas
+        and (HM.formulas.statConversions.byClass or {})[ctx.classToken]) or {}
+    local isWeapon = spell.wpn ~= nil
+    local isHeal = (not isWeapon) and spell.heal ~= nil
+
+    local schoolSet = {}
+    for bit, sname in pairs(SCHOOL_BITS) do
+        if spell.school and math.floor(spell.school / bit) % 2 == 1 then
+            schoolSet[sname] = true
+        end
+    end
+    local function schoolMatches(label)
+        if type(label) ~= "string" then return false end
+        for sname in label:gmatch("[^/]+") do
+            if schoolSet[sname] then return true end
+        end
+        return false
+    end
+
+    -- Does this character-level op feed the spell's scaling input? (Spellmods are
+    -- ability-targeted and belong to direct, never here.)
+    local function feeds(op)
+        if op.kind == "spellmod" then return false end
+        for _, lever in ipairs((HM.Levers and HM.Levers.of(op, spells)) or {}) do
+            if isWeapon then
+                if lever.axis == "mechanic"
+                        and (lever.key == "attack power" or lever.key == "crit") then
+                    return true
+                end
+                if lever.axis == "stat"
+                        and ((lever.key == "Strength" and (conv.apPerStr or 0) ~= 0)
+                          or (lever.key == "Agility" and (conv.apPerAgi or 0) ~= 0)) then
+                    return true
+                end
+            else
+                if lever.axis == "mechanic"
+                        and (lever.key == "crit"
+                          or (isHeal and lever.key == "healing")
+                          or (not isHeal and lever.key == "spell damage")) then
+                    return true
+                end
+                if lever.axis == "stat" and lever.key == "Intellect"
+                        and conv.intPerSpellCrit then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+
+    local out = { spell = spell.name, direct = {}, school = {}, statFeeders = {} }
+    for nid, node in pairs(nodes) do
+        local bucket
+        for _, op in ipairs(node.ops or {}) do
+            for _, sid in ipairs(op.affected or {}) do
+                if sid == spellId then bucket = "direct" break end
+            end
+            if bucket == "direct" then break end
+            if op.kind == "schoolDamage" and op.isPct and schoolMatches(op.school) then
+                bucket = "school"
+            elseif not bucket and feeds(op) then
+                bucket = "statFeeders"
+            end
+        end
+        if bucket then
+            out[bucket][#out[bucket] + 1] = { nodeId = nid, name = node.name }
+        end
+    end
+    for _, list in pairs({ out.direct, out.school, out.statFeeders }) do
+        table.sort(list, function(a, b) return (a.name or "") < (b.name or "") end)
+    end
+    return out
+end
+
 -- FORWARD: the abilities a catalog entry (talent/trait node) touches, each with the op.
 -- Accepts a numeric trait nodeId or a catalog key ("talent:26").
 function Mapping.forEntry(ref)

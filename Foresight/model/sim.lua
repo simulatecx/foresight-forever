@@ -199,13 +199,21 @@ function Sim.abilityHit(loadout, spellId, opts)
         local wmin, wmax = snap.weaponDamageMin or 0, snap.weaponDamageMax or 0
         if wmax <= 0 then return nil end -- no weapon baseline: claim nothing
         local ap = stat("stat.attackPower")
+        -- The snapshot's weapon range contains the SNAPSHOT AP's term (UnitDamage is
+        -- static data here); the graph AP may differ under a what-if. Subtract what
+        -- the range actually contains, fold the live/what-if AP back in.
+        local snapAp = (snap.stats and snap.stats.attackPower) or ap
         local speed = snap.weaponSpeed or 2.0
-        local shift = 0
+        local shift
         if wpn.norm then
-            -- UnitDamage's range ALREADY contains the AP term at actual speed -
-            -- substitute it at normalized speed (the double-count hazard; the selftest
-            -- identity check pins this).
-            shift = -(ap / AP_PER_DPS * speed) + F.weaponNormalization.fn(ap, snap.weaponType)
+            -- Normalized instants: re-add AP at NORMALIZED speed (the double-count
+            -- hazard; the selftest identity check pins this).
+            shift = -(snapAp / AP_PER_DPS * speed)
+                + F.weaponNormalization.fn(ap, snap.weaponType)
+        else
+            -- Non-normalized strikes ride the weapon range as-is; only the MARGINAL
+            -- what-if AP folds, at actual speed (zero on the live loadout).
+            shift = (ap - snapAp) / AP_PER_DPS * speed
         end
         local pctW = (wpn.pct or 100) / 100
         local minv = ((wmin + shift) * pctW + (wpn.flat or 0)) * (1 + pctMods / 100) + flatMods

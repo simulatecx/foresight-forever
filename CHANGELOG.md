@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.31.0 - 2026-10-12
+
+SKILL-CENTRIC MATRIX + PATHWAY ROWS (S22): pick one ability and the whole addon
+orients around it - the talent tree lights its modifiers by CLASS, and the Matrix
+draws the cascade from raw stat to the number the button actually hits for.
+
+- CLASSIFIED REVERSE LOOKUP (S22a): `Mapping.classifiedForSpell` buckets an ability's
+  modifiers into direct (ops whose affected edges name it), school (% school-damage
+  ops matching its school mask), and statFeeders (character-level ops whose LEVERS
+  feed its scaling input - AP/crit + conversion-gated Str/Agi for weapon instants,
+  spell damage/healing/crit + Int-per-spell-crit for casters). Rides Levers.of and
+  the statConversions gates - no second stat-chain walker; priority-deduped; nil for
+  unknown abilities.
+- DUAL GLOW + THE OVERLAY-DIM LAW: direct modifiers glow GOLD SOLID, indirect ones
+  pulse BLUE, and every other node dims under our own dark overlay texture - zero
+  Blizzard-frame mutation (v0.27.0's SetAlpha dim is REPLACED; same taint discipline
+  as the glow). Name-scan fallback stays glow-only (honest degrade).
+- `/foresight focus <ability|clear>`: persistent skill-centric mode (validated saved
+  value; outranks the synergy theme on talent-UI open). The Matrix insight area gains
+  a Focused-skill block listing the three classes.
+- PATHWAY CHIP ROW (S22b): `PanelModel.pathwayModel` visualizes the cascade from
+  EXISTING computed data - "[+10 Strength] -> [+20 Attack Power] -> [+3.7 per swing]
+  -> [+3.4 Stormstrike per hit] (p)" - probe stat through the built graph to the S19
+  abilityHit endpoint. Every link must have actually computed (nil-degrade per link,
+  never an invented middle step); (p) propagates; rows WRAP at low resolution (the
+  mobile binding), never truncate. Coexists with the v0.27.0 "Best next points" rows.
+- CORRECTNESS FIX surfaced by the pathway tests: abilityHit's weapon branch now
+  subtracts the SNAPSHOT AP term (what UnitDamage actually contains) and folds the
+  graph's what-if AP back in - normalized at normalized speed, non-normalized at
+  actual speed (marginal-only). What-if AP gains now move weapon hits correctly;
+  live-loadout numbers are unchanged by construction.
+- Selftest 210 (+8): bucket fixtures (direct/school/feeder + disjointness), unknown ->
+  nil, dual selector sets, weapon cascade consistency vs abilityHit, caster chain =
+  probe x coefficient, missing-endpoint nil-degrade, focus/matrix passthrough.
+
+*Features:* UI-mapping-panel, SYNERGY-highlight, UI-matrix-panel,
+MODEL-ability-outcomes, QA-selftest-harness
+
 ## 0.30.0 - 2026-10-12
 
 STAT COACHING, DERIVED NEVER SCRIPTED (S20): when a stat does nothing for your focus

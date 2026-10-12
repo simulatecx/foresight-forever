@@ -94,10 +94,88 @@ end
 -- basis is stated on the panel. Never fake absolutes.
 local OUTPUT_IDS = { spellcasting = true, meleeDps = true, rangedDps = true, healing = true }
 
+-- S22b: the cascade, visualized - breadcrumb segments from EXISTING computed data
+-- (graph deltas + Sim.abilityHit), each link emitted ONLY when its number actually
+-- computed (nil-degrade per link; a middle step is never invented). The probe is a
+-- round +10 of the spell's scaling input so the chips read as rates. Pure.
+function PanelModel.pathwayModel(loadout, spellId)
+    local spell = HM.gen and HM.gen.spells and HM.gen.spells[spellId]
+    if not (spell and loadout and HM.Sim and HM.Sim.abilityHit) then return nil end
+    local snap = loadout.snapshot or {}
+    local conv = ((HM.formulas.statConversions.byClass or {})[snap.classToken]) or {}
+    local isWeapon = spell.wpn ~= nil
+    local statKey
+    if isWeapon then
+        if (conv.apPerStr or 0) > 0 then statKey = "Strength"
+        elseif (conv.apPerAgi or 0) > 0 then statKey = "Agility" end
+    else
+        statKey = spell.heal and "healingPower" or "spellDamage"
+    end
+    if not statKey then return nil end -- no feeding stat for this class: no cascade claim
+    local before = HM.Sim.abilityHit(loadout, spellId, { selected = snap.talents })
+    if not before then return nil end
+    local probe = 10
+    local modeled = loadout:withStatDelta(statKey, probe, "+10 " .. statKey)
+    local after = HM.Sim.abilityHit(modeled, spellId, { selected = snap.talents })
+    if not after then return nil end
+    local hitDelta = after.avg - before.avg
+    if math.abs(hitDelta) < 0.05 then return nil end -- the chain never reaches the hit
+    local DISPLAY = { spellDamage = "Spell Power", healingPower = "Healing Power" }
+    local segments = { ("+%d %s"):format(probe, DISPLAY[statKey] or statKey) }
+    if isWeapon then
+        -- The AP link, read off the same graphs the hit used (never re-derived).
+        local okAp, apDelta = pcall(function()
+            local bb, ab = loadout:build(), modeled:build()
+            return ab.graph:value("stat.attackPower", ab.ctx, {})
+                - bb.graph:value("stat.attackPower", bb.ctx, {})
+        end)
+        if okAp and type(apDelta) == "number" and math.abs(apDelta) > 0.05 then
+            segments[#segments + 1] = ("%+.0f Attack Power"):format(apDelta)
+            -- per-swing via the classic 14 AP = 1 DPS law (same as impact.lua's chain)
+            segments[#segments + 1] = ("%+.1f per swing"):format(
+                apDelta / 14 * (snap.weaponSpeed or 2.0))
+        end
+    end
+    segments[#segments + 1] = ("%+.1f %s per %s"):format(hitDelta, spell.name,
+        before.kind == "heal" and "cast" or "hit")
+    return { spell = spell.name, segments = segments, hitDelta = hitDelta,
+             presumed = (before.presumed or after.presumed) and true or false }
+end
+
+-- S22a Matrix integration: everything the insight area needs for a focused skill -
+-- the three modifier classes (names capped per row) + the S22b pathway. Pure.
+function PanelModel.focusModel(loadout, name)
+    if not (HM.Sim and HM.Sim.resolveSpellLevelCapped and HM.Mapping
+            and HM.Mapping.classifiedForSpell) then return nil end
+    local snap = loadout.snapshot or {}
+    local sid = HM.Sim.resolveSpellLevelCapped(name, snap.level)
+    local c = sid and HM.Mapping.classifiedForSpell(sid, { classToken = snap.classToken })
+    if not c then return nil end
+    local function joined(list, cap)
+        local out = {}
+        for i = 1, math.min(#list, cap or 4) do out[i] = list[i].name end
+        local more = #list - #out
+        return table.concat(out, ", ") .. (more > 0 and (" (+%d)"):format(more) or "")
+    end
+    local classes = {}
+    if #c.direct > 0 then
+        classes[#classes + 1] = { tag = "Direct", color = "gold", text = joined(c.direct) }
+    end
+    if #c.school > 0 then
+        classes[#classes + 1] = { tag = "School", color = "blue", text = joined(c.school) }
+    end
+    if #c.statFeeders > 0 then
+        classes[#classes + 1] = { tag = "Feeds it", color = "blue", text = joined(c.statFeeders) }
+    end
+    return { spell = c.spell, classes = classes,
+             pathway = PanelModel.pathwayModel(loadout, sid) }
+end
+
 -- pathways (optional): a Sim.goalPathways result - the renderer computes it on talent
 -- changes only (one evaluate per open node is too heavy for every aura tick) and
--- passes it through; the model stays pure.
-function PanelModel.matrixModel(loadout, activeLoopId, pathways)
+-- passes it through; the model stays pure. focus (optional): a PanelModel.focusModel
+-- result - same passthrough contract.
+function PanelModel.matrixModel(loadout, activeLoopId, pathways, focus)
     local results = HM.Impact.evaluate(loadout)
     local snapshot = loadout.snapshot or {}
     local stats = snapshot.stats or {}
@@ -166,6 +244,7 @@ function PanelModel.matrixModel(loadout, activeLoopId, pathways)
         },
         path = (pathways and pathways.rows and #pathways.rows > 0) and
             { label = pathways.label, rows = pathways.rows } or nil,
+        focus = focus or nil,
         eco = eco,
         loopCount = #loops,
     }

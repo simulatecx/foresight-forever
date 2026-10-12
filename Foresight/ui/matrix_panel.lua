@@ -189,6 +189,40 @@ local function layout(model)
         y = y - 8
     end
 
+    -- Skill focus (S22a/S22b): the three modifier classes for the focused ability +
+    -- the cascade chip row. Wrapped FontStrings WRAP to extra rows at low
+    -- resolution/scale (the mobile binding) - never truncate.
+    if model.focus then
+        local CLASS_HEX = { gold = "ffd24d", blue = "59a6ff" }
+        local fh = acquireFS("ARTWORK", "GameFontNormalSmall")
+        fh:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
+        fh:SetWidth(innerW)
+        fh:SetText(("|cff9d9d9dFocused skill -|r |cffffd24d%s|r  |cff9d9d9d(/foresight focus clear)|r")
+            :format(model.focus.spell or ""))
+        y = y - math.max(14, fh:GetStringHeight() + 2)
+        for _, cl in ipairs(model.focus.classes or {}) do
+            local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
+            f:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 6, y)
+            f:SetWidth(innerW - 12)
+            f:SetText(("|cff%s%s:|r %s"):format(CLASS_HEX[cl.color] or "9d9d9d",
+                cl.tag, cl.text))
+            y = y - math.max(13, f:GetStringHeight() + 1)
+        end
+        if model.focus.pathway then
+            local chips = {}
+            for _, seg in ipairs(model.focus.pathway.segments or {}) do
+                chips[#chips + 1] = ("|cff33ff99[|r%s|cff33ff99]|r"):format(seg)
+            end
+            local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
+            f:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 6, y)
+            f:SetWidth(innerW - 12)
+            f:SetText(table.concat(chips, " -> ")
+                .. (model.focus.pathway.presumed and " (p)" or ""))
+            y = y - math.max(13, f:GetStringHeight() + 1)
+        end
+        y = y - 8
+    end
+
     -- Ecosystem map (mockup component 2): goal row + the three tagged cards.
     if model.eco then
         local goal = acquireFS("ARTWORK", "GameFontNormalSmall")
@@ -297,8 +331,16 @@ function MatrixPanel.refresh()
     if cachedPath == nil then
         cachedPath = computePathways(loadout) or false -- false = computed, none found
     end
+    -- Skill focus (S22a): the saved focus feeds the insight block + pathway chips.
+    local focusModel
+    local focusName = HM.SynergyHighlight and HM.SynergyHighlight.savedFocus
+        and HM.SynergyHighlight.savedFocus() or nil
+    if focusName then
+        local okf, fm = pcall(HM.PanelModel.focusModel, loadout, focusName)
+        focusModel = (okf and fm) or nil
+    end
     local ok, model = pcall(HM.PanelModel.matrixModel, loadout, uiState().loop,
-        cachedPath or nil)
+        cachedPath or nil, focusModel)
     if ok and model then
         panel.model = model
         layout(model)

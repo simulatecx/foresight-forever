@@ -33,6 +33,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S19 MODEL-ability-outcomes: what this button actually hits for | 3 | ◐ |
 | S20 Stat coaching, derived never scripted | 3 | ◐ |
 | S21 Rank-rule truth: decode first, vote second | 3 | ◐ |
+| S22 Skill-centric Matrix + pathway rows | 3 | ◐ |
 
 ## Active / next
 
@@ -352,6 +353,26 @@ datamined values ("rank values datamined" header) · ☑ selftest +6 (exact per-
 value, (p) drop, missing-values fallback, order, counts gate, bridge gate; legacy
 override checks green) · ☐ operational: review collected/rank_rules_draft.lua ->
 promote k-of-n lines to overrides.rankRules before 2026-10-21 (human review - user).
+
+### S22 - Skill-centric Matrix + pathway rows ◐  (triaged 2026-10-12, handoff spec)
+Fit & Overlap - Category UI (model support in mapping/panel_model). Verdict: Enhance
+Mapping.forSpell (classified buckets), synergy_highlight (dual glow + overlay dim,
+taint-free law), matrix_panel (focus mode + pathway chip row), panel_model
+(pathwayModel pure). Complements: MODEL-ability-outcomes (pathway endpoint),
+SYNERGY-highlight (one overlay system), UI-matrix-panel. Avoid duplicating: the lever
+taxonomy / statConvert chain logic (statFeeders ride it), the ONE highlight plumbing.
+Mobile: chip row wraps at 1280x720 @ 0.65. Trust: display-only; segments only from
+computed values; (p) propagates. Data: none new. Abuse: not externally reachable.
+
+AC: ☑ classifiedForSpell pure (direct/school/statFeeders) on existing machinery
+(Levers.of; priority dedupe) · ☑ gold solid vs blue pulse vs overlay-dim, zero
+Blizzard-frame mutation (v0.27.0's SetAlpha dim REPLACED per the overlay-dim law) ·
+☑ /foresight focus (saved per char, validated) + Matrix insight lists the classes +
+tree light-up via hookTalentUI (focus outranks theme) · ☑ pathwayModel chip row,
+nil-degrade per link, (p) propagation, wrapped FontStrings (mobile wrap) · ☑ selftest
++8 across both halves · ☑ what-if AP correctness fix in abilityHit's weapon branch
+(snapshot-AP substitution; marginal AP folds on non-normalized strikes) · ☐ in-game
+render verify.
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
