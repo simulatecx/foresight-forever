@@ -365,10 +365,19 @@ function HM.runSelftest(out)
             and text:find("per cast", 1, true) ~= nil
     end)(), castSpellId)
     check("spell lines nil without spell/heal power", (function()
-        if not castSpellId then return false end
+        -- A spell with NO decoded base fields and no power to translate has nothing
+        -- honest to say: no lines at all (the S19 absolute line never invents).
+        local plainId
+        for id, sp in pairs(gen.spells) do
+            if sp.castMs and sp.castMs > 0 and not (sp.dmg or sp.heal or sp.wpn) then
+                plainId = id
+                break
+            end
+        end
+        if not plainId then return false end
         local snap = testSnapshot()
         snap.stats.spellDamage, snap.stats.healingPower = 0, 0
-        return HM.Tooltips.spellLines(castSpellId, HM.Loadout.fromSnapshot(snap)) == nil
+        return HM.Tooltips.spellLines(plainId, HM.Loadout.fromSnapshot(snap)) == nil
     end)())
 
     -- Collector + export plumbing (headless-degraded paths).
@@ -760,11 +769,13 @@ function HM.runSelftest(out)
         return type(bad) == "table" and #bad == 0
     end)(), table.concat(HM.validateLoops(), "; "))
     check("shatter loop computes the frozen-crit answer honestly", (function()
+        -- S19: the payoff rows now claim level-capped absolute numbers from the decode.
         local l = HM.loopById("shatter")
         local text = table.concat(l and l.compute(base) or {}, "\n")
         return text:find("55.0%", 1, true) ~= nil
             and text:find("(p)", 1, true) ~= nil
-            and text:find("not in the shipped data", 1, true) ~= nil
+            and text:find("hits for ~", 1, true) ~= nil
+            and text:find("Shatter crit lands", 1, true) ~= nil
     end)())
     check("windfury loop cascade runs headless (engines resolve from data)", (function()
         local l = HM.loopById("windfury")
@@ -775,6 +786,149 @@ function HM.runSelftest(out)
     check("playstyle label leads with the standing", (function()
         local label = HM.PanelModel.playstyleLabel(HM.Impact.evaluate(base), base.snapshot)
         return label:find("Glass Cannon | ", 1, true) ~= nil
+    end)())
+
+    -- MODEL-ability-outcomes (S19): decoded base spell/heal/weapon data + the composed
+    -- absolute hit. Data gates prove the decode against classic ground truth; model
+    -- checks pin the composition laws (incl. the normalization double-count hazard).
+    check("decode: Fireball r1 base 18 -> the classic 14-22", (function()
+        local d = gen.spells[133] and gen.spells[133].dmg
+        if not (d and d.base == 18) then return false end
+        local mn, mx = HM.formulas.spellBaseDamage.fn(d.base, d.var, d.lvl, 1, d.maxLvl, 1)
+        return approx(mn, 14, 0.05) and approx(mx, 22, 0.05)
+    end)())
+    check("decode: Heroic Strike r8 flat 138, not normalized", (function()
+        local w = gen.spells[11567] and gen.spells[11567].wpn
+        return w ~= nil and w.flat == 138 and w.norm == nil and w.pct == nil
+    end)())
+    check("decode: Backstab 150% weapon damage, normalized", (function()
+        local w = gen.spells[2589] and gen.spells[2589].wpn
+        return w ~= nil and w.pct == 150 and w.norm == true
+    end)())
+    check("decode: Fireball r1 carries the real 0.429 coefficient", (function()
+        local d = gen.spells[133] and gen.spells[133].dmg
+        return d ~= nil and d.coef ~= nil and math.abs(d.coef - 0.429) < 0.001
+    end)())
+    check("decode: Ice Lance resolves with damage data (Shatter claim gate)", (function()
+        local sid = HM.Sim.resolveSpellByName("Ice Lance")
+        local sp = sid and gen.spells[sid]
+        return sp ~= nil and sp.dmg ~= nil and sp.dmg.base > 0
+    end)())
+    check("level-capped resolver picks the trainable rank", (function()
+        local _, low = HM.Sim.resolveSpellLevelCapped("Fireball", 1)
+        local _, mid = HM.Sim.resolveSpellLevelCapped("Fireball", 10)
+        local _, top = HM.Sim.resolveSpellByName("Fireball")
+        return low ~= nil and low.level == 1
+            and mid ~= nil and mid.level ~= nil and mid.level <= 10 and mid.level > 1
+            and top ~= nil and (top.level or 0) > mid.level
+    end)())
+    check("abilityHit composes the spell formula exactly (Fireball fixture)", (function()
+        local sp = gen.spells[133]
+        local hit = HM.Sim.abilityHit(base, 133, {})
+        if not (hit and hit.kind == "spell" and hit.coefSource == "data") then return false end
+        local mn, mx = HM.formulas.spellBaseDamage.fn(sp.dmg.base, sp.dmg.var, sp.dmg.lvl,
+            sp.baseLevel or sp.level, sp.dmg.maxLvl, 60)
+        return approx(hit.min, mn + 50 * sp.dmg.coef, 0.01)
+            and approx(hit.max, mx + 50 * sp.dmg.coef, 0.01)
+            and hit.presumed == true
+    end)())
+    check("weapon normalization substitution identity (double-count gate)", (function()
+        -- avg == weaponAvg - AP/14*actualSpeed + AP/14*normCoefficient, on classic
+        -- Stormstrike (Effect 121, bp 0): the UnitDamage AP term swaps speeds exactly.
+        local snap = testSnapshot()
+        snap.classToken = "SHAMAN"
+        snap.weaponSpeed, snap.weaponType = 3.8, "twoHand"
+        snap.weaponDamageMin, snap.weaponDamageMax = 100, 100
+        snap.stats.attackPower = 700
+        local hit = HM.Sim.abilityHit(HM.Loadout.fromSnapshot(snap), 17364, {})
+        local expect = 100 - 700 / 14 * 3.8 + 700 / 14 * 3.3
+        return hit ~= nil and hit.kind == "weapon"
+            and approx(hit.min, expect, 1e-6) and approx(hit.max, expect, 1e-6)
+    end)())
+    check("weapon flat path (Heroic Strike rides your weapon range)", (function()
+        local snap = testSnapshot()
+        snap.classToken = "WARRIOR"
+        snap.weaponDamageMin, snap.weaponDamageMax = 80, 120
+        local hit = HM.Sim.abilityHit(HM.Loadout.fromSnapshot(snap), 11567, {})
+        return hit ~= nil and approx(hit.min, 218) and approx(hit.max, 258)
+            and hit.kind == "weapon" and hit.critMult == 2
+    end)())
+    -- One trait node with exactly one +damage% op touching Fireball(133), found from
+    -- the shipped data (never hardcoded), backs the spellmod/delta/hover checks.
+    local dmgNodeId, dmgNodeOp
+    for nid, node in pairs(gen.traits.nodes) do
+        local matching, count = nil, 0
+        for _, op in ipairs(node.ops or {}) do
+            if op.kind == "spellmod" and op.property == "damage/healing" and op.isPct
+                    and (op.maxValue or 0) > 0 then
+                for _, sid in ipairs(op.affected or {}) do
+                    if sid == 133 then
+                        count = count + 1
+                        matching = op
+                        break
+                    end
+                end
+            end
+        end
+        if count == 1 and (node.maxRank or 1) > 1 then
+            dmgNodeId, dmgNodeOp = nid, matching
+            break
+        end
+    end
+    check("spellmod talent moves the hit by the ONE rank rule", (function()
+        if not dmgNodeId then return false end
+        local node = gen.traits.nodes[dmgNodeId]
+        local tid = HM.TalentAPI.talentForSpell and node.spellID
+            and tonumber(HM.TalentAPI.talentForSpell(node.spellID)) or nil
+        local plain = HM.Sim.abilityHit(base, 133, {})
+        local r1 = HM.Sim.abilityHit(base, 133,
+            { selected = { { nodeId = dmgNodeId, rank = 1 } } })
+        local r2 = HM.Sim.abilityHit(base, 133,
+            { selected = { { nodeId = dmgNodeId, rank = 2 } } })
+        local v1 = HM.formulas.talentRankValueFor(tid, dmgNodeOp.maxValue, 1, node.maxRank)
+        local v2 = HM.formulas.talentRankValueFor(tid, dmgNodeOp.maxValue, 2, node.maxRank)
+        return plain ~= nil and r1 ~= nil and r2 ~= nil
+            and approx(r1.min, plain.min * (1 + v1 / 100), 0.01)
+            and approx(r2.min, plain.min * (1 + v2 / 100), 0.01)
+            and r2.min > r1.min and r1.min > plain.min
+    end)(), dmgNodeId)
+    check("abilityHit nil-degrades without decoded fields (no absolute line)", (function()
+        local plainId
+        for id, sp in pairs(gen.spells) do
+            if not (sp.dmg or sp.heal or sp.wpn) then
+                plainId = id
+                break
+            end
+        end
+        if not plainId then return false end
+        if HM.Sim.abilityHit(base, plainId, {}) ~= nil then return false end
+        local text = linesText(HM.Tooltips.spellLines(plainId, base) or {})
+        return text:find("Hits for", 1, true) == nil
+            and text:find("Heals for", 1, true) == nil
+    end)())
+    check("abilityHitDelta: before/after/delta consistent", (function()
+        if not dmgNodeId then return false end
+        local d = HM.Sim.abilityHitDelta(base, 133, {}, dmgNodeId, 1)
+        local before = HM.Sim.abilityHit(base, 133, {})
+        local after = HM.Sim.abilityHit(base, 133,
+            { selected = { { nodeId = dmgNodeId, rank = 1 } } })
+        return d ~= nil and approx(d.before.avg, before.avg, 1e-9)
+            and approx(d.after.avg, after.avg, 1e-9)
+            and approx(d.delta, after.avg - before.avg, 1e-9)
+            and d.delta > 0
+    end)())
+    check("spell tooltip leads with the absolute hit line", (function()
+        local text = linesText(HM.Tooltips.spellLines(133, base))
+        return text:find("Hits for", 1, true) ~= nil
+            and text:find("(p)", 1, true) ~= nil
+            and text:find("crits for ~1.5x", 1, true) ~= nil
+            and text:find("datamined", 1, true) ~= nil
+    end)())
+    check("talent hover shows before -> after ability deltas", (function()
+        if not dmgNodeId then return false end
+        local text = linesText(HM.Tooltips.nodeImpactLines(dmgNodeId, base) or {})
+        return text:find("per hit", 1, true) ~= nil
+            and text:find("-> ~", 1, true) ~= nil
     end)())
 
     -- MATRIX panel model (S7b renderer spec: mockups/foresight-matrix-2026-10-12.html).

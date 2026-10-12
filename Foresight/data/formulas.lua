@@ -66,6 +66,37 @@ F.spellCoefficient = {
     end,
 }
 
+-- Base spell/heal magnitude from the decoded SpellEffect fields: min/max from
+-- bp +/- variance/2; level term bp + ppl * (clampedLevel - baseLevel), where
+-- clampedLevel = min(playerLevel, maxLevel when set). The decoded VALUES carry the
+-- generated-data channel provenance; this entry tags the composition LAW.
+F.spellBaseDamage = {
+    unit = "min, max base points at the player's level",
+    source = "Forever client SpellEffect layout (build 1.60.1.70338); min/max law cross-checked vs classic rank-1 Fireball 14-22",
+    confidence = "datamined-presumed",
+    fn = function(base, var, ppl, baseLevel, maxLevel, playerLevel)
+        local bp = base or 0
+        if ppl and ppl > 0 and playerLevel then
+            local lvl = playerLevel
+            if maxLevel and maxLevel > 0 and lvl > maxLevel then lvl = maxLevel end
+            local term = lvl - (baseLevel or lvl)
+            if term > 0 then bp = bp + ppl * term end
+        end
+        local spread = (var or 0) / 2
+        return bp * (1 - spread), bp * (1 + spread)
+    end,
+}
+
+-- Crit damage multipliers (classic laws): melee/ranged crits land 2x, spell and heal
+-- crits 1.5x. Used for the crit FRAMING line only - the headline hit range never
+-- bakes crit in.
+F.critMultiplier = {
+    unit = "damage multiplier on a critical hit",
+    source = "classic combat rules (community-documented)",
+    confidence = "classic-presumed",
+    melee = 2, spell = 1.5,
+}
+
 -- Effective health against physical: HP / (1 - mitigation). Armor mitigation vs a
 -- level L attacker (classic): armor / (armor + 400 + 85 * L), capped at 75%.
 F.armorMitigation = {

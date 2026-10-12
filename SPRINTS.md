@@ -30,6 +30,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S12 Publishing train: GitHub remote + packager CI + CurseForge/Wago | - | ◐ |
 | S13 Crowd scale-up: companion uploader + ingestion + privacy pass | - | ☐ |
 | S18 SIM-engine: simulation & synergy math core (PRD trio) | 3 | ◐ |
+| S19 MODEL-ability-outcomes: what this button actually hits for | 3 | ◐ |
 
 ## Active / next
 
@@ -281,6 +282,32 @@ archetypes replaced with within-character ratios (dimension indices are not cros
 Flurry per-rank scaling UNRESOLVED in data (rank-1 buff decoded; talent-tooltip capture
 upgrades it).
 
+### S19 - MODEL-ability-outcomes: what this button actually hits for ◐  (triaged 2026-10-12, handoff spec)
+Fit & Overlap - Category MODEL -> DATA/UI. Verdict: Net-new capability ID, zero new
+addon files - Enhance generate.py (ship_spells pass), sim.lua (abilityHit beside
+windfuryBurst), formulas.lua (spellBaseDamage law + critMultiplier framing constants),
+tooltips.lua spellLines/nodeImpactLines (the ONE injection module), loops.lua (Shatter
+claim). Complements: SIM-engine, UI-spell-tooltip (retires the backlog line), DATA-loops,
+QA-probe (captured tooltips verify our numbers). Avoid duplicating: build_ops,
+talentRankValue, spellCoefficient, Mapping edges, the injection module. Mobile:
+tooltip/chat text (passes the 1280x720 @ 0.65 binding). Languages: enUS house state.
+Trust: display-only, (p) until probe-verified, nil-degrade on missing decode - never
+invented. Data: no new stored data. Abuse: not externally reachable.
+
+As a player, I want my ability tooltip to say "hits for ~141-156 with your gear" and
+a talent hover to say "+21 to Stormstrike", so the translator covers the thing I
+actually press.
+
+AC: ☑ generate.py decodes dmg{base,var,lvl,maxLvl,coef}/heal/wpn{pct,flat,norm}/dotTick
++ counts in build.lua (509 damage / 158 weapon / 145 heal) · ☑ data gates (Fireball
+14-22, HS flat 138, Backstab 150%+norm, coef 0.429, Ice Lance decodable) ·
+☑ F.spellBaseDamage tagged datamined-presumed · ☑ Sim.abilityHit/abilityHitDelta pure,
+selected-spellmods via affected edges at talentRankValue, normalization substitution,
+nil degrade · ☑ spellLines absolute line + datamined-coefficient upgrade ·
+☑ nodeImpactLines before->after deltas (<=3 lines) · ☑ Shatter loop claims level-capped
+numbers, fallback retained · ☑ /foresight hit · ☑ selftest >= 189 (shipped 191) ·
+☐ in-game verify >= 3 abilities vs rendered tooltips before 2026-10-21.
+
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
 /foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),
@@ -300,7 +327,6 @@ Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 - ☐ GRAPH-rotation-weights: fold cast-time/cost/cooldown mods into throughput via per-spell
   rotation weights (today they surface via tooltips only).
 - ☐ Per-ability base threat + stance/form multipliers for GRAPH-threat (overrides, k-of-n).
-- ☐ Spell-tooltip absolute hit numbers once base spell damage per rank is in the data.
 
 ## Shipped (archived)
 - ☑ S6 Crowd data-collection loop (2026-10-10): collector + harvester + gated deploy;

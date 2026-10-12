@@ -474,6 +474,7 @@ def main() -> int:
     }
     ship_spells = (player_spells | talent_spells | affected_spells) & set(spell_names)
     spells_out = {}
+    multi_damage, multi_heal, scaling_flagged = [], [], set()
     for sid in sorted(ship_spells):
         m = misc.get(sid)
         entry = {"name": spell_names[sid]}
@@ -501,7 +502,74 @@ def main() -> int:
         ticks = [to_int(e["EffectAuraPeriod"]) for e in effects_by_spell.get(sid, []) if to_int(e["EffectAuraPeriod"])]
         if ticks:
             entry["tickMs"] = min(ticks)
+
+        # Ability-outcome decode (MODEL-ability-outcomes): what the button itself does.
+        # Modern SpellEffect layout (no EffectDieSides): magnitude in EffectBasePointsF,
+        # spread in Variance (min/max = bp*(1 -/+ var/2)), real SP/HP coefficient in
+        # EffectBonusCoefficient (meaningful ONLY on Effect 2/10 rows - weapon rows carry
+        # a junk 1), level term in EffectRealPointsPerLevel clamped by SpellLevels.MaxLevel.
+        # Cross-checked vs classic: rank-1 Fireball bp 18 var 0.444 -> 14-22.
+        wpn = {}
+        for e in effects_by_spell.get(sid, []):
+            et = to_int(e["Effect"])
+            if et not in (2, 6, 10, 17, 31, 58, 121):
+                continue
+            if to_int(e["ScalingClass"]):
+                scaling_flagged.add(f"{sid} ({entry['name']})")
+            bp = float(e["EffectBasePointsF"] or 0)
+            if et in (2, 10):
+                key = "dmg" if et == 2 else "heal"
+                if key in entry:
+                    (multi_damage if et == 2 else multi_heal).append(sid)
+                    continue  # first row wins; the printed count feeds curation
+                coef = float(e["EffectBonusCoefficient"] or 0)
+                if not bp and coef <= 0:
+                    continue  # empty row claims nothing (nil-degrade, never invent)
+                shape = {"base": bp}
+                var = float(e["Variance"] or 0)
+                if var:
+                    shape["var"] = var
+                ppl = float(e["EffectRealPointsPerLevel"] or 0)
+                if ppl:
+                    shape["lvl"] = ppl
+                    ml = to_int(lv["MaxLevel"]) if lv else 0
+                    if ml:
+                        shape["maxLvl"] = ml
+                if coef > 0:
+                    shape["coef"] = coef
+                entry[key] = shape
+            elif et == 31:
+                if "pct" not in wpn:
+                    wpn["pct"] = bp
+            elif et in (17, 58, 121):
+                wpn["flat"] = wpn.get("flat", 0.0) + bp
+                if et == 121:
+                    wpn["norm"] = True
+            elif et == 6 and to_int(e["EffectAura"]) == 3 and bp and "dotTick" not in entry:
+                entry["dotTick"] = bp
+        if wpn:
+            if not wpn.get("flat"):
+                wpn.pop("flat", None)  # consumer defaults 0
+            entry["wpn"] = wpn
+        # The ppl level term anchors at BaseLevel, which can diverge from the shipped
+        # SpellLevel (246 spells this build); emit it only where the law needs it.
+        if lv and (("dmg" in entry and "lvl" in entry["dmg"])
+                   or ("heal" in entry and "lvl" in entry["heal"])):
+            bl = to_int(lv["BaseLevel"])
+            if bl != entry.get("level", 0):
+                entry["baseLevel"] = bl
         spells_out[sid] = entry
+
+    n_dmg = sum(1 for s in spells_out.values() if "dmg" in s)
+    n_heal = sum(1 for s in spells_out.values() if "heal" in s)
+    n_wpn = sum(1 for s in spells_out.values() if "wpn" in s)
+    print(f"ability decode: damage={n_dmg} weapon={n_wpn} heal={n_heal}")
+    if multi_damage:
+        print(f"multi-damage-row spells: {len(multi_damage)}")
+    if multi_heal:
+        print(f"multi-heal-row spells: {len(multi_heal)}")
+    for flagged in sorted(scaling_flagged):
+        print(f"WARNING: ScalingClass != 0 on spell {flagged}")
 
     # ---- Traits (Retail node trees = the LIVE talent system on Forever) -------
     # Chain: TraitNode -> (TraitNodeXTraitNodeEntry) -> TraitNodeEntry -> TraitDefinition
@@ -872,6 +940,9 @@ def main() -> int:
                 "talents": len(talents_out),
                 "tabs": len(tabs_out),
                 "spells": len(spells_out),
+                "spellsWithDamage": n_dmg,
+                "spellsWithWeaponHit": n_wpn,
+                "spellsWithHeal": n_heal,
                 "impactsNeedingCuration": needs_curation,
                 "traitNodes": len(trait_nodes),
                 "traitNodesNeedingCuration": trait_curation,

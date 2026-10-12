@@ -260,6 +260,48 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
                 r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
             }
         end
+        -- Ability outcome deltas (MODEL-ability-outcomes): what the next point does to
+        -- the buttons this node actually modifies, before -> after. Capped at 3 lines;
+        -- spells without decoded damage degrade to no line (never an invented number).
+        if HM.Sim and HM.Sim.abilityHitDelta then
+            local snapTalents = (loadout.snapshot and loadout.snapshot.talents) or {}
+            local curRank = 0
+            for _, t in ipairs(snapTalents) do
+                if t.nodeId == nodeId then curRank = t.rank or 0 break end
+            end
+            if curRank < maxRank then
+                local level = loadout.snapshot and loadout.snapshot.level
+                local seenAbility, shown = {}, 0
+                for _, op in ipairs(node.ops or {}) do
+                    if op.kind == "spellmod" and op.property == "damage/healing" and shown < 3 then
+                        for _, sid in ipairs(op.affected or {}) do
+                            if shown >= 3 then break end
+                            local sp = HM.gen.spells and HM.gen.spells[sid]
+                            local name = sp and sp.name
+                            if name and not seenAbility[name] then
+                                seenAbility[name] = true
+                                -- The rank the player actually casts, not the top rank.
+                                local cid = HM.Sim.resolveSpellLevelCapped(name, level) or sid
+                                local okD, dlt = pcall(HM.Sim.abilityHitDelta, loadout, cid,
+                                    snapTalents, nodeId, curRank + 1)
+                                if okD and dlt and math.abs(dlt.delta) >= 0.5 then
+                                    shown = shown + 1
+                                    local unit = dlt.before.kind == "heal" and "per cast" or "per hit"
+                                    lines[#lines + 1] = {
+                                        text = ("%s: ~%d -> ~%d %s (|cff4ade80%+d|r)%s"):format(
+                                            name, math.floor(dlt.before.avg + 0.5),
+                                            math.floor(dlt.after.avg + 0.5), unit,
+                                            math.floor(dlt.delta + 0.5),
+                                            dlt.presumed and " (p)" or ""),
+                                        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+                                    }
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
     end
 
     -- Synergy: other talents that push the same lever (stat / mechanic / school).
@@ -549,10 +591,11 @@ end
 
 -- Spell provider (UI-spell-tooltip) -------------------------------------------
 
--- What a spell does for YOU, honestly, from the data we actually ship: the client cast
--- time + the (p) coefficient formula translate your live Spell/Healing Power into "how
--- much of your gear lands on this button per cast". We deliberately do NOT invent a
--- flat hit number - base spell damage per rank isn't in the shipped tables yet.
+-- What a spell does for YOU, honestly, from the data we actually ship. The decoded
+-- SpellEffect base (MODEL-ability-outcomes) composes with your live numbers into an
+-- absolute "hits for ~X-Y" lead line; the coefficient block translates your Spell/
+-- Healing Power per cast. Spells without decoded fields keep the coefficient-only
+-- block (nil-degrade: no absolute line is ever invented).
 function Tooltips.spellLines(spellId, loadout)
     if not loadout then return nil end
     local spell = HM.gen and HM.gen.spells and HM.gen.spells[spellId]
@@ -561,32 +604,66 @@ function Tooltips.spellLines(spellId, loadout)
     local sp, hp = s.spellDamage or 0, s.healingPower or 0
     local power, powerLabel = sp, "Spell Power"
     if hp > sp then power, powerLabel = hp, "Healing Power" end
-    if power <= 0 then return nil end -- nothing of yours to translate onto this spell yet
+
+    -- The absolute answer, when the decode covers this button.
+    local hit
+    if HM.Sim and HM.Sim.abilityHit then
+        local okH, h = pcall(HM.Sim.abilityHit, loadout, spellId,
+            { selected = loadout.snapshot and loadout.snapshot.talents })
+        hit = okH and h or nil
+    end
+    if not hit and power <= 0 then return nil end -- nothing of yours to translate yet
     local castSec = (spell.castMs and spell.castMs > 0) and (spell.castMs / 1000) or 1.5
-    local coef = HM.formulas.spellCoefficient.fn(castSec)
+    -- Prefer the datamined coefficient when the decode carries one; else the (p) formula.
+    local coef = (hit and hit.coef) or HM.formulas.spellCoefficient.fn(castSec)
     local added = math.floor(power * coef + 0.5)
 
     local lines = {}
+    local headerRight = "(p) coefficient-based"
+    if hit and hit.coefSource == "data" then headerRight = "datamined coefficient"
+    elseif hit and hit.kind == "weapon" then headerRight = "(p) with your weapon" end
     lines[#lines + 1] = {
-        kind = "double", left = "Foresight", right = "(p) coefficient-based",
+        kind = "double", left = "Foresight", right = headerRight,
         r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
     }
-    lines[#lines + 1] = {
-        text = ("Your %s (+%d) adds about |cff4ade80+%d|r to this spell per cast"):format(
-            powerLabel, power, added),
-        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
-    }
-    lines[#lines + 1] = {
-        text = ("(%.0f%% coefficient at a %.1fs cast)"):format(coef * 100, castSec),
-        r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
-    }
+    if hit then
+        local lo, hi = math.floor(hit.min + 0.5), math.floor(hit.max + 0.5)
+        local range = (lo == hi) and ("~%d"):format(lo) or ("~%d-%d"):format(lo, hi)
+        lines[#lines + 1] = {
+            text = ("%s for |cff4ade80%s|r with your gear%s"):format(
+                hit.kind == "heal" and "Heals" or "Hits", range,
+                hit.presumed and " (p)" or ""),
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+        }
+        if (hit.critPct or 0) > 0 then
+            lines[#lines + 1] = {
+                text = ("crits for ~%gx at your %.1f%% crit (p)"):format(
+                    hit.critMult or 2, hit.critPct),
+                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+            }
+        end
+    end
+    -- Power translation: only where spell power actually lands (never on weapon hits).
+    if power > 0 and not (hit and hit.kind == "weapon") then
+        lines[#lines + 1] = {
+            text = ("Your %s (+%d) adds about |cff4ade80+%d|r to this spell per cast"):format(
+                powerLabel, power, added),
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+        }
+        lines[#lines + 1] = {
+            text = (hit and hit.coefSource == "data")
+                and ("(%.0f%% coefficient, datamined)"):format(coef * 100)
+                or ("(%.0f%% coefficient at a %.1fs cast)"):format(coef * 100, castSec),
+            r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+        }
+    end
     -- Resource economy (SIM-engine): what chain-casting this does to your mana pool.
     local okO, oom
     if HM.Sim then okO, oom = pcall(HM.Sim.timeToOOM, loadout, spellId) end
     if okO and oom then
         lines[#lines + 1] = {
             text = ("Chain-cast: ~%d casts, empty mana in ~%ds (p)")
-                :format(oom.casts, oom.seconds),
+                :format(oom.casts, math.floor(oom.seconds + 0.5)),
             r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
         }
     end

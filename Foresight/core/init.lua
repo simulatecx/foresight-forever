@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.27.0"
+HM.version = "0.28.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -330,6 +330,62 @@ local function onSlash(input)
                 printMsg("nothing modifies '" .. rest .. "' in the data (try an ability or talent name)")
             end
         end
+    elseif cmd == "hit" then
+        -- MODEL-ability-outcomes: the composed absolute answer for one ability with
+        -- every step shown - the in-game verification lever for the decode.
+        if rest == "" then
+            printMsg("usage: /foresight hit <ability name>")
+            return
+        end
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not snapshot then
+            printMsg("no character snapshot available")
+            return
+        end
+        local loadout = HM.Loadout.fromSnapshot(snapshot)
+        local sid, spell = HM.Sim.resolveSpellLevelCapped(rest, snapshot.level)
+        if not sid then
+            printMsg("no spell named '" .. rest .. "' in the shipped data")
+            return
+        end
+        local hit = HM.Sim.abilityHit(loadout, sid, { selected = snapshot.talents })
+        if not hit then
+            printMsg(("%s: no decoded base data for this ability - nothing to claim")
+                :format(spell.name))
+            return
+        end
+        printMsg(("%s%s:"):format(spell.name,
+            (spell.level and spell.level > 0) and (" (rank at level " .. spell.level .. ")") or ""))
+        if hit.kind == "weapon" then
+            local wpn = spell.wpn or {}
+            printMsg(("  your weapon: %.0f-%.0f over %.1fs%s"):format(
+                hit.baseMin, hit.baseMax, snapshot.weaponSpeed or 2.0,
+                wpn.norm and (" - instant normalized at " .. (snapshot.weaponType or "oneHand")
+                    .. " speed (p)") or ""))
+            if wpn.pct then printMsg(("  x %g%% weapon damage"):format(wpn.pct)) end
+            if wpn.flat then printMsg(("  + %g flat"):format(wpn.flat)) end
+        else
+            printMsg(("  base: %.0f-%.0f at your level (p)"):format(hit.baseMin, hit.baseMax))
+            if (hit.power or 0) > 0 then
+                printMsg(("  + %d %s x %.3f coefficient (%s)"):format(hit.power,
+                    hit.kind == "heal" and "Healing Power" or "Spell Power", hit.coef or 0,
+                    hit.coefSource == "data" and "datamined" or "presumed (p)"))
+            end
+        end
+        if (hit.pctMods or 0) ~= 0 or (hit.flatMods or 0) ~= 0 then
+            local parts = {}
+            if (hit.pctMods or 0) ~= 0 then parts[#parts + 1] = ("%+g%%"):format(hit.pctMods) end
+            if (hit.flatMods or 0) ~= 0 then parts[#parts + 1] = ("%+g flat"):format(hit.flatMods) end
+            printMsg(("  talents: %s (%s)"):format(table.concat(parts, ", "),
+                table.concat(hit.mods or {}, ", ")))
+        end
+        printMsg(("  = ~%d-%d per %s%s"):format(math.floor(hit.min + 0.5),
+            math.floor(hit.max + 0.5), hit.kind == "heal" and "cast" or "hit",
+            hit.presumed and " (p)" or ""))
+        if (hit.critPct or 0) > 0 then
+            printMsg(("  crits for ~%gx at your %.1f%% crit (p)"):format(
+                hit.critMult or 2, hit.critPct))
+        end
     elseif cmd == "catalog" or cmd == "db" then
         -- The content reference table: counts per kind, or a search across everything.
         if not HM.Catalog then
@@ -644,7 +700,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

@@ -21,12 +21,34 @@ HM.loops = {
         compute = function(loadout)
             local stats = (loadout.snapshot and loadout.snapshot.stats) or {}
             local crit = stats.spellCritPct or 0
-            return {
+            local lines = {
                 ("Shatter at max rank vs a frozen target: your %.1f%% spell crit becomes ~%.1f%% (+50%% (p))")
                     :format(crit, math.min(crit + 50, 100)),
                 "Ice Shards turns those crits from 1.5x into ~2x damage (p)",
-                "absolute hit numbers need base spell damage per rank - not in the shipped data yet, so none are claimed",
             }
+            -- Absolute payoff numbers (MODEL-ability-outcomes): the rank the player can
+            -- actually cast at their level, composed with their gear. Decode absent ->
+            -- the honest fallback line, never an invented number.
+            local level = loadout.snapshot and loadout.snapshot.level
+            local selected = loadout.snapshot and loadout.snapshot.talents
+            local claimed = false
+            for _, payoff in ipairs({ "Frostbolt", "Ice Lance" }) do
+                local sid = HM.Sim.resolveSpellLevelCapped
+                    and HM.Sim.resolveSpellLevelCapped(payoff, level)
+                local hit = sid and HM.Sim.abilityHit
+                    and HM.Sim.abilityHit(loadout, sid, { selected = selected })
+                if hit then
+                    claimed = true
+                    lines[#lines + 1] = ("%s hits for ~%d-%d; a Shatter crit lands ~%gx that%s")
+                        :format(payoff, math.floor(hit.min + 0.5), math.floor(hit.max + 0.5),
+                            hit.critMult or 2, hit.presumed and " (p)" or "")
+                end
+            end
+            if not claimed then
+                lines[#lines + 1] =
+                    "absolute hit numbers need the base-damage decode for your ranks - none claimed here"
+            end
+            return lines
         end,
     },
     {

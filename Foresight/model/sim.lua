@@ -39,6 +39,32 @@ function Sim.resolveSpellByName(name)
     return bestId, best
 end
 
+-- Level-capped rank resolver: the highest rank the player can actually have trained
+-- (spell.level <= playerLevel). resolveSpellByName prefers the highest rank outright,
+-- which over-claims for a leveling character - absolute hit numbers use this instead.
+function Sim.resolveSpellLevelCapped(name, playerLevel)
+    if type(name) ~= "string" or name == "" then return nil end
+    local want, cap = name:lower(), playerLevel or 60
+    local bestId, best
+    for id, s in pairs((HM.gen and HM.gen.spells) or {}) do
+        if (s.name or ""):lower() == want then
+            local lvl = s.level or 0
+            local better
+            if not best then
+                better = true
+            else
+                local bLvl = best.level or 0
+                local sFits, bFits = lvl <= cap, bLvl <= cap
+                if sFits ~= bFits then better = sFits
+                elseif sFits then better = lvl > bLvl
+                else better = lvl < bLvl end -- nothing fits: lowest rank over-claims least
+            end
+            if better then bestId, best = id, s end
+        end
+    end
+    return bestId, best
+end
+
 -- All imbue spell ids sharing a name (ranks), from generated data - never hardcoded.
 function Sim.imbuesByName(name)
     local ids = {}
@@ -82,6 +108,152 @@ function Sim.timeToOOM(loadout, spell)
             ("stop casting for 5s and regen resumes at %.0f mana per tick (p)"):format(tick)
     end
     return out
+end
+
+-- Internal: fold the damage/healing spellmods among SELECTED trait nodes that touch
+-- this spell. Walks the SAME generated affected edges Mapping uses (never the
+-- name-keyed catalog); every magnitude goes through the ONE rank rule
+-- (talentRankValueFor). selected entries accept both the walkTraits shape (nodeID)
+-- and the snapshot.talents shape (nodeId/talentId). extraNode replaces that node's
+-- selected rank (set-with-override), so rank what-ifs never double-count.
+local function selectedSpellMods(spellId, selected, extraNode)
+    local F = HM.formulas
+    local gen = HM.gen or {}
+    local nodes = gen.traits and gen.traits.nodes
+    local pct, flat, names, presumed = 0, 0, {}, false
+    local function fold(ops, rank, maxRank, talentId, name)
+        for _, op in ipairs(ops or {}) do
+            if op.kind == "spellmod" and op.property == "damage/healing" and op.affected then
+                local hits = false
+                for _, sid in ipairs(op.affected) do
+                    if sid == spellId then hits = true break end
+                end
+                if hits then
+                    local v = F.talentRankValueFor(talentId, op.maxValue or 0, rank, maxRank)
+                    if op.isPct then pct = pct + v else flat = flat + v end
+                    names[#names + 1] = name
+                    if F.rankRuleMark(talentId) ~= "" then presumed = true end
+                end
+            end
+        end
+    end
+    local function foldRef(n, rank)
+        local nid = n.nodeID or n.nodeId
+        local node = nid and nodes and nodes[nid]
+        if node then
+            local talentId = HM.TalentAPI and HM.TalentAPI.talentForSpell and node.spellID
+                and tonumber(HM.TalentAPI.talentForSpell(node.spellID)) or nil
+            fold(node.ops, rank, node.maxRank or 1, talentId, node.name or ("node:" .. tostring(nid)))
+        elseif n.talentId and gen.talentImpacts and gen.talentImpacts[n.talentId] then
+            -- Classic-shape fallback (no trait node id): same op shape, same rank rule.
+            local t = gen.talents and gen.talents[n.talentId]
+            fold(gen.talentImpacts[n.talentId].ops, rank, (t and t.maxRank) or 1,
+                n.talentId, (t and t.name) or ("talent:" .. tostring(n.talentId)))
+        end
+    end
+    local extraId = extraNode and (extraNode.nodeId or extraNode.nodeID)
+    for _, n in ipairs(selected or {}) do
+        local nid = n.nodeID or n.nodeId
+        if (n.rank or 0) > 0 and not (extraId and nid == extraId) then
+            foldRef(n, n.rank)
+        end
+    end
+    if extraId and (extraNode.rank or 0) > 0 then
+        foldRef({ nodeId = extraId }, extraNode.rank)
+    end
+    return pct, flat, names, presumed
+end
+
+-- What this button actually does, composed from decoded client data and YOUR numbers.
+-- Pure: one graph build per call, so every existing what-if delta (stat/trait/buff/
+-- racial/plan) flows into the number for free. Returns nil when the spell has no
+-- decoded dmg/heal/wpn fields (honest degrade - never an invented number).
+--   opts = { selected = <walkTraits/snapshot.talents list>, extraNode = {nodeId, rank} }
+--   -> { min, max, avg, kind = "spell"|"weapon"|"heal", coefSource = "data"|"presumed"|nil,
+--        mods = {names}, presumed, critPct, critMult, baseMin, baseMax, power, coef,
+--        pctMods, flatMods }
+-- Known limit (documented): extraNode folds the node's DIRECT spellmods only; its
+-- stat-side ops (e.g. +Int) don't reach the graph in the what-if - mixed nodes
+-- understate slightly rather than double-count.
+function Sim.abilityHit(loadout, spellId, opts)
+    opts = opts or {}
+    local F = HM.formulas
+    local spell = HM.gen and HM.gen.spells and HM.gen.spells[spellId]
+    if not (loadout and spell and F) then return nil end
+    local dmg, heal, wpn = spell.dmg, spell.heal, spell.wpn
+    if not (dmg or heal or wpn) then return nil end
+    local snap = loadout.snapshot or {}
+    local built = loadout:build()
+    local function stat(node)
+        local ok, v = pcall(function() return built.graph:value(node, built.ctx, {}) end)
+        return (ok and type(v) == "number") and v or 0
+    end
+    local pctMods, flatMods, modNames, modsPresumed =
+        selectedSpellMods(spellId, opts.selected, opts.extraNode)
+    local lawPresumed = F.presumedMark(F.spellBaseDamage) ~= ""
+    local out
+
+    if wpn then
+        local wmin, wmax = snap.weaponDamageMin or 0, snap.weaponDamageMax or 0
+        if wmax <= 0 then return nil end -- no weapon baseline: claim nothing
+        local ap = stat("stat.attackPower")
+        local speed = snap.weaponSpeed or 2.0
+        local shift = 0
+        if wpn.norm then
+            -- UnitDamage's range ALREADY contains the AP term at actual speed -
+            -- substitute it at normalized speed (the double-count hazard; the selftest
+            -- identity check pins this).
+            shift = -(ap / AP_PER_DPS * speed) + F.weaponNormalization.fn(ap, snap.weaponType)
+        end
+        local pctW = (wpn.pct or 100) / 100
+        local minv = ((wmin + shift) * pctW + (wpn.flat or 0)) * (1 + pctMods / 100) + flatMods
+        local maxv = ((wmax + shift) * pctW + (wpn.flat or 0)) * (1 + pctMods / 100) + flatMods
+        out = {
+            min = minv, max = maxv, kind = "weapon",
+            critPct = stat("stat.meleeCritPct"), critMult = F.critMultiplier.melee,
+            baseMin = wmin, baseMax = wmax, power = ap,
+            -- lawPresumed covers the whole decode interpretation (weapon-effect rows
+            -- included); the in-game tooltip pass upgrades F.spellBaseDamage for all.
+            presumed = lawPresumed or modsPresumed
+                or (wpn.norm and F.presumedMark(F.weaponNormalization) ~= "")
+                or false,
+        }
+    else
+        local d = dmg or heal
+        local kind = dmg and "spell" or "heal"
+        local baseMin, baseMax = F.spellBaseDamage.fn(d.base, d.var, d.lvl,
+            spell.baseLevel or spell.level, d.maxLvl, snap.level)
+        local power = (kind == "heal") and stat("stat.healingPower") or stat("stat.spellDamage")
+        local coef, coefSource = d.coef, d.coef and "data" or nil
+        if not coef then
+            local castSec = (spell.castMs and spell.castMs > 0) and (spell.castMs / 1000) or 1.5
+            coef = F.spellCoefficient.fn(castSec)
+            coefSource = "presumed"
+        end
+        local minv = (baseMin + power * coef) * (1 + pctMods / 100) + flatMods
+        local maxv = (baseMax + power * coef) * (1 + pctMods / 100) + flatMods
+        out = {
+            min = minv, max = maxv, kind = kind, coefSource = coefSource,
+            critPct = stat("stat.spellCritPct"), critMult = F.critMultiplier.spell,
+            baseMin = baseMin, baseMax = baseMax, power = power, coef = coef,
+            presumed = lawPresumed or modsPresumed or coefSource == "presumed" or false,
+        }
+    end
+    out.avg = (out.min + out.max) / 2
+    out.mods = modNames
+    out.pctMods, out.flatMods = pctMods, flatMods
+    return out
+end
+
+-- Before/after/delta of one trait-node rank change on one ability - the
+-- Sim.standingShift pattern exactly: same snapshot, extra what-if on top.
+function Sim.abilityHitDelta(loadout, spellId, selected, nodeId, rank)
+    local before = Sim.abilityHit(loadout, spellId, { selected = selected })
+    local after = Sim.abilityHit(loadout, spellId,
+        { selected = selected, extraNode = { nodeId = nodeId, rank = rank } })
+    if not (before and after) then return nil end
+    return { before = before, after = after, delta = after.avg - before.avg,
+             presumed = before.presumed or after.presumed }
 end
 
 -- The crit-haste engine (Flurry family) among the player's selected trait nodes.

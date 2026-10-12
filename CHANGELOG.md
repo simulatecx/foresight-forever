@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.28.0 - 2026-10-12
+
+MODEL-ABILITY-OUTCOMES (S19): the translator now covers the thing you actually press -
+"Fireball hits for ~141-156 with your gear", composed from decoded client data and your
+live numbers, never invented.
+
+- PIPELINE DECODE: generate.py now reads each shipped spell's SpellEffect rows into
+  `dmg`/`heal` {base, var, lvl, maxLvl, coef}, `wpn` {pct, flat, norm} and `dotTick`
+  (modern layout: EffectBasePointsF +/- Variance/2, EffectBonusCoefficient only from
+  Effect 2/10 rows, EffectRealPointsPerLevel clamped by SpellLevels.MaxLevel; baseLevel
+  emitted where it diverges). 509 damage / 158 weapon / 145 heal spells; counts land in
+  build.lua so regressions show in the diff; multi-row spells first-row-win with a
+  printed count. Cross-checked vs classic ground truth: Fireball r1 18+/-22% -> 14-22,
+  Heroic Strike r8 flat 138, Backstab 150% normalized, coefficient 0.429.
+- FORMULA LAWS: `F.spellBaseDamage` (min/max + level term, datamined-presumed) and
+  `F.critMultiplier` (melee 2x / spell 1.5x framing constants, classic-presumed) join
+  the registry - no game math inlined anywhere.
+- SIM TIER: pure `Sim.abilityHit` (spell/heal via base + power x coefficient; weapon
+  instants via the normalization SUBSTITUTION on your live weapon range - UnitDamage's
+  AP term swapped from actual to normalized speed, identity selftest-pinned) +
+  `Sim.abilityHitDelta` (before/after of one rank change) + level-capped rank resolver.
+  Selected talents' damage spellmods fold via the generated affected edges through the
+  ONE rank rule; every what-if delta flows in through the one graph build.
+- SURFACES: spell tooltip LEADS with the absolute line (+ crit framing, datamined-
+  coefficient header upgrade, weapon abilities honestly suppress the spell-power
+  translation); talent hover appends before->after ability deltas (<=3, trainable
+  ranks); Shatter loop claims level-capped Frostbolt/Ice Lance numbers (fallback
+  retained); `/foresight hit <ability>` prints the whole composition - the in-game
+  verification lever for the beta window.
+- S19's talent-mod portions keep the (p) wherever the rank rule is unverified; the S21
+  per-rank decode shrinks those marks next.
+- Fixed a latent Lua-dialect hazard the new degrade test exposed: the chain-cast OOM
+  line formatted fractional seconds with %d (fine on the client's 5.1, an error on
+  newer Lua) - now rounds explicitly.
+- Selftest 191 (+14), incl. five decode data gates vs classic values.
+
+*Features:* MODEL-ability-outcomes, DATA-generated-tables, DATA-formula-registry,
+SIM-engine, UI-spell-tooltip, UI-talent-tooltip, DATA-loops, QA-selftest-harness
+
 ## 0.27.0 - 2026-10-12
 
 PER-TALENT RANK RULES + SKILL-CENTRIC MODE + MATRIX PATHWAYS (the three groomed asks).
