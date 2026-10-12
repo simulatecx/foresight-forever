@@ -981,6 +981,23 @@ function HM.runSelftest(out)
             and approx(d.delta, after.avg - before.avg, 1e-9)
             and d.delta > 0
     end)())
+    check("display envelope: live-verified Lightning Bolt 25-30 + float-noise guard", (function()
+        -- First in-game verification (2026-10-12): LB r2 at level 12 computes a raw
+        -- 25.44-29.36 and the game renders "25 to 30" - the widest integer envelope
+        -- (floor min, ceil max), not round-half. The epsilon matters: Fireball r1's
+        -- stored variance puts the raw max at 22.0000001; naive ceil would invent 23.
+        local F = HM.formulas.spellBaseDamage
+        local lb = gen.spells[529]
+        if not (lb and lb.dmg) then return false, "LB r2 missing" end
+        local mn, mx = F.fn(lb.dmg.base, lb.dmg.var, lb.dmg.lvl,
+            lb.baseLevel or lb.level, lb.dmg.maxLvl, 12)
+        local lo, hi = F.display(mn, mx)
+        local fb = gen.spells[133]
+        local fmn, fmx = F.fn(fb.dmg.base, fb.dmg.var, fb.dmg.lvl,
+            fb.baseLevel or fb.level, fb.dmg.maxLvl, 1)
+        local flo, fhi = F.display(fmn, fmx)
+        return lo == 25 and hi == 30 and flo == 14 and fhi == 22
+    end)())
     check("spell tooltip leads with the absolute hit line", (function()
         local text = linesText(HM.Tooltips.spellLines(133, base))
         return text:find("Hits for", 1, true) ~= nil

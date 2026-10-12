@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.31.1"
+HM.version = "0.31.2"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -409,7 +409,8 @@ local function onSlash(input)
             if wpn.pct then printMsg(("  x %g%% weapon damage"):format(wpn.pct)) end
             if wpn.flat then printMsg(("  + %g flat"):format(wpn.flat)) end
         else
-            printMsg(("  base: %.0f-%.0f at your level (p)"):format(hit.baseMin, hit.baseMax))
+            local bLo, bHi = HM.formulas.spellBaseDamage.display(hit.baseMin, hit.baseMax)
+            printMsg(("  base: %d-%d at your level (p)"):format(bLo, bHi))
             if (hit.power or 0) > 0 then
                 printMsg(("  + %d %s x %.3f coefficient (%s)"):format(hit.power,
                     hit.kind == "heal" and "Healing Power" or "Spell Power", hit.coef or 0,
@@ -423,8 +424,9 @@ local function onSlash(input)
             printMsg(("  talents: %s (%s)"):format(table.concat(parts, ", "),
                 table.concat(hit.mods or {}, ", ")))
         end
-        printMsg(("  = ~%d-%d per %s%s"):format(math.floor(hit.min + 0.5),
-            math.floor(hit.max + 0.5), hit.kind == "heal" and "cast" or "hit",
+        local fLo, fHi = HM.formulas.spellBaseDamage.display(hit.min, hit.max)
+        printMsg(("  = ~%d-%d per %s%s"):format(fLo, fHi,
+            hit.kind == "heal" and "cast" or "hit",
             hit.presumed and " (p)" or ""))
         if (hit.critPct or 0) > 0 then
             printMsg(("  crits for ~%gx at your %.1f%% crit (p)"):format(

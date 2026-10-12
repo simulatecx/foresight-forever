@@ -72,7 +72,7 @@ F.spellCoefficient = {
 -- generated-data channel provenance; this entry tags the composition LAW.
 F.spellBaseDamage = {
     unit = "min, max base points at the player's level",
-    source = "Forever client SpellEffect layout (build 1.60.1.70338); min/max law cross-checked vs classic rank-1 Fireball 14-22",
+    source = "Forever client SpellEffect layout (build 1.60.1.70338); min/max law cross-checked vs classic rank-1 Fireball 14-22; display envelope verified vs the LIVE Lightning Bolt r2 tooltip 2026-10-12 (raw 25.4-29.4 renders as 25 to 30)",
     confidence = "datamined-presumed",
     fn = function(base, var, ppl, baseLevel, maxLevel, playerLevel)
         local bp = base or 0
@@ -84,6 +84,13 @@ F.spellBaseDamage = {
         end
         local spread = (var or 0) / 2
         return bp * (1 - spread), bp * (1 + spread)
+    end,
+    -- Blizzard renders the WIDEST integer envelope (floor min, ceil max) - first live
+    -- verification caught our round-half showing 25-29 where the game says 25 to 30.
+    -- The epsilon guards float noise (Fireball's stored variance puts the raw max at
+    -- 22.0000001; naive ceil would claim 23).
+    display = function(minv, maxv)
+        return math.floor((minv or 0) + 0.0005), math.ceil((maxv or 0) - 0.0005)
     end,
 }
 

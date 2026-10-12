@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.31.2 - 2026-10-12
+
+FIRST LIVE VERIFICATION of the S19 decode - and its first correction. In-game
+Lightning Bolt r2 (level-12 Shaman, Valley of Trials): the decoded base (bp 27 +
+0.1/level above 8), the level clamp, and the datamined-coefficient header all
+CONFIRMED against the rendered tooltip. One mismatch: the game shows "25 to 30"
+where our round-half printed "25-29" (raw range 25.44-29.36).
+
+- Correction: Blizzard renders the WIDEST integer envelope - floor the min, ceil
+  the max (the tooltip never understates the roll). `F.spellBaseDamage.display`
+  now encodes that law with a float-noise epsilon (Fireball r1's stored variance
+  puts the raw max at 22.0000001; naive ceil would invent 23). All three display
+  surfaces (spell tooltip lead line, /foresight hit, Shatter loop claims) route
+  through it; raw floats for composition are unchanged.
+- Incident-to-gate: a selftest now pins LB r2 @ L12 -> 25-30 AND Fireball r1 @ L1
+  -> 14-22 through the display law, so neither the envelope nor the epsilon can
+  regress silently.
+- Verification ledger: 1 of >= 3 abilities confirmed before beta close 2026-10-21.
+  The law keeps (p) until the remaining passes land.
+- Selftest 211 (+1).
+
+*Features:* MODEL-ability-outcomes, DATA-formula-registry, QA-selftest-harness
+
 ## 0.31.1 - 2026-10-12
 
 LUA 5.1 DIALECT LINT (incident-to-gate). An external adversarial validation pass

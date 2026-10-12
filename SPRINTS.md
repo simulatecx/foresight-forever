@@ -309,7 +309,9 @@ selected-spellmods via affected edges at talentRankValue, normalization substitu
 nil degrade · ☑ spellLines absolute line + datamined-coefficient upgrade ·
 ☑ nodeImpactLines before->after deltas (<=3 lines) · ☑ Shatter loop claims level-capped
 numbers, fallback retained · ☑ /foresight hit · ☑ selftest >= 189 (shipped 191) ·
-☐ in-game verify >= 3 abilities vs rendered tooltips before 2026-10-21.
+◐ in-game verify >= 3 abilities vs rendered tooltips before 2026-10-21 - 1/3 done:
+Lightning Bolt r2 CONFIRMED live 2026-10-12 (base + level law + coefficient; display
+corrected to the floor/ceil envelope the game renders, v0.31.2, selftest-pinned).
 
 ### S20 - Stat coaching, derived never scripted (enhance MODEL-stat-advisor) ◐  (triaged 2026-10-12, handoff spec)
 Fit & Overlap - Category MODEL -> UI. Verdict: Enhance impact.lua rankStats surface +

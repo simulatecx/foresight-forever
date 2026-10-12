@@ -646,7 +646,9 @@ function Tooltips.spellLines(spellId, loadout)
         r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
     }
     if hit then
-        local lo, hi = math.floor(hit.min + 0.5), math.floor(hit.max + 0.5)
+        -- Widest integer envelope (floor min, ceil max) - matches the game's own
+        -- rendering, live-verified on Lightning Bolt r2 (25 to 30).
+        local lo, hi = HM.formulas.spellBaseDamage.display(hit.min, hit.max)
         local range = (lo == hi) and ("~%d"):format(lo) or ("~%d-%d"):format(lo, hi)
         lines[#lines + 1] = {
             text = ("%s for |cff4ade80%s|r with your gear%s"):format(

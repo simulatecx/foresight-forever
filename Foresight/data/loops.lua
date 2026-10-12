@@ -39,9 +39,10 @@ HM.loops = {
                     and HM.Sim.abilityHit(loadout, sid, { selected = selected })
                 if hit then
                     claimed = true
+                    local lo, hi = HM.formulas.spellBaseDamage.display(hit.min, hit.max)
                     lines[#lines + 1] = ("%s hits for ~%d-%d; a Shatter crit lands ~%gx that%s")
-                        :format(payoff, math.floor(hit.min + 0.5), math.floor(hit.max + 0.5),
-                            hit.critMult or 2, hit.presumed and " (p)" or "")
+                        :format(payoff, lo, hi, hit.critMult or 2,
+                            hit.presumed and " (p)" or "")
                 end
             end
             if not claimed then
