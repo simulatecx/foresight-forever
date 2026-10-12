@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.32.0"
+HM.version = "0.33.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -374,6 +374,73 @@ local function onSlash(input)
             printMsg("open the talent frame to see the tree light up; the Matrix shows the pathway")
         end
         if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
+    elseif cmd == "audit" then
+        -- PREVALIDATION (S19 verification, automated): compare the GAME'S OWN rendered
+        -- spell tooltips against our composed claims for every known decoded spell -
+        -- one command instead of eyeballing ability by ability. Also settles whether
+        -- Forever folds gear bonuses into tooltip numbers. Display-only reads, out of
+        -- combat; results journal to SavedVariables for the harvest.
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not snapshot then
+            printMsg("no character snapshot available")
+            return
+        end
+        if not (_G.IsPlayerSpell and HM.Tooltips.scanSpellRange) then
+            printMsg("audit needs the live client (IsPlayerSpell + tooltip scan)")
+            return
+        end
+        local loadout = HM.Loadout.fromSnapshot(snapshot)
+        local F = HM.formulas
+        local scanned, gearHits, baseHits, misses, unparsed = 0, 0, 0, 0, 0
+        local rows = {}
+        for sid, sp in pairs(HM.gen.spells) do
+            if scanned >= 60 then break end
+            if (sp.dmg or sp.heal) and not sp.wpn and _G.IsPlayerSpell(sid) then
+                scanned = scanned + 1
+                local tipLo, tipHi = HM.Tooltips.scanSpellRange(sid)
+                local hit = HM.Sim.abilityHit(loadout, sid, { selected = snapshot.talents })
+                if not (tipLo and hit) then
+                    unparsed = unparsed + 1
+                    rows[#rows + 1] = { spellId = sid, name = sp.name, verdict = "unparsed" }
+                else
+                    local d = sp.dmg or sp.heal
+                    local bLo, bHi = F.spellBaseDamage.display(F.spellBaseDamage.fn(
+                        d.base, d.var, d.lvl, sp.baseLevel or sp.level, d.maxLvl,
+                        snapshot.level))
+                    local gLo, gHi = F.spellBaseDamage.display(hit.min, hit.max)
+                    local verdict
+                    if tipLo == gLo and tipHi == gHi then
+                        verdict = "gear"
+                        gearHits = gearHits + 1
+                    elseif tipLo == bLo and tipHi == bHi then
+                        verdict = "base"
+                        baseHits = baseHits + 1
+                    else
+                        verdict = "mismatch"
+                        misses = misses + 1
+                        printMsg(("  MISMATCH %s: tooltip %d-%d vs base %d-%d / with-gear %d-%d")
+                            :format(sp.name, tipLo, tipHi, bLo, bHi, gLo, gHi))
+                    end
+                    rows[#rows + 1] = { spellId = sid, name = sp.name, verdict = verdict,
+                        tipMin = tipLo, tipMax = tipHi, baseMin = bLo, baseMax = bHi,
+                        gearMin = gLo, gearMax = gHi }
+                end
+            end
+        end
+        if HM.db and type(HM.db.collect) == "table" then
+            HM.db.collect.hitAudit = {
+                at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?",
+                build = (HM.gen and HM.gen.build) or "?", rows = rows,
+            }
+        end
+        printMsg(("audit: %d known decoded spells scanned - %d match with your gear, "
+            .. "%d match base only (tooltip ignores gear), %d mismatch, %d unparsed")
+            :format(scanned, gearHits, baseHits, misses, unparsed))
+        if scanned > 0 then
+            printMsg("journaled for the harvest - log out or /reload to flush")
+        else
+            printMsg("no known decoded spells found to audit")
+        end
     elseif cmd == "hit" then
         -- MODEL-ability-outcomes: the composed absolute answer for one ability with
         -- every step shown - the in-game verification lever for the decode.
@@ -746,7 +813,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | audit | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

@@ -313,6 +313,9 @@ numbers, fallback retained · ☑ /foresight hit · ☑ selftest >= 189 (shipped
 ◐ in-game verify >= 3 abilities vs rendered tooltips before 2026-10-21 - 1/3 done:
 Lightning Bolt r2 CONFIRMED live 2026-10-12 (base + level law + coefficient; display
 corrected to the floor/ceil envelope the game renders, v0.31.2, selftest-pinned).
+AUTOMATED at scale (v0.33.0): `/foresight audit` scans every known decoded spell's
+rendered tooltip and verdicts vs base + gear-composed envelopes - one command
+completes this criterion and journals for the harvest.
 
 ### S20 - Stat coaching, derived never scripted (enhance MODEL-stat-advisor) ◐  (triaged 2026-10-12, handoff spec)
 Fit & Overlap - Category MODEL -> UI. Verdict: Enhance impact.lua rankStats surface +

@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.33.0 - 2026-10-12
+
+STAT COVERAGE FOR ALL TYPES + THE SELF-AUDIT (prevalidation so the pilot doesn't
+eyeball ability-by-ability).
+
+- ITEM STAT COVERAGE: +Mana, +Health and Armor now map into the model (all were
+  already graph nodes - maxMana/maxHealth/armor - so pools, tank and sustain lenses
+  move with them; spell power was already mapped both key variants). And the FAILURE
+  CLASS itself is closed: `mapItemStats` now returns the keys it could NOT map and
+  every hover journals them (capped counts) - the harvest prints "UNMAPPED item stat
+  keys seen live" so a Forever-specific key can never be silently dropped the way
+  flat AP was. Deliberately deferred (not dropped): crit/haste/hit RATINGS, pending
+  a rating-conversion law.
+- /foresight audit: scans the GAME'S OWN rendered tooltip for every known decoded
+  damage/heal spell (hidden scan frame, SetSpellByID, display-only) and verdicts
+  each against our base envelope AND our gear-composed envelope - "match with gear" /
+  "match base only (tooltip ignores gear)" / "mismatch" (printed with numbers).
+  One command replaces per-ability eyeballing, completes the S19 verification
+  criterion at scale, and settles empirically whether Forever folds gear bonuses
+  into tooltip numbers. Results journal to SavedVariables; the harvest prints the
+  tally + every mismatch.
+- docs/VALIDATION-1PAGER.md: the external-reviewer micro-check brief (impact chains,
+  laws + confidence, verification machinery, 8 adversarial questions with the
+  cite-file:line / "not verified" rule).
+- Selftest 219 (+2): mapper coverage incl. unknown-key surfacing; spell-range parser
+  (damage/heal/commas/nil-degrade).
+
+*Features:* UI-item-tooltip, QA-probe, QA-harvester, QA-selftest-harness
+
 ## 0.32.0 - 2026-10-12
 
 WEAPON-SWAP HONESTY (S23, live catch #3): an 18-27 weapon vs a 34-52 weapon showed

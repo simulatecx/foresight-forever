@@ -676,6 +676,28 @@ def main() -> int:
         sightings = collect.get("itemSightings") or {}
         if sightings:
             print(f"   item sightings: {len(sightings)} distinct items seen on this account")
+        unknown_stats = collect.get("unknownItemStats") or {}
+        if unknown_stats:
+            top = sorted(unknown_stats.items(), key=lambda kv: -int(kv[1] or 0))[:10]
+            print("   UNMAPPED item stat keys seen live (map or defer, never drop "
+                  "silently): " + ", ".join(f"{k} x{v}" for k, v in top))
+        audit = collect.get("hitAudit") or {}
+        audit_rows = audit.get("rows") if isinstance(audit, dict) else None
+        if audit_rows:
+            rows = list(audit_rows.values()) if isinstance(audit_rows, dict) else audit_rows
+            tally: dict = {}
+            for r in rows:
+                if isinstance(r, dict):
+                    v = r.get("verdict") or "?"
+                    tally[v] = tally.get(v, 0) + 1
+            print(f"   spell-tooltip AUDIT ({audit.get('at', '?')}): {tally} "
+                  "(gear = model confirmed incl. gear fold; base = tooltip ignores "
+                  "gear; mismatch = investigate)")
+            for r in rows:
+                if isinstance(r, dict) and r.get("verdict") == "mismatch":
+                    print(f"     !! {r.get('name')}: tooltip {r.get('tipMin')}-"
+                          f"{r.get('tipMax')} vs base {r.get('baseMin')}-"
+                          f"{r.get('baseMax')} / gear {r.get('gearMin')}-{r.get('gearMax')}")
         tips = collect.get("talentTooltips") or {}
         if tips:
             tip_probe = probe_from_tooltips(tips)

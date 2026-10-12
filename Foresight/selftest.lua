@@ -301,6 +301,31 @@ function HM.runSelftest(out)
             and text:find("per swing", 1, true) ~= nil
             and HM.Tooltips.itemLines({}, lo, nil, nil) == nil -- stat-less non-weapon: nothing
     end)())
+    check("item mapper: Mana/Health/armor map; unknown keys surfaced, never dropped", (function()
+        local mapped, unknown = HM.Tooltips.mapItemStats({
+            ITEM_MOD_MANA_SHORT = 50, ITEM_MOD_HEALTH_SHORT = 30,
+            RESISTANCE0_NAME = 45, ITEM_MOD_SPELL_POWER_SHORT = 12,
+            ITEM_MOD_MYSTERY_RATING_SHORT = 7,
+        })
+        if not (mapped.maxMana == 50 and mapped.maxHealth == 30 and mapped.armor == 45
+                and mapped.spellDamage == 12) then return false end
+        for _, k in ipairs(unknown) do
+            if k == "ITEM_MOD_MYSTERY_RATING_SHORT" then return true end
+        end
+        return false, "unknown key not surfaced"
+    end)())
+    check("audit parser: spell tooltip ranges (damage, heal, commas; nil degrade)", (function()
+        local lo, hi = HM.Tooltips.parseSpellRange({
+            "Lightning Bolt", "30 Mana", "2 sec cast",
+            "Casts a bolt of lightning at the target for 25 to 30 Nature damage.",
+        })
+        if not (lo == 25 and hi == 30) then return false end
+        local hl, hh = HM.Tooltips.parseSpellRange({
+            "Heals a friendly target for 1,234 to 2,345.",
+        })
+        if not (hl == 1234 and hh == 2345) then return false end
+        return HM.Tooltips.parseSpellRange({ "Increases your armor by 240." }) == nil
+    end)())
     check("capture no-downgrade: trained tooltip never overwritten by untrained", (function()
         local S = HM.Tooltips.shouldReplaceCapture
         return S(nil, { rank = nil }) == true

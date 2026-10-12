@@ -361,23 +361,34 @@ local ITEM_STAT_MAP = {
     ITEM_MOD_SPELL_HEALING_DONE_SHORT = "healingPower",
     ITEM_MOD_ATTACK_POWER_SHORT = "attackPower",
     ITEM_MOD_RANGED_ATTACK_POWER_SHORT = "rangedAttackPower",
+    ITEM_MOD_MANA_SHORT = "maxMana",
+    ITEM_MOD_HEALTH_SHORT = "maxHealth",
+    RESISTANCE0_NAME = "armor", -- physical resistance index 0 = armor (classic shape)
 }
 local DISPLAY_STAT = {
     spellDamage = "Spell Power", healingPower = "Healing Power",
     attackPower = "Attack Power", rangedAttackPower = "Ranged Attack Power",
+    maxMana = "Mana", maxHealth = "Health", armor = "Armor",
 }
 local STAT_ORDER = { "Strength", "Agility", "Stamina", "Intellect", "Spirit",
-                     "spellDamage", "healingPower", "attackPower", "rangedAttackPower" }
+                     "spellDamage", "healingPower", "attackPower", "rangedAttackPower",
+                     "maxMana", "maxHealth", "armor" }
 
--- Map a raw GetItemStats table to our stat names, summing duplicates.
+-- Map a raw GetItemStats table to our stat names, summing duplicates. Second return:
+-- the keys we did NOT map (the AP live catch proved silent drops hide real impact -
+-- unknowns get journaled so the harvest surfaces what Forever items actually carry).
 function Tooltips.mapItemStats(raw)
-    local out = {}
-    if type(raw) ~= "table" then return out end
+    local out, unknown = {}, {}
+    if type(raw) ~= "table" then return out, unknown end
     for key, val in pairs(raw) do
         local name = ITEM_STAT_MAP[key]
-        if name and type(val) == "number" then out[name] = (out[name] or 0) + val end
+        if name and type(val) == "number" then
+            out[name] = (out[name] or 0) + val
+        elseif type(val) == "number" and val ~= 0 then
+            unknown[#unknown + 1] = tostring(key)
+        end
     end
-    return out
+    return out, unknown
 end
 
 -- INVTYPE -> the equipped inventory slot(s) to compare a hovered item against. First
@@ -416,6 +427,23 @@ function Tooltips.parseWeaponTip(lines)
     end
     if dmin and dmax and speed and speed > 0 then
         return { min = dmin, max = dmax, speed = speed }
+    end
+    return nil
+end
+
+-- Pure (prevalidation audit): pull the "X to Y" damage/heal range out of a rendered
+-- SPELL tooltip's text lines (enUS: "...for 25 to 30 Nature damage.", "...heals ...
+-- for 40 to 47."). First range wins; comma numbers handled; nil when no range shows.
+function Tooltips.parseSpellRange(lines)
+    for _, t in ipairs(lines or {}) do
+        if type(t) == "string" then
+            local a, b = t:match("([%d,]+)%s+to%s+([%d,]+)")
+            if a then
+                local lo = tonumber((a:gsub(",", "")))
+                local hi = tonumber((b:gsub(",", "")))
+                if lo and hi and hi >= lo then return lo, hi end
+            end
+        end
     end
     return nil
 end
@@ -894,6 +922,29 @@ local function weaponFacts(link)
     return Tooltips.parseWeaponTip(texts)
 end
 
+-- Scan a spell's rendered tooltip for its damage/heal range (the audit lever): the
+-- same hidden frame, SetSpellByID. Returns lo, hi or nil (display-only read).
+function Tooltips.scanSpellRange(spellId)
+    if not (spellId and _G.CreateFrame) then return nil end
+    local tip = _G.ForesightScanTooltip
+    if not tip then
+        tip = _G.CreateFrame("GameTooltip", "ForesightScanTooltip", nil, "GameTooltipTemplate")
+    end
+    tip:SetOwner(_G.UIParent, "ANCHOR_NONE")
+    tip:ClearLines()
+    if not (type(tip.SetSpellByID) == "function"
+            and pcall(tip.SetSpellByID, tip, spellId)) then
+        return nil
+    end
+    local texts = {}
+    for i = 1, (tip:NumLines() or 0) do
+        local fs = _G["ForesightScanTooltipTextLeft" .. i]
+        local t = fs and fs:GetText()
+        if t and t ~= "" then texts[#texts + 1] = t end
+    end
+    return Tooltips.parseSpellRange(texts)
+end
+
 local SWAP_EQUIP_LOC = {
     INVTYPE_WEAPON = true, INVTYPE_2HWEAPON = true, INVTYPE_WEAPONMAINHAND = true,
 }
@@ -925,12 +976,30 @@ local function knownWindfury()
     return wfKnownCache or nil
 end
 
+-- Journal unmapped GetItemStats keys (capped counts): the self-correcting loop for
+-- stat coverage - the harvest prints what live Forever items carry that we drop.
+local function journalUnknownStatKeys(unknown)
+    if not (unknown and #unknown > 0 and HM.db and type(HM.db.collect) == "table") then return end
+    local c = HM.db.collect
+    if type(c.unknownItemStats) ~= "table" then c.unknownItemStats = {} end
+    for _, key in ipairs(unknown) do
+        if c.unknownItemStats[key] then
+            c.unknownItemStats[key] = c.unknownItemStats[key] + 1
+        else
+            local n = 0
+            for _ in pairs(c.unknownItemStats) do n = n + 1 end
+            if n < 40 then c.unknownItemStats[key] = 1 end
+        end
+    end
+end
+
 local function injectItem(tip)
     if tip.foresightInjected then return end
     if type(tip.GetItem) ~= "function" then return end
     local _, link = tip:GetItem()
     if not link then return end
-    local mapped = Tooltips.mapItemStats(resolveItemStats(link))
+    local mapped, unknownKeys = Tooltips.mapItemStats(resolveItemStats(link))
+    pcall(journalUnknownStatKeys, unknownKeys)
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
