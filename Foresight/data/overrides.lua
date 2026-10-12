@@ -41,6 +41,14 @@ HM.overrides = {
     -- formulas.talentRankValueFor; a listed talent drops its "(p) rank rule" mark.
     rankRules = {
         -- [talentId] = "maxTotal" | "perRank",
+        -- Promoted 2026-10-12 (human-reviewed from rank_rules_draft.lua, build
+        -- 1.60.1.70338): all four are TRAINED captures - Blizzard's own rendered
+        -- tooltip text at a known rank, not statistical votes. Weak untrained-r1
+        -- lines and the contradicted Destructive Reach (964) stay held.
+        [37] = "perRank",   -- Improved Frostbolt (inspected mage, r4/5 text)
+        [130] = "perRank",  -- Deflection (trained capture)
+        [613] = "perRank",  -- Thundering Strikes (pilot shaman, r2/5 text)
+        [614] = "maxTotal", -- Ancestral Knowledge (pilot shaman, r1/5 text)
     },
 }
 

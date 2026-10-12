@@ -353,8 +353,12 @@ trait nodes (live path) · ☑ resolution order values > override > presumed, ON
 function (loadout/impact/tooltips/sim all pass op.values) · ☑ rankRuleMark "" for
 datamined values ("rank values datamined" header) · ☑ selftest +6 (exact per-rank
 value, (p) drop, missing-values fallback, order, counts gate, bridge gate; legacy
-override checks green) · ☐ operational: review collected/rank_rules_draft.lua ->
-promote k-of-n lines to overrides.rankRules before 2026-10-21 (human review - user).
+override checks green) · ◐ operational: review collected/rank_rules_draft.lua ->
+promote lines to overrides.rankRules before 2026-10-21 (human review - user). FIRST
+PROMOTION 2026-10-12 (v0.31.3): all 4 trained-backed lines promoted (Improved
+Frostbolt/Deflection/Thundering Strikes = perRank, Ancestral Knowledge = maxTotal);
+63 weak untrained lines + the contradicted Destructive Reach held for more trained
+captures - keep hovering trained talents and inspecting players until 10-21.
 
 ### S22 - Skill-centric Matrix + pathway rows ◐  (triaged 2026-10-12, handoff spec)
 Fit & Overlap - Category UI (model support in mapping/panel_model). Verdict: Enhance

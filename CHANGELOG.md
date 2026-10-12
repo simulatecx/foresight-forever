@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.31.3 - 2026-10-12
+
+FIRST RANK-RULE PROMOTIONS (S21 operational step, human-reviewed). The post-reload
+harvest grew the captured-tooltip corpus to 151 nodes / 117 voting / 67 decided, and
+the four TRAINED-backed lines (Blizzard's own rendered text at a known rank - ground
+truth, not statistical votes) moved from rank_rules_draft.lua into
+overrides.rankRules:
+
+- Improved Frostbolt (37) = perRank (inspected mage, r4/5 text)
+- Deflection (130) = perRank
+- Thundering Strikes (613) = perRank (pilot shaman, r2/5)
+- Ancestral Knowledge (614) = maxTotal (pilot shaman, r1/5)
+
+These four now scale by their verified rule through every value path and drop the
+"(p) rank rule" mark (green "rank rule crowd-verified" header). HELD: the 63 weak
+untrained-r1 lines (need trained captures) and Destructive Reach (964, trained votes
+split 1-1 - contradiction surfaced, never averaged). Also in this harvest: Oil of
+Olaf armor +50 re-confirmed (n=10); Goretusk Liver Pie +1-vs-+3 Strength mismatch
+persists (n=2, suspected level-scaled Well-Fed - still needs multi-level
+observations).
+
+*Features:* DATA-overrides, QA-probe, QA-harvester
+
 ## 0.31.2 - 2026-10-12
 
 FIRST LIVE VERIFICATION of the S19 decode - and its first correction. In-game
