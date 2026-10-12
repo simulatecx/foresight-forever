@@ -495,8 +495,9 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
         end
     end
     -- A stat-less WEAPON still gets judged - its damage range IS the item (the S20
-    -- user binding: count everything the item brings, weapon DPS included).
-    if not any and not (ctx and ctx.weaponSwap) then return nil end
+    -- user binding: count everything the item brings, weapon DPS included) - and an
+    -- uncomparable weapon still says why.
+    if not any and not (ctx and (ctx.weaponSwap or ctx.weaponSwapWhy)) then return nil end
 
     local equipped = ctx and ctx.equipped
     local ok, _, changes = pcall(Tooltips._itemDims, loadout, mapped)
@@ -532,14 +533,29 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
         end
-        -- Weapon-swap line (the honest A->B of equipping this weapon): base ranges
-        -- from both tooltips + your AP, through Sim.weaponSwap. Beneath the verdict.
+        -- Weapon-swap rows (the honest A->B of equipping this weapon): from -> to in
+        -- real units, red when it's a loss - base ranges from both tooltips + your AP
+        -- through Sim.weaponSwap. A weapon hover that CAN'T compare says why, never
+        -- silently falls back to stat-only rows.
         if ctx and ctx.weaponSwap then
             local w = ctx.weaponSwap
+            local color = (w.pct >= 0.5 and "|cff4ade80")
+                or (w.pct <= -0.5 and "|cfff87171") or "|cff9d9d9d"
             lines[#lines + 1] = {
-                text = ("|cff9d9d9dWeapon swap:|r ~%.0f -> ~%.0f per swing, ~%.1f -> ~%.1f white DPS (%+.0f%%) vs your main hand (p)")
-                    :format(w.curSwing, w.newSwing, w.curDps, w.newDps, w.pct),
+                text = ("|cff9d9d9dMelee DPS change:|r %s%.1f -> %.1f (%+.0f%%)|r (p)")
+                    :format(color, w.curDps, w.newDps, w.pct),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+            lines[#lines + 1] = {
+                text = ("~%.0f -> ~%.0f per swing, vs your main hand, with your %d AP folded in")
+                    :format(w.curSwing, w.newSwing,
+                        (loadout.snapshot.stats and loadout.snapshot.stats.attackPower) or 0),
+                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+            }
+        elseif ctx and ctx.weaponSwapWhy then
+            lines[#lines + 1] = {
+                text = "weapon compare unavailable: " .. ctx.weaponSwapWhy,
+                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
             }
         end
     end
@@ -1000,17 +1016,37 @@ local SWAP_EQUIP_LOC = {
     INVTYPE_WEAPON = true, INVTYPE_2HWEAPON = true, INVTYPE_WEAPONMAINHAND = true,
 }
 
--- Weapon-swap context for a hovered MELEE weapon: both base ranges scanned, the two
--- stat bundles' AP-equivalents netted, composed by pure Sim.weaponSwap. nil-degrades
--- whenever any input is missing (empty main hand, unscannable tooltip, same item).
-local function weaponSwapFor(link, mapped, loadout)
+-- Read the VISIBLE tooltip's own text lines (left + right columns) - the most robust
+-- source for the hovered weapon's damage/speed: no hidden-scan round trip can fail.
+local function liveTipTexts(tip)
+    local name = tip and tip.GetName and tip:GetName()
+    if not name then return nil end
+    local texts = {}
+    for i = 1, (tip:NumLines() or 0) do
+        for _, side in ipairs({ "Left", "Right" }) do
+            local fs = _G[name .. "Text" .. side .. i]
+            local t = fs and fs:GetText()
+            if t and t ~= "" then texts[#texts + 1] = t end
+        end
+    end
+    return texts
+end
+
+-- Weapon-swap context for a hovered MELEE weapon: both base ranges read (hovered side
+-- from the visible tooltip first, hidden scan as fallback), the two stat bundles'
+-- AP-equivalents netted, composed by pure Sim.weaponSwap. Second return: an HONEST
+-- reason when a weapon hover can't be compared (shown grey, never silent).
+local function weaponSwapFor(link, mapped, loadout, hovFacts)
     if not (loadout and HM.Sim and HM.Sim.weaponSwap and _G.GetItemInfo) then return nil end
     local equipLoc = select(9, _G.GetItemInfo(link))
     if not (equipLoc and SWAP_EQUIP_LOC[equipLoc]) then return nil end
     local eqLink = _G.GetInventoryItemLink and _G.GetInventoryItemLink("player", 16)
-    if not eqLink or eqLink == link then return nil end
-    local hov, eq = weaponFacts(link), weaponFacts(eqLink)
-    if not (hov and eq) then return nil end
+    if not eqLink then return nil, "no main-hand weapon equipped to compare against" end
+    if eqLink == link then return nil end -- your own weapon: baseline mode covers it
+    local hov = hovFacts or weaponFacts(link)
+    if not hov then return nil, "couldn't read this weapon's damage line" end
+    local eq = weaponFacts(eqLink)
+    if not eq then return nil, "couldn't read your equipped weapon's damage line" end
     local classToken = loadout.snapshot.classToken
     local apDelta = HM.Sim.apFromStats(mapped, classToken)
         - HM.Sim.apFromStats(Tooltips.mapItemStats(resolveItemStats(eqLink)), classToken)
@@ -1064,10 +1100,13 @@ local function injectItem(tip)
         ctx = { itemId = itemId, speedMs = genItem.speedMs, wfImbue = knownWindfury() }
     end
     -- Weapon-swap honesty: the hovered weapon's own damage range vs your main hand.
-    local okSwap, swap = pcall(weaponSwapFor, link, mapped, loadout)
-    if okSwap and swap then
+    -- The hovered side parses the VISIBLE tooltip's lines first (most robust).
+    local okSwap, swap, why = pcall(weaponSwapFor, link, mapped, loadout,
+        Tooltips.parseWeaponTip(liveTipTexts(tip)))
+    if okSwap and (swap or why) then
         ctx = ctx or {}
         ctx.weaponSwap = swap
+        ctx.weaponSwapWhy = (not swap) and why or nil
     end
     -- BASELINE LAW: hovering an item you're WEARING switches to baseline mode - its
     -- stats are already inside every number, so no verdict/% is ever claimed for it.

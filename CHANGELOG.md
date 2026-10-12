@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.34.1 - 2026-10-12
+
+WEAPON COMPARE: FROM -> TO, AND NEVER SILENT. The bag-vs-equipped weapon readout
+still looked stat-only in live play - meaning the hidden tooltip scan was failing
+quietly and the compare degraded to identical-looking stat rows. Three changes:
+
+- The hovered weapon's damage/speed now parse from the VISIBLE tooltip's own lines
+  first (both text columns) - no hidden-scan round trip to fail; the hidden frame
+  remains only for the EQUIPPED side.
+- The readout is the user's framing: "Melee DPS change: 33.1 -> 24.0 (-27%)" -
+  from value, to value, red on a loss, green on a gain - with the per-swing from ->
+  to beneath it and the AP folded stated explicitly.
+- HONESTY ON FAILURE: a weapon hover that cannot be compared now says why ("couldn't
+  read this weapon's damage line" / "...your equipped weapon's..." / "no main-hand
+  weapon equipped") in grey instead of silently showing stat-only rows that look the
+  same for every weapon.
+- Selftest 224 (updated): downgrade direction reads negative with the loss color,
+  from->to rows render, the why-line renders, stat-less non-weapons still show
+  nothing.
+
+*Features:* UI-item-tooltip, SIM-engine, QA-selftest-harness
+
 ## 0.34.0 - 2026-10-12
 
 THE MELEE LENS TELLS THE TRUTH + TOTEM BUFF CHAINS (live catches #6 and the

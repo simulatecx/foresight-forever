@@ -291,15 +291,24 @@ function HM.runSelftest(out)
         return melee ~= nil and approx(melee.pct, 57.3) and melee.direction == "upgrade"
             and caster ~= nil and not approx(caster.pct, 57.3)
     end)())
-    check("weapon swap: a stat-less weapon still gets the block + swap line", (function()
+    check("weapon swap: from -> to rows, red on a loss, honest when unavailable", (function()
         local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
-        local swap = HM.Sim.weaponSwap(lo.snapshot, { min = 34, max = 52, speed = 2.6 },
-            { min = 18, max = 27, speed = 2.6 }, 0)
-        local lines = HM.Tooltips.itemLines({}, lo, nil, { weaponSwap = swap })
-        local text = linesText(lines or {})
-        return text:find("white DPS", 1, true) ~= nil
-            and text:find("per swing", 1, true) ~= nil
-            and HM.Tooltips.itemLines({}, lo, nil, nil) == nil -- stat-less non-weapon: nothing
+        -- The downgrade direction (the user's bag weapon): must read negative/red.
+        local down = HM.Sim.weaponSwap(lo.snapshot, { min = 18, max = 27, speed = 2.6 },
+            { min = 34, max = 52, speed = 2.6 }, 0)
+        if not (down and down.pct < 0) then return false, "downgrade not negative" end
+        local text = linesText(HM.Tooltips.itemLines({}, lo, nil, { weaponSwap = down }) or {})
+        if not (text:find("Melee DPS change:", 1, true) and text:find("per swing", 1, true)
+                and text:find("fff87171")) then
+            return false, "missing from->to rows or loss color"
+        end
+        -- A weapon hover that can't compare says WHY instead of silence.
+        local whyText = linesText(HM.Tooltips.itemLines({ attackPower = 4 }, lo, nil,
+            { weaponSwapWhy = "couldn't read this weapon's damage line" }) or {})
+        if whyText:find("weapon compare unavailable", 1, true) == nil then
+            return false, "no why line"
+        end
+        return HM.Tooltips.itemLines({}, lo, nil, nil) == nil -- stat-less non-weapon: nothing
     end)())
     check("item mapper: Mana/Health/armor map; unknown keys surfaced, never dropped", (function()
         local mapped, unknown = HM.Tooltips.mapItemStats({
