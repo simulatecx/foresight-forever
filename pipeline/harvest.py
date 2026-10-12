@@ -673,6 +673,15 @@ def main() -> int:
                   f"presumed (untrained r1 text): {analysis['untrained_votes']}")
             for d in analysis["details"][:20]:
                 print(f"     {d}")
+        taints = collect.get("taintEvents") or {}
+        if taints:
+            rows = list(taints.values()) if isinstance(taints, dict) else taints
+            print(f"   !! TAINT EVENTS ({len(rows)}) - the client blocked a protected "
+                  "action naming Foresight (account-safety doctrine: fix before anything):")
+            for t in rows:
+                if isinstance(t, dict):
+                    print(f"      {t.get('at')}: {t.get('event')} func={t.get('func')} "
+                          f"talentUIopen={t.get('talentUIOpen')} combat={t.get('inCombat')}")
         sightings = collect.get("itemSightings") or {}
         if sightings:
             print(f"   item sightings: {len(sightings)} distinct items seen on this account")

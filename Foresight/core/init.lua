@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.33.1"
+HM.version = "0.33.2"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -845,6 +845,36 @@ if _G.CreateFrame then
     _G.SLASH_FORESIGHT2 = "/fore"
     _G.SLASH_FORESIGHT3 = "/helpme" -- legacy alias from the HelpMe era
     _G.SlashCmdList["FORESIGHT"] = onSlash
+
+    -- TAINT SENTINEL (account-safety doctrine): if the client ever blocks a protected
+    -- action and names Foresight, journal WHICH function plus context so the harvest
+    -- surfaces the exact vector - never guess from a dialog screenshot again.
+    -- Observer only; it changes no behavior.
+    local sentinel = _G.CreateFrame("Frame")
+    sentinel:RegisterEvent("ADDON_ACTION_BLOCKED")
+    sentinel:RegisterEvent("ADDON_ACTION_FORBIDDEN")
+    local taintWarned
+    sentinel:SetScript("OnEvent", function(_, event, addon, func)
+        if addon ~= ADDON_NAME then return end
+        if HM.db and type(HM.db.collect) == "table" then
+            local c = HM.db.collect
+            if type(c.taintEvents) ~= "table" then c.taintEvents = {} end
+            if #c.taintEvents < 20 then
+                c.taintEvents[#c.taintEvents + 1] = {
+                    event = event, func = tostring(func),
+                    at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?",
+                    talentUIOpen = (_G.PlayerSpellsFrame and _G.PlayerSpellsFrame.IsShown
+                        and _G.PlayerSpellsFrame:IsShown()) and true or false,
+                    inCombat = (_G.InCombatLockdown and _G.InCombatLockdown()) and true or false,
+                }
+            end
+        end
+        if not taintWarned then
+            taintWarned = true
+            printMsg(("the client blocked '%s' (%s) with Foresight on the stack - journaled for the harvest; please /reload and report what you were doing"):format(
+                tostring(func), event))
+        end
+    end)
 else
     initSavedVariables()
 end

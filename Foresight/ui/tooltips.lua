@@ -810,14 +810,16 @@ end
 -- One injection per tooltip BUILD, re-injected on every rebuild. The flag is set before
 -- attach (so attach's Show() can't recurse into us) and cleared on OnTooltipCleared, which
 -- fires each time the tooltip is rebuilt - including the async item-data refresh that was
--- making our block flash then vanish.
+-- making our block flash then vanish. TAINT ISOLATION: the flag lives in OUR weak-keyed
+-- table - Foresight writes no key onto any Blizzard object, ever.
+local injectedTips = setmetatable({}, { __mode = "k" })
 local clearHooked = false
 local function ensureClearHook()
     if clearHooked then return end
     for _, name in ipairs({ "GameTooltip", "ItemRefTooltip" }) do
         local t = _G[name]
         if t and t.HookScript then
-            t:HookScript("OnTooltipCleared", function(self) self.foresightInjected = nil end)
+            t:HookScript("OnTooltipCleared", function(self) injectedTips[self] = nil end)
         end
     end
     clearHooked = true
@@ -1011,7 +1013,7 @@ local function journalUnknownStatKeys(unknown)
 end
 
 local function injectItem(tip)
-    if tip.foresightInjected then return end
+    if injectedTips[tip] then return end
     if type(tip.GetItem) ~= "function" then return end
     local _, link = tip:GetItem()
     if not link then return end
@@ -1070,7 +1072,7 @@ local function injectItem(tip)
         }
     end
     if lines then
-        tip.foresightInjected = true
+        injectedTips[tip] = true
         attach(tip, lines)
     end
 end
@@ -1171,7 +1173,7 @@ function Tooltips.abilityMapLines(spellId, spellName)
 end
 
 local function injectSpell(tip, spellId)
-    if tip.foresightInjected then return end
+    if injectedTips[tip] then return end
     local spellName
     if type(tip.GetSpell) == "function" then
         local a, b = tip:GetSpell()  -- (name, spellID) on both classic and mainline
@@ -1194,7 +1196,7 @@ local function injectSpell(tip, spellId)
         end
     end
     if lines then
-        tip.foresightInjected = true
+        injectedTips[tip] = true
         attach(tip, lines)
     end
 end
@@ -1282,7 +1284,7 @@ local function injectNodeBlock(tip, nodeId, source)
     if HM.db and type(HM.db.collect) == "table" then
         HM.db.collect.traitTipProbe = { source = source, nodeId = nodeId, injected = false }
     end
-    if not nodeId or tip.foresightInjected then return end
+    if not nodeId or injectedTips[tip] then return end
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
@@ -1290,7 +1292,7 @@ local function injectNodeBlock(tip, nodeId, source)
     pcall(journalTalentTooltip, tip, nodeId, snap)
     local lines = Tooltips.nodeImpactLines(nodeId, loadout)
     if lines then
-        tip.foresightInjected = true
+        injectedTips[tip] = true
         if HM.db and type(HM.db.collect) == "table" then HM.db.collect.traitTipProbe.injected = true end
         attach(tip, lines)
     end

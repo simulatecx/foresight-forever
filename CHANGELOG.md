@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.33.2 - 2026-10-12
+
+TAINT ISOLATION HARDENING. A live "Foresight has been blocked from an action only
+available to the Blizzard UI" dialog fired in-game (no taint.log enabled, exact
+function unknown; the auto-verify probe is exonerated - it presence-checks protected
+APIs without calling them). Most likely vector: our glow/dim overlays were PARENTED
+INTO Blizzard's talent-button tree while the player spent talent points (protected
+config operations). Account-safety doctrine says fix the class, not debate the
+instance:
+
+- TAINT ISOLATION LAW: all highlight/dim overlays now live on our OWN layer
+  (ForesightHighlightLayer on UIParent) and merely ANCHOR to the node buttons -
+  Foresight no longer parents any frame into any Blizzard tree. The tooltip
+  injected-once flag moved off the GameTooltip/ItemRefTooltip objects into a
+  weak-keyed local table. Net state: Foresight writes NO key onto any Blizzard
+  object and inserts NO frame into Blizzard's hierarchy, anywhere.
+- COMBAT GATES: apply/applyAbility and the talent-UI OnShow reapply timer all no-op
+  during InCombatLockdown - the talent UI is never enumerated or decorated in combat.
+- TAINT SENTINEL: ADDON_ACTION_BLOCKED/ADDON_ACTION_FORBIDDEN listener journals the
+  exact blocked function + context (talent UI open? in combat?) to SavedVariables
+  when the client names Foresight, prints one chat notice, and the harvest surfaces
+  it prominently - the next occurrence self-reports instead of being a dialog
+  screenshot.
+
+*Features:* SYNERGY-highlight, UI-talent-tooltip, UI-item-tooltip, UI-spell-tooltip,
+QA-collector, QA-harvester
+
 ## 0.33.1 - 2026-10-12
 
 THE BASELINE LAW (live catches #4 and #5, same principle, user-stated): "once it's on

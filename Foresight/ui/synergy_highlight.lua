@@ -85,14 +85,29 @@ if not _G.CreateFrame then return Highlight end -- headless: pure selector only
 local BRAND = { r = 0.2, g = 1, b = 0.6 }   -- theme glow (synergy)
 local GOLD  = { r = 1, g = 0.82, b = 0.2 }  -- direct modifiers (solid)
 local BLUE  = { r = 0.35, g = 0.65, b = 1 } -- indirect: school + stat feeders (pulse)
+
+-- TAINT ISOLATION LAW (hardened 2026-10-12 after a live "blocked from an action only
+-- available to the Blizzard UI"): our overlays live on OUR OWN layer parented to
+-- UIParent and merely ANCHOR to the node buttons - Foresight never parents a frame
+-- into Blizzard's talent-frame tree and never writes a key onto their objects, so no
+-- secure talent operation (point spend / config commit) ever walks our frames.
+local container
+local function overlayLayer()
+    if container then return container end
+    container = _G.CreateFrame("Frame", "ForesightHighlightLayer", _G.UIParent)
+    container:SetAllPoints(_G.UIParent)
+    container:SetFrameStrata("HIGH")
+    container:Hide()
+    return container
+end
+
 local overlays = {} -- [button] = our overlay frame (pooled per button, reused)
 
 local function overlayFor(button)
     local o = overlays[button]
     if o then return o end
-    o = _G.CreateFrame("Frame", nil, button)
-    o:SetAllPoints()
-    o:SetFrameLevel((button.GetFrameLevel and button:GetFrameLevel() or 1) + 5)
+    o = _G.CreateFrame("Frame", nil, overlayLayer())
+    o:SetAllPoints(button) -- anchor to the button, never parent into its tree
     local fill = o:CreateTexture(nil, "OVERLAY", nil, -1)
     fill:SetAllPoints()
     o.fill = fill
@@ -126,17 +141,15 @@ local function styleOverlay(o, c, pulse)
 end
 
 -- DIM LAW (S22a): dimming is an OVERLAY too - a dark semi-transparent house texture
--- parented to the node button. We NEVER mutate Blizzard button properties (no
--- SetAlpha/SetDesaturated on their frames) - the same taint discipline as the glow.
--- (Replaces the v0.27.0 SetAlpha dim.)
+-- on OUR layer, anchored to the node button. We NEVER mutate Blizzard button
+-- properties and never enter their frame tree (taint isolation law above).
 local dims = {} -- [button] = our dim frame (pooled, reused)
 
 local function dimFor(button)
     local d = dims[button]
     if d then return d end
-    d = _G.CreateFrame("Frame", nil, button)
-    d:SetAllPoints()
-    d:SetFrameLevel((button.GetFrameLevel and button:GetFrameLevel() or 1) + 4)
+    d = _G.CreateFrame("Frame", nil, overlayLayer())
+    d:SetAllPoints(button)
     local fill = d:CreateTexture(nil, "OVERLAY", nil, -2)
     fill:SetAllPoints()
     fill:SetColorTexture(0, 0, 0, 0.62)
@@ -192,9 +205,14 @@ function Highlight.clear()
         o:Hide()
     end
     for _, d in pairs(dims) do d:Hide() end
+    if container then container:Hide() end
 end
 
 local function applySets(ids, names, dimOthers, color, pulse)
+    -- COMBAT GATE: never enumerate or decorate the talent UI in combat - protected
+    -- talent operations must never find us anywhere near their execution window.
+    if _G.InCombatLockdown and _G.InCombatLockdown() then return 0 end
+    overlayLayer():Show()
     local buttons, others = collectButtons(ids, names, dimOthers)
     for _, b in ipairs(buttons) do
         local o = overlayFor(b)
@@ -211,6 +229,7 @@ end
 -- number of buttons lit (0 when the talent UI is closed) + the resolved label.
 function Highlight.apply(query)
     Highlight.clear()
+    if _G.InCombatLockdown and _G.InCombatLockdown() then return nil end
     local ids, names, label = Highlight.traitMembers(query, Highlight.playerContext())
     if not ids then return nil end
     return applySets(ids, names, false, BRAND, true), label
@@ -222,6 +241,7 @@ end
 -- classified lookup can't resolve the ability.
 function Highlight.applyAbility(query)
     Highlight.clear()
+    if _G.InCombatLockdown and _G.InCombatLockdown() then return nil end
     local ctx
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then ctx = { classToken = snap.classToken, level = snap.level } end
@@ -296,6 +316,8 @@ local function hookTalentUI()
         local theme = Highlight.savedTheme()
         if (focus or theme) and _G.C_Timer and _G.C_Timer.After then
             _G.C_Timer.After(0.3, function()
+                -- Combat gate: the saved look can wait for the next open.
+                if _G.InCombatLockdown and _G.InCombatLockdown() then return end
                 if focus then
                     pcall(Highlight.applyAbility, focus)
                 else
