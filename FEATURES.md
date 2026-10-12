@@ -58,7 +58,7 @@ CHANGELOG.md for its history. Last reviewed: 2026-10-12.
 
 ## QA - verification & feedback
 - ☑ `QA-selftest-harness` - 210-check selftest (in-game + headless via lupa; incl. the lever-taxonomy completeness gate, the class-loops name-resolution gate, and the S19 decode data gates vs classic ground truth) + harvest sandbox/analyze/observed-compare + version-sync gates -> `Foresight/selftest.lua`, `pipeline/run_tests.py`
-- ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation -> `pipeline/check_compliance.py`
+- ☑ `QA-compliance-gate` - static ToS/automation scan, first step of the ship gate; proven red on planted violation. LUA 5.1 DIALECT LINT (v0.31.1): scrubs strings/comments then reds on goto/labels/`//`/bitwise ops - the constructs the newer-Lua harness silently accepts but the 5.1 client rejects (the gap the %d-on-float incident + external validation exposed); proven red on planted probe -> `pipeline/check_compliance.py`
 - ☑ `QA-collector` - session + level-up stat journal + ITEM SIGHTINGS (v0.15.0: equipped+bag item IDs scanned at login/logout - the "what's actually in game" ground truth, crowd-DB phase A; capped, IDs only) into SavedVariables -> `Foresight/core/collect.lua`
 - ☑ `QA-verify-command` - /foresight verify: live API checks + all-talents tooltip probe + raw talent-API shape probe; auto-runs once per login -> `Foresight/core/collect.lua`
 - ☑ `QA-harvester` - SavedVariables -> JSON archive + rank-rule hypothesis voting + sightings aggregation (`collected/item_sightings.json`, distinct-account counts = the k-of-n seed, consumable cross-check) -> `pipeline/harvest.py`

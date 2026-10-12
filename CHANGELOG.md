@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.31.1 - 2026-10-12
+
+LUA 5.1 DIALECT LINT (incident-to-gate). An external adversarial validation pass
+(Gemini, against the 7 validation questions) confirmed the v0.31.0 architecture but
+exposed one unguarded failure class: the headless harness runs NEWER Lua, which
+silently ACCEPTS 5.2+/5.3+ constructs (goto, ::labels::, `//` integer division,
+bitwise ops) that the 5.1 game client rejects - so such code would pass every test
+and then fail to load in game. The same session's %d-on-float catch proved dialect
+drift is a live hazard in the other direction.
+
+- check_compliance.py gains `dialect_scan()`: strings and comments are scrubbed
+  first (newlines preserved; WoW color codes and URLs never false-positive), then
+  any 5.2+ construct reds the ship gate with file:line. Proven green on all 38
+  shipped files and red on a planted probe.
+- Validation-report corrections recorded (Gemini's verdicts stand where our gates
+  back them; its proofs drift): modern SpellEffect has NO EffectDieSides (variance
+  lives in the Variance column - the exact reason the S19 decode exists); highlight
+  overlays parent to the node buttons ABOVE them, not below; harvest DoS hardening
+  (wall-clock timeout, cycle detection) is NOT shipped - only the 20MB size cap is;
+  it remains the open audit P1 gating S13, as SPRINTS records.
+
+*Features:* QA-compliance-gate
+
 ## 0.31.0 - 2026-10-12
 
 SKILL-CENTRIC MATRIX + PATHWAY ROWS (S22): pick one ability and the whole addon
