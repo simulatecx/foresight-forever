@@ -574,6 +574,18 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
                     .. (verdict.compared and "" or " |cff9d9d9d(added)|r"),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
+            if verdict.note then
+                lines[#lines + 1] = { text = verdict.note,
+                    r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
+            end
+            -- S28b: ONE plan-relevance line - a world drop that serves a saved plan
+            -- goal says so in concrete units, never on equipped gear (baseline law).
+            local okP, planLine = pcall(Tooltips._planRelevanceLine, loadout, mapped,
+                comparedStats)
+            if okP and planLine then
+                lines[#lines + 1] = { text = planLine,
+                    r = BODY.r, g = BODY.g, b = BODY.b, wrap = true }
+            end
         end
         -- Weapon-swap rows (the honest A->B of equipping this weapon): from -> to in
         -- real units, red when it's a loss - base ranges from both tooltips + your AP
@@ -715,6 +727,42 @@ end
 -- Indirection so itemLines can pcall the model without a hard upvalue on Impact.
 function Tooltips._itemDims(loadout, mapped)
     return HM.Impact.explainItemDelta(loadout, mapped)
+end
+
+-- S28b: the ONE plan-relevance line. When a saved plan has goal abilities, compute
+-- the hovered item's net-swap effect on each and name the STRONGEST POSITIVE one in
+-- concrete units - never a "closeness %%", never more than one line.
+function Tooltips._planRelevanceLine(loadout, mapped, comparedStats)
+    if not (loadout and HM.Plan and HM.Plan.goals and HM.Sim and HM.Sim.abilityHit) then
+        return nil
+    end
+    local goals = HM.Plan.goals()
+    if #goals == 0 then return nil end
+    local modeled = loadout
+    local function fold(bundle, sign)
+        for stat, v in pairs(bundle or {}) do
+            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps" then
+                modeled = modeled:withStatDelta(stat, sign * v, "planswap:" .. stat)
+            end
+        end
+    end
+    fold(comparedStats, -1)
+    fold(mapped, 1)
+    local bestName, bestDelta, bestKind
+    for _, sid in ipairs(goals) do
+        local okB, b = pcall(HM.Sim.abilityHit, loadout, sid, {})
+        local okA, a = pcall(HM.Sim.abilityHit, modeled, sid, {})
+        if okB and okA and b and a then
+            local d = a.avg - b.avg
+            if d >= 0.5 and (not bestDelta or d > bestDelta) then
+                local sp = HM.gen.spells[sid]
+                bestName, bestDelta, bestKind = sp and sp.name, d, a.kind
+            end
+        end
+    end
+    if not bestName then return nil end
+    return ("|cff9d9d9dYour '%s' plan:|r this adds |cff4ade80~%+.1f|r per %s (p)")
+        :format(bestName, bestDelta, bestKind == "heal" and "cast" or "hit")
 end
 
 -- "What is this FOR" (user ask 2026-10-12): when a swap moves caster inputs (spell

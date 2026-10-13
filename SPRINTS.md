@@ -39,6 +39,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S25 School damage pools: +Frost means frost | 3 | ◐ |
 | S26 Class loop parity: all nine classes on the Matrix | 3 | ◐ |
 | S27 UI-display-grammar: one voice + the standing toggle | 3 | ◐ |
+| S28 Goal-first: ability goals + plan-aware gear relevance | 3 | ◐ |
 
 ## Active / next
 
@@ -498,6 +499,21 @@ AC: ☑ six claim shapes string-for-string selftested · ☑ weakest-tag inherit
 tooltip verdict + comparison; c/d remaining: panel/matrix/command printers + formatter
 deletion) · ☑ options-menu GUI backlogged · ☑ selftest 246 (+4) · ☐ in-game render
 spot-check.
+
+### S28 - Goal-first: ability-level goals + plan-aware gear relevance ◐
+Fit & Overlap - Category MODEL -> UI. Verdict: Enhance gearGoal vocabulary +
+itemVerdict + goalPathways + plan store + the ONE injection module. Boundary kept:
+focus (S22a) LIGHTS, goal JUDGES - shared level-capped resolver, distinct settings.
+Avoid duplicating: the resolver, the loadout delta path, abilityHit. Trust: user
+goals ARE the owner control; verdict fallback is honest (never a silent wrong judge);
+no invented closeness %. Data: two validated settings fields.
+
+AC: ☑ goal grammar auto|dimension|ability:<id>, validated + tamper/unjudgeable ->
+auto · ☑ ability-goal verdicts via net-swap abilityHit (baseline law), honest
+fallback note · ☑ pathways rank by abilityHitDelta under an ability goal (unit-honest
+rows) · ☑ plan goals cap 3 (/foresight plan goal) + ONE relevance line beneath the
+verdict, concrete units, never on equipped · ☑ selftest 252 (+6) · ☐ pilot
+goal/relevance verify in-game.
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

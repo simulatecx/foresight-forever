@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.39.0"
+HM.version = "0.40.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -82,8 +82,13 @@ end
 function HM.gearGoal()
     local db = HM.charDb and HM.charDb()
     local g = db and db.settings and db.settings.goal
-    if type(g) == "string" and (g == "auto" or (HM.dimensions and HM.dimensions.byId(g))) then
-        return g
+    if type(g) == "string" then
+        if g == "auto" or (HM.dimensions and HM.dimensions.byId(g)) then return g end
+        -- S28: ability-level goals ("ability:<spellId>") - valid only when the spell
+        -- is judgeable (has a decode); tampered/unjudgeable degrades to auto.
+        local sid = tonumber(g:match("^ability:(%d+)$"))
+        local sp = sid and HM.gen and HM.gen.spells and HM.gen.spells[sid]
+        if sp and (sp.dmg or sp.heal or sp.wpn) then return g end
     end
     return "auto"
 end
@@ -299,7 +304,19 @@ local function onSlash(input)
                 printMsg("gearing goal set: " .. dim.label .. " - item verdicts now judge for this")
                 if HM.StatsPanel and HM.StatsPanel.refresh then pcall(HM.StatsPanel.refresh) end
             else
-                printMsg("unknown goal '" .. rest .. "' - try: survival, tank, dps, caster, healing, auto")
+                -- S28: maybe they named an ABILITY ("maximize Stormstrike").
+                local snapshot = HM.Snapshot and HM.Snapshot.capture()
+                local sid, spell = HM.Sim.resolveSpellLevelCapped(rest,
+                    snapshot and snapshot.level)
+                local sp = sid and HM.gen.spells[sid]
+                if sp and (sp.dmg or sp.heal or sp.wpn) then
+                    db.settings.goal = "ability:" .. sid
+                    printMsg(("gearing goal set: %s - verdicts and pathways now judge by this ability's hit"):format(spell.name))
+                    if HM.StatsPanel and HM.StatsPanel.refresh then pcall(HM.StatsPanel.refresh) end
+                    if HM.MatrixPanel then pcall(HM.MatrixPanel.invalidatePathways); pcall(HM.MatrixPanel.refresh) end
+                else
+                    printMsg("unknown goal '" .. rest .. "' - a dimension (survival/tank/dps/caster/healing/auto) or a decoded ability name")
+                end
             end
         end
     elseif cmd == "affects" or cmd == "map" then
@@ -639,6 +656,32 @@ local function onSlash(input)
         local Plan = HM.Plan
         if not Plan then
             printMsg("plan module unavailable")
+            return
+        end
+        -- S28b: plan GOAL abilities (cap 3) - world drops then tell you when they
+        -- serve the plan (the relevance line beneath item verdicts).
+        local sub, subArg = rest:match("^(%S*)%s*(.-)$")
+        if sub == "goal" then
+            local db = HM.charDb()
+            if subArg == "clear" or subArg == "" then
+                db.settings.planGoals = nil
+                printMsg(subArg == "clear" and "plan goals cleared"
+                    or "usage: /foresight plan goal <ability>|clear")
+                return
+            end
+            local snapshot = HM.Snapshot and HM.Snapshot.capture()
+            local sid, spell = HM.Sim.resolveSpellLevelCapped(subArg,
+                snapshot and snapshot.level)
+            local sp = sid and HM.gen.spells[sid]
+            if not (sp and (sp.dmg or sp.heal or sp.wpn)) then
+                printMsg("'" .. subArg .. "' is not a decoded ability - nothing to judge by")
+                return
+            end
+            if type(db.settings.planGoals) ~= "table" then db.settings.planGoals = {} end
+            local g = db.settings.planGoals
+            if #g >= 3 then table.remove(g, 1) end
+            g[#g + 1] = sid
+            printMsg(("plan goal added: %s (%d/3) - item hovers now flag gear that serves it"):format(spell.name, #g))
             return
         end
         local sub, planArgs = rest:match("^(%S*)%s*(.-)$")

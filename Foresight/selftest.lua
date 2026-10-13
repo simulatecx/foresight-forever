@@ -558,6 +558,79 @@ function HM.runSelftest(out)
         local onLabel = HM.PanelModel.playstyleLabel(HM.Impact.evaluate(base), base.snapshot)
         return offOk and tamperOk and onLabel:find("Glass Cannon", 1, true) ~= nil
     end)())
+    -- S28: ability-level goals + plan-aware gear relevance.
+    check("goal grammar: ability form validates, tamper degrades to auto", (function()
+        local db = HM.charDb()
+        local saved = db.settings.goal
+        db.settings.goal = "ability:133"
+        local legal = HM.gearGoal() == "ability:133"
+        db.settings.goal = "ability:999999999"
+        local unjudgeable = HM.gearGoal() == "auto"
+        db.settings.goal = "garbage"
+        local tampered = HM.gearGoal() == "auto"
+        db.settings.goal = saved
+        return legal and unjudgeable and tampered
+    end)())
+    check("ability-goal verdict judges by the net-swap abilityHit", (function()
+        local v = HM.Impact.itemVerdict(base, { spellPower = 10 }, nil, "ability:133")
+        return v ~= nil and v.abilityGoal == true and v.label == "Fireball"
+            and v.pct > 0 and v.direction == "upgrade"
+    end)())
+    check("ability-goal verdict falls back HONESTLY when not judgeable", (function()
+        -- Stormstrike is a weapon hit; the MAGE fixture has no weapon damage, so
+        -- abilityHit is nil -> fallback to the auto dimension with a note.
+        local v = HM.Impact.itemVerdict(base, { Intellect = 5 }, nil, "ability:17364")
+        return v ~= nil and v.abilityGoal == nil
+            and type(v.note) == "string"
+            and v.note:find("isn't judgeable", 1, true) ~= nil
+    end)())
+    check("pathways rank by abilityHitDelta under an ability goal (unit-honest)", (function()
+        -- Self-contained node lookup (this block runs before the S19 dmgNodeId local).
+        local nodeId
+        for nid, node in pairs(gen.traits.nodes) do
+            local count = 0
+            for _, op in ipairs(node.ops or {}) do
+                if op.kind == "spellmod" and op.property == "damage/healing"
+                        and op.isPct and (op.maxValue or 0) > 0 then
+                    for _, sid in ipairs(op.affected or {}) do
+                        if sid == 133 then count = count + 1 break end
+                    end
+                end
+            end
+            if count == 1 and (node.maxRank or 1) > 1 then nodeId = nid break end
+        end
+        if not nodeId then return false, "no fireball dmg node" end
+        local path = HM.Sim.goalPathways(base, "ability:133",
+            { { label = "x 1/5", nodeId = nodeId, rank = 1 } }, 4)
+        return path ~= nil and path.rows[1] ~= nil and path.rows[1].pct > 0
+            and path.rows[1].unit == " per hit"
+            and path.label:find("Fireball", 1, true) ~= nil
+    end)())
+    check("plan goals: validated, junk dropped, capped at 3", (function()
+        local db = HM.charDb()
+        local saved = db.settings.planGoals
+        db.settings.planGoals = { 133, "junk", 999999999, 331, 17364, 143 }
+        local goals = HM.Plan.goals()
+        db.settings.planGoals = saved
+        return #goals == 3 and goals[1] == 133 and goals[2] == 331 and goals[3] == 17364
+    end)())
+    check("plan relevance: ONE concrete line, only when a goal gains, never equipped", (function()
+        local db = HM.charDb()
+        local saved = db.settings.planGoals
+        db.settings.planGoals = { 133 }
+        local line = HM.Tooltips._planRelevanceLine(base, { spellPower = 10 }, nil)
+        local gained = type(line) == "string"
+            and line:find("'Fireball' plan", 1, true) ~= nil
+            and line:find("per hit", 1, true) ~= nil
+        local noGain = HM.Tooltips._planRelevanceLine(base, { Stamina = 5 }, nil) == nil
+        -- equipped gear never claims plan relevance (baseline law: structural - the
+        -- line renders inside the not-equipped branch only)
+        local text = linesText(HM.Tooltips.itemLines({ spellPower = 10 }, base, nil,
+            { equipped = true }) or {})
+        local notOnEquipped = text:find("plan:", 1, true) == nil
+        db.settings.planGoals = saved
+        return gained and noGain and notOnEquipped
+    end)())
     check("lens display law: real units + vs-base indices (summary coherence)", (function()
         local D = HM.dimensions
         return D.display("meleeDps", 154) == "15.4 DPS"

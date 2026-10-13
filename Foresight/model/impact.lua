@@ -154,6 +154,40 @@ end
 function Impact.itemVerdict(loadout, mapped, comparedStats, goalId, weaponSwap)
     local goal = goalId
     if not goal or goal == "auto" then goal = Impact.primaryDimension(loadout) end
+    -- S28a: ability-level goals judge by the NET-SWAP effect on abilityHit (the one
+    -- delta path, baseline law intact). Un-composable -> honest fallback note, never
+    -- a silent wrong judge.
+    local abilitySid = type(goal) == "string" and tonumber(goal:match("^ability:(%d+)$"))
+    local fallbackNote
+    if abilitySid and HM.Sim and HM.Sim.abilityHit then
+        local before = HM.Sim.abilityHit(loadout, abilitySid, {})
+        if before and before.avg ~= 0 then
+            local modeled = loadout
+            local function fold(bundle, sign)
+                for stat, v in pairs(bundle or {}) do
+                    if type(v) == "number" and v ~= 0 and stat ~= "weaponDps" then
+                        modeled = modeled:withStatDelta(stat, sign * v, "goalswap:" .. stat)
+                    end
+                end
+            end
+            fold(comparedStats, -1)
+            fold(mapped, 1)
+            local after = HM.Sim.abilityHit(modeled, abilitySid, {})
+            if after then
+                local sp = HM.gen and HM.gen.spells and HM.gen.spells[abilitySid]
+                local pctA = (after.avg - before.avg) / math.abs(before.avg) * 100
+                local direction = (pctA > 0.05 and "upgrade")
+                    or (pctA < -0.05 and "downgrade") or "sidegrade"
+                return { dim = goal, label = (sp and sp.name) or "ability", pct = pctA,
+                         direction = direction, compared = comparedStats ~= nil,
+                         abilityGoal = true }
+            end
+        end
+        goal = Impact.primaryDimension(loadout)
+        local sp = HM.gen and HM.gen.spells and HM.gen.spells[abilitySid]
+        fallbackNote = ("your '%s' goal isn't judgeable here - judged for %s instead")
+            :format((sp and sp.name) or "ability", goal)
+    end
     local pct
     if comparedStats then
         for _, r in ipairs(Impact.compareItems(loadout, mapped, comparedStats)) do
@@ -173,7 +207,8 @@ function Impact.itemVerdict(loadout, mapped, comparedStats, goalId, weaponSwap)
     local direction = (pct > 0.05 and "upgrade")
         or (pct < -0.05 and "downgrade") or "sidegrade"
     return { dim = goal, label = dim and dim.label or goal, pct = pct,
-             direction = direction, compared = comparedStats ~= nil }
+             direction = direction, compared = comparedStats ~= nil,
+             note = fallbackNote }
 end
 
 -- MODEL-stat-advisor: rank stats by marginal value for THIS build, so gear/drop choices

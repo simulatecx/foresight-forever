@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.40.0 - 2026-10-12
+
+GOAL-FIRST: ability-level goals + plan-aware gear relevance (S28). You can now set
+"maximize Stormstrike" (or any decoded ability) as your gearing goal: gearGoal grows
+to ability:<spellId> (validated - a goal must be judgeable, else it degrades to auto),
+itemVerdict judges by the NET-SWAP effect on abilityHit under the baseline law (honest
+fallback note when a swap can't be composed, never a silent wrong judge), and the
+Matrix "best next points" ranks talent steps by abilityHitDelta with unit-honest
+"per hit" rows. Plan goals (up to 3, /foresight plan goal <ability>) make world drops
+tell you when they serve your saved plan: ONE concrete line beneath the verdict -
+"Your 'Stormstrike' plan: this adds ~+3.4 per hit (p)" - never a made-up closeness
+percent, never on equipped gear. Concept boundary held: focus (S22a) LIGHTS the tree,
+goal JUDGES the gear - shared resolver, distinct settings. Selftest 252 (+6).
+
+*Features:* MODEL-ability-outcomes, MODEL-impact-diff, SIM-engine, WHATIF-planner,
+UI-item-tooltip, UI-matrix-panel, QA-selftest-harness
+
 ## 0.39.0 - 2026-10-12
 
 UI DISPLAY GRAMMAR + THE STANDING TOGGLE (S27). New pure ui/display.lua: six claim

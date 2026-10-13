@@ -21,6 +21,24 @@ local PLAN_STATS = {
 }
 Plan.stats = PLAN_STATS
 
+-- S28b: plan GOAL abilities (validated on read like everything else; cap 3; only
+-- decoded spells qualify - a goal must be judgeable).
+function Plan.goals()
+    local db = HM.charDb and HM.charDb()
+    local g = db and db.settings and db.settings.planGoals
+    local out = {}
+    if type(g) == "table" then
+        for _, sid in ipairs(g) do
+            sid = tonumber(sid)
+            local sp = sid and HM.gen and HM.gen.spells and HM.gen.spells[sid]
+            if sp and (sp.dmg or sp.heal or sp.wpn) and #out < 3 then
+                out[#out + 1] = sid
+            end
+        end
+    end
+    return out
+end
+
 local MAX_DELTAS = 20
 local MAX_AMOUNT = 1000
 local MAX_LABEL = 40

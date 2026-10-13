@@ -185,7 +185,8 @@ local function layout(model)
             local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
             f:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 6, y)
             f:SetWidth(innerW - 12)
-            f:SetText(("%d. %s  |cff4ade80%+.1f%%|r"):format(i, row.label, row.pct))
+            f:SetText(("%d. %s  |cff4ade80%+.1f%s|r"):format(i, row.label,
+                row.pct, row.unit or "%"))
             y = y - math.max(13, f:GetStringHeight() + 1)
         end
         y = y - 8
@@ -311,6 +312,7 @@ local function computePathways(loadout)
                 label = ("%s %d/%d"):format(n.name or ("node " .. n.nodeID),
                     (n.rank or 0) + 1, n.maxRank or 1),
                 what = loadout:withTraitNode(n.nodeID, (n.rank or 0) + 1),
+                nodeId = n.nodeID, rank = (n.rank or 0) + 1, -- S28 ability-goal mode
             }
         end
     end

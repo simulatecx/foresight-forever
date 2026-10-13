@@ -522,6 +522,32 @@ end
 -- caller builds them (live: next rank of every unfinished trait node). Out-of-combat
 -- command surface only: this evaluates one graph per candidate.
 function Sim.goalPathways(loadout, dimId, candidates, topN)
+    -- S28a: an ability goal ("ability:<sid>") ranks candidate talent steps by their
+    -- abilityHitDelta instead of a dimension pct; rows carry unit = " per hit" so the
+    -- renderer never mislabels a flat delta as a percent.
+    local abilitySid = type(dimId) == "string" and tonumber(dimId:match("^ability:(%d+)$"))
+    if abilitySid then
+        local sp = HM.gen and HM.gen.spells and HM.gen.spells[abilitySid]
+        local selected = loadout.snapshot and loadout.snapshot.talents
+        local rows = {}
+        for _, c in ipairs(candidates or {}) do
+            if c.nodeId and c.rank then
+                local ok, d = pcall(Sim.abilityHitDelta, loadout, abilitySid,
+                    selected, c.nodeId, c.rank)
+                if ok and d and d.delta > 0.05 then
+                    rows[#rows + 1] = { label = c.label, pct = d.delta, unit = " per hit" }
+                end
+            end
+        end
+        table.sort(rows, function(x, y)
+            if x.pct ~= y.pct then return x.pct > y.pct end
+            return x.label < y.label
+        end)
+        local out = {}
+        for i = 1, math.min(topN or 8, #rows) do out[i] = rows[i] end
+        return { dim = dimId, label = ((sp and sp.name) or "ability") .. " (per hit)",
+                 rows = out, considered = #(candidates or {}) }
+    end
     local dim = HM.dimensions.byId and HM.dimensions.byId(dimId)
     if not dim then return nil, "unknown dimension" end
     local base = HM.Impact.evaluate(loadout)
