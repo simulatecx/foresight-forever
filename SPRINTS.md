@@ -37,6 +37,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S23 Weapon-swap honesty in the item verdict | 3 | ◐ |
 | S24 Modular split + Retail validation fork program | all | ◐ |
 | S25 School damage pools: +Frost means frost | 3 | ◐ |
+| S26 Class loop parity: all nine classes on the Matrix | 3 | ◐ |
 
 ## Active / next
 
@@ -463,6 +464,22 @@ tripwire), PLAN_STATS updated · ☑ verify prints the six pools (the in-game ch
 ☑ selftest >= 235 (shipped 236) · ☐ in-game verify one school read + one frost-gear
 hover before 2026-10-21.
 
+### S26 - Class loop parity: all nine classes on the Matrix ◐  (S25-S28 handoff)
+Fit & Overlap - Category DATA. Verdict: Enhance data/loops.lua (six new curated loops;
+Gemini name-level input, gate-verified - "Improved Aspect of the Hawk" and "Curse of
+Agony" failed the name gate and were substituted, never forced). Complements:
+UI-matrix-panel, MODEL-ability-outcomes (payoff numbers via abilityHit + the shared
+loopCompute). Avoid duplicating: Shatter compute pattern; abilityHit the only hit
+source; NO proc math - undecoded proc rates say so (PROC_GAP line). Roster law
+applied: all 9 client classes covered, selftest-gated. Mobile: existing cards.
+Trust: display-only, confidence-tagged, honest gaps. Data: none new.
+
+AC: ☑ six new loops, every member resolves (gate) · ☑ computes only where math
+exists (abilityHit payoffs + Instant Poison per-swing for ROGUE); proc gaps say
+"not yet decoded" · ☑ backlog groomed: DATA-proc-families · ☑ roster-law selftest
+(9/9 classes) · ☑ selftest 242 (+3... +4 incl. roster gate) · ☐ one new class card
+render verify in-game.
+
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
 /foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),
@@ -478,6 +495,9 @@ over every impact source (`/foresight catalog`), the query spine for synergy/sea
 Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 
 ## Backlog (not yet scheduled)
+- ☐ DATA-proc-families: pipeline decode of proc rates beyond critHaste (Nightfall /
+  Omen of Clarity / Seal of Command / Hawk-family) extending sim_procs.lua - upgrades
+  the S26 loop cards from honest gaps to expected values.
 - ☐ UI skill picker for focus mode (user ask 2026-10-12, after the first live focus
   render): an in-UI way to enter skill-centric mode - click an ability on the Matrix /
   type-to-search among the CHARACTER'S known spells (IsPlayerSpell over gen.spells,

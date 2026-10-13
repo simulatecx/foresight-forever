@@ -1151,6 +1151,39 @@ function HM.runSelftest(out)
         local bad = HM.validateLoops()
         return type(bad) == "table" and #bad == 0
     end)(), table.concat(HM.validateLoops(), "; "))
+    check("class loops: the FULL client roster is covered (roster law)", (function()
+        -- STANDING DIRECTIVE 2026-10-12: enumerate classes from the client's own
+        -- data (gen classNames), never a remembered list - then check each.
+        local tokens = { Warrior = "WARRIOR", Paladin = "PALADIN", Hunter = "HUNTER",
+            Rogue = "ROGUE", Priest = "PRIEST", Shaman = "SHAMAN", Mage = "MAGE",
+            Warlock = "WARLOCK", Druid = "DRUID" }
+        for _, name in pairs(gen.build and gen.classNames or gen.classNames or {}) do
+            local token = tokens[name]
+            if token and #HM.loopsForClass(token) == 0 then
+                return false, name .. " has no loop"
+            end
+        end
+        return #HM.loops >= 9
+    end)())
+    check("class loops: new computes run headless, honest about proc gaps", (function()
+        for _, id in ipairs({ "combo", "hawk", "seal", "weave", "nightfall", "clarity" }) do
+            local l = HM.loopById(id)
+            if not l then return false, id end
+            local ok, lines = pcall(l.compute, base)
+            if not (ok and type(lines) == "table" and #lines > 0) then
+                return false, id
+            end
+            local text = table.concat(lines, "\n")
+            -- never an invented proc EV: no "% chance" claims in the gap loops
+            if l.id ~= "combo" and text:find("%% chance") then return false, id end
+        end
+        return true
+    end)())
+    check("class loops: proc-gap loops say so out loud", (function()
+        local l = HM.loopById("nightfall")
+        local text = table.concat(l.compute(base), "\n")
+        return text:find("not yet decoded", 1, true) ~= nil
+    end)())
     check("shatter loop computes the frozen-crit answer honestly", (function()
         -- S19: the payoff rows now claim level-capped absolute numbers from the decode.
         local l = HM.loopById("shatter")

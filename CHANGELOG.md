@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.38.0 - 2026-10-12
+
+CLASS LOOP PARITY (S26): all nine classes on the Matrix. Six new curated loops -
+Rogue combo engine (with the Instant Poison per-swing line from the real imbue
+decode), Hunter hawk shots, Paladin seal/judgement, Priest shadow weave, Warlock
+Nightfall, Druid Omen of Clarity - every member name gate-verified against shipped
+data (two Gemini names failed the gate and were substituted, never forced). Payoff
+numbers come only from abilityHit; undecoded proc engines say 'proc rate not yet
+decoded' instead of inventing expected values (DATA-proc-families pipeline decode
+backlogged). Roster-law selftest: the full client class list must have a loop.
+Selftest 242 (+3).
+
+*Features:* DATA-loops, UI-matrix-panel, QA-selftest-harness
+
 ## 0.37.2 - 2026-10-12
 
 THIRD RANK-RULE PROMOTION ROUND (human-reviewed, build-filtered corpus): 8 more
