@@ -108,10 +108,11 @@ def dialect_scan() -> list[str]:
 # House law (synergy_highlight.lua, hardened 2026-10-12): visuals live on OUR frames
 # and only ANCHOR to Blizzard's - this lint makes the law mechanical. Receivers
 # checked: the Blizzard globals below plus any file-local alias assigned straight
-# from one (local psf = _G.PlayerSpellsFrame). Parenting a frame TO one via
-# CreateFrame stays allowed (established, bounded practice: the FS button); regions
-# and key writes are the incident class. Function-parameter aliases are not tracked -
-# the lint is conservative, not complete.
+# from one (local psf = _G.PlayerSpellsFrame). The incident classes: key writes,
+# region creation, AND (2026-10-13) PARENTING a frame into an interactive Blizzard
+# frame - the old "parenting is fine" carve-out was wrong, it was the stats-panel
+# gamepad-taint vector. Function-parameter aliases are not tracked - the lint is
+# conservative, not complete.
 
 BLIZZARD_OBJECTS = [
     "PlayerSpellsFrame", "CharacterFrame", "PaperDollFrame", "GameTooltip",
@@ -122,8 +123,19 @@ BLIZZARD_OBJECTS = [
 REGION_CREATORS = ["CreateFontString", "CreateTexture", "CreateLine",
                    "CreateMaskTexture", "CreateAnimationGroup"]
 
+# Frames PARENTED INTO an interactive Blizzard frame inherit that frame's secure
+# context: when the client runs a protected operation on the parent (2026-10-13 live
+# incident: gamepad interact-targeting walking CharacterFrame's children), our tainted
+# child blocks it (SetPreferredGamepadInteractTarget, open=[char+fs]). The law:
+# anchor to Blizzard frames from our OWN UIParent layer, never parent into them.
+# UIParent/WorldFrame are the legitimate top-level parents and are excluded.
+PARENT_SAFE = {"UIParent", "WorldFrame"}
+FRAME_PARENT_FORBIDDEN = [o for o in BLIZZARD_OBJECTS if o not in PARENT_SAFE]
+
+# Capture BOTH the alias name and WHICH Blizzard object it points at, so an alias of
+# UIParent (safe to parent into) isn't flagged by the parent check.
 _ALIAS_RE = re.compile(
-    r"(?<![\w.])local\s+(\w+)\s*=\s*(?:_G\.)?(?:" + "|".join(BLIZZARD_OBJECTS) + r")\b"
+    r"(?<![\w.])local\s+(\w+)\s*=\s*(?:_G\.)?(" + "|".join(BLIZZARD_OBJECTS) + r")\b"
 )
 
 
@@ -135,13 +147,19 @@ def taint_scan() -> list[str]:
         raw_lines = path.read_text(encoding="utf-8-sig").splitlines()
         scrubbed = _scrub_lua("\n".join(raw_lines))
         names = set(BLIZZARD_OBJECTS)
+        forbidden_parents = set(FRAME_PARENT_FORBIDDEN)
         for m in _ALIAS_RE.finditer(scrubbed):
             names.add(m.group(1))
+            if m.group(2) in FRAME_PARENT_FORBIDDEN:
+                forbidden_parents.add(m.group(1))  # alias of a forbidden parent
         name_alt = "|".join(sorted(names))
         write_re = re.compile(
             r"(?<![\w.])(?:_G\.)?(" + name_alt + r")\.(\w+)\s*=(?!=)")
         region_re = re.compile(
             r"(?<![\w.])(?:_G\.)?(" + name_alt + r")\s*:\s*(" + creators + r")\s*\(")
+        parent_re = re.compile(
+            r"(?<![\w.])(?:_G\.)?CreateFrame\s*\(\s*[^,()]+,\s*[^,()]+,\s*(?:_G\.)?("
+            + "|".join(sorted(forbidden_parents)) + r")\b") if forbidden_parents else None
         for lineno, line in enumerate(scrubbed.splitlines(), 1):
             hits: list[str] = []
             mw = write_re.search(line)
@@ -150,6 +168,10 @@ def taint_scan() -> list[str]:
             mr = region_re.search(line)
             if mr:
                 hits.append(f"region created on Blizzard object ({mr.group(1)}:{mr.group(2)}())")
+            mp = parent_re.search(line) if parent_re else None
+            if mp:
+                hits.append(f"frame parented INTO Blizzard frame ({mp.group(1)}) - "
+                            "anchor from UIParent instead")
             if not hits:
                 continue
             original = raw_lines[lineno - 1] if lineno <= len(raw_lines) else ""

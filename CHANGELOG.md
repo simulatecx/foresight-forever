@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.45.5 - 2026-10-13
+
+TAINT VECTOR PINNED AND FIXED (account-safety). The hardened recorder earned its keep:
+the login block journaled with full context - func=SetPreferredGamepadInteractTarget,
+`open=[char+fs]`, uptime 15852s (not a login race). Translation: with the character
+tab and our stats panel both open, the client's gamepad interact-targeting hit our
+panel and blocked. Cause: the stats panel and its two buttons (FS + options) were
+CHILDREN of Blizzard's CharacterFrame, so they inherited its secure context and our
+addon taint contaminated a protected operation on it. Fix (the v0.33.2 law, applied):
+the panel and buttons are now UIParent children that only ANCHOR to the character
+frame, shown/hidden with it via hooks - never inside its frame tree. GATE
+(incident-to-gate): the compliance taint-law lint now also reds on a frame PARENTED
+into an interactive Blizzard frame (UIParent/WorldFrame excluded); proven red on the
+three pre-fix sites, green after. The old "parenting is fine" carve-out is gone - it
+was this exact vector.
+
+*Features:* UI-stats-panel, QA-compliance-gate
+
 ## 0.45.4 - 2026-10-13
 
 MATRIX RUNS HORIZONTAL (user ask: "make the chart run horizontal instead of vertical

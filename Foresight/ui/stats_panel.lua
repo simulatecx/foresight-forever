@@ -41,7 +41,11 @@ local function restorePosition()
     if pos then
         panel:SetPoint(pos.point, _G.UIParent, pos.relPoint, pos.x, pos.y)
     else
-        panel:SetPoint(DEFAULT_POINT[1], panel:GetParent(), DEFAULT_POINT[2],
+        -- Default dock: ANCHOR to the character frame (we are a UIParent child, never
+        -- a CharacterFrame child - the taint-isolation law). nil-safe if CharacterFrame
+        -- isn't loaded yet.
+        local anchor = _G.CharacterFrame or _G.UIParent
+        panel:SetPoint(DEFAULT_POINT[1], anchor, DEFAULT_POINT[2],
             DEFAULT_POINT[3], DEFAULT_POINT[4])
     end
 end
@@ -330,12 +334,19 @@ function StatsPanel.resetPosition()
 end
 
 local function createPanel()
-    local parent = _G.CharacterFrame
-    if not parent then return end
+    local charFrame = _G.CharacterFrame
+    if not charFrame then return end
     local r, g, b = classColor()
 
-    panel = _G.CreateFrame("Frame", "ForesightStatsPanel", parent)
+    -- TAINT-ISOLATION LAW (v0.45.5, after a live gamepad-interact block with the
+    -- character tab open): our panel and its buttons are UIParent children that merely
+    -- ANCHOR to the character frame - never children of it. A child inherits
+    -- CharacterFrame's secure context, so when the client ran a protected gamepad
+    -- interact-target operation it blocked on our tainted frame. On our own layer it
+    -- can't. We show/hide them with the character frame via hooks below.
+    panel = _G.CreateFrame("Frame", "ForesightStatsPanel", _G.UIParent)
     panel:SetWidth(PANEL_WIDTH)
+    panel:SetFrameStrata("HIGH") -- above the char frame (was implicit as its child)
 
     -- Movable: drag the panel anywhere (it sits beside the character sheet by default,
     -- which can overlap other panels); position is saved per character and restored.
@@ -384,16 +395,19 @@ local function createPanel()
     subtitle:SetText("what more would do")
     panel.subtitle = subtitle -- updated each refresh with the playstyle label
 
-    toggleButton = _G.CreateFrame("Button", "ForesightToggleButton", parent, "UIPanelButtonTemplate")
+    -- The FS toggle + options buttons: also UIParent children, ANCHORED to the char
+    -- frame's bottom-right (they must sit on the character sheet, but not live inside
+    -- its frame tree). They're shown/hidden with the character frame via the hooks
+    -- below, since anchoring alone won't track its visibility.
+    toggleButton = _G.CreateFrame("Button", "ForesightToggleButton", _G.UIParent, "UIPanelButtonTemplate")
+    toggleButton:SetFrameStrata("HIGH")
     toggleButton:SetSize(36, 18)
     toggleButton:SetText("FS")
-    toggleButton:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -40, 4)
+    toggleButton:SetPoint("BOTTOMRIGHT", charFrame, "BOTTOMRIGHT", -40, 4)
     toggleButton:SetScript("OnClick", StatsPanel.toggle)
 
-    -- Options button (S30): the UI entry point for /foresight options, beside FS on the
-    -- character frame so settings are a click, not a command - same reliable text-button
-    -- style the FS button uses. A cog glyph label; tooltip names it.
-    local optBtn = _G.CreateFrame("Button", "ForesightOptionsButton", parent, "UIPanelButtonTemplate")
+    local optBtn = _G.CreateFrame("Button", "ForesightOptionsButton", _G.UIParent, "UIPanelButtonTemplate")
+    optBtn:SetFrameStrata("HIGH")
     optBtn:SetSize(20, 18)
     optBtn:SetText("|TInterface\\Buttons\\UI-OptionsButton:12:12|t")
     optBtn:SetPoint("RIGHT", toggleButton, "LEFT", -2, 0)
@@ -409,7 +423,17 @@ local function createPanel()
     end)
     optBtn:SetScript("OnLeave", function() if _G.GameTooltip then _G.GameTooltip:Hide() end end)
 
-    parent:HookScript("OnHide", function() panel:Hide() end)
+    -- Track the character frame's visibility (we're anchored, not parented): the
+    -- buttons appear only while the char sheet is open; closing it also hides the panel.
+    local function setFurnitureShown(show)
+        toggleButton:SetShown(show)
+        optBtn:SetShown(show)
+        if not show then panel:Hide() end
+    end
+    charFrame:HookScript("OnShow", function() setFurnitureShown(true) end)
+    charFrame:HookScript("OnHide", function() setFurnitureShown(false) end)
+    setFurnitureShown(charFrame.IsShown and charFrame:IsShown() and true or false)
+
     -- S33 throttle law: a hidden panel runs zero animation work.
     panel:SetScript("OnHide", function()
         if HM.Motion then HM.Motion.cancelOwner("fs") end

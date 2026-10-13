@@ -657,6 +657,15 @@ ask "run horizontal for all the context"): the Matrix goes TWO-COLUMN past ~500p
 (bars/pathways/focus | eco diagram/gauges), narrow stays single-column (mobile binding
 holds). ☐ in-game verify the two-column wide layout + resize + session-focus behavior.
 
+TAINT VECTOR PINNED + FIXED (v0.45.5): the hardened recorder captured the login block
+with full context - func=SetPreferredGamepadInteractTarget, open=[char+fs], uptime
+15852s. Cause: the stats panel + its FS/options buttons were CHILDREN of CharacterFrame
+(inherited its secure context; our taint blocked a gamepad interact-target op). Fixed:
+panel + buttons are now UIParent children ANCHORED to the char frame (shown/hidden via
+hooks), never inside its tree. Compliance taint-law lint gained a PARENT rule (reds on
+CreateFrame into an interactive Blizzard frame; proven red on the 3 pre-fix sites).
+☐ in-game verify: character tab opens with zero taint block.
+
 
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
 /foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),
