@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.45.1"
+HM.version = "0.45.2"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -936,6 +936,41 @@ end
 
 -- WoW client wiring -----------------------------------------------------------
 if _G.CreateFrame then
+    -- TAINT RECORDER (hardened v0.45.2): the morning incident journaled fine, but a
+    -- block that fires BEFORE the collect store exists (early login, before our
+    -- ADDON_LOADED init - exactly when the client sets gamepad interact targets) was
+    -- printing the warning yet journaling NOTHING, so we stayed blind. Now every event
+    -- is buffered into a plain Lua table the instant it fires and flushed into the
+    -- store as soon as it exists - plus richer context (uptime + which surface was
+    -- open) so the next occurrence names its own vector.
+    local pendingTaint = {}
+    local function flushTaint()
+        if not (HM.db and type(HM.db) == "table") then return end
+        if type(HM.db.collect) ~= "table" then HM.db.collect = { sessions = {}, levels = {} } end
+        local c = HM.db.collect
+        if type(c.taintEvents) ~= "table" then c.taintEvents = {} end
+        while #pendingTaint > 0 and #c.taintEvents < 40 do
+            c.taintEvents[#c.taintEvents + 1] = table.remove(pendingTaint, 1)
+        end
+    end
+    local function shown(name)
+        local f = _G[name]
+        return (f and f.IsShown and f:IsShown()) and true or false
+    end
+    local function recordTaint(event, func)
+        pendingTaint[#pendingTaint + 1] = {
+            event = event, func = tostring(func),
+            at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?",
+            uptime = _G.GetTime and math.floor(_G.GetTime()) or nil,
+            talentUIOpen = shown("PlayerSpellsFrame"),
+            charOpen = shown("CharacterFrame"),
+            matrixOpen = shown("ForesightMatrixPanel"),
+            fsOpen = shown("ForesightStatsPanel"),
+            inCombat = (_G.InCombatLockdown and _G.InCombatLockdown()) and true or false,
+        }
+        flushTaint() -- best-effort now; the PLAYER_LOGIN flush catches pre-init events
+    end
+
     local frame = _G.CreateFrame("Frame")
     frame:RegisterEvent("ADDON_LOADED")
     frame:RegisterEvent("PLAYER_LOGIN")
@@ -943,6 +978,7 @@ if _G.CreateFrame then
         if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
             initSavedVariables()
         elseif event == "PLAYER_LOGIN" then
+            flushTaint() -- drain any block that fired before the store was ready
             local gen = HM.gen
             printMsg(("v%s loaded - data build %s (%s talents)"):format(
                 HM.version, gen and gen.build or "?",
@@ -973,19 +1009,7 @@ if _G.CreateFrame then
     local taintWarned
     sentinel:SetScript("OnEvent", function(_, event, addon, func)
         if addon ~= ADDON_NAME then return end
-        if HM.db and type(HM.db.collect) == "table" then
-            local c = HM.db.collect
-            if type(c.taintEvents) ~= "table" then c.taintEvents = {} end
-            if #c.taintEvents < 20 then
-                c.taintEvents[#c.taintEvents + 1] = {
-                    event = event, func = tostring(func),
-                    at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?",
-                    talentUIOpen = (_G.PlayerSpellsFrame and _G.PlayerSpellsFrame.IsShown
-                        and _G.PlayerSpellsFrame:IsShown()) and true or false,
-                    inCombat = (_G.InCombatLockdown and _G.InCombatLockdown()) and true or false,
-                }
-            end
-        end
+        recordTaint(event, func) -- buffers + flushes; never blind at login now
         if not taintWarned then
             taintWarned = true
             printMsg(("the client blocked '%s' (%s) with Foresight on the stack - journaled for the harvest; please /reload and report what you were doing"):format(

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.45.2 - 2026-10-13
+
+TAINT RECORDER HARDENED (account-safety). The v0.45.0 session reported another client
+block, but the harvest showed NO new journaled event - only this morning's two
+pre-fix ones. Root cause: the sentinel only journaled when the collect store already
+existed, so a block that fires before init (early login - exactly when the client
+assigns gamepad interact targets, the function both morning blocks named) printed the
+warning and recorded nothing. We stayed blind. Fix: every block now buffers into a
+plain Lua table the instant it fires and flushes into the store as soon as it exists
+(and again on PLAYER_LOGIN), with richer context - uptime (near-zero = a login-time
+block) and which surface was open (talents / character / matrix / FS) - so the next
+occurrence names its own vector instead of leaving us to guess. The harvest print
+shows the new context. Observer-only; changes no addon behavior.
+
+*Features:* QA-probe, SYNERGY-highlight
+
 ## 0.45.1 - 2026-10-13
 
 S33 IN-GAME FEEDBACK PASS (first live look at the UI dynamics). The radar drew and

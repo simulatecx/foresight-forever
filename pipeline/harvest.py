@@ -738,8 +738,17 @@ def main() -> int:
                   "action naming Foresight (account-safety doctrine: fix before anything):")
             for t in rows:
                 if isinstance(t, dict):
+                    # Which surface was up names the vector (v0.45.2 richer context):
+                    # uptime ~0 = a login-time block; charOpen/matrixOpen/fsOpen point
+                    # at the panel that was drawing when it fired.
+                    surfaces = [n for n, k in (("talents", "talentUIOpen"),
+                                ("char", "charOpen"), ("matrix", "matrixOpen"),
+                                ("fs", "fsOpen")) if t.get(k)]
+                    where = ("+".join(surfaces)) if surfaces else "none-open"
+                    up = t.get("uptime")
+                    up_s = f" uptime={up}s" if up is not None else ""
                     print(f"      {t.get('at')}: {t.get('event')} func={t.get('func')} "
-                          f"talentUIopen={t.get('talentUIOpen')} combat={t.get('inCombat')}")
+                          f"open=[{where}]{up_s} combat={t.get('inCombat')}")
         sightings = collect.get("itemSightings") or {}
         if sightings:
             print(f"   item sightings: {len(sightings)} distinct items seen on this account")
