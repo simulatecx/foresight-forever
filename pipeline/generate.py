@@ -129,6 +129,30 @@ CLASS_NAMES = {
 }
 
 
+def class_roster(cache: Path) -> dict:
+    """S29: the class roster - id -> {name, token}. From ChrClasses when fetched (the
+    client's own data, roster-law source); degrades to CLASS_NAMES (token = NAME) when
+    the table is absent so a pre-fetch run still produces a usable roster. Resource/power
+    type is deliberately NOT guessed here - S31's per-class honesty reads it LIVE
+    (maxMana > 0), the most honest source."""
+    try:
+        rows = read_csv(cache, "ChrClasses")
+    except FileNotFoundError:
+        return {cid: {"name": name, "token": name.upper()}
+                for cid, name in CLASS_NAMES.items()}
+    out = {}
+    for r in rows:
+        cid = to_int(r["ID"])
+        name = r.get("Name_lang") or CLASS_NAMES.get(cid, f"class:{cid}")
+        token = (r.get("Filename") or name).upper()
+        # Only the playable classes we model (the CLASS_NAMES set); the table may carry
+        # non-playable/test rows.
+        if cid in CLASS_NAMES:
+            out[cid] = {"name": name, "token": token}
+    return out or {cid: {"name": name, "token": name.upper()}
+                   for cid, name in CLASS_NAMES.items()}
+
+
 def read_csv(cache: Path, table: str) -> list[dict]:
     with open(cache / f"{table}.csv", newline="", encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
@@ -1036,6 +1060,7 @@ def main() -> int:
                 "critHasteProcs": len(crit_haste),
             },
             "classNames": CLASS_NAMES,
+            "classes": class_roster(cache),  # S29: roster-law source (id -> name/token)
         }, out_dir, args.build),
         LuaWriter.file("talent_tabs", {"talentTabs": tabs_out}, out_dir, args.build),
         LuaWriter.file("talents", {"talents": talents_out}, out_dir, args.build),

@@ -40,6 +40,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S26 Class loop parity: all nine classes on the Matrix | 3 | ◐ |
 | S27 UI-display-grammar: one voice + the standing toggle | 3 | ◐ |
 | S28 Goal-first: ability goals + plan-aware gear relevance | 3 | ◐ |
+| S29 Class roster + per-class coverage report | - | ◐ |
 
 ## Active / next
 
@@ -514,6 +515,18 @@ fallback note · ☑ pathways rank by abilityHitDelta under an ability goal (uni
 rows) · ☑ plan goals cap 3 (/foresight plan goal) + ONE relevance line beneath the
 verdict, concrete units, never on equipped · ☑ selftest 252 (+6) · ☐ pilot
 goal/relevance verify in-game.
+
+### S29 - Class roster + per-class coverage report ◐  (carry-over, S25-S28 handoff)
+Fit & Overlap - Category DATA. Verdict: Enhance generate.py + fetch.py (gen.classes
+from ChrClasses, degrade to CLASS_NAMES) + harvest (coverage matrix) + selftest
+(conversions-per-class gate). The data-backed source for the roster law - loop
+coverage + S31's per-class ledger honesty enumerate from it, never a remembered list.
+Trust: honest degrade when ChrClasses isn't fetched; resource type read LIVE not
+guessed. Data: generated shape addition. Abuse: not externally reachable.
+
+AC: ☑ gen.classes (id/name/token) emitted, ChrClasses-sourced when present ·
+☑ conversions-per-class completeness gate (selftest) · ☑ S26 loop coverage enumerates
+gen.classes · ☑ harvest per-class coverage matrix · ☑ selftest 254 (+2).
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

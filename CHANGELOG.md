@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.41.0 - 2026-10-12
+
+CLASS ROSTER (S29, the roster-law data source): the pilot is a Shaman, so sampled
+coverage hides the other classes' gaps. gen.classes (id -> name/token) now ships -
+from ChrClasses when fetched (added to the fetch table list), degrading to the
+CLASS_NAMES set when the table is absent so a pre-fetch run still produces a usable
+roster. Resource/power type is deliberately NOT guessed offline - S31's per-class
+honesty reads it live (maxMana > 0). Two gates land on it: a conversions-per-class
+completeness check (every roster class must have a statConversions entry or the model
+would silently mis-scale it) and the S26 loop-coverage check now enumerates from
+gen.classes rather than a remembered token map. The harvest prints a per-class
+coverage matrix (classic talents mapped per class) every run. Selftest 254 (+2).
+
+*Features:* DATA-roster, DATA-pipeline-generate, QA-harvester, QA-selftest-harness
+
 ## 0.40.0 - 2026-10-12
 
 GOAL-FIRST: ability-level goals + plan-aware gear relevance (S28). You can now set

@@ -1274,16 +1274,36 @@ function HM.runSelftest(out)
         local bad = HM.validateLoops()
         return type(bad) == "table" and #bad == 0
     end)(), table.concat(HM.validateLoops(), "; "))
+    -- S29 class roster (roster law, data-backed): gen.classes from the client's own
+    -- data drives the coverage gate and every per-class honesty decision.
+    check("roster: gen.classes covers the nine classes with tokens", (function()
+        local c = gen.classes
+        if type(c) ~= "table" then return false, "no gen.classes" end
+        local n = 0
+        for _, info in pairs(c) do
+            if not (type(info.name) == "string" and type(info.token) == "string") then
+                return false
+            end
+            n = n + 1
+        end
+        return n == 9 and c[7] and c[7].token == "SHAMAN" and c[8].token == "MAGE"
+    end)())
+    check("roster: every class has a statConversions entry (conversions gate)", (function()
+        -- The hard gate: a class in the roster with no conversion table would silently
+        -- mis-model its stats. Enumerate from the roster, never a remembered list.
+        for _, info in pairs(gen.classes or {}) do
+            if not (HM.formulas.statConversions.byClass or {})[info.token] then
+                return false, info.token .. " missing conversions"
+            end
+        end
+        return true
+    end)())
     check("class loops: the FULL client roster is covered (roster law)", (function()
-        -- STANDING DIRECTIVE 2026-10-12: enumerate classes from the client's own
-        -- data (gen classNames), never a remembered list - then check each.
-        local tokens = { Warrior = "WARRIOR", Paladin = "PALADIN", Hunter = "HUNTER",
-            Rogue = "ROGUE", Priest = "PRIEST", Shaman = "SHAMAN", Mage = "MAGE",
-            Warlock = "WARLOCK", Druid = "DRUID" }
-        for _, name in pairs(gen.build and gen.classNames or gen.classNames or {}) do
-            local token = tokens[name]
-            if token and #HM.loopsForClass(token) == 0 then
-                return false, name .. " has no loop"
+        -- STANDING DIRECTIVE 2026-10-12: enumerate classes from the client's own data
+        -- (gen.classes, S29), never a remembered list - then check each has a loop.
+        for _, info in pairs(gen.classes or {}) do
+            if #HM.loopsForClass(info.token) == 0 then
+                return false, info.name .. " has no loop"
             end
         end
         return #HM.loops >= 9

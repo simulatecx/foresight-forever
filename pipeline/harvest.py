@@ -800,7 +800,29 @@ def main() -> int:
     aggregate_sightings(gen)
     aggregate_observed(gen)
     aggregate_rank_rules(gen)
+    coverage_report(gen)
     return exit_code
+
+
+def coverage_report(gen) -> None:
+    """S29 per-class coverage matrix (roster law): enumerate the FULL class roster
+    from the client's own data (gen.classes), never a remembered list, and print each
+    class's generated data coverage so the pilot (a Shaman) never hides another class's
+    gap. Offline - no SavedVariables needed; runs every harvest."""
+    classes = gen.get("classes") if gen else None
+    if not classes:
+        return
+    talents = gen.get("talents") or {}
+    by_class = {}
+    for t in talents.values():
+        cid = t.get("classId") or 0
+        by_class[cid] = by_class.get(cid, 0) + 1
+    print("\nper-class coverage (roster law - from gen.classes):")
+    for cid in sorted(classes, key=lambda k: int(k)):
+        info = classes[cid]
+        n = by_class.get(int(cid), 0)
+        flag = "" if n > 0 else "  !! NO classic talents mapped (trait-only or gap)"
+        print(f"   {info.get('name'):8} ({info.get('token')}): {n} classic talents{flag}")
 
 
 def aggregate_sightings(gen) -> None:

@@ -30,6 +30,7 @@ TABLES = [
     "SpellLevels",
     "SkillLineAbility",   # class/profession skill-line membership
     "SkillLine",
+    "ChrClasses",         # S29: the class roster (id/name/token) - the roster-law source
     "ChrRaces",           # race id/token (racial SkillLineAbility.RaceMasks bit = 1<<(ID-1))
     "SkillRaceClassInfo", # race/class gating of skill lines (racial availability)
     # Consumable-buff chain (CONSUME-buffs): item -> effect -> buff spell.
