@@ -333,6 +333,28 @@ function HM.runSelftest(out)
         end
         return false, "unknown key not surfaced"
     end)())
+    check("item mapper: resistances map ONCE despite the client's twin key shapes", (function()
+        -- Live journal catch 2026-10-13: fire-resist items emit BOTH RESISTANCE2_NAME
+        -- and ITEM_MOD_FIRE_RESISTANCE_SHORT (identical x1585 counts) - one stat,
+        -- never a doubled sum; the twin is not "unknown". Index-only shape still maps.
+        local mapped, unknown = HM.Tooltips.mapItemStats({
+            RESISTANCE2_NAME = 15, ITEM_MOD_FIRE_RESISTANCE_SHORT = 15,
+            RESISTANCE5_NAME = 10, -- shadow, index shape alone
+        })
+        if mapped["resist.fire"] ~= 15 then return false, "twin shapes double-counted" end
+        if mapped["resist.shadow"] ~= 10 then return false, "index-only shape dropped" end
+        if #unknown ~= 0 then return false, "twin journaled as unknown" end
+        -- Display-only law: a resist delta folds into NO graph node and adds no note
+        -- noise (the weaponDps pattern).
+        local built = HM.Loadout.fromSnapshot(meleeShamanSnap())
+            :withStatDelta("resist.fire", 15, "test:resist"):build()
+        for _, n in ipairs((built and built.notes) or {}) do
+            if n:find("unknown stat node", 1, true) then
+                return false, "resist leaked into the graph path"
+            end
+        end
+        return true
+    end)())
     check("audit parser: spell tooltip ranges (damage, heal, commas; nil degrade)", (function()
         local lo, hi = HM.Tooltips.parseSpellRange({
             "Lightning Bolt", "30 Mana", "2 sec cast",

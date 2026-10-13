@@ -165,7 +165,8 @@ function Impact.itemVerdict(loadout, mapped, comparedStats, goalId, weaponSwap)
             local modeled = loadout
             local function fold(bundle, sign)
                 for stat, v in pairs(bundle or {}) do
-                    if type(v) == "number" and v ~= 0 and stat ~= "weaponDps" then
+                    if type(v) == "number" and v ~= 0 and stat ~= "weaponDps"
+                            and not stat:find("^resist%.") then
                         modeled = modeled:withStatDelta(stat, sign * v, "goalswap:" .. stat)
                     end
                 end

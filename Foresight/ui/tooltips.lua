@@ -376,12 +376,33 @@ local DISPLAY_STAT = {
     ["school.holy"] = "Holy Spell Damage", ["school.fire"] = "Fire Spell Damage",
     ["school.nature"] = "Nature Spell Damage", ["school.frost"] = "Frost Spell Damage",
     ["school.shadow"] = "Shadow Spell Damage", ["school.arcane"] = "Arcane Spell Damage",
+    ["resist.holy"] = "Holy Resistance", ["resist.fire"] = "Fire Resistance",
+    ["resist.nature"] = "Nature Resistance", ["resist.frost"] = "Frost Resistance",
+    ["resist.shadow"] = "Shadow Resistance", ["resist.arcane"] = "Arcane Resistance",
 }
 local STAT_ORDER = { "Strength", "Agility", "Stamina", "Intellect", "Spirit",
                      "spellPower", "spellDamage", "healingPower", "attackPower", "rangedAttackPower", "weaponDps",
                      "maxMana", "maxHealth", "armor",
                      "school.holy", "school.fire", "school.nature", "school.frost",
-                     "school.shadow", "school.arcane" }
+                     "school.shadow", "school.arcane",
+                     "resist.holy", "resist.fire", "resist.nature", "resist.frost",
+                     "resist.shadow", "resist.arcane" }
+
+-- Elemental resistances (2026-10-13 journal triage, x1239-1585 sightings each):
+-- display-only like weaponDps - no graph node models mitigation yet. The client emits
+-- BOTH key shapes for the same stat on the same item (RESISTANCE2_NAME +
+-- ITEM_MOD_FIRE_RESISTANCE_SHORT arrived with identical journal counts), so the index
+-- shape maps only when its named twin is absent - summing twins would double-count.
+-- Index enum 1-6 = holy/fire/nature/frost/shadow/arcane (0 = armor above,
+-- classic shape).
+local RESIST_INDEX = {
+    RESISTANCE1_NAME = { "holy",   "ITEM_MOD_HOLY_RESISTANCE_SHORT" },
+    RESISTANCE2_NAME = { "fire",   "ITEM_MOD_FIRE_RESISTANCE_SHORT" },
+    RESISTANCE3_NAME = { "nature", "ITEM_MOD_NATURE_RESISTANCE_SHORT" },
+    RESISTANCE4_NAME = { "frost",  "ITEM_MOD_FROST_RESISTANCE_SHORT" },
+    RESISTANCE5_NAME = { "shadow", "ITEM_MOD_SHADOW_RESISTANCE_SHORT" },
+    RESISTANCE6_NAME = { "arcane", "ITEM_MOD_ARCANE_RESISTANCE_SHORT" },
+}
 
 -- S25: per-school item damage keys translate by PATTERN (the ITEM_MOD_<SCHOOL>_SPELL_
 -- DAMAGE family); the unknownItemStats journal stays the tripwire for any key shape
@@ -396,16 +417,32 @@ function Tooltips.mapItemStats(raw)
     local out, unknown = {}, {}
     if type(raw) ~= "table" then return out, unknown end
     for key, val in pairs(raw) do
-        local name = ITEM_STAT_MAP[key]
+        local name, twinSkip = ITEM_STAT_MAP[key], false
         if not name and type(key) == "string" then
             local school = key:match("^ITEM_MOD_(%u+)_SPELL_DAMAGE")
             if school and SCHOOL_KEY_NAMES[school] then
                 name = "school." .. SCHOOL_KEY_NAMES[school]
             end
+            if not name then
+                local rschool = key:match("^ITEM_MOD_(%u+)_RESISTANCE")
+                if rschool and SCHOOL_KEY_NAMES[rschool] then
+                    name = "resist." .. SCHOOL_KEY_NAMES[rschool]
+                end
+            end
+            if not name then
+                local twin = RESIST_INDEX[key]
+                if twin then
+                    if raw[twin[2]] == nil then
+                        name = "resist." .. twin[1]
+                    else
+                        twinSkip = true -- named twin carries the value; not unknown
+                    end
+                end
+            end
         end
         if name and type(val) == "number" then
             out[name] = (out[name] or 0) + val
-        elseif type(val) == "number" and val ~= 0 then
+        elseif not twinSkip and type(val) == "number" and val ~= 0 then
             unknown[#unknown + 1] = tostring(key)
         end
     end
@@ -741,7 +778,8 @@ function Tooltips._planRelevanceLine(loadout, mapped, comparedStats)
     local modeled = loadout
     local function fold(bundle, sign)
         for stat, v in pairs(bundle or {}) do
-            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps" then
+            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps"
+                    and not stat:find("^resist%.") then
                 modeled = modeled:withStatDelta(stat, sign * v, "planswap:" .. stat)
             end
         end
@@ -808,7 +846,8 @@ function Tooltips._casterRelevanceLines(loadout, mapped, comparedStats)
     local modeled = loadout
     local function fold(bundle, sign)
         for stat, v in pairs(bundle or {}) do
-            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps" then
+            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps"
+                    and not stat:find("^resist%.") then
                 modeled = modeled:withStatDelta(stat, sign * v,
                     ("swap:%s"):format(stat))
             end

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.44.4 - 2026-10-13
+
+RESISTANCE KEYS MAPPED + HARVEST TRIAGE RECORDS (the unknownItemStats journal pays
+out again). The six elemental resistances now map DISPLAY-ONLY (the weaponDps
+pattern: a stat line, never a delta claim - no graph node models mitigation yet).
+Live catch inside the catch: the client emits TWO key shapes for one resist stat on
+the same item (RESISTANCE2_NAME + ITEM_MOD_FIRE_RESISTANCE_SHORT, identical x1585
+journal counts) - the summing mapper would have DOUBLED every resist line; twins
+dedupe, index-only shape still maps, and the selftest pins it (267, +1). Triage
+records in the same change: Well-Fed level-scaling evidence state updated (Mackerel
++80 AP observed vs gen +6 at n=20 - a 13x gap, still parked: all observations at one
+level); hovered-without-data consumables (healing potions, bandages, utility items)
+deferred on the record - restore effects belong to S10 Panic's registry, not the
+buff-impact model.
+
+*Features:* DATA-items, QA-probe
+
 ## 0.44.3 - 2026-10-13
 
 FOURTH RANK-RULE PROMOTION ROUND + TWO HONEST DEMOTIONS (human-reviewed, post-v0.44.x

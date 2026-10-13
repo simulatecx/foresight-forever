@@ -145,7 +145,12 @@ replacements) - k-of-n (>=3 accounts) + human review, never auto-applied; new sh
 selfcheck. FIRST LIVE CATCH: Oil of Olaf +50 armor confirmed; Goretusk Liver Pie observed
 +1 Str vs generated +3 (n=2) - suspected Forever LEVEL-SCALED Well-Fed values; needs
 observations at more levels before a correction is drafted (if confirmed, the fix is a
-scaling rule in generate.py, not a flat override).
+scaling rule in generate.py, not a flat override). EVIDENCE STATE 2026-10-13: Oil of
+Olaf +50 armor CONFIRMED exact (n=12); Goretusk +1 Str vs gen +3 holds at n=5;
+Slitherskin Mackerel observed +80 AP vs gen +6 at n=20 (a 13x gap - the scaling theory
+strengthens). ALL observations still sit at ONE character level, so the theory stays
+PARKED for multi-level data; the standing law holds (generate.py scaling rule when
+confirmed, never a flat override).
 CAPTURED-TOOLTIP VOTING SHIPPED (v0.25.1): harvest now parses the "Rank N/M" line off
 every captured talent tooltip (recovers ranks even on INSPECTED players' trees, where
 the journal's rank field can't resolve), strips chrome (rank line + the beta F6 footer
@@ -196,6 +201,12 @@ consumable tooltip "While active / On expiry these gains reverse" block; `/fores
 Decodes: 290 crit% (SpellEquippedItems discriminates weapon-conditional ones), 34 flat
 max health (Titans), 22 armor (Scrolls of Protection), 99/124 AP (Well Fed).
 Remaining: in-game render verify (fold into S3 session). Details: research doc A.
+Journal triage 2026-10-13: the hovered-without-data items are RESTORE/USE effects
+outside the stat-buff decode - healing potions (118 x17), bandages (1251 x3), and
+subclass-8 utility items (Incense Candle x17, First Aid Kit x20, Faintly Glowing
+Skull x3). Deferred ON THE RECORD: restore effects carry no stat impact for this
+model; their natural home is S10 PANIC's consumable registry (heal/escape options),
+not a buff-impact tooltip.
 Fit & Overlap: reuses applyOps/diff (no forked math); complements S10 PANIC (consumable registry).
 
 ### S15 - Racials impact ◐  (phase 1 SHIPPED v0.11.0)

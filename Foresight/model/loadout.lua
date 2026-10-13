@@ -393,9 +393,10 @@ function Loadout:build()
                 g:addModifier{ target = "stat.healingPower", op = "flat",
                                value = d.amount,
                                source = d.label or "delta:spellPower" }
-            elseif d.stat == "weaponDps" then
-                -- Display-only item stat (no graph node by design): the weapon-swap
-                -- compare owns weapon DPS; silently skip, never a note.
+            elseif d.stat == "weaponDps" or d.stat:find("^resist%.") then
+                -- Display-only item stats (no graph node by design): the weapon-swap
+                -- compare owns weapon DPS; resistances model no mitigation yet.
+                -- Silently skip, never a note.
                 local _ = nil
             else
                 local node = STAT_NODE[d.stat] or ("stat." .. d.stat)
