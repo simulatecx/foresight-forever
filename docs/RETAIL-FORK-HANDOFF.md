@@ -37,6 +37,24 @@ layer map and coupling census there define what moves and what must not.
   back into the Forever fork's data or formulas.
 - data/: generated tables, overrides.lua, loops.lua are per-game. Never cross.
 
+## Program schedule (user decision 2026-10-12)
+
+- NOW -> 2026-10-21 (beta close): Forever DEVELOPMENT is frozen at v0.36.0; Forever
+  PLAY TIME continues (captures are the only deadline-bound asset: trained talent
+  hovers, inspects, /foresight audit runs, buff observations - raw rendered text is
+  engine-independent ground truth). ALL dev effort moves to the retail fork.
+- CONTINUOUS PORT-BACK, not one migration: every engine/pipeline fix proven on
+  retail cherry-picks back immediately; the Forever gate (Forever-pinned data gates)
+  + one in-game /foresight audit after redeploy is the no-breakage confirmation, so
+  remaining beta sessions always capture on the best engine.
+- 2026-10-21 -> 11-04 (no Forever client exists): pure retail validation window -
+  drive audit mismatches to zero.
+- 2026-11-04: Forever launch build fetch/regenerate/gate/deploy, channel=live, open
+  crowdsourcing.
+- Boundary: "fix everything in retail" covers ENGINE/PIPELINE/ADAPTER code only;
+  Forever data corrections (rank rules, overrides, classic formula values) can only
+  come from Forever captures - which is why beta play time is irreplaceable.
+
 ## Workspace layout (decided 2026-10-12, already scaffolded)
 
 The fork lives in a SIBLING FOLDER as a full clone (shared git history = clean
