@@ -116,6 +116,7 @@ local function layout(model)
     y = y - 18
 
     local standing = model.header.standing or {}
+    if standing.name then
     local badge = acquireFS("ARTWORK", "GameFontNormalSmall")
     badge:SetPoint("TOP", panel, "TOP", 0, y - 3)
     badge:SetJustifyH("CENTER")
@@ -139,6 +140,7 @@ local function layout(model)
         line:SetColorTexture(r, g, b, 0.7)
     end
     panel.badgeTip = standing.detail
+    end
     y = y - 28
 
     -- Dimension bars (honest relative fill; basis printed under the block).

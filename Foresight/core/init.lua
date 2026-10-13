@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.38.0"
+HM.version = "0.39.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -86,6 +86,18 @@ function HM.gearGoal()
         return g
     end
     return "auto"
+end
+
+-- Per-character display settings (S27, recorded user decision: standing names STAY,
+-- default ON, toggleable). Validated on read; only whitelisted keys exist. The full
+-- options GUI is backlogged - /foresight set <key> on|off is the lever until then.
+local SHOW_KEYS = { standing = true }
+function HM.showSetting(key)
+    if not SHOW_KEYS[key] then return true end
+    local db = HM.charDb and HM.charDb()
+    local show = db and db.settings and db.settings.show
+    if type(show) == "table" and show[key] == false then return false end
+    return true
 end
 
 local function printMsg(msg)
@@ -373,6 +385,19 @@ local function onSlash(input)
         else
             printMsg("open the talent frame to see the tree light up; the Matrix shows the pathway")
         end
+        if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
+    elseif cmd == "set" then
+        -- Generic settings lever (S27; the options GUI menu is backlogged).
+        local key, val = rest:match("^(%S+)%s+(%S+)$")
+        if key ~= "standing" or (val ~= "on" and val ~= "off") then
+            printMsg("usage: /foresight set standing on|off (hides the archetype NAME; your numbers never hide)")
+            return
+        end
+        local db = HM.charDb()
+        if type(db.settings.show) ~= "table" then db.settings.show = {} end
+        db.settings.show.standing = (val == "on")
+        printMsg("standing names " .. val .. (val == "off" and " - lean and goal text remain" or ""))
+        if HM.StatsPanel and HM.StatsPanel.refresh then pcall(HM.StatsPanel.refresh) end
         if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
     elseif cmd == "report" then
         -- One-command calc-issue report (user binding 2026-10-12): bundle the live
@@ -848,7 +873,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | audit | report [note] | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | audit | report [note] | set standing on|off | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

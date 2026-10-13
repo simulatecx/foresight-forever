@@ -566,15 +566,12 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
         local okv, verdict = pcall(HM.Impact.itemVerdict, loadout, mapped, comparedStats,
             goal, ctx and ctx.weaponSwap)
         if okv and verdict then
-            local word, color
-            if verdict.direction == "upgrade" then word, color = "Upgrade", "|cff4ade80"
-            elseif verdict.direction == "downgrade" then word, color = "Downgrade", "|cfff87171"
-            else word, color = "Sidegrade", "|cff9d9d9d" end
-            local pctText = (verdict.direction == "sidegrade") and ""
-                or (" (%+.1f%%)"):format(verdict.pct)
+            -- S27: the ONE verdict shape (Display grammar).
+            local word = verdict.direction == "upgrade" and "Upgrade"
+                or verdict.direction == "downgrade" and "Downgrade" or "Sidegrade"
             lines[#lines + 1] = {
-                text = ("%s%s|r for %s%s%s"):format(color, word, verdict.label, pctText,
-                    verdict.compared and "" or " |cff9d9d9d(added)|r"),
+                text = HM.Display.verdict(word, verdict.label, verdict.pct)
+                    .. (verdict.compared and "" or " |cff9d9d9d(added)|r"),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
         end
@@ -588,8 +585,9 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
             local color = (w.pct >= 0.5 and "|cff4ade80")
                 or (w.pct <= -0.5 and "|cfff87171") or "|cff9d9d9d"
             lines[#lines + 1] = {
-                text = ("|cff9d9d9dMelee DPS change:|r %s%.1f -> %.1f (%+.1f DPS, %+.0f%%)|r (p)")
-                    :format(color, w.curDps, w.newDps, net, w.pct),
+                -- S27: the ONE comparison shape (Display grammar), direction-colored.
+                text = "|cff9d9d9dMelee DPS change:|r " .. color
+                    .. HM.Display.comparison(w.curDps, w.newDps, "DPS") .. "|r (p)",
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
             -- The explain layer (user binding 2026-10-12): the game already prints the
@@ -618,7 +616,7 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
     -- Archetype shift (SIM-engine): when the swap changes the plain-English standing
     -- of the whole build, say so prominently - that is a bigger call than +x%.
     -- (Suppressed for your own equipped item: re-adding its stats is a false shift.)
-    if HM.Sim and not equipped then
+    if HM.Sim and not equipped and (not HM.showSetting or HM.showSetting("standing")) then
         local oks, shift = pcall(HM.Sim.standingShift, loadout, mapped, comparedStats)
         if oks and shift then
             lines[#lines + 1] = {

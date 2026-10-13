@@ -38,6 +38,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S24 Modular split + Retail validation fork program | all | ◐ |
 | S25 School damage pools: +Frost means frost | 3 | ◐ |
 | S26 Class loop parity: all nine classes on the Matrix | 3 | ◐ |
+| S27 UI-display-grammar: one voice + the standing toggle | 3 | ◐ |
 
 ## Active / next
 
@@ -480,6 +481,24 @@ exists (abilityHit payoffs + Instant Poison per-swing for ROGUE); proc gaps say
 (9/9 classes) · ☑ selftest 242 (+3... +4 incl. roster gate) · ☐ one new class card
 render verify in-game.
 
+### S27 - UI-display-grammar: one voice for every number + the standing toggle ◐
+Fit & Overlap - Category UI -> GRAPH. Verdict: Net-new ui/display.lua (pure) as a
+CONSOLIDATION; delegates dimension values to D.display (never a second renderer).
+Touches (phased): tooltips (verdict + comparison MIGRATED, phase b), panel/matrix/
+commands + deletion of remaining superseded formatters = phases c/d (next cut).
+Trust: THE owner-control story - settings.show.standing (default ON, user decision
+2026-10-12), /foresight set standing on|off, respected at all four render sites
+(playstyleLabel prefix, Matrix badge, item Shifts-your-build line, /foresight build);
+OFF hides the NAME never the numbers; options GUI menu backlogged. Data: one
+validated settings key. Abuse: not externally reachable.
+
+AC: ☑ six claim shapes string-for-string selftested · ☑ weakest-tag inheritance ·
+☑ one color table + bracket exclusivity · ☑ /foresight set standing on|off validated
+(tamper defaults ON), four render sites respect it · ◐ phased migration (b done:
+tooltip verdict + comparison; c/d remaining: panel/matrix/command printers + formatter
+deletion) · ☑ options-menu GUI backlogged · ☑ selftest 246 (+4) · ☐ in-game render
+spot-check.
+
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
 /foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),
@@ -495,6 +514,8 @@ over every impact source (`/foresight catalog`), the query spine for synergy/sea
 Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 
 ## Backlog (not yet scheduled)
+- ☐ Options GUI menu: one panel listing every /foresight setting (standing toggle,
+  opacity, goal, focus) - groomed via S27; until then /foresight set is the lever.
 - ☐ DATA-proc-families: pipeline decode of proc rates beyond critHaste (Nightfall /
   Omen of Clarity / Seal of Command / Hawk-family) extending sim_procs.lua - upgrades
   the S26 loop cards from honest gaps to expected values.

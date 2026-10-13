@@ -68,9 +68,11 @@ function PanelModel.playstyleLabel(results, snapshot)
         else lean = " - balanced" end
     end
     -- SIM-engine standing: the plain-English name leads, the lean detail follows.
+    -- S27 toggle: the NAME is the user's to hide; the lean/goal text never hides.
     local standing = HM.Sim and HM.Sim.standing(results, stats)
-    local prefix = (standing and standing.name and standing.name ~= "Unmeasured")
-        and (standing.name .. " | ") or ""
+    local showName = not HM.showSetting or HM.showSetting("standing")
+    local prefix = (showName and standing and standing.name
+        and standing.name ~= "Unmeasured") and (standing.name .. " | ") or ""
     return ("%s%s-leaning%s (v0 heuristic)"):format(prefix, arch.word, lean)
 end
 
@@ -181,6 +183,10 @@ function PanelModel.matrixModel(loadout, activeLoopId, pathways, focus)
     local stats = snapshot.stats or {}
     local standing = HM.Sim and HM.Sim.standing(results, stats)
         or { name = "?", detail = "" }
+    -- S27 toggle: hide the archetype NAME on the Matrix badge; detail/lean remain.
+    if HM.showSetting and not HM.showSetting("standing") then
+        standing = { name = nil, detail = standing.detail, lean = standing.lean }
+    end
 
     -- Dimension bars, grouped for an honest relative fill.
     local groupMax = { output = 0, defense = 0 }

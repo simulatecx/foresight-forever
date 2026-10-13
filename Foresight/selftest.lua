@@ -508,6 +508,56 @@ function HM.runSelftest(out)
         return text:find("+17.1%", 1, true) ~= nil
             and text:find("Melee DPS |cff9d9d9d(vs equipped)", 1, true) ~= nil
     end)())
+    -- S27 display grammar: six claim shapes, one color table, the honesty ladder.
+    check("display grammar: the six claim shapes, string for string", (function()
+        local D = HM.Display
+        return D.magnitude(24, "Attack Power") == "+24 Attack Power"
+            and D.magnitude(1.7) == "+1.7"
+            and D.translation("+1.7 damage per swing", "3.8s weapon", true)
+                == "-> ~+1.7 damage per swing (3.8s weapon)"
+            and D.comparison(27.4, 28.3, "DPS") == "27.4 -> 28.3 DPS (+0.9, +3.3%)"
+            and D.verdict("Upgrade", "Melee DPS", 2.8)
+                == "|cff4ade80Upgrade|r for Melee DPS (+2.8%)"
+            and D.verdict("Nonsense", "X"):find("Sidegrade", 1, true) ~= nil
+            and D.cascade({ "+12 Strength", "+24 AP" })
+                == "|cff33ff99[|r+12 Strength|cff33ff99]|r -> |cff33ff99[|r+24 AP|cff33ff99]|r"
+            and D.attribution("1 Str = 2 AP") == "|cff9d9d9d(via 1 Str = 2 AP)|r"
+    end)())
+    check("display grammar: honesty ladder + weakest-tag inheritance", (function()
+        local D = HM.Display
+        return D.mark("presumed") == " |cff9d9d9d(p)|r"
+            and D.mark("none") == ""
+            and D.mark("crowd-verified"):find("crowd%-verified") ~= nil
+            and D.weakest("play-verified", "presumed") == "presumed"
+            and D.weakest("datamined", "crowd-verified") == "crowd-verified"
+            and D.weakest(nil, "datamined") == "none"
+    end)())
+    check("display grammar: brackets are cascade-exclusive; one color table", (function()
+        local D = HM.Display
+        for _, s in ipairs({ D.magnitude(5, "x"), D.translation("t"), D.comparison(1, 2),
+                D.verdict("Upgrade", "x", 1), D.attribution("a"), D.mark("presumed") }) do
+            if s:find("[", 1, true) then return false, s end
+        end
+        return D.COLORS.gain == "4ade80" and D.COLORS.loss == "f87171"
+            and D.color("gain", "x") == "|cff4ade80x|r"
+    end)())
+    check("standing toggle: name hides on all surfaces, numbers never do", (function()
+        if not (HM.charDb and HM.showSetting) then return false end
+        local db = HM.charDb()
+        local saved = db.settings.show
+        db.settings.show = { standing = false }
+        local label = HM.PanelModel.playstyleLabel(HM.Impact.evaluate(base), base.snapshot)
+        local m = HM.PanelModel.matrixModel(base, nil, nil, nil)
+        local offOk = label:find("Glass Cannon", 1, true) == nil
+            and label:find("leaning", 1, true) ~= nil -- the lean text remains
+            and m.header.standing.name == nil
+            and type(m.header.standing.detail) == "string"
+        db.settings.show = "garbage" -- tamper: validated read must default ON
+        local tamperOk = HM.showSetting("standing") == true
+        db.settings.show = saved
+        local onLabel = HM.PanelModel.playstyleLabel(HM.Impact.evaluate(base), base.snapshot)
+        return offOk and tamperOk and onLabel:find("Glass Cannon", 1, true) ~= nil
+    end)())
     check("lens display law: real units + vs-base indices (summary coherence)", (function()
         local D = HM.dimensions
         return D.display("meleeDps", 154) == "15.4 DPS"

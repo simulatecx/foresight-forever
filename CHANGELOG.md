@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.39.0 - 2026-10-12
+
+UI DISPLAY GRAMMAR + THE STANDING TOGGLE (S27). New pure ui/display.lua: six claim
+shapes (magnitude, translation, comparison, verdict with a fixed vocabulary, the
+bracket-exclusive cascade, and the Gemini-ratified attribution), the five-step
+honesty ladder (play-verified / datamined / crowd-verified / (p) / silence) with
+weakest-tag inheritance, and THE color table - one semantic, one color. Dimension
+values stay with D.display (delegation, never a second renderer). Phase b migration:
+the item verdict line and the Melee-DPS-change comparison now speak the grammar;
+panel/matrix/command printers and formatter deletion follow as phases c/d. And the
+recorded user decision ships: archetype/standing names stay, DEFAULT ON, with
+/foresight set standing on|off (validated; tamper defaults ON) respected at all four
+render sites - the NAME hides, the numbers never do. Options GUI menu backlogged.
+Selftest 246 (+4).
+
+*Features:* UI-display-grammar, UI-stats-panel, UI-matrix-panel, UI-item-tooltip,
+UI-playstyle-label, QA-selftest-harness
+
 ## 0.38.0 - 2026-10-12
 
 CLASS LOOP PARITY (S26): all nine classes on the Matrix. Six new curated loops -
