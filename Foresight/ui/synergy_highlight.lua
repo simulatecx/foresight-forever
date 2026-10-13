@@ -111,6 +111,53 @@ function Highlight.endTransient()
     return true
 end
 
+-- SESSION-ONLY focus/theme (v0.45.1): the highlight is a thing you ASK FOR this
+-- session, never a state that resurrects on every login. The old design persisted
+-- focus/theme to SavedVariables and auto-re-applied it on talent-UI open, so a focus
+-- set once lit the tree forever (the user's "Lightning always highlights when I log
+-- in") - and applying overlays to talent buttons at login is exactly the taint class
+-- v0.33.2 warned about. Now the value lives in a session upvalue that starts nil on
+-- every login; migrateLegacy() wipes the stale persisted keys so nothing lingers.
+-- Pure (above the headless guard) so the selftest can prove the no-persist contract.
+local sessionFocus, sessionTheme
+local legacyMigrated = false
+
+local function validName(v)
+    return (type(v) == "string" and v ~= "" and #v <= 40) and v or nil
+end
+
+-- One-time per session: clear the legacy persisted focus/theme (the stuck overlay).
+local function migrateLegacy()
+    if legacyMigrated then return end
+    legacyMigrated = true
+    local db = HM.charDb and HM.charDb()
+    if db and type(db.settings) == "table" and type(db.settings.synergy) == "table" then
+        db.settings.synergy.focus = nil
+        db.settings.synergy.theme = nil
+    end
+end
+Highlight._migrateLegacy = migrateLegacy -- selftest hook
+
+function Highlight.savedTheme()
+    return validName(sessionTheme)
+end
+
+function Highlight.setTheme(query) -- nil clears
+    migrateLegacy()
+    sessionTheme = validName(query)
+end
+
+-- Session skill focus (S22a): the ability name the player is studying THIS session.
+-- Focus outranks the theme on tree open; both reset to nil on logout/login.
+function Highlight.savedFocus()
+    return validName(sessionFocus)
+end
+
+function Highlight.setFocus(query) -- nil clears
+    migrateLegacy()
+    sessionFocus = validName(query)
+end
+
 if not _G.CreateFrame then return Highlight end -- headless: pure selector only
 
 local BRAND = { r = 0.2, g = 1, b = 0.6 }   -- theme glow (synergy)
@@ -302,41 +349,11 @@ function Highlight.playerContext()
              buffs = HM.Snapshot.captureActiveBuffs() }
 end
 
--- Saved theme (per character, validated on read - untrusted-input law).
-local function synergySettings()
-    local db = HM.charDb and HM.charDb()
-    if not db then return nil end
-    if type(db.settings.synergy) ~= "table" then db.settings.synergy = {} end
-    return db.settings.synergy
-end
-
-function Highlight.savedTheme()
-    local s = synergySettings()
-    local t = s and s.theme
-    return (type(t) == "string" and t ~= "" and #t <= 40) and t or nil
-end
-
-function Highlight.setTheme(query) -- nil clears
-    local s = synergySettings()
-    if s then s.theme = query end
-end
-
--- Saved skill focus (S22a): the ability name the player is studying. Validated on
--- read like the theme (untrusted-input law). Focus outranks the theme on tree open.
-function Highlight.savedFocus()
-    local s = synergySettings()
-    local f = s and s.focus
-    return (type(f) == "string" and f ~= "" and #f <= 40) and f or nil
-end
-
-function Highlight.setFocus(query) -- nil clears
-    local s = synergySettings()
-    if s then s.focus = query end
-end
-
--- Re-apply the saved PERSISTENT look (focus first, then theme). Combat-gated.
+-- Re-apply the look set THIS session (focus first, then theme) when the talent UI
+-- re-opens mid-session. Combat-gated. Fresh login = nothing set = nothing lit.
 function Highlight.restoreSaved()
     if _G.InCombatLockdown and _G.InCombatLockdown() then return end
+    migrateLegacy()
     local focus = Highlight.savedFocus()
     local theme = Highlight.savedTheme()
     if focus then pcall(Highlight.applyAbility, focus)
@@ -418,7 +435,15 @@ local boot = _G.CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
 boot:RegisterEvent("ADDON_LOADED")
 boot:SetScript("OnEvent", function(_, event, addon)
-    if event == "PLAYER_LOGIN" or addon == "Blizzard_PlayerSpells" then hookTalentUI() end
+    if event == "PLAYER_LOGIN" then
+        hookTalentUI()
+        -- Wipe any legacy persisted focus/theme at login so a focus set in an old
+        -- build never resurrects (the stuck-Lightning report). Nothing lights until
+        -- the user asks this session.
+        if migrateLegacy then migrateLegacy() end
+    elseif addon == "Blizzard_PlayerSpells" then
+        hookTalentUI()
+    end
 end)
 
 return Highlight

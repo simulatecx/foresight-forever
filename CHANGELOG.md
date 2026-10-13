@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.45.1 - 2026-10-13
+
+S33 IN-GAME FEEDBACK PASS (first live look at the UI dynamics). The radar drew and
+reads well ("Radar is good!"); three fixes from the session:
+
+- STUCK TALENT OVERLAY FIXED. A talent focus set once (the user's Lightning Bolt) was
+  persisted per character and auto-re-applied on every login - the tree lit up on its
+  own forever. Focus AND theme are now SESSION-ONLY: nothing highlights until you ask
+  this session (`/foresight focus <ability>`, the ALT trace, or `/foresight synergy
+  <theme>`), and login wipes any legacy persisted value so the stuck overlay is gone.
+  This also removes a login-time talent-overlay vector from the taint class v0.33.2
+  flagged.
+- MATRIX HORIZONTAL STRETCH. The panel was a fixed 320px vertical strip and the new
+  ecosystem diagram cramped. It is now user-resizable: drag the bottom-right grip to
+  widen it (300-680, validated + saved per char), and the whole layout re-flows off
+  the live width - bars, the Enabler->Engine->Payoff node boxes, and the gauges all
+  get room. Height stays content-driven.
+- Selftest 274 (+2): width validation/clamp, and the focus session-only contract
+  (set round-trips, a planted legacy DB value is wiped, never persists).
+
+ACCOUNT-SAFETY (open): the session also reported another client block naming
+Foresight. The flushed sentinel record pins the exact function + context, and
+SavedVariables only flush on logout/reload - so the vector gets pinned from the
+harvest on the next /reload. The focus fix above removes one plausible login-time
+vector in the meantime; the taint-law lint stays green (no new key-writes/regions on
+Blizzard objects in this change).
+
+*Features:* SYNERGY-highlight, UI-matrix-panel, CORE-options, QA-selftest-harness
+
 ## 0.45.0 - 2026-10-13
 
 UI DYNAMICS (S33, the user directive: "i dont like the text - rig up some dynamic

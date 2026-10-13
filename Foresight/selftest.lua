@@ -1764,6 +1764,30 @@ function HM.runSelftest(out)
             and (gm.note or ""):find("60s", 1, true) ~= nil
             and (gm.label or ""):find("(p)", 1, true) ~= nil
     end)())
+    check("matrix width: validated + clamped (horizontal stretch state)", (function()
+        local N = HM.PanelModel.normalizeWidth
+        return N("junk") == 320 and N(100) == HM.PanelModel.WIDTH_MIN
+            and N(9999) == HM.PanelModel.WIDTH_MAX and N(421.6) == 422
+    end)())
+    check("focus is session-only: set round-trips, never persists to the DB", (function()
+        local H = HM.SynergyHighlight
+        if not (H and H.setFocus and H.savedFocus) then return false end
+        -- A legacy persisted focus must be wiped, not read.
+        local db = { settings = { synergy = { focus = "Lightning Bolt",
+            theme = "crit" } } }
+        local realCharDb = HM.charDb
+        HM.charDb = function() return db end
+        H.setFocus("Fireball")
+        local ok = H.savedFocus() == "Fireball"
+            and db.settings.synergy.focus == nil  -- legacy value wiped
+            and db.settings.synergy.theme == nil
+        H.setFocus(nil)
+        ok = ok and H.savedFocus() == nil
+        H.setFocus(("x"):rep(99)) -- over the 40-char cap -> rejected to nil
+        ok = ok and H.savedFocus() == nil
+        HM.charDb = realCharDb
+        return ok
+    end)())
 
     -- Per-talent rank rules (S11): captured votes resolve each talent's scaling.
     check("per-talent rank rule defaults to the global hypothesis", (function()

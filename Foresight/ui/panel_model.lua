@@ -87,6 +87,19 @@ function PanelModel.normalizeOpacity(v)
     return a
 end
 
+-- Matrix panel WIDTH (S33: user-resizable horizontal stretch). Validated like opacity:
+-- garbage/out-of-range falls back to the default; the min keeps the eco diagram's three
+-- node boxes legible, the max keeps it on-screen at low resolution (mobile binding).
+local WIDTH_DEFAULT, WIDTH_MIN, WIDTH_MAX = 320, 300, 680
+function PanelModel.normalizeWidth(v)
+    local w = tonumber(v)
+    if not w then return WIDTH_DEFAULT end
+    if w < WIDTH_MIN then return WIDTH_MIN end
+    if w > WIDTH_MAX then return WIDTH_MAX end
+    return math.floor(w + 0.5)
+end
+PanelModel.WIDTH_MIN, PanelModel.WIDTH_MAX = WIDTH_MIN, WIDTH_MAX
+
 -- The Matrix panel model (S7b, mockups/foresight-matrix-2026-10-12.html): header with
 -- the plain-English standing badge, dimension BARS, and the class's Enabler -> Engine
 -- -> Payoff loops. Pure - the renderer draws, this decides.

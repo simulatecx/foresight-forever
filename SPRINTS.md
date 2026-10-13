@@ -639,6 +639,16 @@ selftests +5 (geometry points/fan/layout, gaugeModel both paths + honest-empty,
 uiMotion validation; 272 total) · ☑ gate green + deployed · ☐ in-game verify incl.
 mobile binding + uiMotion=off round-trip (the P1 sweep).
 
+IN-GAME FEEDBACK 2026-10-13 (v0.45.1): radar user-confirmed ("Radar is good!").
+Fixes: (1) STUCK FOCUS - a persisted focus auto-relit the tree every login; focus +
+theme are now SESSION-ONLY (nothing lights until asked this session; login wipes the
+legacy value) - also kills a login-time talent-overlay taint vector. (2) MATRIX
+HORIZONTAL STRETCH - the panel is now resizable (drag grip, width 300-680 validated +
+saved) and re-flows off the live width so the eco diagram/bars/gauges stop cramping.
+Selftest 274 (+2). ☐ STILL OPEN: another client taint block reported this session -
+pin the exact func/context from the next /reload harvest (SavedVariables flush on
+logout/reload only); ☐ in-game verify the resize + session-focus behavior.
+
 
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
 /foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),

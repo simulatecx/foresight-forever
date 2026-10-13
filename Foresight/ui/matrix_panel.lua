@@ -59,6 +59,12 @@ local function restorePosition()
     end
 end
 
+-- S33: the saved, validated panel width (horizontal-stretch state).
+local function restoreWidth()
+    if not panel then return end
+    panel:SetWidth(HM.PanelModel.normalizeWidth(uiState().width))
+end
+
 -- Font-string + texture pools: the panel rebuilds on every refresh/cycle.
 local function acquireFS(layer, template)
     for _, f in ipairs(fsPool) do
@@ -117,7 +123,10 @@ local function layout(model)
     end
     local motion = HM.Motion and HM.Motion.level() or "off"
     local r, g, b = classColor()
-    local innerW = WIDTH - PAD * 2
+    -- S33: the panel is user-resizable (horizontal stretch) - all layout works off the
+    -- LIVE width, so widening re-flows the bars, the eco diagram, and the gauges.
+    local W = math.floor((panel:GetWidth() or WIDTH) + 0.5)
+    local innerW = W - PAD * 2
     local y = -30 -- below the title bar
 
     -- Character header: name, descriptor, standing badge (mockup component 1).
@@ -428,7 +437,7 @@ local function layout(model)
         local size = 44
         local n = #model.gauges
         local totalW = n * size + (n - 1) * 36
-        local left = (WIDTH - totalW) / 2
+        local left = (W - totalW) / 2
         local gy = y - 8
         for i, gm in ipairs(model.gauges) do
             local gx = left + (i - 1) * (size + 36)
@@ -578,6 +587,16 @@ local function createPanel()
     panel = _G.CreateFrame("Frame", "ForesightMatrixPanel", _G.UIParent)
     panel:SetWidth(WIDTH)
     panel:SetMovable(true)
+    panel:SetResizable(true)
+    -- Width-only resize bounds (height is content-driven). SetResizeBounds is the
+    -- 11.x API; pcall the older min/max setters as a fallback (degrade law).
+    local wmin, wmax = HM.PanelModel.WIDTH_MIN, HM.PanelModel.WIDTH_MAX
+    if panel.SetResizeBounds then
+        pcall(panel.SetResizeBounds, panel, wmin, 160, wmax, 2000)
+    else
+        pcall(panel.SetMinResize, panel, wmin, 160)
+        pcall(panel.SetMaxResize, panel, wmax, 2000)
+    end
     panel:EnableMouse(true)
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", function(self) self:StartMoving() end)
@@ -588,6 +607,7 @@ local function createPanel()
                           x = math.floor(x + 0.5), y = math.floor(y + 0.5) }
     end)
     restorePosition()
+    restoreWidth()
 
     -- Dark card + hairline border; the bg alpha is the user's opacity baseline.
     panel.bg = panel:CreateTexture(nil, "BACKGROUND", nil, -8)
@@ -650,6 +670,34 @@ local function createPanel()
         _G.GameTooltip:Show()
     end)
     optBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+
+    -- S33 RESIZE GRIP: drag the bottom-right corner to stretch the panel wider; the
+    -- layout re-flows to the new width live and the validated width is saved per char.
+    local grip = _G.CreateFrame("Button", nil, panel)
+    grip:SetSize(16, 16)
+    grip:SetPoint("BOTTOMRIGHT", -2, 2)
+    grip:EnableMouse(true)
+    local gripTex = grip:CreateTexture(nil, "OVERLAY")
+    gripTex:SetAllPoints()
+    gripTex:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetScript("OnMouseDown", function()
+        panel:StartSizing("BOTTOMRIGHT")
+    end)
+    grip:SetScript("OnMouseUp", function()
+        panel:StopMovingOrSizing()
+        local w = HM.PanelModel.normalizeWidth(panel:GetWidth())
+        panel:SetWidth(w) -- clamp back inside bounds
+        uiState().width = w
+        MatrixPanel.refresh() -- re-flow to the final width
+    end)
+    -- Live re-flow while the PANEL resizes (throttled so it isn't a per-frame rebuild).
+    local sizePending
+    panel:SetScript("OnSizeChanged", function()
+        if sizePending or not panel:IsShown() then return end
+        sizePending = true
+        local function run() sizePending = nil; MatrixPanel.refresh() end
+        if _G.C_Timer and _G.C_Timer.After then _G.C_Timer.After(0.05, run) else run() end
+    end)
 
     panel:Hide()
     -- S33 throttle law: a hidden panel runs zero animation work.
