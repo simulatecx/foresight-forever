@@ -80,6 +80,37 @@ function Highlight.abilityClassified(query, ctx)
     return dIds, iIds, dNames, iNames, c.spell
 end
 
+-- S32 action-bar trigger - the PURE half (headless-testable): a TRANSIENT focus (the
+-- hold-ALT trace) that NEVER saves over the user's persistent focus. State is tracked
+-- so the restore is exact; applyAbility/clear/restoreSaved exist only in-game, so the
+-- transient functions call them defensively (and set/clear the flag either way).
+local transientActive = false
+function Highlight.isTransient() return transientActive end
+
+-- Pure: an action slot's (type, id) -> the spell name we can trace, or nil (honest
+-- skip for macro/item/companion slots - we only trace spells we have data for).
+function Highlight.actionToSpellName(actionType, id)
+    if actionType == "spell" and id then
+        local sp = HM.gen and HM.gen.spells and HM.gen.spells[id]
+        return sp and sp.name
+    end
+    return nil
+end
+
+function Highlight.applyTransient(spellName)
+    if not spellName then return nil end
+    transientActive = true
+    if Highlight.applyAbility then return Highlight.applyAbility(spellName) end -- never setFocus
+end
+
+function Highlight.endTransient()
+    if not transientActive then return false end
+    transientActive = false
+    if Highlight.clear then Highlight.clear() end
+    if Highlight.restoreSaved then Highlight.restoreSaved() end
+    return true
+end
+
 if not _G.CreateFrame then return Highlight end -- headless: pure selector only
 
 local BRAND = { r = 0.2, g = 1, b = 0.6 }   -- theme glow (synergy)
@@ -303,6 +334,23 @@ function Highlight.setFocus(query) -- nil clears
     if s then s.focus = query end
 end
 
+-- Re-apply the saved PERSISTENT look (focus first, then theme). Combat-gated.
+function Highlight.restoreSaved()
+    if _G.InCombatLockdown and _G.InCombatLockdown() then return end
+    local focus = Highlight.savedFocus()
+    local theme = Highlight.savedTheme()
+    if focus then pcall(Highlight.applyAbility, focus)
+    elseif theme then pcall(Highlight.apply, theme) end
+end
+
+-- The configured trace modifier is down? (reads the settings spine, S30.)
+local function triggerModifierDown()
+    local mode = HM.Settings and HM.Settings.get("actionTrigger") or "off"
+    if mode == "alt" then return _G.IsAltKeyDown and _G.IsAltKeyDown() end
+    if mode == "shift" then return _G.IsShiftKeyDown and _G.IsShiftKeyDown() end
+    return false -- off
+end
+
 -- Re-apply the saved focus (first) or theme whenever the talent UI opens (it is
 -- load-on-demand, so hook once Blizzard_PlayerSpells exists); clear overlays on hide.
 local hooked
@@ -312,21 +360,44 @@ local function hookTalentUI()
     if not (psf and psf.HookScript) then return end
     hooked = true
     psf:HookScript("OnShow", function()
-        local focus = Highlight.savedFocus()
-        local theme = Highlight.savedTheme()
-        if (focus or theme) and _G.C_Timer and _G.C_Timer.After then
-            _G.C_Timer.After(0.3, function()
-                -- Combat gate: the saved look can wait for the next open.
-                if _G.InCombatLockdown and _G.InCombatLockdown() then return end
-                if focus then
-                    pcall(Highlight.applyAbility, focus)
-                else
-                    pcall(Highlight.apply, theme)
-                end
-            end)
+        if _G.C_Timer and _G.C_Timer.After then
+            _G.C_Timer.After(0.3, Highlight.restoreSaved)
+        end
+        -- S32 hint: one corner line when the trace is enabled (settings-driven text).
+        local mode = HM.Settings and HM.Settings.get("actionTrigger") or "off"
+        if mode ~= "off" and not psf.foresightHint then
+            local hint = psf:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+            hint:SetPoint("BOTTOMLEFT", psf, "BOTTOMLEFT", 12, 10)
+            hint:SetText(("|cff9d9d9dHold %s + hover an action button to trace it|r")
+                :format(mode:upper()))
+            psf.foresightHint = hint
+        elseif psf.foresightHint then
+            psf.foresightHint:SetShown(mode ~= "off")
+            if mode ~= "off" then
+                psf.foresightHint:SetText(("|cff9d9d9dHold %s + hover an action button to trace it|r")
+                    :format(mode:upper()))
+            end
         end
     end)
     psf:HookScript("OnHide", function() pcall(Highlight.clear) end)
+
+    -- S32: hovering an action button fires GameTooltip:SetAction(slot). We read the
+    -- slot's spell (GetActionInfo, read-only), check the modifier, and apply a
+    -- TRANSIENT trace - all visuals on the talent-tree overlays; we NEVER touch an
+    -- action button (the taint law). Combat-gated; only while the talent UI is open.
+    local gt = _G.GameTooltip
+    if gt and _G.hooksecurefunc and type(gt.SetAction) == "function" then
+        _G.hooksecurefunc(gt, "SetAction", function(_, slot)
+            if _G.InCombatLockdown and _G.InCombatLockdown() then return end
+            if not (psf.IsShown and psf:IsShown()) then return end
+            if not triggerModifierDown() then return end
+            if not (_G.GetActionInfo and slot) then return end
+            local okA, actionType, id = pcall(_G.GetActionInfo, slot)
+            local name = okA and Highlight.actionToSpellName(actionType, id)
+            if name then pcall(Highlight.applyTransient, name) end
+        end)
+        gt:HookScript("OnHide", function() pcall(Highlight.endTransient) end)
+    end
 end
 
 local boot = _G.CreateFrame("Frame")

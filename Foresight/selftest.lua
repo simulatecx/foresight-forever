@@ -1890,6 +1890,32 @@ function HM.runSelftest(out)
     check("ability members return nil for unknown abilities (no false glow)", (function()
         return HM.SynergyHighlight.abilityMembers("Totally Fake Spell") == nil
     end)())
+    -- S32 action-bar trigger: the slot resolver + the transient/persistent state machine.
+    check("action trigger: slot->spell resolves spells, honest-skips macros/items", (function()
+        local H = HM.SynergyHighlight
+        return H.actionToSpellName("spell", 133) == "Fireball"
+            and H.actionToSpellName("spell", 999999999) == nil -- unknown id: no false trace
+            and H.actionToSpellName("macro", 1) == nil
+            and H.actionToSpellName("item", 1) == nil
+            and H.actionToSpellName(nil, nil) == nil
+    end)())
+    check("action trigger: transient focus never persists; ends restore cleanly", (function()
+        local H = HM.SynergyHighlight
+        if H.isTransient() then return false, "dirty start" end
+        local db = HM.charDb()
+        local before = db.settings.synergy and db.settings.synergy.focus or nil
+        -- headless: applyAbility finds no talent UI (returns nil) but the STATE is set.
+        H.applyTransient("Fireball")
+        local during = H.isTransient()
+        -- the transient trace must NOT have written the persistent focus setting
+        local nowFocus = db.settings.synergy and db.settings.synergy.focus or nil
+        local leaked = nowFocus ~= before
+        local ended = H.endTransient()
+        local after = H.isTransient()
+        local endsIdempotent = H.endTransient() == false -- nothing to end now
+        return during == true and leaked == false and ended == true
+            and after == false and endsIdempotent
+    end)())
 
     -- WHATIF-planner: persistent future-build plan over the one delta stack.
     check("plan validates typed deltas and drops garbage", (function()

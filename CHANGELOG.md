@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.44.0 - 2026-10-12
+
+ACTION-BAR SYNERGY TRIGGER (S32): with the talent tree open, hold ALT (or Shift, or
+off - the actionTrigger setting from S30) and hover any button on your real action
+bars to light up every talent that feeds it. It is a TRANSIENT trace into the existing
+focus machinery (S22a classification + dual glow + overlay dim) - it NEVER saves over
+your persistent /foresight focus; on modifier release, hover end, or talent-UI close it
+clears and restores your prior look exactly. The slot resolves through GetActionInfo
+(Guards-routed, read-only); macro/item/unknown slots honest-skip (we only trace spells
+we have data for). TAINT LAW held: we read action slots and hook GameTooltip:SetAction,
+but never create, touch, or overlay an action BUTTON - all visuals stay on the talent-
+tree overlays; combat-gated throughout. A one-line hint appears in the talent frame
+when the trace is on. apiWatch gains GetActionInfo + the modifier keys. Selftest 266
+(+2): the slot->spell resolver (spells resolve, macros/items/unknown skip) and the
+transient-vs-persistent state machine (apply sets state without leaking to the saved
+focus; end restores and is idempotent).
+
+*Features:* SYNERGY-highlight, UI-mapping-panel, CORE-options, QA-verify-command,
+QA-selftest-harness
+
 ## 0.43.0 - 2026-10-12
 
 THE EXPANDED CHARACTER TAB - models + sections (S31). The FS side panel grows three
