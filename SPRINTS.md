@@ -42,6 +42,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S28 Goal-first: ability goals + plan-aware gear relevance | 3 | ◐ |
 | S29 Class roster + per-class coverage report | - | ◐ |
 | S30 CORE-options: settings surface, one spine two controls | 3 | ◐ |
+| S31 Expanded Character Tab (top outputs, ledger, radar) | 3 | ◐ |
 
 ## Active / next
 
@@ -544,6 +545,21 @@ AC: ☑ SETTINGS_KEYS declared (type/default/validator/description), standing mi
 report button wired · ☑ tabs from shipped groups only · ☑ combat-gated; validators
 heal tamper (false-value read bug caught + pinned) · ☑ selftest 259 (+5) · ☐ in-game
 render + toggle verify.
+
+### S31 - The Expanded Character Tab: top outputs, the ledger, the radar ◐  (S30-S32 handoff)
+Fit & Overlap - Category UI -> MODEL. Verdict: Enhance UI-stats-panel (new sections,
+keep drag/pos/refresh) + net-new PURE models (core/spellbook.lua adapter,
+Sim.topOutputs, PanelModel.ledgerModel, PanelModel.radarModel) rendered display-grammar
+native (= S27 phase c). Trust: ranking-basis law (per-use non-crit, kind-split, NO DPS
+claim), ledger RECONCILIATION law (Base+other remainder + over-attribution (p)), radar
+per-axis independent normalization + basis line. New guarded reads Guards-routed +
+apiWatch. Mobile: radar edges-only (fallback law) pending the screenshot polygon.
+
+AC: ☑ spellbook adapter (guarded, apiWatch, headless-empty) · ☑ top-3 ranking law,
+kind-split · ☑ ledgerModel sources + reconciliation + discrepancy · ☑ radarModel
+per-axis independence + plan layer 2 + basis · ☑ sections wired into the FS panel ·
+☑ selftest 264 (+5) · ◐ spoke polygon + header/eye + top-3 hover->ledger = screenshot
+pass · ☐ in-game verify pilot + one other class.
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

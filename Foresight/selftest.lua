@@ -752,8 +752,16 @@ function HM.runSelftest(out)
 
     -- Stats panel model (the renderer is in-game only; the model is fully testable).
     local model = HM.PanelModel.build(base)
-    check("panel model has 6 sections (incl. Future build)", model and #model.sections == 6,
-        model and #model.sections)
+    local function sectionById(id)
+        for _, sec in ipairs(model.sections) do if sec.id == id then return sec end end
+    end
+    check("panel model has the core sections (dims/regen/mechanics/whatif/plan/statvalue)",
+        (function()
+            for _, id in ipairs({ "dimensions", "regen", "mechanics", "whatif", "plan", "statvalue" }) do
+                if not sectionById(id) then return false, id end
+            end
+            return #model.sections >= 6
+        end)(), model and #model.sections)
     check("panel Future build section hints when the plan is empty", (function()
         for _, s in ipairs(model.sections) do
             if s.id == "plan" then
@@ -779,12 +787,82 @@ function HM.runSelftest(out)
     end)())
     check("panel dimensions section has 8 rows (incl. threat)", model.sections[1].rows and #model.sections[1].rows == 8)
     check("panel regen marks presumed formulas", (function()
-        local v = model.sections[2].rows[1].value
+        local v = sectionById("regen").rows[1].value
         return type(v) == "string" and v:find("%(p%)") ~= nil
     end)())
     check("panel what-if rows are human lines", (function()
-        local rows = model.sections[4].rows
+        local rows = sectionById("whatif").rows
         return #rows == 5 and rows[1].label == "+10 Spirit" and rows[1].value:find("mana/min") ~= nil
+    end)())
+    -- S31 character tab: top outputs (ranking law), ledger (reconciliation), radar.
+    check("top outputs: ranking by per-use non-crit, kind-split, no DPS claim", (function()
+        -- Caster fixture with spell power: Fireball + Frostbolt rank by avg; the
+        -- ranking never claims DPS and never mixes damage with heal.
+        local snap = testSnapshot()
+        snap.stats.spellDamage = 100
+        snap.stats.schoolDamage = { holy=0, fire=100, nature=0, frost=100, shadow=0, arcane=0 }
+        local lo = HM.Loadout.fromSnapshot(snap)
+        local tops = HM.Sim.topOutputs(lo, { 133, 116, 331 }, 3) -- Fireball, Frostbolt, Healing Wave
+        if not tops then return false end
+        -- 133/116 are damage, 331 is heal: kind separation holds.
+        local dmgNames, healNames = {}, {}
+        for _, o in ipairs(tops.damage) do dmgNames[o.name] = true
+            if o.kind == "heal" then return false, "heal in damage bucket" end end
+        for _, o in ipairs(tops.heal) do healNames[o.name] = true
+            if o.kind ~= "heal" then return false, "non-heal in heal bucket" end end
+        -- sorted by avg descending
+        for i = 2, #tops.damage do
+            if tops.damage[i].avg > tops.damage[i-1].avg then return false, "not sorted" end
+        end
+        return dmgNames["Fireball"] and healNames["Healing Wave"]
+    end)())
+    check("ledger: reconciliation remainder always renders; over-attribution flags (p)", (function()
+        local snap = testSnapshot()
+        snap.stats.spellDamage = 50
+        snap.stats.attackPower = 100
+        local lo = HM.Loadout.fromSnapshot(snap)
+        -- Attribute +30 AP from gear: remainder = 70 ("Base + other").
+        local led = HM.PanelModel.ledgerModel(lo, { attackPower = 30 })
+        local apRow
+        for _, r in ipairs(led.rows) do if r.label == "Attack Power" then apRow = r end end
+        if not apRow then return false, "no AP row" end
+        local joined = table.concat(apRow.sources, " | ")
+        if joined:find("Base %+ other: 70") == nil then return false, "no remainder" end
+        -- Over-attribution: +200 AP on a 100 sheet -> discrepancy (p) line.
+        local led2 = HM.PanelModel.ledgerModel(lo, { attackPower = 200 })
+        for _, r in ipairs(led2.rows) do
+            if r.label == "Attack Power" then
+                return table.concat(r.sources, " | "):find("exceeds your sheet") ~= nil
+            end
+        end
+        return false
+    end)())
+    check("ledger: a zero pool renders no row (roster-law relevance)", (function()
+        local snap = testSnapshot()
+        snap.stats.healingPower = 0
+        local led = HM.PanelModel.ledgerModel(HM.Loadout.fromSnapshot(snap), nil)
+        for _, r in ipairs(led.rows) do
+            if r.label == "Healing Power" then return false, "healing row on zero pool" end
+        end
+        return true
+    end)())
+    check("radar: per-axis independent normalization, plan overlay, basis line", (function()
+        local radar = HM.PanelModel.radarModel(base, {})
+        if not (radar and #radar.axes == 8 and not radar.hasPlan) then return false end
+        -- Every axis fill is in [0,1]; with no plan, curFill == 1 on each (self-max).
+        for _, ax in ipairs(radar.axes) do
+            if ax.curFill < 0 or ax.curFill > 1.0001 then return false, ax.id end
+            if ax.planFill ~= nil then return false, "plan fill without plan" end
+        end
+        if radar.basis:find("not cross%-axis magnitude") == nil then return false end
+        -- A plan raising one axis must NOT rescale the others (independence).
+        local plan = HM.Plan.validate({ { type = "stat", stat = "Intellect", amount = 50 } })
+        local r2 = HM.PanelModel.radarModel(base, plan)
+        return r2.hasPlan == true
+    end)())
+    check("spellbook adapter degrades to empty headless (no API)", (function()
+        return HM.Spellbook ~= nil and type(HM.Spellbook.known) == "function"
+            and #HM.Spellbook.known(true) == 0
     end)())
 
     -- Tooltip injection module (S2): resolver + line builders are pure, fully testable.

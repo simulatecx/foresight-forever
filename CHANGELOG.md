@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.43.0 - 2026-10-12
+
+THE EXPANDED CHARACTER TAB - models + sections (S31). The FS side panel grows three
+sections, each on a pure, honesty-lawed model:
+
+- TOP OUTPUTS: your strongest buttons on your real numbers. New core/spellbook.lua
+  enumerates your KNOWN spells (guarded C_SpellBook with a classic fallback, apiWatch,
+  headless-empty), and Sim.topOutputs ranks by the RANKING-BASIS LAW: average NON-CRIT
+  output PER USE, damage and healing ranked SEPARATELY (a healer top-3 is heals -
+  roster law), the kind shown matching your primary dimension. No DPS claim (rotation
+  weights are post-launch).
+- THE LEDGER: where each pool comes from. PanelModel.ledgerModel attributes the live
+  equipped-item scan per pool (six schools, AP/RAP, healing, regen as the labeled MP5
+  view) under the RECONCILIATION LAW - a "Base + other: N" remainder ALWAYS renders,
+  and an attribution exceeding your sheet prints as a (p) discrepancy (a bug detector).
+  Zero pools render no row (roster-law relevance).
+- THE RADAR: PanelModel.radarModel - 8 dimension axes, each normalized INDEPENDENTLY
+  so the shape is per-axis fill not cross-axis magnitude (the basis line says so);
+  layer 2 is the saved PLAN projection through the one plan delta path, never a goal
+  vector. Ships edges-only (the mobile-binding fallback law); the spoke polygon is the
+  screenshot pass.
+- New reads (C_SpellBook, GetActionInfo, modifier keys, spell texture) are on the
+  apiWatch drift tripwire.
+- Selftest 264 (+5); existing panel tests moved to id-based section lookup.
+
+*Features:* UI-stats-panel, MODEL-ability-outcomes, MODEL-snapshot, SIM-engine,
+WHATIF-planner, QA-verify-command, QA-selftest-harness
+
 ## 0.42.0 - 2026-10-12
 
 OPTIONS MENU (S30): a settings window, and the spine behind it. core/settings.lua

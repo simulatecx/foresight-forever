@@ -314,6 +314,44 @@ function Sim.weaponSwap(snapshot, hovered, equipped, apDelta)
     }
 end
 
+-- S31b top outputs (RANKING-BASIS LAW): rank the player's KNOWN buttons by AVERAGE
+-- NON-CRIT output PER USE (same-unit, honest) - never a DPS claim (that needs rotation
+-- weights, post-launch). Damage and healing are SEPARATE rankings (roster law: a
+-- healer's top-3 is heals). spellIds from the spellbook adapter; each scored via
+-- abilityHit on the player's real numbers. Returns { damage = {rows}, heal = {rows} }
+-- where a row = { spellId, name, avg, min, max, kind, crit, critPct, presumed }.
+function Sim.topOutputs(loadout, spellIds, topN)
+    local out = { damage = {}, heal = {} }
+    if not (loadout and HM.Sim.abilityHit) then return out end
+    local selected = loadout.snapshot and loadout.snapshot.talents
+    local seen = {}
+    for _, sid in ipairs(spellIds or {}) do
+        local sp = HM.gen and HM.gen.spells and HM.gen.spells[sid]
+        if sp and sp.name and not seen[sp.name] then
+            local hit = HM.Sim.abilityHit(loadout, sid, { selected = selected })
+            if hit and hit.avg and hit.avg > 0 then
+                seen[sp.name] = true
+                local bucket = (hit.kind == "heal") and out.heal or out.damage
+                bucket[#bucket + 1] = {
+                    spellId = sid, name = sp.name, avg = hit.avg,
+                    min = hit.min, max = hit.max, kind = hit.kind,
+                    critPct = hit.critPct, critMult = hit.critMult,
+                    crit = hit.avg * (hit.critMult or 1), presumed = hit.presumed,
+                    weapon = hit.kind == "weapon",
+                }
+            end
+        end
+    end
+    local function rank(bucket)
+        table.sort(bucket, function(a, b) return a.avg > b.avg end)
+        local n = topN or 3
+        while #bucket > n do table.remove(bucket) end
+    end
+    rank(out.damage)
+    rank(out.heal)
+    return out
+end
+
 -- The crit-haste engine (Flurry family) among the player's selected trait nodes.
 -- selected: TalentAPI.walkTraits-shaped list ({spellID, rank}). Data: gen.critHaste.
 function Sim.flurryFor(selected)

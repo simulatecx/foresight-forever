@@ -255,6 +255,123 @@ function PanelModel.matrixModel(loadout, activeLoopId, pathways, focus)
     }
 end
 
+-- Live equipped-stat sum across all armor/weapon slots (the ledger's attribution
+-- source) - mapped through the ONE item mapper so school/AP/spell keys match the pool
+-- vocabulary. In-game only; nil headless so the pure ledgerModel runs with no sources.
+function PanelModel._equippedStatSum()
+    if not (_G.GetInventoryItemLink and HM.Tooltips and HM.Tooltips.mapItemStats) then
+        return nil
+    end
+    local getStats = (_G.C_Item and _G.C_Item.GetItemStats) or _G.GetItemStats
+    if not getStats then return nil end
+    local sum = {}
+    for slot = 1, 18 do -- head..ranged (classic equipped slots)
+        local link = _G.GetInventoryItemLink("player", slot)
+        if link then
+            local ok, raw = pcall(getStats, link)
+            if ok and type(raw) == "table" then
+                local mapped = HM.Tooltips.mapItemStats(raw)
+                for k, v in pairs(mapped) do
+                    if type(v) == "number" then sum[k] = (sum[k] or 0) + v end
+                end
+            end
+        end
+    end
+    return sum
+end
+
+-- S31c THE LEDGER (pure): per-pool attribution with the RECONCILIATION LAW. The live
+-- total is the snapshot value (base already contains gear/talents); the sources we can
+-- honestly ATTRIBUTE are the equipped items (equippedStats, summed per stat from the
+-- live per-slot scan the caller passes in). The gap - base stats, enchants, buffs we
+-- did not attribute - ALWAYS renders as a "Base + other" remainder so the rows
+-- reconcile; an attribution EXCEEDING the live total prints as a (p) discrepancy (a bug
+-- detector, not an embarrassment). Per-class nuance: a pool renders only when it is
+-- nonzero/relevant (read LIVE - no mana row for a character with no mana, roster law).
+function PanelModel.ledgerModel(loadout, equippedStats)
+    local D = HM.Display
+    local snap = loadout.snapshot or {}
+    local stats = snap.stats or {}
+    local eq = equippedStats or {}
+    local rows = {}
+    local function add(label, total, itemKeys)
+        if (total or 0) == 0 then return end
+        local attributed, srcLines = 0, {}
+        for _, k in ipairs(itemKeys or {}) do
+            local v = eq[k]
+            if type(v) == "number" and v ~= 0 then
+                attributed = attributed + v
+                srcLines[#srcLines + 1] = D.magnitude(v) .. " from equipped gear"
+            end
+        end
+        local remainder = total - attributed
+        if remainder < -0.5 then
+            srcLines[#srcLines + 1] = D.color("neutral",
+                ("attribution exceeds your sheet by %.0f - a bug to chase (p)"):format(-remainder))
+        else
+            srcLines[#srcLines + 1] = ("Base + other: %.0f"):format(remainder)
+        end
+        rows[#rows + 1] = { label = label, total = total, sources = srcLines }
+    end
+    local sd = stats.schoolDamage
+    if type(sd) == "table" then
+        for _, name in ipairs({ "holy", "fire", "nature", "frost", "shadow", "arcane" }) do
+            add(name:gsub("^%l", string.upper) .. " Spell Power", sd[name],
+                { "school." .. name, "spellDamage", "spellPower" })
+        end
+    else
+        add("Spell Power", stats.spellDamage, { "spellDamage", "spellPower" })
+    end
+    add("Healing Power", stats.healingPower, { "healingPower", "spellPower" })
+    add("Attack Power", stats.attackPower, { "attackPower" })
+    add("Ranged Attack Power", stats.rangedAttackPower, { "rangedAttackPower" })
+    local okTick, tick = pcall(function()
+        local built = loadout:build()
+        return built.graph:value("mech.manaPerTick", built.ctx, {})
+    end)
+    if okTick and tick and tick > 0 then
+        rows[#rows + 1] = {
+            label = "Mana regen", total = tick * 2.5, isView = true,
+            sources = { D.attribution(("tick %.0f x 2.5 = MP5, outside the 5s rule"):format(tick)) },
+        }
+    end
+    return { rows = rows }
+end
+
+-- S31d THE RADAR (pure): 8 axes (the dimensions). Layer 1 = current build; Layer 2 =
+-- the saved PLAN's projected build (plan deltas through the one loadout path) - NOT a
+-- goal vector (a multi-dimension goal polygon is the exact dishonesty the SIM doc
+-- rejected). HONESTY BASIS: each axis normalized INDEPENDENTLY (unit = max(current,
+-- plan) on that axis) so the shape is per-axis fill, never cross-axis magnitude - the
+-- basis line says so. No layer 2 when no plan.
+function PanelModel.radarModel(loadout, plan)
+    local results = HM.Impact.evaluate(loadout)
+    local planResults
+    if plan and #plan > 0 and HM.Plan then
+        local ok, modeled = pcall(HM.Plan.apply, loadout, plan)
+        if ok then planResults = HM.Impact.evaluate(modeled) end
+    end
+    local goal = HM.gearGoal and HM.gearGoal() or "auto"
+    local goalDim = (type(goal) == "string" and goal ~= "auto"
+        and not goal:find("^ability:")) and goal or nil
+    local axes = {}
+    for _, dim in ipairs(HM.dimensions.list) do
+        local cur = results[dim.id] and results[dim.id].score
+        local pl = planResults and planResults[dim.id] and planResults[dim.id].score
+        if cur then
+            local axisMax = math.max(cur, pl or 0)
+            axes[#axes + 1] = {
+                id = dim.id, label = dim.label, current = cur, plan = pl,
+                curFill = axisMax > 0 and (cur / axisMax) or 0,
+                planFill = (pl and axisMax > 0) and (pl / axisMax) or nil,
+                isGoal = (dim.id == goalDim),
+            }
+        end
+    end
+    return { axes = axes, hasPlan = planResults ~= nil,
+        basis = "axes scaled independently - shape is not cross-axis magnitude (p)" }
+end
+
 -- Build the full panel model for a loadout.
 -- Returns { sections = { { id, title, rows = { { label, value, tooltip? } } } } }
 function PanelModel.build(loadout)
@@ -281,6 +398,85 @@ function PanelModel.build(loadout)
         }
     end
     sections[#sections + 1] = { id = "dimensions", title = "Dimensions", rows = dimRows }
+
+    -- S31b TOP OUTPUTS: the player's strongest buttons, per the ranking-basis law
+    -- (per-use non-crit, kind-split, no DPS claim). spellIds come from the live
+    -- spellbook; the kind shown matches the build's primary (healer -> heals).
+    if HM.Spellbook and HM.Sim and HM.Sim.topOutputs then
+        local known = HM.Spellbook.known()
+        if #known > 0 then
+            local tops = HM.Sim.topOutputs(loadout, known, 3)
+            local primary = HM.Impact.primaryDimension(loadout)
+            local healFirst = primary == "healing"
+            local order = healFirst and { { "heal", tops.heal }, { "damage", tops.damage } }
+                or { { "damage", tops.damage }, { "heal", tops.heal } }
+            local rows = {}
+            for _, grp in ipairs(order) do
+                local kind, list = grp[1], grp[2]
+                for _, o in ipairs(list) do
+                    local lo, hi = HM.formulas.spellBaseDamage.display(o.min, o.max, o.kind)
+                    local crit = (o.critPct and o.critPct > 0)
+                        and (" | ~%d crit"):format(math.floor(o.crit + 0.5)) or ""
+                    rows[#rows + 1] = {
+                        label = o.name,
+                        value = ("~%d-%d avg %s%s%s"):format(lo, hi,
+                            kind == "heal" and "heal" or "hit", crit,
+                            o.presumed and " (p)" or ""),
+                        wide = true,
+                    }
+                end
+            end
+            if #rows > 0 then
+                rows[#rows + 1] = { label = "", value =
+                    "|cff9d9d9dper use, with your gear - not a DPS ranking (p)|r", wide = true }
+                sections[#sections + 1] = { id = "topoutputs",
+                    title = "Top outputs (per use)", rows = rows }
+            end
+        end
+    end
+
+    -- S31c LEDGER: where each pool comes from, with the reconciliation remainder.
+    if HM.PanelModel.ledgerModel then
+        local eq = PanelModel._equippedStatSum and PanelModel._equippedStatSum() or nil
+        local ledger = HM.PanelModel.ledgerModel(loadout, eq)
+        local ledgerRows = {}
+        for _, row in ipairs(ledger.rows) do
+            ledgerRows[#ledgerRows + 1] = { label = row.label,
+                value = ("%d%s"):format(math.floor(row.total + 0.5),
+                    row.isView and " MP5" or ""), wide = true }
+            for _, src in ipairs(row.sources) do
+                ledgerRows[#ledgerRows + 1] = { label = "",
+                    value = "  " .. src, wide = true }
+            end
+        end
+        if #ledgerRows > 0 then
+            sections[#sections + 1] = { id = "ledger", title = "Ledger (sources)",
+                rows = ledgerRows }
+        end
+    end
+
+    -- S31d RADAR (edges-only fallback render per the spec's mobile-binding law): the
+    -- 8 dimension axes as per-axis-independent fills, plan overlay when a plan exists.
+    -- The spoke polygon is the screenshot-iteration pass; the model + basis are honest.
+    if HM.PanelModel.radarModel then
+        local plan = HM.Plan and HM.Plan.store() or {}
+        local radar = HM.PanelModel.radarModel(loadout, plan)
+        local radarRows = {}
+        for _, ax in ipairs(radar.axes) do
+            local cur = HM.dimensions.display(ax.id, ax.current)
+            local planPart = ax.plan and (" |cffd4b84d-> " .. HM.dimensions.display(ax.id, ax.plan) .. "|r") or ""
+            radarRows[#radarRows + 1] = {
+                label = (ax.isGoal and "* " or "") .. ax.label,
+                value = cur .. planPart, wide = true,
+            }
+        end
+        if #radarRows > 0 then
+            radarRows[#radarRows + 1] = { label = "",
+                value = "|cff9d9d9d" .. radar.basis .. "|r", wide = true }
+            sections[#sections + 1] = { id = "radar",
+                title = radar.hasPlan and "Shape (current -> plan)" or "Shape", rows = radarRows }
+        end
+    end
 
     -- Regen: the "+2 Spirit actually matters" numbers, FSR-annotated.
     sections[#sections + 1] = {
