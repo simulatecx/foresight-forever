@@ -37,6 +37,23 @@ layer map and coupling census there define what moves and what must not.
   back into the Forever fork's data or formulas.
 - data/: generated tables, overrides.lua, loops.lua are per-game. Never cross.
 
+## Workspace layout (decided 2026-10-12, already scaffolded)
+
+The fork lives in a SIBLING FOLDER as a full clone (shared git history = clean
+cherry-picks), never a branch (generated data + deploy targets collide) and never a
+monorepo subfolder (packager/TOC/CI are one-addon-per-repo):
+
+- Forever (canonical): `E:\Development_Related\development_projects\wowforever_addons\overlay`
+  -> github.com/simulatecx/foresight-forever, deploys to `_classic_beta_`.
+- Retail (validation fork): `...\wowforever_addons\overlay-retail` - cloned at
+  v0.36.0 (1fd0f4a); remotes: `forever` = the GitHub canonical (cherry-pick source),
+  `forever-local` = the sibling folder. Create its own GitHub repo when ready
+  (`gh repo create foresight-retail --private --source .` from that folder) and set
+  it as `origin`; CI workflows come along in the clone. `pipeline/collected/` is
+  gitignored and did NOT copy - each fork keeps its own crowd corpus.
+- Port-back mechanics from the Forever checkout:
+  `git fetch "..\overlay-retail"` then cherry-pick engine/pipeline commits only.
+
 ## Fork procedure (step by step)
 
 1. Fork the repo (new remote, e.g. foresight-retail). Keep the name/brand; set
