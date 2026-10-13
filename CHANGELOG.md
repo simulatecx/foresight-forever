@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.45.4 - 2026-10-13
+
+MATRIX RUNS HORIZONTAL (user ask: "make the chart run horizontal instead of vertical
+for all of the context"). v0.45.1 let you stretch the panel; this makes the stretch
+reorganize. Past ~500px wide the Matrix lays its context into TWO columns - dimension
+bars + pathways + focus on the left, the Enabler->Engine->Payoff diagram + radial
+gauges on the right - so a wide panel reads as a landscape dashboard instead of one
+tall strip. Narrow stays single-column, so the mobile binding (1280x720 @ 0.65) is
+untouched. The layout was refactored into column-aware section renderers; honesty and
+motion laws are unchanged (fill bases print, (p) never animates away, all on our
+frames). Pure model selftests unchanged at 274.
+
+*Features:* UI-matrix-panel
+
 ## 0.45.3 - 2026-10-13
 
 FIFTH RANK-RULE PROMOTION ROUND - the ~10 high-level inspect pull (human-reviewed).

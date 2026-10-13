@@ -189,9 +189,13 @@ items are actually in game") lands at every flush - locally, compliantly (addon 
 PHASE B remaining: opt-in companion uploader (reads SavedVariables, POSTs sanitized JSON) +
 ingestion/aggregation backend; k-of-n confirmation before any overrides change; privacy-by-
 design pass (consent, hashing, retention). Full design (Cloudflare Worker + D1/R2, k-of-n via
-unique index, companion sanitize) in `docs/RESEARCH-2026-10-11.md` C2. GATED ON: S12 publish
-decisions (users need CurseForge/Wago to exist) + the user's backend choice (Cloudflare vs
-Firebase) + companion distribution.
+unique index, companion sanitize) in `docs/RESEARCH-2026-10-11.md` C2.
+BACKEND DECISION 2026-10-13 (user, FINAL): **Firebase** (not Cloudflare - supersedes the
+C2 Cloudflare sketch for the transport/store; the k-of-n + sanitize + consent design
+carries over). SEQUENCING (user, 2026-10-13): build phase B AFTER the UI-tuning pass is
+done ("lets finish tuning the UI, then we will do the backend"). Capture side already
+works for every downloader (no dev gate - verified v0.45.3); this phase is the
+transport + aggregation only. Still gated on S12 publish (real users first).
 
 ### S14 - Buffs & consumables impact ◐  (SHIPPED code-complete v0.12.0)
 "How does a flask/elixir/food impact me while active, and what do I lose when it expires."
@@ -645,9 +649,13 @@ theme are now SESSION-ONLY (nothing lights until asked this session; login wipes
 legacy value) - also kills a login-time talent-overlay taint vector. (2) MATRIX
 HORIZONTAL STRETCH - the panel is now resizable (drag grip, width 300-680 validated +
 saved) and re-flows off the live width so the eco diagram/bars/gauges stop cramping.
-Selftest 274 (+2). ☐ STILL OPEN: another client taint block reported this session -
-pin the exact func/context from the next /reload harvest (SavedVariables flush on
-logout/reload only); ☐ in-game verify the resize + session-focus behavior.
+Selftest 274 (+2). TAINT FOLLOW-UP (v0.45.2): the reported block did NOT re-journal -
+the recorder was blind to blocks firing before its store existed (early login); now it
+buffers+flushes with richer context (uptime + open surface). No new event in the
+v0.45.x sessions (only the two pre-fix morning ones). HORIZONTAL LAYOUT (v0.45.4, user
+ask "run horizontal for all the context"): the Matrix goes TWO-COLUMN past ~500px wide
+(bars/pathways/focus | eco diagram/gauges), narrow stays single-column (mobile binding
+holds). ☐ in-game verify the two-column wide layout + resize + session-focus behavior.
 
 
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

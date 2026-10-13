@@ -171,90 +171,100 @@ local function layout(model)
     end
     y = y - 28
 
-    -- Dimension bars (honest relative fill; basis printed under the block).
-    -- S33: fills SWEEP from the previous value (keyed by dimension id - pooled
-    -- widgets have no identity), the top lens carries a breathing accent, and a
-    -- changed value flashes once. uiMotion=off renders the static fill exactly.
-    for _, bar in ipairs(model.bars.rows) do
-        local label = acquireFS("ARTWORK", "GameFontHighlightSmall")
-        label:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
-        label:SetText(bar.label)
-        local value = acquireFS("ARTWORK", "GameFontHighlightSmall")
-        value:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PAD, y)
-        value:SetJustifyH("RIGHT")
-        local vc = bar.top and BRAND or MUTED
-        value:SetText(("|cff%02x%02x%02x%s|r"):format(vc.r * 255, vc.g * 255,
-            vc.b * 255, bar.value))
-        local prevFill = HM.Motion
-            and HM.Motion.trackValue("mx:bar:" .. (bar.id or bar.label), bar.fill)
-        if HM.Motion and motion ~= "off" and prevFill
-                and math.abs(prevFill - bar.fill) > 0.002 then
-            local fl = acquireTex("ARTWORK", 2)
-            fl:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PAD, y + 1)
-            fl:SetSize(64, 13)
-            HM.Motion.flash("matrix", fl, BRAND.r, BRAND.g, BRAND.b, 0.22)
-        end
-        y = y - 14
-        local track = acquireTex("BACKGROUND", 1)
-        track:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
-        track:SetSize(innerW, 5)
-        track:SetColorTexture(0, 0, 0, 0.55)
-        local fillW = math.max(1, math.floor(innerW * math.min(bar.fill, 1)))
-        local fill = acquireTex("BACKGROUND", 2)
-        fill:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
-        fill:SetSize(fillW, 5)
-        local fc = bar.top and BRAND or MUTED
-        fill:SetColorTexture(fc.r, fc.g, fc.b, bar.top and 0.95 or 0.55)
-        if HM.Motion and motion ~= "off" then
-            local prevW = prevFill
-                and math.max(1, math.floor(innerW * math.min(prevFill, 1)))
-            if prevW and prevW ~= fillW then
-                HM.Motion.sweepWidth("matrix", fill, prevW, fillW)
+    -- SECTION RENDERERS (S33 horizontal layout): each draws into a column rect
+    -- {sx, sw} from sy and returns the ending y. Narrow runs them down one cursor
+    -- (the mobile binding stays single-column); wide runs bars/pathways/focus in a
+    -- left column and eco/gauges in a right one, so stretching the panel turns the
+    -- tall strip into a landscape dashboard. Honesty/motion laws are unchanged - only
+    -- the x-origin and width vary.
+    local function drawBars(sx, sw, sy)
+        local y = sy
+        for _, bar in ipairs(model.bars.rows) do
+            local label = acquireFS("ARTWORK", "GameFontHighlightSmall")
+            label:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+            label:SetText(bar.label)
+            local value = acquireFS("ARTWORK", "GameFontHighlightSmall")
+            value:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+            value:SetWidth(sw)
+            value:SetJustifyH("RIGHT")
+            local vc = bar.top and BRAND or MUTED
+            value:SetText(("|cff%02x%02x%02x%s|r"):format(vc.r * 255, vc.g * 255,
+                vc.b * 255, bar.value))
+            local prevFill = HM.Motion
+                and HM.Motion.trackValue("mx:bar:" .. (bar.id or bar.label), bar.fill)
+            if HM.Motion and motion ~= "off" and prevFill
+                    and math.abs(prevFill - bar.fill) > 0.002 then
+                local fl = acquireTex("ARTWORK", 2)
+                fl:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + sw - 64, y + 1)
+                fl:SetSize(64, 13)
+                HM.Motion.flash("matrix", fl, BRAND.r, BRAND.g, BRAND.b, 0.22)
             end
-            if bar.top then HM.Motion.pulse(fill, 1, 0.62, 1.4) end
+            y = y - 14
+            local track = acquireTex("BACKGROUND", 1)
+            track:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+            track:SetSize(sw, 5)
+            track:SetColorTexture(0, 0, 0, 0.55)
+            local fillW = math.max(1, math.floor(sw * math.min(bar.fill, 1)))
+            local fill = acquireTex("BACKGROUND", 2)
+            fill:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+            fill:SetSize(fillW, 5)
+            local fc = bar.top and BRAND or MUTED
+            fill:SetColorTexture(fc.r, fc.g, fc.b, bar.top and 0.95 or 0.55)
+            if HM.Motion and motion ~= "off" then
+                local prevW = prevFill
+                    and math.max(1, math.floor(sw * math.min(prevFill, 1)))
+                if prevW and prevW ~= fillW then
+                    HM.Motion.sweepWidth("matrix", fill, prevW, fillW)
+                end
+                if bar.top then HM.Motion.pulse(fill, 1, 0.62, 1.4) end
+            end
+            y = y - 12
         end
-        y = y - 12
+        local basis = acquireFS("ARTWORK", "GameFontDisableSmall")
+        basis:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+        basis:SetWidth(sw)
+        basis:SetText(model.bars.basis)
+        return y - math.max(12, basis:GetStringHeight() + 2) - 8
     end
-    local basis = acquireFS("ARTWORK", "GameFontDisableSmall")
-    basis:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
-    basis:SetWidth(innerW)
-    basis:SetText(model.bars.basis)
-    y = y - math.max(12, basis:GetStringHeight() + 2) - 8
 
     -- Goal pathways: your best unspent talent points for the dimension you're
     -- building toward (computed on talent changes, not every refresh).
-    if model.path then
+    local function drawPathways(sx, sw, sy)
+        if not model.path then return sy end
+        local y = sy
         local ph = acquireFS("ARTWORK", "GameFontNormalSmall")
-        ph:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
-        ph:SetWidth(innerW)
+        ph:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+        ph:SetWidth(sw)
         ph:SetText(("|cff9d9d9dBest next points -|r %s"):format(model.path.label or ""))
         y = y - math.max(14, ph:GetStringHeight() + 2)
         for i, row in ipairs(model.path.rows) do
             local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
-            f:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 6, y)
-            f:SetWidth(innerW - 12)
+            f:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 6, y)
+            f:SetWidth(sw - 12)
             f:SetText(("%d. %s  |cff4ade80%+.1f%s|r"):format(i, row.label,
                 row.pct, row.unit or "%"))
             y = y - math.max(13, f:GetStringHeight() + 1)
         end
-        y = y - 8
+        return y - 8
     end
 
     -- Skill focus (S22a/S22b): the three modifier classes for the focused ability +
     -- the cascade chip row. Wrapped FontStrings WRAP to extra rows at low
     -- resolution/scale (the mobile binding) - never truncate.
-    if model.focus then
+    local function drawFocus(sx, sw, sy)
+        if not model.focus then return sy end
+        local y = sy
         local CLASS_HEX = { gold = "ffd24d", blue = "59a6ff" }
         local fh = acquireFS("ARTWORK", "GameFontNormalSmall")
-        fh:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
-        fh:SetWidth(innerW)
+        fh:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+        fh:SetWidth(sw)
         fh:SetText(("|cff9d9d9dFocused skill -|r |cffffd24d%s|r  |cff9d9d9d(/foresight focus clear)|r")
             :format(model.focus.spell or ""))
         y = y - math.max(14, fh:GetStringHeight() + 2)
         for _, cl in ipairs(model.focus.classes or {}) do
             local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
-            f:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 6, y)
-            f:SetWidth(innerW - 12)
+            f:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 6, y)
+            f:SetWidth(sw - 12)
             f:SetText(("|cff%s%s:|r %s"):format(CLASS_HEX[cl.color] or "9d9d9d",
                 cl.tag, cl.text))
             y = y - math.max(13, f:GetStringHeight() + 1)
@@ -265,20 +275,22 @@ local function layout(model)
                 chips[#chips + 1] = ("|cff33ff99[|r%s|cff33ff99]|r"):format(seg)
             end
             local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
-            f:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 6, y)
-            f:SetWidth(innerW - 12)
+            f:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 6, y)
+            f:SetWidth(sw - 12)
             f:SetText(table.concat(chips, " -> ")
                 .. (model.focus.pathway.presumed and " (p)" or ""))
             y = y - math.max(13, f:GetStringHeight() + 1)
         end
-        y = y - 8
+        return y - 8
     end
 
-    -- Ecosystem map (mockup component 2): goal row + the three tagged cards.
-    if model.eco then
+    -- Ecosystem map (mockup component 2): goal row + the three tagged nodes + insight.
+    local function drawEco(sx, sw, sy)
+        if not model.eco then return sy end
+        local y = sy
         local goal = acquireFS("ARTWORK", "GameFontNormalSmall")
-        goal:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
-        goal:SetWidth(innerW)
+        goal:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+        goal:SetWidth(sw)
         goal:SetText(("|cff9d9d9dGoal:|r %s%s"):format(model.eco.name,
             (model.loopCount or 0) > 1 and "  |cff9d9d9d(click title to cycle)|r" or ""))
         y = y - math.max(14, goal:GetStringHeight() + 2) - 6
@@ -289,7 +301,7 @@ local function layout(model)
             -- cards. Text REDUCED, not removed: tag + members stay in the box, the
             -- card's explainer sentence moves to the box's hover tooltip, and the
             -- insight box below keeps every computed number and (p) mark.
-            local boxes, links = HM.Motion.diagramLayout(#model.eco.nodes, innerW, 16)
+            local boxes, links = HM.Motion.diagramLayout(#model.eco.nodes, sw, 16)
             local topY = y
             local boxH = 40
             local titleFS = {}
@@ -307,7 +319,7 @@ local function layout(model)
             panel.ecoHit = panel.ecoHit or {}
             for i, node in ipairs(model.eco.nodes) do
                 local c = TAG_COLOR[node.tag] or MUTED
-                local bx = PAD + boxes[i].x
+                local bx = sx + boxes[i].x
                 local bg = acquireTex("BACKGROUND", 1)
                 bg:SetPoint("TOPLEFT", panel, "TOPLEFT", bx, topY)
                 bg:SetSize(boxes[i].w, boxH)
@@ -350,7 +362,7 @@ local function layout(model)
             for i = #model.eco.nodes + 1, #panel.ecoHit do panel.ecoHit[i]:Hide() end
             local cyLine = topY - boxH / 2
             for j, lk in ipairs(links) do
-                local x1, x2 = PAD + lk.x1 + 2, PAD + lk.x2 - 2
+                local x1, x2 = sx + lk.x1 + 2, sx + lk.x2 - 2
                 HM.Motion.line(panel, "TOPLEFT", x1, cyLine, x2, cyLine,
                     { r = BRAND.r, g = BRAND.g, b = BRAND.b, a = 0.55 }, 2)
                 if motion == "full" then
@@ -370,55 +382,55 @@ local function layout(model)
             end
             y = topY - boxH - 10
         else
-        if panel.ecoHit then
-            for _, hit in ipairs(panel.ecoHit) do hit:Hide() end
-        end
-        for _, node in ipairs(model.eco.nodes) do
-            local c = TAG_COLOR[node.tag] or MUTED
-            local cardTop = y
-            local tag = acquireFS("ARTWORK", "GameFontDisableSmall")
-            tag:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 8, y - 4)
-            tag:SetText(("|cff%02x%02x%02x%s|r"):format(c.r * 255, c.g * 255,
-                c.b * 255, node.tag:upper()))
-            y = y - 16
-            local title = acquireFS("ARTWORK", "GameFontNormalSmall")
-            title:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 8, y - 4)
-            title:SetWidth(innerW - 16)
-            title:SetText("|cffffffff" .. (node.title or "") .. "|r")
-            y = y - math.max(13, title:GetStringHeight() + 1)
-            local d = acquireFS("ARTWORK", "GameFontDisableSmall")
-            d:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 8, y - 4)
-            d:SetWidth(innerW - 16)
-            d:SetText(node.desc or "")
-            y = y - math.max(12, d:GetStringHeight() + 1) - 8
-            local cardH = cardTop - y - 2
-            local cardBg = acquireTex("BACKGROUND", 1)
-            cardBg:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, cardTop)
-            cardBg:SetSize(innerW, cardH)
-            cardBg:SetColorTexture(1, 1, 1, 0.04)
-            local strip = acquireTex("BACKGROUND", 2)
-            strip:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, cardTop)
-            strip:SetSize(3, cardH)
-            strip:SetColorTexture(c.r, c.g, c.b, 0.9)
-            y = y - 6
-        end
+            if panel.ecoHit then
+                for _, hit in ipairs(panel.ecoHit) do hit:Hide() end
+            end
+            for _, node in ipairs(model.eco.nodes) do
+                local c = TAG_COLOR[node.tag] or MUTED
+                local cardTop = y
+                local tag = acquireFS("ARTWORK", "GameFontDisableSmall")
+                tag:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 8, y - 4)
+                tag:SetText(("|cff%02x%02x%02x%s|r"):format(c.r * 255, c.g * 255,
+                    c.b * 255, node.tag:upper()))
+                y = y - 16
+                local title = acquireFS("ARTWORK", "GameFontNormalSmall")
+                title:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 8, y - 4)
+                title:SetWidth(sw - 16)
+                title:SetText("|cffffffff" .. (node.title or "") .. "|r")
+                y = y - math.max(13, title:GetStringHeight() + 1)
+                local d = acquireFS("ARTWORK", "GameFontDisableSmall")
+                d:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 8, y - 4)
+                d:SetWidth(sw - 16)
+                d:SetText(node.desc or "")
+                y = y - math.max(12, d:GetStringHeight() + 1) - 8
+                local cardH = cardTop - y - 2
+                local cardBg = acquireTex("BACKGROUND", 1)
+                cardBg:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, cardTop)
+                cardBg:SetSize(sw, cardH)
+                cardBg:SetColorTexture(1, 1, 1, 0.04)
+                local strip = acquireTex("BACKGROUND", 2)
+                strip:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, cardTop)
+                strip:SetSize(3, cardH)
+                strip:SetColorTexture(c.r, c.g, c.b, 0.9)
+                y = y - 6
+            end
         end
 
         -- Actionable insight box: the loop's why + its live computed numbers.
         local boxTop = y
         local insight = acquireFS("ARTWORK", "GameFontHighlightSmall")
-        insight:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD + 6, y - 6)
-        insight:SetWidth(innerW - 12)
+        insight:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 6, y - 6)
+        insight:SetWidth(sw - 12)
         local lines = { "|cff33ff99Actionable insight:|r " .. (model.eco.insight or "") }
         for _, line in ipairs(model.eco.computed or {}) do
             lines[#lines + 1] = "|cffbfbfbf" .. line .. "|r"
         end
         insight:SetText(table.concat(lines, "\n"))
         y = y - math.max(16, insight:GetStringHeight() + 12)
-        local boxH = boxTop - y
+        local ibH = boxTop - y
         local box = acquireTex("BACKGROUND", 1)
-        box:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, boxTop)
-        box:SetSize(innerW, boxH)
+        box:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, boxTop)
+        box:SetSize(sw, ibH)
         box:SetColorTexture(BRAND.r, BRAND.g, BRAND.b, 0.05)
         for _, edge in ipairs({ { "TOPLEFT", "TOPRIGHT" }, { "BOTTOMLEFT", "BOTTOMRIGHT" } }) do
             local line = acquireTex("BORDER")
@@ -427,17 +439,21 @@ local function layout(model)
             line:SetHeight(1)
             line:SetColorTexture(BRAND.r, BRAND.g, BRAND.b, 0.25)
         end
-        y = y - 4
+        return y - 4
     end
 
     -- S33 RADIAL GAUGES: rings only where the model found a TRUE fraction (Flurry
     -- uptime / focused-spell OOM) - honest absence otherwise; the printed basis note
     -- and the (p) in each label never animate away. Off = no rings (static render).
-    if model.gauges and #model.gauges > 0 and HM.Motion and motion ~= "off" then
+    local function drawGauges(sx, sw, sy)
+        if not (model.gauges and #model.gauges > 0 and HM.Motion and motion ~= "off") then
+            return sy
+        end
+        local y = sy
         local size = 44
         local n = #model.gauges
         local totalW = n * size + (n - 1) * 36
-        local left = (W - totalW) / 2
+        local left = sx + math.max(0, (sw - totalW) / 2)
         local gy = y - 8
         for i, gm in ipairs(model.gauges) do
             local gx = left + (i - 1) * (size + 36)
@@ -464,13 +480,32 @@ local function layout(model)
         for _, gm in ipairs(model.gauges) do
             if gm.note then
                 local nf = acquireFS("ARTWORK", "GameFontDisableSmall")
-                nf:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
-                nf:SetWidth(innerW)
+                nf:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+                nf:SetWidth(sw)
                 nf:SetText("|cff9d9d9d" .. gm.note .. "|r")
                 y = y - math.max(12, nf:GetStringHeight() + 2)
             end
         end
-        y = y - 4
+        return y - 4
+    end
+
+    -- Compose. Wide (stretched past the threshold) = two columns so the context runs
+    -- horizontal; narrow = one column (the mobile binding at 1280x720 @ 0.65 holds).
+    local TWO_COL_MIN = 500
+    if W >= TWO_COL_MIN then
+        local gutter = 16
+        local leftW = math.floor((innerW - gutter) / 2)
+        local rightW = innerW - gutter - leftW
+        local leftX, rightX = PAD, PAD + leftW + gutter
+        local ly = drawFocus(leftX, leftW, drawPathways(leftX, leftW, drawBars(leftX, leftW, y)))
+        local ry = drawGauges(rightX, rightW, drawEco(rightX, rightW, y))
+        y = math.min(ly, ry)
+    else
+        y = drawBars(PAD, innerW, y)
+        y = drawPathways(PAD, innerW, y)
+        y = drawFocus(PAD, innerW, y)
+        y = drawEco(PAD, innerW, y)
+        y = drawGauges(PAD, innerW, y)
     end
 
     panel:SetHeight(math.max(160, -y + PAD))
