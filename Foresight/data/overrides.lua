@@ -60,6 +60,16 @@ HM.overrides = {
         [823] = "perRank",  -- Nature's Focus (trained B=1)
         [824] = "perRank",  -- Naturalist (trained B=2)
         [1601] = "maxTotal", -- Shield Specialization (trained A=2)
+        -- Third promotion round 2026-10-12 (build-filtered corpus, same trained
+        -- standard; the inspect-pass harvest):
+        [401] = "perRank",   -- Holy Specialization (trained B=1)
+        [403] = "maxTotal",  -- Searing Light (trained A=2)
+        [408] = "maxTotal",  -- Improved Healing (trained A=1)
+        [586] = "perRank",   -- Improved Healing Wave (trained B=1)
+        [593] = "maxTotal",  -- Tidal Focus (trained A=3)
+        [796] = "maxTotal",  -- Ferocity (trained A=1)
+        [1003] = "maxTotal", -- Improved Corruption (trained A=1; was weak-maxTotal)
+        [1181] = "maxTotal", -- Divine Fury (trained A=1)
     },
 }
 

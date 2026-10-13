@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.37.2 - 2026-10-12
+
+THIRD RANK-RULE PROMOTION ROUND (human-reviewed, build-filtered corpus): 8 more
+trained-backed lines from the inspect-pass harvest - Holy Specialization + Improved
+Healing Wave = perRank; Searing Light, Improved Healing, Tidal Focus, Ferocity,
+Improved Corruption (weak line now trained-confirmed) and Divine Fury = maxTotal.
+19 talents now carry verified rank scaling; the 5 contradictions stay held. The
+build filter confirmed the corpus was retail-clean (18 trained-backed unchanged
+after scoping).
+
+*Features:* DATA-overrides, QA-probe
+
 ## 0.37.1 - 2026-10-12
 
 THE AUDIT PAYS OFF + THE STORY TOOLTIP (live catches #9-#12 from one harvest + two
