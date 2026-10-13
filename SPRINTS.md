@@ -371,7 +371,14 @@ promote lines to overrides.rankRules before 2026-10-21 (human review - user). FI
 PROMOTION 2026-10-12 (v0.31.3): all 4 trained-backed lines promoted (Improved
 Frostbolt/Deflection/Thundering Strikes = perRank, Ancestral Knowledge = maxTotal);
 63 weak untrained lines + the contradicted Destructive Reach held for more trained
-captures - keep hovering trained talents and inspecting players until 10-21.
+captures - keep hovering trained talents and inspecting players until 10-21. FOURTH
+ROUND 2026-10-13 (v0.44.3): +8 trained-backed (Lightning Reflexes, Improved Sinister
+Strike, Endurance, Improved Eviscerate, Blood Frenzy, Feral Swiftness, Heart of the
+Wild = maxTotal; Dual Wield Specialization = perRank); DEMOTED Ferocity + Tidal Focus
+to (p) on conflicted trained evidence (new r5/5 Ferocity capture votes B vs round-3's
+A; Tidal Focus trained votes gone from the corpus, untrained B x3) · ☐ in-game trained
+mid-rank hover (r2-r4) on Ferocity + Tidal Focus to settle direction. 25 verified;
+5 contradictions held.
 
 ### S22 - Skill-centric Matrix + pathway rows ◐  (triaged 2026-10-12, handoff spec)
 Fit & Overlap - Category UI (model support in mapping/panel_model). Verdict: Enhance

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.44.3 - 2026-10-13
+
+FOURTH RANK-RULE PROMOTION ROUND + TWO HONEST DEMOTIONS (human-reviewed, post-v0.44.x
+harvest, 24 merged archives). Promoted, all trained-backed: Lightning Reflexes,
+Improved Sinister Strike, Endurance, Improved Eviscerate, Blood Frenzy, Feral
+Swiftness, Heart of the Wild = maxTotal; Dual Wield Specialization = perRank. DEMOTED
+back to (p) presumed - the honesty law outranks a growing count: Ferocity (a new
+trained r5/5 capture votes B against round-3's trained A - the trained evidence
+self-conflicts) and Tidal Focus (round-3's trained votes are gone from the corpus and
+3 untrained votes now point B). Both need a trained mid-rank hover (r2-r4, where the
+hypotheses diverge) to settle. 25 talents now carry verified rank scaling; the 5
+contradictions stay held. Also noted: the harvest's two "Healing Wave mismatch" lines
+are a STALE hitAudit record (2026-10-12 13:44, pre-v0.37.1 heal-rounding law) - re-run
+/foresight audit in the next session to refresh it.
+
+*Features:* DATA-overrides, QA-probe
+
 ## 0.44.2 - 2026-10-13
 
 TAINT INCIDENT FIX + GATE (account-safety doctrine). The first live session with the
