@@ -43,7 +43,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S29 Class roster + per-class coverage report | - | ◐ |
 | S30 CORE-options: settings surface, one spine two controls | 3 | ◐ |
 | S31 Expanded Character Tab (top outputs, ledger, radar) | 3 | ◐ |
-| S32 Action-bar synergy trigger (hold ALT, trace the button) | 3 | ◐ |
+| S32 Action-bar synergy trigger (hold ALT, trace the button) | 3 | ☑ |
 
 ## Active / next
 
@@ -562,7 +562,7 @@ per-axis independence + plan layer 2 + basis · ☑ sections wired into the FS p
 ☑ selftest 264 (+5) · ◐ spoke polygon + header/eye + top-3 hover->ledger = screenshot
 pass · ☐ in-game verify pilot + one other class.
 
-### S32 - Action-bar synergy trigger: hold ALT, trace the button ◐  (S30-S32 handoff)
+### S32 - Action-bar synergy trigger: hold ALT, trace the button ☑  (S30-S32 handoff)
 Fit & Overlap - Category UI. Verdict: Enhance focus mode (S22a) with a TRANSIENT
 modifier-hover input path. Complements: S30 (actionTrigger setting), classification,
 the talent-UI hint. Avoid duplicating: classification/glow/dim; the persistent focus
@@ -574,7 +574,8 @@ AC: ☑ modifier-hover applies transient focus, restores prior state on release/
 ☑ slot->spell guarded resolve, honest macro/item/unknown skip · ☑ setting off|alt|shift
 honored (S30 spine) · ☑ no action-button frames touched; combat-gated · ☑ apiWatch
 (GetActionInfo, IsAltKeyDown, IsShiftKeyDown) · ☑ talent-UI hint line · ☑ selftest 266
-(+2 state machine + resolver) · ☐ in-game gesture verify.
+(+2 state machine + resolver) · ☑ in-game gesture verify (user-confirmed 2026-10-13:
+"the alt toggle on talents works well").
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
