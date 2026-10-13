@@ -37,23 +37,30 @@ layer map and coupling census there define what moves and what must not.
   back into the Forever fork's data or formulas.
 - data/: generated tables, overrides.lua, loops.lua are per-game. Never cross.
 
-## Program schedule (user decision 2026-10-12)
+## Program schedule (user decision 2026-10-12, refined same day)
 
-- NOW -> 2026-10-21 (beta close): Forever DEVELOPMENT is frozen at v0.36.0; Forever
-  PLAY TIME continues (captures are the only deadline-bound asset: trained talent
-  hovers, inspects, /foresight audit runs, buff observations - raw rendered text is
-  engine-independent ground truth). ALL dev effort moves to the retail fork.
-- CONTINUOUS PORT-BACK, not one migration: every engine/pipeline fix proven on
-  retail cherry-picks back immediately; the Forever gate (Forever-pinned data gates)
-  + one in-game /foresight audit after redeploy is the no-breakage confirmation, so
-  remaining beta sessions always capture on the best engine.
-- 2026-10-21 -> 11-04 (no Forever client exists): pure retail validation window -
-  drive audit mismatches to zero.
+- PHASE 1 - RETAIL SPRINT (~Oct 12-14, HARD CAP 2 dev days): Forever development
+  frozen at v0.36.0. All dev on the retail fork: retail's calculations are
+  established and fully visible, so it is the BASELINE for how Foresight should
+  look, feel, and calculate. Exit criteria ("what is validated"): retail
+  /foresight audit mismatch-zero (or every mismatch explained) on 2+ classes;
+  weapon-swap rows agree with Blizzard's own compare numbers on several pairs;
+  panel/Matrix/tooltip surfaces reviewed at sane real-data values; retail gate
+  green. The cap is hard because the Forever capture window cannot be extended.
+- PHASE 2 - MIGRATION (~Oct 14-15): cherry-pick engine/pipeline/adapter commits
+  back to Forever; migration is COMPLETE when the Forever-pinned gate is green,
+  the addon is deployed, and one in-game /foresight verify + audit pass clean.
+- PHASE 3 - FOREVER DATA GATHERING (migration -> Oct 21): the focused capture
+  sprint on the validated engine - trained talent hovers, player inspects,
+  /foresight audit runs, buff observations, rank-rule promotion rounds. Optional
+  captures during Phase 1 still count (raw rendered text is engine-independent).
+- 2026-10-21 -> 11-04 (no Forever client exists): residual retail validation and
+  polish; nothing Forever-side is possible.
 - 2026-11-04: Forever launch build fetch/regenerate/gate/deploy, channel=live, open
   crowdsourcing.
 - Boundary: "fix everything in retail" covers ENGINE/PIPELINE/ADAPTER code only;
   Forever data corrections (rank rules, overrides, classic formula values) can only
-  come from Forever captures - which is why beta play time is irreplaceable.
+  come from Forever captures - which is why Phase 3 is irreplaceable.
 
 ## Workspace layout (decided 2026-10-12, already scaffolded)
 
