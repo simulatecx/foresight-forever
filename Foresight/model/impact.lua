@@ -302,6 +302,9 @@ end
 
 -- Returns (line, info) or nil. At most ONE line, neutral wording, no emoji.
 function Impact.coachingLine(loadout, ranked, focus)
+    -- S30: one off switch for all three coaching surfaces (advisor, panel footer, item
+    -- tooltip) - gating here covers them all. Default ON.
+    if HM.showSetting and not HM.showSetting("coaching") then return nil end
     if not ranked then ranked, focus = Impact.rankStats(loadout) end
     local mech = focus and DEAD_MECHANISM[focus]
     local top = ranked and ranked[1]

@@ -41,6 +41,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S27 UI-display-grammar: one voice + the standing toggle | 3 | ◐ |
 | S28 Goal-first: ability goals + plan-aware gear relevance | 3 | ◐ |
 | S29 Class roster + per-class coverage report | - | ◐ |
+| S30 CORE-options: settings surface, one spine two controls | 3 | ◐ |
 
 ## Active / next
 
@@ -527,6 +528,22 @@ guessed. Data: generated shape addition. Abuse: not externally reachable.
 AC: ☑ gen.classes (id/name/token) emitted, ChrClasses-sourced when present ·
 ☑ conversions-per-class completeness gate (selftest) · ☑ S26 loop coverage enumerates
 gen.classes · ☑ harvest per-class coverage matrix · ☑ selftest 254 (+2).
+
+### S30 - CORE-options: the settings surface, one spine two controls ◐  (S30-S32 handoff)
+Fit & Overlap - Category CORE -> UI. Verdict: Net-new core/settings.lua (the declared
+SETTINGS_KEYS spine) + ui/options_panel.lua (GUI) + Enhance init.lua (/foresight set
+generalized, standing migrated). Complements: /foresight set + the eye icon (two
+controls, one key). Avoid duplicating: one settings store, one validation path, no
+Blizzard Settings API fork risk. Trust: THE owner-controls surface; tabs render only
+for shipped groups (no Panic tab). Data: validated settings keys. Abuse: not
+externally reachable.
+
+AC: ☑ SETTINGS_KEYS declared (type/default/validator/description), standing migrated ·
+☑ new keys coaching (3 surfaces honor OFF), actionTrigger (off|alt|shift), panelAlpha
+(Matrix opacity aliased to it) · ☑ /foresight options + /foresight set <key> <value>;
+report button wired · ☑ tabs from shipped groups only · ☑ combat-gated; validators
+heal tamper (false-value read bug caught + pinned) · ☑ selftest 259 (+5) · ☐ in-game
+render + toggle verify.
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

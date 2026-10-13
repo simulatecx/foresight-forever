@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.42.0 - 2026-10-12
+
+OPTIONS MENU (S30): a settings window, and the spine behind it. core/settings.lua
+declares SETTINGS_KEYS - one validated table (type, default, validator, description per
+key) that the slash commands, the GUI, and the docs all read, so a setting is one edit
+everywhere. /foresight set is now generic over that table; the S27 standing branch
+migrated into it. New keys: coaching (default ON; one gate in Impact.coachingLine
+silences all three coaching surfaces), actionTrigger (off|alt|shift, default alt -
+consumed by S32), panelAlpha (the opacity slider; /foresight matrix opacity now aliases
+it so both panels read one key). ui/options_panel.lua is the house-skinned GUI (tab
+column + content, checkbox/enum/slider rows built from the declared keys) - tabs render
+ONLY for groups with shipped features (no Panic Advisor tab until the pillar exists),
+with a wired Report-an-issue button and a combat-gated open. Every write goes through
+the same validators as the slash path; a tampered settings table heals on read. Caught
+and pinned a false-value read bug (the and/or idiom dropped a stored alse to the
+default). Selftest 259 (+5).
+
+*Features:* CORE-options, MODEL-stat-advisor, UI-matrix-panel, QA-selftest-harness
+
 ## 0.41.0 - 2026-10-12
 
 CLASS ROSTER (S29, the roster-law data source): the pilot is a Shaman, so sampled

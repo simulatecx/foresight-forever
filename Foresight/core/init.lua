@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.41.0"
+HM.version = "0.42.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -96,13 +96,11 @@ end
 -- Per-character display settings (S27, recorded user decision: standing names STAY,
 -- default ON, toggleable). Validated on read; only whitelisted keys exist. The full
 -- options GUI is backlogged - /foresight set <key> on|off is the lever until then.
-local SHOW_KEYS = { standing = true }
+-- Toggle read, delegating to the settings spine (S30) - one validated store for the
+-- slash commands, the GUI, and these call sites. Returns true unless explicitly OFF.
 function HM.showSetting(key)
-    if not SHOW_KEYS[key] then return true end
-    local db = HM.charDb and HM.charDb()
-    local show = db and db.settings and db.settings.show
-    if type(show) == "table" and show[key] == false then return false end
-    return true
+    if not (HM.Settings and HM.Settings.KEYS[key]) then return true end
+    return HM.Settings.get(key) ~= false
 end
 
 local function printMsg(msg)
@@ -403,17 +401,33 @@ local function onSlash(input)
             printMsg("open the talent frame to see the tree light up; the Matrix shows the pathway")
         end
         if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
-    elseif cmd == "set" then
-        -- Generic settings lever (S27; the options GUI menu is backlogged).
-        local key, val = rest:match("^(%S+)%s+(%S+)$")
-        if key ~= "standing" or (val ~= "on" and val ~= "off") then
-            printMsg("usage: /foresight set standing on|off (hides the archetype NAME; your numbers never hide)")
+    elseif cmd == "set" or cmd == "options" or cmd == "config" then
+        if cmd ~= "set" then
+            -- Open the options GUI (S30); slash set stays as the headless/quick lever.
+            if HM.OptionsPanel and HM.OptionsPanel.toggle then
+                HM.OptionsPanel.toggle()
+            else
+                printMsg("options window is in-game only - use /foresight set <key> <value>")
+            end
             return
         end
-        local db = HM.charDb()
-        if type(db.settings.show) ~= "table" then db.settings.show = {} end
-        db.settings.show.standing = (val == "on")
-        printMsg("standing names " .. val .. (val == "off" and " - lean and goal text remain" or ""))
+        -- Generic settings lever over the declared SETTINGS_KEYS spine (S30).
+        local key, val = rest:match("^(%S+)%s+(%S+)$")
+        if not (key and HM.Settings and HM.Settings.KEYS[key]) then
+            local keys = {}
+            for k in pairs(HM.Settings and HM.Settings.KEYS or {}) do
+                keys[#keys + 1] = HM.Settings.usage(k)
+            end
+            table.sort(keys)
+            printMsg("usage: /foresight set <" .. table.concat(keys, " | ") .. ">")
+            return
+        end
+        local clean = HM.Settings.setFromText(key, val)
+        if clean == nil then
+            printMsg("invalid value - usage: /foresight set " .. HM.Settings.usage(key))
+            return
+        end
+        printMsg(("%s = %s"):format(key, tostring(clean)))
         if HM.StatsPanel and HM.StatsPanel.refresh then pcall(HM.StatsPanel.refresh) end
         if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
     elseif cmd == "report" then
@@ -916,7 +930,7 @@ local function onSlash(input)
             printMsg("export window unavailable outside the game client")
         end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | audit | report [note] | set standing on|off | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | audit | report [note] | options | set <key> <value> | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
     end
 end
 

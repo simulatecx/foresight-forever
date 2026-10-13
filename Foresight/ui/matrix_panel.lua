@@ -38,6 +38,13 @@ local function uiState()
 end
 
 local function opacity()
+    -- S30: panelAlpha is the unified key both panels read; the per-panel matrix.opacity
+    -- is a migration fallback (older saves) honored only if panelAlpha is unset.
+    if HM.Settings then
+        local a = uiState().opacity
+        if a == nil then return HM.Settings.get([[panelAlpha]]) end
+        return HM.PanelModel.normalizeOpacity(a)
+    end
     return HM.PanelModel.normalizeOpacity(uiState().opacity)
 end
 
@@ -364,8 +371,11 @@ function MatrixPanel.toggle()
 end
 
 function MatrixPanel.setOpacity(v)
-    local a = HM.PanelModel.normalizeOpacity(v)
-    uiState().opacity = a
+    -- S30: writes the UNIFIED panelAlpha key (the /foresight matrix opacity alias) and
+    -- clears the legacy per-panel value so the one key wins going forward.
+    local a = HM.Settings and HM.Settings.setValue([[panelAlpha]], v)
+        or HM.PanelModel.normalizeOpacity(v)
+    uiState().opacity = nil
     if panel and panel.bg then
         panel.bg:SetColorTexture(0.055, 0.055, 0.07, a)
     end

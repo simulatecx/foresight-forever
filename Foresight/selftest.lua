@@ -508,6 +508,59 @@ function HM.runSelftest(out)
         return text:find("+17.1%", 1, true) ~= nil
             and text:find("Melee DPS |cff9d9d9d(vs equipped)", 1, true) ~= nil
     end)())
+    -- S30 settings spine: one declared key table, validated, slash + GUI bind to it.
+    check("settings spine: every key declares type/default/validator/description", (function()
+        local S = HM.Settings
+        if not S then return false end
+        for key, spec in pairs(S.KEYS) do
+            if not (spec.group and spec.type and spec.label and spec.desc) then
+                return false, key
+            end
+            if spec.type == "enum" and type(spec.values) ~= "table" then return false, key end
+            if spec.type == "slider" and not (spec.min and spec.max) then return false, key end
+            if S.validate(key, nil) ~= spec.default then return false, key .. " default" end
+        end
+        return S.KEYS.standing and S.KEYS.coaching and S.KEYS.actionTrigger
+            and S.KEYS.panelAlpha and true or false
+    end)())
+    check("settings: validators round-trip legal, reject illegal -> default", (function()
+        local S = HM.Settings
+        return S.validate("standing", false) == false
+            and S.validate("standing", "junk") == true -- default
+            and S.coerce("standing", "off") == false and S.coerce("standing", "x") == nil
+            and S.validate("actionTrigger", "shift") == "shift"
+            and S.validate("actionTrigger", "nope") == "alt"
+            and S.coerce("actionTrigger", "shift") == "shift"
+            and S.validate("panelAlpha", 0.5) == 0.5
+            and S.validate("panelAlpha", 99) == 0.92 and S.validate("panelAlpha", 0.05) == 0.92
+    end)())
+    check("settings: set round-trips through the store and heals tamper", (function()
+        local S, db = HM.Settings, HM.charDb()
+        local savedShow, savedAt = db.settings.show, db.settings.actionTrigger
+        S.setValue("actionTrigger", "shift")
+        local got = S.get("actionTrigger") == "shift"
+        db.settings.actionTrigger = "tampered" -- illegal -> read heals to default
+        local healed = S.get("actionTrigger") == "alt"
+        db.settings.show, db.settings.actionTrigger = savedShow, savedAt
+        return got and healed
+    end)())
+    check("settings: coaching OFF silences all three coaching surfaces", (function()
+        local db = HM.charDb()
+        local saved = db.settings.show
+        db.settings.show = { coaching = false }
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local line = HM.Impact.coachingLine(lo)
+        local itemLine = HM.Impact.coachingItemLine(lo, { Agility = 10, Stamina = 2 })
+        db.settings.show = saved
+        local backOn = HM.Impact.coachingLine(HM.Loadout.fromSnapshot(meleeShamanSnap()))
+        return line == nil and itemLine == nil and type(backOn) == "string"
+    end)())
+    check("settings: GUI tabs only for groups with shipped keys (no Panic tab)", (function()
+        local groups = {}
+        for _, spec in pairs(HM.Settings.KEYS) do groups[spec.group] = true end
+        return groups["General"] and groups["Synergy Matrix"]
+            and groups["Panic Advisor"] == nil
+    end)())
     -- S27 display grammar: six claim shapes, one color table, the honesty ladder.
     check("display grammar: the six claim shapes, string for string", (function()
         local D = HM.Display
