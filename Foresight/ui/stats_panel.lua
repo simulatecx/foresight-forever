@@ -86,6 +86,11 @@ local function createRow()
     f.value = f:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
     f.value:SetPoint("RIGHT", -6, 0)
     f.value:SetJustifyH("RIGHT")
+    -- S33: value-change flash accent (ours, hidden until Motion lights it).
+    f.flash = f:CreateTexture(nil, "OVERLAY")
+    f.flash:SetPoint("RIGHT", -2, 0)
+    f.flash:SetSize(72, ROW_HEIGHT - 2)
+    f.flash:Hide()
     f:SetScript("OnEnter", function(self)
         self.stripe:SetColorTexture(1, 1, 1, 0.10)
         if self.tooltipText then
@@ -122,9 +127,99 @@ local function createHeader()
     return f
 end
 
+-- S33 RADAR CHART: the drawn shape (spokes + SetVertexOffset polygon fill + plan
+-- outline) the S31 spec deferred. Renders ABOVE the section's text rows - the rows
+-- and the basis line stay (text reduced, never removed; the display law owns the
+-- numbers). Honest degrades: no CreateLine/SetVertexOffset -> text rows only.
+local RADAR_ABBREV = { meleeDps = "Melee", spellcasting = "Spell", healing = "Heal",
+    survivability = "Surv", sustain = "Sust", threat = "Threat",
+    rangedDps = "Ranged", tankability = "Tank" }
+local CHART_H = 168
+local CHART_RADIUS = 56
+
+local function renderRadar(chart, yTop, innerW, r, g, b)
+    local M = HM.Motion
+    local cf = panel.radarChart
+    if not cf then
+        cf = _G.CreateFrame("Frame", nil, panel)
+        cf.labels = {}
+        panel.radarChart = cf
+    end
+    if not cf.CreateLine then return false end
+    M.releaseLines(cf)
+    M.releaseTris(cf)
+    cf:ClearAllPoints()
+    cf:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, yTop)
+    cf:SetSize(innerW, CHART_H)
+    cf:Show()
+    local cx, cy = innerW / 2, -CHART_H / 2
+    local axes = chart.axes
+    local n = #axes
+    if n < 3 then cf:Hide() return false end
+    local ones, cur, plan, hasPlan = {}, {}, {}, false
+    for i, ax in ipairs(axes) do
+        ones[i] = 1
+        cur[i] = ax.curFill or 0
+        plan[i] = ax.planFill or ax.curFill or 0
+        if ax.planFill then hasPlan = true end
+    end
+    local rim = M.radarPoints(ones, CHART_RADIUS)
+    -- spokes + rim (the reference web)
+    for i = 1, n do
+        M.line(cf, "TOPLEFT", cx, cy, cx + rim[i].x, cy + rim[i].y,
+            { r = 1, g = 1, b = 1, a = 0.10 }, 1)
+        local nxt = rim[(i % n) + 1]
+        M.line(cf, "TOPLEFT", cx + rim[i].x, cy + rim[i].y, cx + nxt.x, cy + nxt.y,
+            { r = 1, g = 1, b = 1, a = 0.14 }, 1)
+    end
+    -- current shape: filled polygon + bright outline (class color)
+    local pts = M.radarPoints(cur, CHART_RADIUS)
+    M.drawFan(cf, "TOPLEFT", cx, cy, pts, { r = r, g = g, b = b, a = 0.20 })
+    for i = 1, n do
+        local nxt = pts[(i % n) + 1]
+        M.line(cf, "TOPLEFT", cx + pts[i].x, cy + pts[i].y, cx + nxt.x, cy + nxt.y,
+            { r = r, g = g, b = b, a = 0.85 }, 1.5)
+    end
+    -- plan overlay: OUTLINE only (never a second fill - the shapes must both read)
+    if hasPlan then
+        local ppts = M.radarPoints(plan, CHART_RADIUS)
+        for i = 1, n do
+            local nxt = ppts[(i % n) + 1]
+            M.line(cf, "TOPLEFT", cx + ppts[i].x, cy + ppts[i].y,
+                cx + nxt.x, cy + nxt.y, { r = 1, g = 0.82, b = 0.3, a = 0.9 }, 1)
+        end
+    end
+    -- axis tip labels (abbreviated; the full label + display-law value stays in the
+    -- rows below). Goal axis reads in class color with the star.
+    local tips = M.radarPoints(ones, CHART_RADIUS + 16)
+    for i = 1, n do
+        local fs = cf.labels[i]
+        if not fs then
+            fs = cf:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+            cf.labels[i] = fs
+        end
+        fs:ClearAllPoints()
+        fs:SetPoint("CENTER", cf, "TOPLEFT", cx + tips[i].x, cy + tips[i].y)
+        local ab = RADAR_ABBREV[axes[i].id] or (axes[i].label or ""):sub(1, 5)
+        if axes[i].isGoal then
+            fs:SetText(("|cff%02x%02x%02x* %s|r"):format(r * 255, g * 255, b * 255, ab))
+        else
+            fs:SetText(ab)
+        end
+        fs:Show()
+    end
+    for i = n + 1, #cf.labels do cf.labels[i]:Hide() end
+    return true
+end
+
+local FLASH_SECTIONS = { dimensions = true, ledger = true, statvalue = true }
+
 local function layout(model)
     releaseAll(rowPool)
     releaseAll(headerPool)
+    if HM.Motion then HM.Motion.cancelOwner("fs") end
+    local motion = HM.Motion and HM.Motion.level() or "off"
+    if panel.radarChart and motion == "off" then panel.radarChart:Hide() end
     local state = uiState()
     local r, g, b = classColor()
     local y = -PAD - 22 -- below title bar
@@ -138,11 +233,29 @@ local function layout(model)
         header:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
         header:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
         y = y - HEADER_HEIGHT - 2
+        if section.id == "radar" and panel.radarChart
+                and (collapsed or motion == "off" or not section.chart) then
+            panel.radarChart:Hide()
+        end
         if not collapsed then
+            if section.id == "radar" and section.chart and motion ~= "off"
+                    and HM.Motion then
+                if renderRadar(section.chart, y, PANEL_WIDTH - PAD * 2, r, g, b) then
+                    y = y - CHART_H - 6
+                end
+            end
             local zebra = false
             for _, row in ipairs(section.rows) do
                 local f = acquire(rowPool, createRow)
                 f.tooltipText = row.tooltip
+                f.flash:Hide()
+                if HM.Motion and FLASH_SECTIONS[section.id] then
+                    local key = "fs:" .. section.id .. ":" .. tostring(row.label)
+                    local prev = HM.Motion.trackValue(key, row.value)
+                    if motion ~= "off" and prev ~= nil and prev ~= row.value then
+                        HM.Motion.flash("fs", f.flash, r, g, b, 0.20)
+                    end
+                end
                 f.zebra = zebra
                 f.stripe:SetColorTexture(1, 1, 1, zebra and 0.04 or 0)
                 zebra = not zebra
@@ -297,6 +410,10 @@ local function createPanel()
     optBtn:SetScript("OnLeave", function() if _G.GameTooltip then _G.GameTooltip:Hide() end end)
 
     parent:HookScript("OnHide", function() panel:Hide() end)
+    -- S33 throttle law: a hidden panel runs zero animation work.
+    panel:SetScript("OnHide", function()
+        if HM.Motion then HM.Motion.cancelOwner("fs") end
+    end)
 
     -- Live refresh while visible: gear, stats, talents, and buffs all re-snapshot.
     -- pcall per registration - event names drift across client flavors (degrade law).

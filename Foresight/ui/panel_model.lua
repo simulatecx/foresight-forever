@@ -372,6 +372,52 @@ function PanelModel.radarModel(loadout, plan)
         basis = "axes scaled independently - shape is not cross-axis magnitude (p)" }
 end
 
+-- S33 GAUGES (pure): radial rings render ONLY where a true fraction exists - a ring
+-- never invents a scale. Two honest sources: Flurry-engine steady-state uptime (the
+-- trained crit-haste engine + the registered formula) and chain-cast time-to-OOM for
+-- the FOCUSED mana spell, normalized against a PRINTED 60s cap. Classes/builds
+-- without either get an empty list, never a fake ring.
+local OOM_RING_CAP = 60 -- seconds of chain-casting = a full ring (printed basis)
+
+function PanelModel.gaugeModel(loadout, focusName)
+    local out = {}
+    local snap = loadout.snapshot or {}
+    local stats = snap.stats or {}
+    if HM.Sim and HM.Sim.flurryFor and HM.formulas and HM.formulas.flurryUptime then
+        local eng = HM.Sim.flurryFor(snap.talents)
+        local crit = stats.meleeCritPct
+        if eng and type(crit) == "number" and crit > 0 then
+            local uptime = HM.formulas.flurryUptime.fn(crit, eng.swings or 0)
+            if uptime and uptime > 0 then
+                out[#out + 1] = {
+                    id = "flurry",
+                    label = (eng.name or "Flurry") .. " uptime (p)",
+                    frac = math.min(1, uptime),
+                    text = ("%.0f%%"):format(uptime * 100),
+                    tooltip = ("steady-state at %.1f%% crit over %d swings (p)")
+                        :format(crit, eng.swings or 0),
+                }
+            end
+        end
+    end
+    if focusName and HM.Sim and HM.Sim.resolveSpellByName and HM.Sim.timeToOOM then
+        local sid = HM.Sim.resolveSpellByName(focusName)
+        local oom = sid and HM.Sim.timeToOOM(loadout, sid)
+        if oom and oom.seconds and oom.seconds > 0 then
+            out[#out + 1] = {
+                id = "oom",
+                label = ("%s to OOM (p)"):format(oom.name or focusName),
+                frac = math.min(1, oom.seconds / OOM_RING_CAP),
+                text = ("%.0fs"):format(oom.seconds),
+                note = ("ring full = %ds of chain-casting (p)"):format(OOM_RING_CAP),
+                tooltip = ("%d casts at %d mana each (p)"):format(
+                    oom.casts or 0, oom.cost or 0),
+            }
+        end
+    end
+    return out
+end
+
 -- Build the full panel model for a loadout.
 -- Returns { sections = { { id, title, rows = { { label, value, tooltip? } } } } }
 function PanelModel.build(loadout)
@@ -474,7 +520,12 @@ function PanelModel.build(loadout)
             radarRows[#radarRows + 1] = { label = "",
                 value = "|cff9d9d9d" .. radar.basis .. "|r", wide = true }
             sections[#sections + 1] = { id = "radar",
-                title = radar.hasPlan and "Shape (current -> plan)" or "Shape", rows = radarRows }
+                title = radar.hasPlan and "Shape (current -> plan)" or "Shape",
+                rows = radarRows,
+                -- S33: the structured axes ride along so the renderer can DRAW the
+                -- chart (spokes + polygon fill) when uiMotion allows; the text rows
+                -- above stay rendered either way (text reduced, never removed).
+                chart = radar }
         end
     end
 

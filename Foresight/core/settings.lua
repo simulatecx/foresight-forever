@@ -36,6 +36,12 @@ Settings.KEYS = {
         label = "Action-bar trace modifier",
         desc = "Hold this while hovering an action button (talent frame open) to light the talents that feed it. off disables it.",
     },
+    uiMotion = {
+        group = "General", type = "enum", default = "subtle",
+        values = { "off", "subtle", "full" },
+        label = "UI motion",
+        desc = "Dynamic visuals on the panels: bars sweep, the ecosystem renders as a connected diagram, the radar draws its shape. off = the static text render; full adds traveling pulses.",
+    },
 }
 
 -- The ordered group list for the GUI (a group renders only if it owns >= 1 key).

@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.45.0 - 2026-10-13
+
+UI DYNAMICS (S33, the user directive: "i dont like the text - rig up some dynamic
+visual"). One motion spine, four surfaces, zero honesty bends:
+
+- `ui/motion.lua` - the ONE home for dynamic visuals: tweens on a self-stopping
+  OnUpdate driver (zero work when idle or hidden), accent pulses as AnimationGroups
+  (GPU-side, no per-frame Lua), pooled connector lines with a traveling pulse,
+  SetVertexOffset triangle-fan polygon fills, Cooldown-swipe radial gauges (masked
+  disc + paused swipe). Pure geometry (radar points, triangle fan, diagram layout)
+  lives above the headless guard and is selftest-covered.
+- MATRIX: dimension bars SWEEP from their previous fill to the new one (keyed by
+  dimension id - pooled widgets have no identity), the top lens breathes, changed
+  values flash once. The ecosystem's stacked text cards become a CONNECTED
+  Enabler -> Engine -> Payoff diagram - three tagged node boxes joined by real lines
+  (a pulse travels them in full); each card's explainer sentence moved to its box's
+  hover tooltip; the insight box keeps every computed number and (p).
+- CHARACTER TAB: the radar finally DRAWS (closes the S31 deferral) - spokes, the
+  filled per-axis polygon in class color, the saved plan as a gold OUTLINE overlay
+  (never a second fill), abbreviated tip labels; the display-law rows and the basis
+  line stay below the chart (text reduced, never removed). Dimension/ledger value
+  changes flash.
+- RADIAL GAUGES, honest-only: rings render exclusively where a TRUE fraction exists -
+  Flurry steady-state uptime when the engine is trained, chain-cast time-to-OOM for
+  the focused mana spell against a PRINTED 60s cap (pure PanelModel.gaugeModel;
+  empty list otherwise, never a fake ring).
+- OWNER CONTROL (trust law): settings key uiMotion = off|subtle|full, default
+  subtle. off IS the v0.44.x static render - text-card eco, text-row radar, instant
+  bars, no rings. The options GUI picked the key up from the spine automatically.
+- Laws held: all drawing on OUR frames (the taint-law lint watches); animations
+  cancel on hide/relayout (throttle law); (p) marks and fill-basis lines never
+  animate away. Selftest 272 (+5): uiMotion validation, radar point/clamp geometry,
+  triangle fan, diagram layout, both gauge paths + the honest-empty case.
+
+In-game verify queued (the P1 sweep): motion-level round-trip (off == pre-S33
+render), diagram/chart/gauge renders, mobile binding at 1280x720 @ 0.65.
+
+*Features:* UI-motion, UI-matrix-panel, UI-stats-panel, CORE-options,
+QA-selftest-harness
+
 ## 0.44.4 - 2026-10-13
 
 RESISTANCE KEYS MAPPED + HARVEST TRIAGE RECORDS (the unknownItemStats journal pays

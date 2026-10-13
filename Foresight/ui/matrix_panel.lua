@@ -97,13 +97,25 @@ end
 
 local function releasePools()
     for _, f in ipairs(fsPool) do f.inUse = false; f:Hide() end
-    for _, t in ipairs(texPool) do t.inUse = false; t:Hide() end
+    for _, t in ipairs(texPool) do
+        t.inUse = false
+        t:Hide()
+        if HM.Motion then HM.Motion.stopPulse(t) end -- pooled tex may carry an accent
+    end
 end
 
 local TAG_COLOR = { Enabler = BLUE, Engine = YELLOW, Payoff = BRAND }
 
 local function layout(model)
     releasePools()
+    -- S33: in-flight tweens target pooled regions about to be re-acquired - kill them
+    -- before relayout, and release the motion-owned pools (lines, gauges).
+    if HM.Motion then
+        HM.Motion.cancelOwner("matrix")
+        HM.Motion.releaseLines(panel)
+        HM.Motion.releaseGauges(panel)
+    end
+    local motion = HM.Motion and HM.Motion.level() or "off"
     local r, g, b = classColor()
     local innerW = WIDTH - PAD * 2
     local y = -30 -- below the title bar
@@ -151,6 +163,9 @@ local function layout(model)
     y = y - 28
 
     -- Dimension bars (honest relative fill; basis printed under the block).
+    -- S33: fills SWEEP from the previous value (keyed by dimension id - pooled
+    -- widgets have no identity), the top lens carries a breathing accent, and a
+    -- changed value flashes once. uiMotion=off renders the static fill exactly.
     for _, bar in ipairs(model.bars.rows) do
         local label = acquireFS("ARTWORK", "GameFontHighlightSmall")
         label:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
@@ -161,6 +176,15 @@ local function layout(model)
         local vc = bar.top and BRAND or MUTED
         value:SetText(("|cff%02x%02x%02x%s|r"):format(vc.r * 255, vc.g * 255,
             vc.b * 255, bar.value))
+        local prevFill = HM.Motion
+            and HM.Motion.trackValue("mx:bar:" .. (bar.id or bar.label), bar.fill)
+        if HM.Motion and motion ~= "off" and prevFill
+                and math.abs(prevFill - bar.fill) > 0.002 then
+            local fl = acquireTex("ARTWORK", 2)
+            fl:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PAD, y + 1)
+            fl:SetSize(64, 13)
+            HM.Motion.flash("matrix", fl, BRAND.r, BRAND.g, BRAND.b, 0.22)
+        end
         y = y - 14
         local track = acquireTex("BACKGROUND", 1)
         track:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
@@ -172,6 +196,14 @@ local function layout(model)
         fill:SetSize(fillW, 5)
         local fc = bar.top and BRAND or MUTED
         fill:SetColorTexture(fc.r, fc.g, fc.b, bar.top and 0.95 or 0.55)
+        if HM.Motion and motion ~= "off" then
+            local prevW = prevFill
+                and math.max(1, math.floor(innerW * math.min(prevFill, 1)))
+            if prevW and prevW ~= fillW then
+                HM.Motion.sweepWidth("matrix", fill, prevW, fillW)
+            end
+            if bar.top then HM.Motion.pulse(fill, 1, 0.62, 1.4) end
+        end
         y = y - 12
     end
     local basis = acquireFS("ARTWORK", "GameFontDisableSmall")
@@ -242,6 +274,96 @@ local function layout(model)
             (model.loopCount or 0) > 1 and "  |cff9d9d9d(click title to cycle)|r" or ""))
         y = y - math.max(14, goal:GetStringHeight() + 2) - 6
 
+        if HM.Motion and motion ~= "off" and panel.CreateLine then
+            -- S33 CONNECTED DIAGRAM: the loop as three linked node boxes with real
+            -- connector lines (a pulse travels them in full) instead of stacked text
+            -- cards. Text REDUCED, not removed: tag + members stay in the box, the
+            -- card's explainer sentence moves to the box's hover tooltip, and the
+            -- insight box below keeps every computed number and (p) mark.
+            local boxes, links = HM.Motion.diagramLayout(#model.eco.nodes, innerW, 16)
+            local topY = y
+            local boxH = 40
+            local titleFS = {}
+            for i, node in ipairs(model.eco.nodes) do
+                local t = acquireFS("ARTWORK", "GameFontHighlightSmall")
+                t:SetWidth(boxes[i].w - 10)
+                t:SetJustifyH("CENTER")
+                t:SetWordWrap(true)
+                if t.SetMaxLines then t:SetMaxLines(0) end
+                t:SetText("|cffffffff" .. (node.title or "") .. "|r")
+                titleFS[i] = t
+                local h = 20 + (t:GetStringHeight() or 12) + 8
+                if h > boxH then boxH = h end
+            end
+            panel.ecoHit = panel.ecoHit or {}
+            for i, node in ipairs(model.eco.nodes) do
+                local c = TAG_COLOR[node.tag] or MUTED
+                local bx = PAD + boxes[i].x
+                local bg = acquireTex("BACKGROUND", 1)
+                bg:SetPoint("TOPLEFT", panel, "TOPLEFT", bx, topY)
+                bg:SetSize(boxes[i].w, boxH)
+                bg:SetColorTexture(c.r, c.g, c.b, 0.07)
+                local strip = acquireTex("BACKGROUND", 2)
+                strip:SetPoint("TOPLEFT", panel, "TOPLEFT", bx, topY)
+                strip:SetSize(boxes[i].w, 2)
+                strip:SetColorTexture(c.r, c.g, c.b, 0.9)
+                local tag = acquireFS("ARTWORK", "GameFontDisableSmall")
+                tag:SetPoint("TOPLEFT", panel, "TOPLEFT", bx, topY - 5)
+                tag:SetWidth(boxes[i].w)
+                tag:SetJustifyH("CENTER")
+                tag:SetText(("|cff%02x%02x%02x%s|r"):format(c.r * 255, c.g * 255,
+                    c.b * 255, node.tag:upper()))
+                titleFS[i]:SetPoint("TOPLEFT", panel, "TOPLEFT", bx + 5, topY - 20)
+                local hit = panel.ecoHit[i]
+                if not hit then
+                    hit = _G.CreateFrame("Frame", nil, panel)
+                    hit:EnableMouse(true)
+                    hit:SetScript("OnEnter", function(self)
+                        if self.tipTitle then
+                            _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                            _G.GameTooltip:SetText(self.tipTitle, 1, 1, 1)
+                            if self.tipBody then
+                                _G.GameTooltip:AddLine(self.tipBody, 0.8, 0.8, 0.8, true)
+                            end
+                            _G.GameTooltip:Show()
+                        end
+                    end)
+                    hit:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+                    panel.ecoHit[i] = hit
+                end
+                hit:ClearAllPoints()
+                hit:SetPoint("TOPLEFT", panel, "TOPLEFT", bx, topY)
+                hit:SetSize(boxes[i].w, boxH)
+                hit.tipTitle = node.tag .. " - " .. (node.title or "")
+                hit.tipBody = node.desc
+                hit:Show()
+            end
+            for i = #model.eco.nodes + 1, #panel.ecoHit do panel.ecoHit[i]:Hide() end
+            local cyLine = topY - boxH / 2
+            for j, lk in ipairs(links) do
+                local x1, x2 = PAD + lk.x1 + 2, PAD + lk.x2 - 2
+                HM.Motion.line(panel, "TOPLEFT", x1, cyLine, x2, cyLine,
+                    { r = BRAND.r, g = BRAND.g, b = BRAND.b, a = 0.55 }, 2)
+                if motion == "full" then
+                    local dot = acquireTex("ARTWORK", 1)
+                    dot:SetSize(5, 5)
+                    dot:SetColorTexture(BRAND.r, BRAND.g, BRAND.b, 0.95)
+                    dot:SetPoint("TOPLEFT", panel, "TOPLEFT", x1, cyLine + 2.5)
+                    HM.Motion.tween("matrix", 0.9 + j * 0.2, function(e)
+                        dot:ClearAllPoints()
+                        dot:SetPoint("TOPLEFT", panel, "TOPLEFT",
+                            x1 + (x2 - x1 - 5) * e, cyLine + 2.5)
+                    end, { loop = function()
+                        return dot.inUse and panel:IsShown()
+                            and HM.Motion.level() == "full"
+                    end })
+                end
+            end
+            y = topY - boxH - 10
+        else
+        if panel.ecoHit then
+            for _, hit in ipairs(panel.ecoHit) do hit:Hide() end
+        end
         for _, node in ipairs(model.eco.nodes) do
             local c = TAG_COLOR[node.tag] or MUTED
             local cardTop = y
@@ -271,6 +393,7 @@ local function layout(model)
             strip:SetColorTexture(c.r, c.g, c.b, 0.9)
             y = y - 6
         end
+        end
 
         -- Actionable insight box: the loop's why + its live computed numbers.
         local boxTop = y
@@ -294,6 +417,49 @@ local function layout(model)
             line:SetPoint(edge[2], box, edge[2])
             line:SetHeight(1)
             line:SetColorTexture(BRAND.r, BRAND.g, BRAND.b, 0.25)
+        end
+        y = y - 4
+    end
+
+    -- S33 RADIAL GAUGES: rings only where the model found a TRUE fraction (Flurry
+    -- uptime / focused-spell OOM) - honest absence otherwise; the printed basis note
+    -- and the (p) in each label never animate away. Off = no rings (static render).
+    if model.gauges and #model.gauges > 0 and HM.Motion and motion ~= "off" then
+        local size = 44
+        local n = #model.gauges
+        local totalW = n * size + (n - 1) * 36
+        local left = (WIDTH - totalW) / 2
+        local gy = y - 8
+        for i, gm in ipairs(model.gauges) do
+            local gx = left + (i - 1) * (size + 36)
+            local gframe = HM.Motion.gauge(panel, "TOPLEFT", gx, gy, size,
+                gm.frac, BRAND, gm.text)
+            if gframe then
+                gframe:EnableMouse(true)
+                gframe.tipText = gm.tooltip
+                gframe:SetScript("OnEnter", function(self)
+                    if self.tipText then
+                        _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                        _G.GameTooltip:SetText(self.tipText, nil, nil, nil, nil, true)
+                        _G.GameTooltip:Show()
+                    end
+                end)
+                gframe:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+                local lf = acquireFS("ARTWORK", "GameFontDisableSmall")
+                lf:SetPoint("TOP", gframe, "BOTTOM", 0, -2)
+                lf:SetJustifyH("CENTER")
+                lf:SetText(gm.label)
+            end
+        end
+        y = gy - size - 18
+        for _, gm in ipairs(model.gauges) do
+            if gm.note then
+                local nf = acquireFS("ARTWORK", "GameFontDisableSmall")
+                nf:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
+                nf:SetWidth(innerW)
+                nf:SetText("|cff9d9d9d" .. gm.note .. "|r")
+                y = y - math.max(12, nf:GetStringHeight() + 2)
+            end
         end
         y = y - 4
     end
@@ -353,6 +519,11 @@ function MatrixPanel.refresh()
     local ok, model = pcall(HM.PanelModel.matrixModel, loadout, uiState().loop,
         cachedPath or nil, focusModel)
     if ok and model then
+        -- S33: the gauge model rides along (pure; empty where no true fraction).
+        if HM.PanelModel.gaugeModel then
+            local okg, gauges = pcall(HM.PanelModel.gaugeModel, loadout, focusName)
+            model.gauges = (okg and gauges) or nil
+        end
         panel.model = model
         layout(model)
         panel.bg:SetColorTexture(0.055, 0.055, 0.07, opacity())
@@ -481,6 +652,10 @@ local function createPanel()
     optBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
 
     panel:Hide()
+    -- S33 throttle law: a hidden panel runs zero animation work.
+    panel:SetScript("OnHide", function()
+        if HM.Motion then HM.Motion.cancelOwner("matrix") end
+    end)
 
     -- Live refresh while visible (same debounced event set as the stats panel).
     local events = _G.CreateFrame("Frame")

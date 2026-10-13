@@ -1707,6 +1707,64 @@ function HM.runSelftest(out)
             and m.path.label == "Spellcasting"
     end)())
 
+    -- S33 UI dynamics: the motion spine's pure half + the gauge model.
+    check("settings: uiMotion validates and defaults subtle", (function()
+        return HM.Settings.validate("uiMotion", "garbage") == "subtle"
+            and HM.Settings.validate("uiMotion", "full") == "full"
+            and HM.Settings.validate("uiMotion", "off") == "off"
+            and HM.Motion ~= nil and HM.Motion.level() ~= nil
+    end)())
+    check("motion geometry: radar points land on the axes and clamp", (function()
+        local function near(a, b) return math.abs(a - b) < 1e-6 end
+        local pts = HM.Motion.radarPoints({ 1, 1, 1, 1 }, 100)
+        if #pts ~= 4 then return false end
+        if not (near(pts[1].x, 0) and near(pts[1].y, 100)) then return false end
+        if not (near(pts[2].x, 100) and near(pts[2].y, 0)) then return false end
+        if not (near(pts[3].x, 0) and near(pts[3].y, -100)) then return false end
+        if not (near(pts[4].x, -100) and near(pts[4].y, 0)) then return false end
+        local cl = HM.Motion.radarPoints({ -1, 2 }, 50) -- out-of-range fills clamp
+        if not (near(cl[1].x, 0) and near(cl[1].y, 0) and near(cl[2].y, -50)) then
+            return false
+        end
+        local tris = HM.Motion.triangleFan(pts)
+        if #tris ~= 4 then return false end -- one triangle per edge, fan-closed
+        if not (near(tris[1].x2, pts[1].x) and near(tris[4].x3, pts[1].x)) then
+            return false -- the fan wraps back to the first vertex
+        end
+        return #HM.Motion.triangleFan({ pts[1], pts[2] }) == 0 -- <3 points: no fan
+    end)())
+    check("motion geometry: diagram layout spaces three linked boxes", (function()
+        local boxes, links = HM.Motion.diagramLayout(3, 316, 16)
+        if #boxes ~= 3 or #links ~= 2 then return false end
+        local w = (316 - 32) / 3
+        return approx(boxes[1].x, 0) and approx(boxes[1].w, w)
+            and approx(links[1].x1, w) and approx(links[1].x2, w + 16)
+            and approx(boxes[3].x, 2 * (w + 16))
+    end)())
+    check("gauges: Flurry uptime ring only when the engine is trained", (function()
+        local sn = testSnapshot()
+        sn.talents = { { spellID = 16256, rank = 1 } }
+        sn.stats.meleeCritPct = 30
+        local gs = HM.PanelModel.gaugeModel(HM.Loadout.fromSnapshot(sn))
+        if #gs ~= 1 or gs[1].id ~= "flurry" then return false end
+        if not approx(gs[1].frac, 1 - 0.7 ^ 3, 1e-9) then return false end
+        if gs[1].label:find("(p)", 1, true) == nil then return false end
+        local bare = testSnapshot()
+        bare.talents = {}
+        return #HM.PanelModel.gaugeModel(HM.Loadout.fromSnapshot(bare)) == 0
+    end)())
+    check("gauges: focused mana spell gets the OOM ring with a printed cap", (function()
+        local gs = HM.PanelModel.gaugeModel(base, "Frostbolt")
+        local gm
+        for _, e in ipairs(gs) do
+            if e.id == "oom" then gm = e end
+        end
+        return gm ~= nil and gm.frac > 0 and gm.frac <= 1
+            and gm.text:find("s$") ~= nil
+            and (gm.note or ""):find("60s", 1, true) ~= nil
+            and (gm.label or ""):find("(p)", 1, true) ~= nil
+    end)())
+
     -- Per-talent rank rules (S11): captured votes resolve each talent's scaling.
     check("per-talent rank rule defaults to the global hypothesis", (function()
         return approx(HM.formulas.talentRankValueFor(26, -500, 2, 5), -200)

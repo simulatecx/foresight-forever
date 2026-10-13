@@ -44,6 +44,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S30 CORE-options: settings surface, one spine two controls | 3 | ◐ |
 | S31 Expanded Character Tab (top outputs, ledger, radar) | 3 | ◐ |
 | S32 Action-bar synergy trigger (hold ALT, trace the button) | 3 | ☑ |
+| S33 UI dynamics: motion spine, eco diagram, radar chart, gauges | 3 | ◐ |
 
 ## Active / next
 
@@ -604,7 +605,41 @@ UIParent frame, anchored only; compliance gained the TAINT-LAW LINT (proven red 
 the pre-fix lines). Causality presumed, not proven (client taint blame is fuzzy) ·
 ☐ in-game verify: next session shows zero sentinel taint events.
 
-### SYNERGY - impact sources that work together ◐
+### S33 - UI dynamics: motion spine, eco diagram, radar chart, gauges ◐  (user directive 2026-10-13)
+Fit & Overlap - Category UI -> CORE. Verdict: Enhance matrix_panel + stats_panel +
+panel_model (new pure gaugeModel) with ONE net-new shared spine `ui/motion.lua`
+(tweens/pulses/lines/radial gauges/polygon math - neither panel forks animation code).
+Complements: S30 (new uiMotion key on the spine), S31 (closes the deferred radar
+spoke-polygon), S22a (same overlay discipline). Avoid duplicating: the synergy house
+glow stays untouched; fill-basis math stays in the model; the 0.2s debounce pattern is
+reused, never rewritten. Mobile: chart/diagram sized inside existing panel widths,
+labels keep full values; uiMotion=off restores today's static render exactly; verify
+at 1280x720 @ 0.65. Trust: owner control uiMotion off|subtle|full (default subtle);
+honesty laws unchanged - fill-basis lines stay, (p) never animates away, text REDUCED
+not removed (eco descs move to hover tooltips; numbers + grammar lines stay). Data:
+none new. Abuse: not externally reachable. Compliance: all drawing on OUR frames (the
+taint-law lint enforces); animation only while panels shown (throttle law - tweens
+self-terminate, continuous pulses stop on hide).
+
+As the player, I want the Matrix and Character Tab to SHOW relationships and change -
+bars that sweep, a connected Enabler->Engine->Payoff diagram, a real radar shape,
+rings for uptime/OOM - so the UI reads at a glance instead of as stacked text.
+
+AC (shipped v0.45.0): ☑ uiMotion key on the S30 spine (off|subtle|full, default
+subtle; off = the v0.44.x static render, including text-card eco + text-row radar) ·
+☑ Matrix dimension bars tween to new fills + top-lens accent pulse; value text
+flashes on change · ☑ eco = connected 3-node diagram (our lines + traveling pulse in
+full; node descs on hover; insight box + computed numbers unchanged) · ☑ radar
+renders as a drawn chart (spokes + SetVertexOffset polygon fill + plan outline
+overlay + abbreviated tip labels; display-law rows + basis line kept BELOW the chart)
+· ☑ radial gauges where a TRUE fraction exists (Flurry uptime when the engine is
+trained; chain-cast OOM ring for the focused mana spell, 60s cap printed) - honest
+absence otherwise · ☑ value-change flashes on FS dimension/ledger rows · ☑ pure
+selftests +5 (geometry points/fan/layout, gaugeModel both paths + honest-empty,
+uiMotion validation; 272 total) · ☑ gate green + deployed · ☐ in-game verify incl.
+mobile binding + uiMotion=off round-trip (the P1 sweep).
+
+
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
 /foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),
 themes include the player's racials and active consumables alongside talents - typed members
