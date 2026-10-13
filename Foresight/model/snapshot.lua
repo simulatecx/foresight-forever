@@ -18,15 +18,32 @@ local function statIndex(i)
     return Guards.number(v) or 0
 end
 
+-- THE one source for school identities (S25). SCHOOLS: name -> GetSpellBonusDamage
+-- index. SCHOOL_MASKS: the SpellEffect/gen.spells school BITMASK -> pool name
+-- (single-school masks only; physical and multi-school masks return nil so consumers
+-- fall back to the generic pool - honest degrade, never a guess).
 local SCHOOLS = { holy = 2, fire = 3, nature = 4, frost = 5, shadow = 6, arcane = 7 }
+local SCHOOL_MASKS = { [2] = "holy", [4] = "fire", [8] = "nature",
+                       [16] = "frost", [32] = "shadow", [64] = "arcane" }
+Snapshot.SCHOOLS = SCHOOLS
+Snapshot.SCHOOL_MASKS = SCHOOL_MASKS
 
-local function bestSpellDamage()
-    local best = 0
-    for _, idx in pairs(SCHOOLS) do
+-- Pool name for a spell's school mask, or nil (physical/multi-school/unknown).
+function Snapshot.schoolPoolName(mask)
+    return type(mask) == "number" and SCHOOL_MASKS[mask] or nil
+end
+
+-- S25: RETAIN all six school totals (GetSpellBonusDamage(school) returns the TOTAL
+-- for that school - generic + school-specific baked in by the client; the pool law,
+-- tagged in formulas.lua F.schoolPoolLaw). best stays for back-compat consumers.
+local function schoolDamagePools()
+    local pools, best = {}, 0
+    for name, idx in pairs(SCHOOLS) do
         local v = Guards.number(Guards.call(_G.GetSpellBonusDamage, idx)) or 0
+        pools[name] = v
         if v > best then best = v end
     end
-    return best
+    return pools, best
 end
 
 function Snapshot.capture()
@@ -34,6 +51,7 @@ function Snapshot.capture()
         return nil, "not in game client"
     end
     local _, classToken = _G.UnitClass("player")
+    local pools, bestPool = schoolDamagePools()
     local snapshot = {
         classToken = classToken,
         level = Guards.number(Guards.call(_G.UnitLevel, "player")) or 60,
@@ -44,7 +62,8 @@ function Snapshot.capture()
             stamina = statIndex(3),
             intellect = statIndex(4),
             spirit = statIndex(5),
-            spellDamage = bestSpellDamage(),
+            spellDamage = bestPool,
+            schoolDamage = pools, -- S25: all six retained, not just the max
             healingPower = Guards.number(Guards.call(_G.GetSpellBonusHealing)) or 0,
             attackPower = Guards.number(Guards.call(_G.UnitAttackPower, "player")) or 0,
             rangedAttackPower = Guards.number(Guards.call(_G.UnitRangedAttackPower, "player")) or 0,

@@ -12,9 +12,12 @@ local Plan = {}
 HM.Plan = Plan
 
 -- Stats a plan delta may move: the base graph nodes withStatDelta can target.
+-- S25: the six school pools are first-class plan stats.
 local PLAN_STATS = {
     Strength = true, Agility = true, Stamina = true, Intellect = true, Spirit = true,
     spellDamage = true, healingPower = true, armor = true,
+    ["school.holy"] = true, ["school.fire"] = true, ["school.nature"] = true,
+    ["school.frost"] = true, ["school.shadow"] = true, ["school.arcane"] = true,
 }
 Plan.stats = PLAN_STATS
 

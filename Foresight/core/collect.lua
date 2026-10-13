@@ -395,6 +395,17 @@ function Collect.verify(out)
                 s.strength, s.agility, s.stamina, s.intellect, s.spirit, s.attackPower, s.armor))
         result("weapon speed sane", snap.weaponSpeed > 0.5 and snap.weaponSpeed < 6,
             tostring(snap.weaponSpeed))
+        -- S25 in-game verification lever: the six retained school pools, printed so
+        -- one glance against the character sheet confirms the pool law.
+        local sdPools = snap.stats.schoolDamage
+        result("school damage pools retained", type(sdPools) == "table", (function()
+            if type(sdPools) ~= "table" then return "missing" end
+            local parts = {}
+            for _, name in ipairs({ "holy", "fire", "nature", "frost", "shadow", "arcane" }) do
+                parts[#parts + 1] = ("%s=%d"):format(name, sdPools[name] or 0)
+            end
+            return table.concat(parts, " ")
+        end)())
         result("talents captured", snap.talents ~= nil, tostring(snap.talents and #snap.talents or 0) .. " talents with ranks")
     else
         result("snapshot captures stats", false, "capture returned nil")

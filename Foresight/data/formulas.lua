@@ -94,6 +94,17 @@ F.spellBaseDamage = {
     end,
 }
 
+-- School damage pools (S25, doc-entry law - no fn, the identity IS the claim):
+-- GetSpellBonusDamage(school) returns the TOTAL bonus for that school - generic
+-- "+spell damage" and school-specific "+Frost damage" already combined by the client.
+-- The graph's six stat.school.* pools and the generic-feeds-all-six folding law rest
+-- on this; the in-game check compares the pools against the character sheet.
+F.schoolPoolLaw = {
+    unit = "total bonus spell damage per school",
+    source = "classic GetSpellBonusDamage semantics (community-documented); per-school reads retained since v0.37.0",
+    confidence = "classic-presumed",
+}
+
 -- Crit damage multipliers (classic laws): melee/ranged crits land 2x, spell and heal
 -- crits 1.5x. Used for the crit FRAMING line only - the headline hit range never
 -- bakes crit in.

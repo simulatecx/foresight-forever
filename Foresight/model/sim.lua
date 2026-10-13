@@ -233,7 +233,17 @@ function Sim.abilityHit(loadout, spellId, opts)
         local kind = dmg and "spell" or "heal"
         local baseMin, baseMax = F.spellBaseDamage.fn(d.base, d.var, d.lvl,
             spell.baseLevel or spell.level, d.maxLvl, snap.level)
-        local power = (kind == "heal") and stat("stat.healingPower") or stat("stat.spellDamage")
+        -- S25: damage spells draw from THEIR school's pool (one source for the mask
+        -- map: Snapshot.schoolPoolName); physical/multi-school/unknown falls back to
+        -- the generic max pool; heals keep healing power.
+        local power
+        if kind == "heal" then
+            power = stat("stat.healingPower")
+        else
+            local pool = HM.Snapshot and HM.Snapshot.schoolPoolName
+                and HM.Snapshot.schoolPoolName(spell.school)
+            power = pool and stat("stat.school." .. pool) or stat("stat.spellDamage")
+        end
         local coef, coefSource = d.coef, d.coef and "data" or nil
         if not coef then
             local castSec = (spell.castMs and spell.castMs > 0) and (spell.castMs / 1000) or 1.5

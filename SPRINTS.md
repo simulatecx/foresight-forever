@@ -36,6 +36,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S22 Skill-centric Matrix + pathway rows | 3 | ◐ |
 | S23 Weapon-swap honesty in the item verdict | 3 | ◐ |
 | S24 Modular split + Retail validation fork program | all | ◐ |
+| S25 School damage pools: +Frost means frost | 3 | ◐ |
 
 ## Active / next
 
@@ -436,6 +437,31 @@ never cross) · ☐ execute the fork (new repo, retail build fetch/generate, re-
 data gates to retail ground truth) · ☐ retail in-game validation to audit
 mismatch=0 · ☐ port-back + Forever launch-build regen on 2026-11-04 + flip channel
 to live + open crowdsourcing.
+
+### S25 - School damage pools: +Frost means frost ◐  (S25-S28 handoff, 2026-10-12)
+Fit & Overlap - Category MODEL -> GRAPH. Verdict: Enhance snapshot (retain per-school
+reads), loadout (six school nodes + max formula node, one delta-folding law), sim
+abilityHit (school-aware power), ITEM_STAT_MAP/PLAN_STATS/levers vocabulary (school
+stats first-class). Complements: MODEL-ability-outcomes (school-true hit numbers),
+SYNERGY (school axis already exists). Avoid duplicating: the SCHOOLS id map (one
+source: Snapshot.SCHOOLS/SCHOOL_MASKS/schoolPoolName), the lever school axis, the one
+op-folder. Mobile: no new UI surface. Languages: existing sentence patterns. Trust:
+display-only; pool law tagged classic-presumed (F.schoolPoolLaw); nil-degrade keeps
+today's generic behavior. Data: no new stored data. Abuse: not externally reachable.
+Compliance: reads already Guards-routed.
+
+As a caster, I want +Frost Damage gear to move my frost spells specifically - and my
+Frostbolt tooltip to read from the frost pool - so school gear decisions are honest
+instead of averaged.
+
+AC: ☑ snapshot retains all six school totals (guarded, headless-zero) · ☑ six
+stat.school.* nodes + stat.spellDamage = max formula node (dimensions untouched) ·
+☑ folding law: generic -> all six, school-specific -> one (classic-presumed tagged) ·
+☑ abilityHit reads the spell's school pool, falls back honestly (frost != best
+fixture) · ☑ school item keys mapped (pattern family; unknown-key journal stays the
+tripwire), PLAN_STATS updated · ☑ verify prints the six pools (the in-game check) ·
+☑ selftest >= 235 (shipped 236) · ☐ in-game verify one school read + one frost-gear
+hover before 2026-10-21.
 
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

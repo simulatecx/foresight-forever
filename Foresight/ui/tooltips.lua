@@ -369,10 +369,21 @@ local DISPLAY_STAT = {
     spellDamage = "Spell Power", healingPower = "Healing Power",
     attackPower = "Attack Power", rangedAttackPower = "Ranged Attack Power",
     maxMana = "Mana", maxHealth = "Health", armor = "Armor",
+    ["school.holy"] = "Holy Spell Damage", ["school.fire"] = "Fire Spell Damage",
+    ["school.nature"] = "Nature Spell Damage", ["school.frost"] = "Frost Spell Damage",
+    ["school.shadow"] = "Shadow Spell Damage", ["school.arcane"] = "Arcane Spell Damage",
 }
 local STAT_ORDER = { "Strength", "Agility", "Stamina", "Intellect", "Spirit",
                      "spellDamage", "healingPower", "attackPower", "rangedAttackPower",
-                     "maxMana", "maxHealth", "armor" }
+                     "maxMana", "maxHealth", "armor",
+                     "school.holy", "school.fire", "school.nature", "school.frost",
+                     "school.shadow", "school.arcane" }
+
+-- S25: per-school item damage keys translate by PATTERN (the ITEM_MOD_<SCHOOL>_SPELL_
+-- DAMAGE family); the unknownItemStats journal stays the tripwire for any key shape
+-- Forever actually emits that this misses.
+local SCHOOL_KEY_NAMES = { HOLY = "holy", FIRE = "fire", NATURE = "nature",
+                           FROST = "frost", SHADOW = "shadow", ARCANE = "arcane" }
 
 -- Map a raw GetItemStats table to our stat names, summing duplicates. Second return:
 -- the keys we did NOT map (the AP live catch proved silent drops hide real impact -
@@ -382,6 +393,12 @@ function Tooltips.mapItemStats(raw)
     if type(raw) ~= "table" then return out, unknown end
     for key, val in pairs(raw) do
         local name = ITEM_STAT_MAP[key]
+        if not name and type(key) == "string" then
+            local school = key:match("^ITEM_MOD_(%u+)_SPELL_DAMAGE")
+            if school and SCHOOL_KEY_NAMES[school] then
+                name = "school." .. SCHOOL_KEY_NAMES[school]
+            end
+        end
         if name and type(val) == "number" then
             out[name] = (out[name] or 0) + val
         elseif type(val) == "number" and val ~= 0 then

@@ -399,6 +399,78 @@ function HM.runSelftest(out)
         local normal = linesText(HM.Tooltips.itemLines(mapped, lo, nil, nil) or {})
         return normal:find("for ", 1, true) ~= nil
     end)())
+    -- S25 school damage pools: six stat.school.* nodes, spellDamage = max formula,
+    -- one folding law (generic -> all six, school-specific -> one), school-aware hits.
+    check("school pools: legacy fixture seeds all six from the generic value", (function()
+        local built = base:build()
+        for _, name in ipairs({ "holy", "fire", "nature", "frost", "shadow", "arcane" }) do
+            if built.graph:value("stat.school." .. name, built.ctx, {}) ~= 50 then
+                return false, name
+            end
+        end
+        return built.graph:value("stat.spellDamage", built.ctx, {}) == 50
+    end)())
+    check("school pools: generic delta feeds ALL six + the max node", (function()
+        local built = base:withStatDelta("spellDamage", 10, "+10 sp"):build()
+        for _, name in ipairs({ "holy", "fire", "nature", "frost", "shadow", "arcane" }) do
+            if built.graph:value("stat.school." .. name, built.ctx, {}) ~= 60 then
+                return false, name
+            end
+        end
+        return built.graph:value("stat.spellDamage", built.ctx, {}) == 60
+    end)())
+    check("school pools: a school delta feeds exactly one pool", (function()
+        local built = base:withStatDelta("school.frost", 15, "+15 frost"):build()
+        local frost = built.graph:value("stat.school.frost", built.ctx, {})
+        local fire = built.graph:value("stat.school.fire", built.ctx, {})
+        local max = built.graph:value("stat.spellDamage", built.ctx, {})
+        return frost == 65 and fire == 50 and max == 65
+    end)())
+    check("school pools: abilityHit reads the SPELL'S school (frost != best fixture)", (function()
+        local snap = testSnapshot()
+        snap.stats.schoolDamage = { holy = 0, fire = 10, nature = 0,
+                                    frost = 80, shadow = 0, arcane = 0 }
+        snap.stats.spellDamage = 80 -- the old single number = the max (frost)
+        local lo = HM.Loadout.fromSnapshot(snap)
+        local fire = HM.Sim.abilityHit(lo, 133, {}) -- Fireball: fire school
+        local fbId = HM.Sim.resolveSpellByName("Frostbolt")
+        local frost = fbId and HM.Sim.abilityHit(lo, fbId, {})
+        return fire ~= nil and fire.power == 10 -- NOT the 80 max: the fix, proven
+            and frost ~= nil and frost.power == 80
+    end)())
+    check("school pools: mask map is one-source and honest on edges", (function()
+        local S = HM.Snapshot.schoolPoolName
+        return S(16) == "frost" and S(4) == "fire" and S(2) == "holy"
+            and S(1) == nil and S(24) == nil and S(nil) == nil -- physical/multi: fallback
+    end)())
+    check("school pools: item school keys map (journal tripwire stays for the rest)", (function()
+        local mapped, unknown = HM.Tooltips.mapItemStats({
+            ITEM_MOD_FROST_SPELL_DAMAGE_SHORT = 12,
+            ITEM_MOD_SHADOW_SPELL_DAMAGE_SHORT = 7,
+        })
+        if not (mapped["school.frost"] == 12 and mapped["school.shadow"] == 7) then
+            return false
+        end
+        return #unknown == 0 and HM.Plan.stats["school.frost"] == true
+    end)())
+    check("school pools: a FLAT school-damage op feeds its pool", (function()
+        -- Data-driven: any trait node with a flat schoolDamage op proves the fold.
+        for nid, node in pairs(gen.traits.nodes) do
+            for _, op in ipairs(node.ops or {}) do
+                if op.kind == "schoolDamage" and not op.isPct
+                        and type(op.school) == "string"
+                        and not op.school:find("/") and (op.maxValue or 0) > 0 then
+                    local pool = "stat.school." .. op.school:lower()
+                    local b0 = base:build()
+                    local b1 = base:withTraitNode(nid, node.maxRank or 1):build()
+                    local before = b0.graph:value(pool, b0.ctx, {})
+                    local after = b1.graph:value(pool, b1.ctx, {})
+                    return after > before, node.name
+                end
+            end
+        end
+        return true -- no flat school op in this build's data: nothing to prove
+    end)())
     check("lens display law: real units + vs-base indices (summary coherence)", (function()
         local D = HM.dimensions
         return D.display("meleeDps", 154) == "15.4 DPS"

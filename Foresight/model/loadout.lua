@@ -66,6 +66,30 @@ local STAT_NODE = {
     Strength = "stat.strength", Agility = "stat.agility", Stamina = "stat.stamina",
     Intellect = "stat.intellect", Spirit = "stat.spirit",
 }
+-- S25: the six school pools. FOLDING LAW (classic-presumed, F.schoolPoolLaw): a
+-- GENERIC spell-damage delta applies to ALL SIX pools ("+spell damage applies to all
+-- schools"); a SCHOOL-specific delta applies to its one pool. stat.spellDamage is the
+-- MAX over the pools (a formula node) so every existing consumer keeps working.
+local SCHOOL_NODES = {
+    holy = "stat.school.holy", fire = "stat.school.fire", nature = "stat.school.nature",
+    frost = "stat.school.frost", shadow = "stat.school.shadow", arcane = "stat.school.arcane",
+}
+
+local function addGenericSpellDamage(graph, op, value, source)
+    for _, node in pairs(SCHOOL_NODES) do
+        graph:addModifier{ target = node, op = op, value = value, source = source }
+    end
+end
+
+-- "Fire" / "Nature/Arcane" school label -> the pool node(s) it feeds.
+local function schoolNodesForLabel(label)
+    local nodes = {}
+    for name in tostring(label or ""):gmatch("[^/]+") do
+        local node = SCHOOL_NODES[name:lower()]
+        if node then nodes[#nodes + 1] = node end
+    end
+    return nodes
+end
 local STAT_KEY = { -- display stat name -> snapshot.stats key (conversion source)
     Strength = "strength", Agility = "agility", Stamina = "stamina",
     Intellect = "intellect", Spirit = "spirit",
@@ -88,8 +112,13 @@ local function applyOps(graph, ops, rank, maxRank, source, snapStats, talentId)
             maxRank, op.values)
         if op.kind == "statConvert" and CONVERT_NODE[op.to] then
             local srcVal = (snapStats and STAT_KEY[op.from] and snapStats[STAT_KEY[op.from]]) or 0
-            graph:addModifier{ target = CONVERT_NODE[op.to], op = "flat",
-                               value = srcVal * value / 100, source = source }
+            if op.to == "spellDamage" then
+                -- Generic spell damage feeds ALL SIX pools (S25 folding law).
+                addGenericSpellDamage(graph, "flat", srcVal * value / 100, source)
+            else
+                graph:addModifier{ target = CONVERT_NODE[op.to], op = "flat",
+                                   value = srcVal * value / 100, source = source }
+            end
         elseif op.kind == "stat" and STAT_NODE[op.stat] then
             graph:addModifier{
                 target = STAT_NODE[op.stat],
@@ -104,6 +133,13 @@ local function applyOps(graph, ops, rank, maxRank, source, snapStats, talentId)
         elseif op.kind == "schoolDamage" and op.isPct then
             graph:addModifier{ target = "agg.spellThroughputPct", op = "flat",
                                value = value, source = source }
+        elseif op.kind == "schoolDamage" then
+            -- FLAT school damage ("+15 Frost spell damage") previously had no node -
+            -- it now feeds its school pool(s) (S25).
+            for _, node in ipairs(schoolNodesForLabel(op.school)) do
+                graph:addModifier{ target = node, op = "flat",
+                                   value = value, source = source }
+            end
         elseif op.kind == "spellmod" and op.property == "damage/healing" and op.isPct then
             -- v0: percent damage/healing on specific spells feeds the throughput
             -- aggregate; the precise affected-spell list stays available for tooltips.
@@ -185,7 +221,6 @@ function Loadout:build()
         ["stat.stamina"] = s.stats.stamina or 0,
         ["stat.intellect"] = s.stats.intellect or 0,
         ["stat.spirit"] = s.stats.spirit or 0,
-        ["stat.spellDamage"] = s.stats.spellDamage or 0,
         ["stat.healingPower"] = s.stats.healingPower or 0,
         ["stat.rangedCritPct"] = s.stats.rangedCritPct or 0,
         ["stat.hastePct"] = s.stats.hastePct or 0,
@@ -197,9 +232,28 @@ function Loadout:build()
         ["agg.rangedThroughputPct"] = 0,
         ["agg.threatModPct"] = 0, -- talent threat modifiers sum here (negative = less threat)
     }
+    -- S25: six school pools seeded from the retained per-school reads. A legacy
+    -- fixture without schoolDamage seeds every pool with the generic value (the old
+    -- single-number behavior, exactly); real snapshots carry the true six.
+    local sd = s.stats.schoolDamage
+    for name, node in pairs(SCHOOL_NODES) do
+        baseStats[node] = (type(sd) == "table" and (sd[name] or 0))
+            or s.stats.spellDamage or 0
+    end
     for id in pairs(baseStats) do
         g:addNode{ id = id, kind = id:find("^agg") and "aggregate" or "stat" }
     end
+    -- stat.spellDamage = MAX over the pools (formula node): every existing consumer
+    -- (dimensions, tooltips, conversions display) keeps reading the same id.
+    g:addNode{ id = "stat.spellDamage", kind = "stat",
+               formula = function(get)
+                   local best = 0
+                   for _, node in pairs(SCHOOL_NODES) do
+                       local v = get(node)
+                       if v > best then best = v end
+                   end
+                   return best
+               end }
 
     -- Derived combat stats: the game's reported AP/crit already INCLUDES primary-stat
     -- contributions, so these nodes apply classic conversion rates only to the
@@ -324,12 +378,20 @@ function Loadout:build()
                 notes[#notes + 1] = "race what-if adds the modeled race's passives; your current racials remain in your stats"
             end
         elseif d.type == "stat" then
-            local node = STAT_NODE[d.stat] or ("stat." .. d.stat)
-            if g:getNode(node) then
-                g:addModifier{ target = node, op = "flat", value = d.amount,
-                               source = d.label or ("delta:" .. d.stat) }
+            if d.stat == "spellDamage" then
+                -- S25 folding law: a generic spell-damage delta feeds ALL SIX pools
+                -- (the max node follows; targeting the max directly would be a
+                -- double count).
+                addGenericSpellDamage(g, "flat", d.amount,
+                    d.label or "delta:spellDamage")
             else
-                notes[#notes + 1] = "unknown stat node " .. node
+                local node = STAT_NODE[d.stat] or ("stat." .. d.stat)
+                if g:getNode(node) then
+                    g:addModifier{ target = node, op = "flat", value = d.amount,
+                                   source = d.label or ("delta:" .. d.stat) }
+                else
+                    notes[#notes + 1] = "unknown stat node " .. node
+                end
             end
         end
     end

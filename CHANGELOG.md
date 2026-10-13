@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.37.0 - 2026-10-12
+
+SCHOOL DAMAGE POOLS (S25, the beta-sensitive cut of the S25-S28 handoff): +Frost
+means frost. The snapshot read all six GetSpellBonusDamage schools and kept only the
+max; +Frost gear was invisible to frost spells and school item keys journaled as
+unmapped.
+
+- Snapshot RETAINS all six school totals (stats.schoolDamage, guarded, headless-zero)
+  plus the one-source school maps (Snapshot.SCHOOLS / SCHOOL_MASKS / schoolPoolName).
+  Pool law tagged in the registry (F.schoolPoolLaw, classic-presumed:
+  GetSpellBonusDamage(school) = generic + school-specific combined).
+- Graph: six stat.school.* nodes; stat.spellDamage becomes the MAX formula node so
+  every existing consumer (spellcasting lens, tooltips, conversions) keeps reading
+  the same id. ONE folding law: generic spell-damage deltas (item spellDamage,
+  statConvert outputs, plan/stat what-ifs) feed ALL SIX pools; school-specific
+  deltas feed exactly one; FLAT schoolDamage ops ("+15 Frost spell damage"), which
+  previously had no node at all, now fold into their pool.
+- abilityHit draws a damage spell's power from ITS school pool (mask -> pool via the
+  one-source map); physical/multi-school/unknown falls back to the generic max -
+  honest degrade, never a guess. The frost != best fixture is selftest-pinned: a
+  Fireball on an 80-frost/10-fire caster now composes with 10, not 80.
+- Item keys: the ITEM_MOD_<SCHOOL>_SPELL_DAMAGE family maps by pattern into
+  school.<name> stats (display names, stat order, PLAN_STATS all first-class); the
+  unknown-key journal remains the tripwire for any key shape Forever actually emits.
+- /foresight verify prints the six pools - the one-glance in-game check against the
+  character sheet's own breakdown (do this + one frost-gear hover before 10-21).
+- Selftest 236 (+7): legacy-fixture seeding, generic-feeds-six, school-feeds-one,
+  frost != best abilityHit, mask-map edges (physical/multi -> nil), item school keys,
+  data-driven flat-school-op fold.
+
+*Features:* MODEL-snapshot, MODEL-loadout-whatif, MODEL-ability-outcomes,
+UI-item-tooltip, DATA-formula-registry, WHATIF-planner, QA-verify-command,
+QA-selftest-harness
+
 ## 0.36.0 - 2026-10-12
 
 THE MODULAR SPLIT PASS + THE SUMMARY DISPLAY LAW (S24 kickoff + live catch #8).
