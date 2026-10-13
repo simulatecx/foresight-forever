@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.45.3 - 2026-10-13
+
+FIFTH RANK-RULE PROMOTION ROUND - the ~10 high-level inspect pull (human-reviewed).
+Trained-backed votes jumped 18 -> 29; 12 lines promoted, taking the verified total
+from 25 to 37: 10 new across mage/warrior/rogue/priest/shaman/warlock (Arcane Impact,
+Cruelty, Hack and Slash, Improved Power Word: Shield, Meditation, Improved Renew,
+Restorative Totems, Purification, Mental Strength, Precision) plus two RE-PROMOTES -
+the v0.44.3 demotions of Tidal Focus and Ferocity are resolved: the pull delivered
+clean single-direction trained votes (593 A=3/B=0, 796 A=1/B=0), exactly the
+mid-rank trained evidence the demotion note asked for. The 4 contradicted lines
+(untrained-only splits) stay held. Taint did NOT re-fire this session (only the two
+pre-fix morning events, now shown in the richer format).
+
+*Features:* DATA-overrides, QA-probe
+
 ## 0.45.2 - 2026-10-13
 
 TAINT RECORDER HARDENED (account-safety). The v0.45.0 session reported another client

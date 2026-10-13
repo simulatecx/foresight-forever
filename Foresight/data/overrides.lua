@@ -68,13 +68,6 @@ HM.overrides = {
         [586] = "perRank",   -- Improved Healing Wave (trained B=1)
         [1003] = "maxTotal", -- Improved Corruption (trained A=1; was weak-maxTotal)
         [1181] = "maxTotal", -- Divine Fury (trained A=1)
-        -- DEMOTED 2026-10-13 (honesty law: conflicted evidence falls back to (p),
-        -- never a false "verified" mark):
-        --   [593] Tidal Focus - round-3 said trained A=3, but the current corpus holds
-        --   zero trained votes and 3 untrained B votes; direction unresolved.
-        --   [796] Ferocity - round-3 trained A=1 vs a NEW trained r5/5 capture voting B
-        --   ("by 5 Rage or Energy"); the trained evidence self-conflicts.
-        --   Both need a trained hover at a mid rank (r2-r4, where A and B diverge).
         -- Fourth promotion round 2026-10-13 (same trained-capture standard as rounds
         -- one through three; 24 merged archives, build-filtered):
         [186] = "maxTotal",  -- Lightning Reflexes (trained A=1)
@@ -85,6 +78,23 @@ HM.overrides = {
         [807] = "maxTotal",  -- Feral Swiftness (trained A=2)
         [808] = "maxTotal",  -- Heart of the Wild (trained A=3)
         [1581] = "perRank",  -- Dual Wield Specialization (trained B=2)
+        -- Fifth promotion round 2026-10-13 (the ~10 high-level inspect pull): 10 new
+        -- trained-backed lines spanning mage/warrior/rogue/priest/shaman/warlock, plus
+        -- two RE-PROMOTES - the v0.44.3 demotions of Tidal Focus (593) and Ferocity
+        -- (796) are resolved: the pull gave clean, single-direction trained votes
+        -- (593 A=3/B=0, 796 A=1/B=0), so the conflict that forced (p) is gone.
+        [81] = "maxTotal",   -- Arcane Impact (trained A=1)
+        [157] = "maxTotal",  -- Cruelty (trained A=1)
+        [182] = "maxTotal",  -- Hack and Slash (trained A=1)
+        [343] = "maxTotal",  -- Improved Power Word: Shield (trained A=1)
+        [347] = "maxTotal",  -- Meditation (trained A=1)
+        [406] = "perRank",   -- Improved Renew (trained B=1)
+        [588] = "perRank",   -- Restorative Totems (trained B=2)
+        [592] = "maxTotal",  -- Purification (trained A=2)
+        [593] = "maxTotal",  -- Tidal Focus (trained A=3; re-promote, conflict resolved)
+        [796] = "maxTotal",  -- Ferocity (trained A=1; re-promote, conflict resolved)
+        [1201] = "maxTotal", -- Mental Strength (trained A=1)
+        [1630] = "perRank",  -- Precision (trained B=2)
     },
 }
 
