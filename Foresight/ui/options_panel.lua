@@ -11,8 +11,11 @@ if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 
 if not _G.CreateFrame then return end
 
-local WIDTH, HEIGHT, PAD = 420, 320, 14
-local TABW = 120
+-- Enlarged v0.45.8 (user: the window was too small): wider content, taller body,
+-- roomier rows so the settings are comfortable to read and adjust.
+local WIDTH, HEIGHT, PAD = 560, 460, 16
+local TABW = 140
+local ROW_H, ROW_STEP = 40, 48
 local BRAND = { r = 0.20, g = 1.00, b = 0.60 }
 local GOLD  = { r = 1.00, g = 0.82, b = 0.40 }
 local MUTED = { r = 0.55, g = 0.55, b = 0.60 }
@@ -56,7 +59,7 @@ local function renderKey(key, y, innerX, innerW)
     local spec = HM.Settings.KEYS[key]
     local row = _G.CreateFrame("Button", nil, panel)
     row:SetPoint("TOPLEFT", panel, "TOPLEFT", innerX, y)
-    row:SetSize(innerW, 36)
+    row:SetSize(innerW, ROW_H)
     widgets[#widgets + 1] = row
 
     local label = row:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
@@ -98,6 +101,8 @@ local function renderKey(key, y, innerX, innerW)
             end
             HM.Settings.setValue(key, nextV or spec.default)
             paint()
+            if HM.StatsPanel and HM.StatsPanel.refresh then pcall(HM.StatsPanel.refresh) end
+            if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
         end)
     elseif spec.type == "slider" then
         local sl = _G.CreateFrame("Slider", nil, row, "OptionsSliderTemplate")
@@ -114,10 +119,13 @@ local function renderKey(key, y, innerX, innerW)
             if key == "panelAlpha" and HM.MatrixPanel and HM.MatrixPanel.setOpacity then
                 pcall(HM.MatrixPanel.setOpacity, v)
             end
+            -- Any slider (panelScale, growth, etc.) applies live to the panels.
+            if HM.StatsPanel and HM.StatsPanel.refresh then pcall(HM.StatsPanel.refresh) end
+            if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
         end)
         widgets[#widgets + 1] = sl
     end
-    return y - 42
+    return y - ROW_STEP
 end
 
 local function layout()

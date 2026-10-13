@@ -378,6 +378,10 @@ HM.StatsPanel = StatsPanel
 
 function StatsPanel.refresh()
     if not panel or not panel:IsShown() then return end
+    -- v0.45.8: user-set panel scale (addon coexistence).
+    if HM.Settings and HM.Settings.get then
+        panel:SetScale(HM.Settings.get("panelScale") or 1)
+    end
     local snapshot = HM.Snapshot.capture()
     if not snapshot then return end
     local loadout = HM.Loadout.fromSnapshot(snapshot)

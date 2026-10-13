@@ -124,10 +124,19 @@ function D.humanValue(id, score)
 end
 
 -- The full display string every value surface uses (panel dims, Matrix bars).
+-- GROWTH VIEW (user call 2026-10-13): the "+X% vs base" framing compares to a no-gear
+-- floor, which climbs as you gear and reads oddly - so it's now an opt-in toggle
+-- (settings.growthView), OFF by default. Off shows the plain current index; the
+-- decision numbers people act on are always diffs from the current character anyway.
+-- (The real "vs others in your spec" comparison is the planned crowd-data build.)
 function D.display(id, score)
     if type(score) ~= "number" then return "-" end
     if HUNDRED_FLOOR[id] then
-        return ("%+.1f%% vs base"):format(score - 100)
+        local growth = HM.Settings and HM.Settings.get and HM.Settings.get("growthView")
+        if growth then
+            return ("%+.1f%% vs base"):format(score - 100)
+        end
+        return ("%.0f"):format(score) -- plain current index (tooltip carries the unit)
     end
     local v, unit = D.humanValue(id, score)
     local body

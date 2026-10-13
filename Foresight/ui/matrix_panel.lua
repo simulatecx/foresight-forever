@@ -568,6 +568,10 @@ function MatrixPanel.refresh()
             local okg, gauges = pcall(HM.PanelModel.gaugeModel, loadout, focusName)
             model.gauges = (okg and gauges) or nil
         end
+        -- v0.45.8: user-set panel scale (addon coexistence).
+        if HM.Settings and HM.Settings.get then
+            panel:SetScale(HM.Settings.get("panelScale") or 1)
+        end
         panel.model = model
         layout(model)
         panel.bg:SetColorTexture(0.055, 0.055, 0.07, opacity())

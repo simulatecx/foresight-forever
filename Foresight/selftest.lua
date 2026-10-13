@@ -706,16 +706,25 @@ function HM.runSelftest(out)
         db.settings.planGoals = saved
         return gained and noGain and notOnEquipped
     end)())
-    check("lens display law: real units + vs-base indices (summary coherence)", (function()
+    check("lens display law: real units always; index lenses honor growthView", (function()
         local D = HM.dimensions
-        return D.display("meleeDps", 154) == "15.4 DPS"
-            and D.display("spellcasting", 108.8) == "+8.8% vs base"
-            and D.display("rangedDps", 102.6) == "+2.6% vs base"
+        -- Real units are unconditional.
+        if not (D.display("meleeDps", 154) == "15.4 DPS"
             and D.display("tankability", 466.6) == "467 EHP"
             and D.display("sustain", 672) == "672/min"
             and D.display("threat", 100) == "100%"
             and D.display("survivability", 1676) == "1.7k"
-            and D.display("meleeDps", nil) == "-"
+            and D.display("meleeDps", nil) == "-") then return false end
+        -- growthView OFF (default): index lenses show the plain current index.
+        HM.Settings.setValue("growthView", false)
+        if not (D.display("spellcasting", 108.8) == "109"
+            and D.display("rangedDps", 102.6) == "103") then return false end
+        -- growthView ON: the "+X% vs base" how-far-you've-come framing returns.
+        HM.Settings.setValue("growthView", true)
+        local ok = D.display("spellcasting", 108.8) == "+8.8% vs base"
+            and D.display("rangedDps", 102.6) == "+2.6% vs base"
+        HM.Settings.setValue("growthView", false) -- restore the default
+        return ok
     end)())
     check("HM.Client is the one item-API swap point (nil-safe headless)", (function()
         return HM.Client ~= nil

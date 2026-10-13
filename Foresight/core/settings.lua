@@ -42,6 +42,16 @@ Settings.KEYS = {
         label = "UI motion",
         desc = "Dynamic visuals on the panels: bars sweep, the ecosystem renders as a connected diagram, the radar draws its shape. off = the static text render; full adds traveling pulses.",
     },
+    growthView = {
+        group = "General", type = "toggle", default = false,
+        label = "Show growth vs. floor",
+        desc = "Show the caster/ranged/heal lenses as '+X% vs base' - how far your bonuses lift you above a no-gear floor. Off (default) shows the plain current index; the real decision numbers are always diffs from your current character.",
+    },
+    panelScale = {
+        group = "General", type = "slider", default = 1.0, min = 0.7, max = 1.3,
+        label = "Panel scale",
+        desc = "Scale the Foresight panels up or down so they fit alongside your other UI addons.",
+    },
 }
 
 -- The ordered group list for the GUI (a group renders only if it owns >= 1 key).

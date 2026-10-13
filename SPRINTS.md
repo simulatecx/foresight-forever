@@ -196,6 +196,13 @@ carries over). SEQUENCING (user, 2026-10-13): build phase B AFTER the UI-tuning 
 done ("lets finish tuning the UI, then we will do the backend"). Capture side already
 works for every downloader (no dev gate - verified v0.45.3); this phase is the
 transport + aggregation only. Still gated on S12 publish (real users first).
+HEADLINE FEATURE (user, 2026-10-13): the crowd payoff is **"compare to others in your
+spec"** - a same-spec/same-level peer baseline so the standing lenses read against a
+real reference that stays meaningful as you grow (this is what the retired zero-floor
+"+X% vs base" should become; growthView is the interim toggle, default off). This
+needs: the Firebase uploader + ingestion, per-spec/level aggregates (percentiles, not
+raw PII), and a panel readout ("your Spellcasting is top ~30% of your spec at your
+level (p)"). Privacy-by-design: aggregates only, small-bucket suppression, consent.
 
 ### S14 - Buffs & consumables impact ◐  (SHIPPED code-complete v0.12.0)
 "How does a flask/elixir/food impact me while active, and what do I lose when it expires."

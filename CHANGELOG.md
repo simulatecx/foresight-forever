@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.45.8 - 2026-10-13
+
+OPTIONS + FLEXIBILITY PASS (user direction).
+
+- "+X% vs base" is now OPT-IN. The caster/ranged/heal lenses compared to a no-gear
+  floor, a number that climbs as you gear and reads oddly. New setting growthView
+  (default OFF) governs it: off shows the plain current index, on restores the
+  "+X% vs base / how far you've come" framing. The decision numbers people act on
+  were always diffs from the current character anyway; the real "vs others in your
+  spec" comparison is the planned crowd build.
+- PANEL SCALE. New panelScale slider (0.7-1.3) scales the Foresight panels so they
+  fit alongside other UI addons - the first of the "make it flexible" controls.
+- BIGGER OPTIONS WINDOW. The options view grew (560x460, roomier rows, wider tabs)
+  since it was cramped; sliders and enum/toggle changes now apply to the panels live.
+- Selftest 274: the display-law test now pins BOTH growthView modes.
+
+Next (user-confirmed): the crowd "compare to others in your spec" build (S13,
+Firebase) - what "vs base" should ultimately become; plus finer flexibility (text
+size, padding, character-panel horizontal resize).
+
+*Features:* CORE-options, UI-stats-panel, UI-matrix-panel
+
 ## 0.45.7 - 2026-10-13
 
 RADAR HINT + PROFESSION TRIAGE. The Shape chart gets a "mouseover an axis for details"
