@@ -212,6 +212,14 @@ subclass-8 utility items (Incense Candle x17, First Aid Kit x20, Faintly Glowing
 Skull x3). Deferred ON THE RECORD: restore effects carry no stat impact for this
 model; their natural home is S10 PANIC's consumable registry (heal/escape options),
 not a buff-impact tooltip.
+Profession pass 2026-10-13 (user did profession work; 18 without-data hovers): combat
+potions (Venomous Blood/Dragonfire/Smog/Elemental Purging, subclass 1), engineering
+gadgets/bombs (SAF-T Dynamite/Copper Bombs/Stealthman/battery, subclass 0/14), and
+bandages/first-aid - all combat/restore tools with no persistent stat buff, same
+S10-Panic deferral. EXCEPTION NOTED: ARMOR KITS (Mystic Rugged 252487, Forceful Thick
+252463, subclass 6) DO add stats, but as a GEAR-APPLIED enchant (permanent on a slot),
+not a buff - so they belong to a future gear-enchant/kit model, not consumables. On the
+record, not dropped; backlog candidate `DATA-gear-kits`. No generated-data change.
 Fit & Overlap: reuses applyOps/diff (no forked math); complements S10 PANIC (consumable registry).
 
 ### S15 - Racials impact ◐  (phase 1 SHIPPED v0.11.0)

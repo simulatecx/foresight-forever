@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.45.7 - 2026-10-13
+
+RADAR HINT + PROFESSION TRIAGE. The Shape chart gets a "mouseover an axis for details"
+line above it, so the collapsed rows don't leave the hover feature undiscoverable
+(user ask). Also recorded the profession harvest: the 18 without-data consumable
+hovers are combat potions, engineering gadgets/bombs, and bandages (no persistent
+stat buff -> the S10 Panic registry's job, same deferral as the restore items),
+EXCEPT armor kits (Mystic Rugged, Forceful Thick) which add stats as a GEAR-APPLIED
+enchant, not a buff - noted on the record as a future gear-kit model, not dropped. No
+generated-data change. ACCOUNT-SAFETY: the v0.45.5 panel reparent is confirmed in-game
+- the v0.45.6 session used the character tab with zero new taint events (only the six
+pre-fix ones remain on record).
+
+*Features:* UI-stats-panel, QA-probe
+
 ## 0.45.6 - 2026-10-13
 
 RADAR HOVER-TO-EXPAND (user ask, UI tuning). The Shape chart's eight axis tips are now

@@ -285,14 +285,28 @@ local function layout(model)
         if section.id == "radar" and panel.radarChart
                 and (collapsed or motion == "off" or not section.chart) then
             panel.radarChart:Hide()
+            if panel.radarHint then panel.radarHint:Hide() end
         end
         if not collapsed then
             local radarCharted = false
             if section.id == "radar" and section.chart and motion ~= "off"
                     and HM.Motion then
-                if renderRadar(section.chart, y, PANEL_WIDTH - PAD * 2, r, g, b) then
-                    y = y - CHART_H - 6
+                -- Discoverability hint above the chart: the per-axis rows collapsed, so
+                -- tell the player the detail is a hover away.
+                if not panel.radarHint then
+                    panel.radarHint = panel:CreateFontString(nil, "ARTWORK",
+                        "GameFontDisableSmall")
+                end
+                panel.radarHint:ClearAllPoints()
+                panel.radarHint:SetPoint("TOP", panel, "TOPLEFT", PANEL_WIDTH / 2, y - 1)
+                panel.radarHint:SetText("|cff9d9d9dmouseover an axis for details|r")
+                local chartTop = y - 13
+                if renderRadar(section.chart, chartTop, PANEL_WIDTH - PAD * 2, r, g, b) then
+                    panel.radarHint:Show()
+                    y = chartTop - CHART_H - 6
                     radarCharted = true
+                else
+                    panel.radarHint:Hide()
                 end
             end
             -- When the radar DREW, collapse its per-axis text rows: hover a tip for the
