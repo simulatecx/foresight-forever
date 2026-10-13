@@ -463,6 +463,23 @@ local function createPanel()
     close:SetPoint("TOPRIGHT", 2, 2)
     close:SetScript("OnClick", function() panel:Hide() end)
 
+    -- Options gear on the Matrix title bar too (S30), left of the close button.
+    local optBtn = _G.CreateFrame("Button", nil, panel)
+    optBtn:SetSize(18, 18)
+    optBtn:SetPoint("TOPRIGHT", close, "TOPLEFT", -2, -4)
+    local cog = optBtn:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    cog:SetAllPoints()
+    cog:SetText("|TInterface\\Buttons\\UI-OptionsButton:12:12|t")
+    optBtn:SetScript("OnClick", function()
+        if HM.OptionsPanel and HM.OptionsPanel.toggle then HM.OptionsPanel.toggle() end
+    end)
+    optBtn:SetScript("OnEnter", function(self)
+        _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        _G.GameTooltip:SetText("Foresight options", 0.2, 1, 0.6)
+        _G.GameTooltip:Show()
+    end)
+    optBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+
     panel:Hide()
 
     -- Live refresh while visible (same debounced event set as the stats panel).

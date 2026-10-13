@@ -277,6 +277,25 @@ local function createPanel()
     toggleButton:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -40, 4)
     toggleButton:SetScript("OnClick", StatsPanel.toggle)
 
+    -- Options button (S30): the UI entry point for /foresight options, beside FS on the
+    -- character frame so settings are a click, not a command - same reliable text-button
+    -- style the FS button uses. A cog glyph label; tooltip names it.
+    local optBtn = _G.CreateFrame("Button", "ForesightOptionsButton", parent, "UIPanelButtonTemplate")
+    optBtn:SetSize(20, 18)
+    optBtn:SetText("|TInterface\\Buttons\\UI-OptionsButton:12:12|t")
+    optBtn:SetPoint("RIGHT", toggleButton, "LEFT", -2, 0)
+    optBtn:SetScript("OnClick", function()
+        if HM.OptionsPanel and HM.OptionsPanel.toggle then HM.OptionsPanel.toggle() end
+    end)
+    optBtn:SetScript("OnEnter", function(self)
+        if _G.GameTooltip then
+            _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            _G.GameTooltip:SetText("Foresight options", 0.2, 1, 0.6)
+            _G.GameTooltip:Show()
+        end
+    end)
+    optBtn:SetScript("OnLeave", function() if _G.GameTooltip then _G.GameTooltip:Hide() end end)
+
     parent:HookScript("OnHide", function() panel:Hide() end)
 
     -- Live refresh while visible: gear, stats, talents, and buffs all re-snapshot.

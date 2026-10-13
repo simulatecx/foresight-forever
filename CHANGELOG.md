@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.44.1 - 2026-10-13
+
+OPTIONS, IN THE UI (user ask): the options window now has click entry points, not just
+/foresight options. A cog button sits beside the FS button on the character frame (same
+reliable text-button style you liked) and on the Matrix title bar - both open the S30
+settings window, both tooltip-named, combat-gated by the window itself.
+
+*Features:* CORE-options, UI-stats-panel, UI-matrix-panel
+
 ## 0.44.0 - 2026-10-12
 
 ACTION-BAR SYNERGY TRIGGER (S32): with the talent tree open, hold ALT (or Shift, or
