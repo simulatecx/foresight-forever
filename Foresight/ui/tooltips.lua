@@ -356,7 +356,10 @@ local ITEM_STAT_MAP = {
     ITEM_MOD_STAMINA_SHORT = "Stamina",
     ITEM_MOD_INTELLECT_SHORT = "Intellect",
     ITEM_MOD_SPIRIT_SHORT = "Spirit",
-    ITEM_MOD_SPELL_POWER_SHORT = "spellDamage",
+    -- classic combined stat: damage (ALL schools) AND healing (S25 catch:
+    -- the Cauldron Stirrer's +8 must raise Healing Wave too)
+    ITEM_MOD_SPELL_POWER_SHORT = "spellPower",
+    ITEM_MOD_DAMAGE_PER_SECOND_SHORT = "weaponDps", -- display-only (x1889 journal catch)
     ITEM_MOD_SPELL_DAMAGE_DONE_SHORT = "spellDamage",
     ITEM_MOD_SPELL_HEALING_DONE_SHORT = "healingPower",
     ITEM_MOD_ATTACK_POWER_SHORT = "attackPower",
@@ -366,7 +369,8 @@ local ITEM_STAT_MAP = {
     RESISTANCE0_NAME = "armor", -- physical resistance index 0 = armor (classic shape)
 }
 local DISPLAY_STAT = {
-    spellDamage = "Spell Power", healingPower = "Healing Power",
+    spellPower = "Spell Power", weaponDps = "Damage Per Second",
+    spellDamage = "Spell Damage", healingPower = "Healing Power",
     attackPower = "Attack Power", rangedAttackPower = "Ranged Attack Power",
     maxMana = "Mana", maxHealth = "Health", armor = "Armor",
     ["school.holy"] = "Holy Spell Damage", ["school.fire"] = "Fire Spell Damage",
@@ -374,7 +378,7 @@ local DISPLAY_STAT = {
     ["school.shadow"] = "Shadow Spell Damage", ["school.arcane"] = "Arcane Spell Damage",
 }
 local STAT_ORDER = { "Strength", "Agility", "Stamina", "Intellect", "Spirit",
-                     "spellDamage", "healingPower", "attackPower", "rangedAttackPower",
+                     "spellPower", "spellDamage", "healingPower", "attackPower", "rangedAttackPower", "weaponDps",
                      "maxMana", "maxHealth", "armor",
                      "school.holy", "school.fire", "school.nature", "school.frost",
                      "school.shadow", "school.arcane" }
@@ -658,14 +662,39 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
     elseif comparedStats then
         -- The NET swap per dimension IS the primary block when you wear a comparable.
         local okc, cmp = pcall(HM.Impact.compareItems, loadout, mapped, comparedStats)
-        for i = 1, math.min(#(okc and cmp or {}), 4) do
-            local c = cmp[i]
+        local rows = okc and cmp or {}
+        -- CONSISTENCY LAW (live catch 2026-10-12: verdict said +17%% while this block
+        -- said -1.2%% Melee DPS): for weapon hovers the melee row IS the weapon-aware
+        -- swap number - one claim, one number, everywhere.
+        if ctx and ctx.weaponSwap and type(ctx.weaponSwap.pct) == "number" then
+            local replaced = false
+            for _, c in ipairs(rows) do
+                if c.id == "meleeDps" then
+                    c.net = ctx.weaponSwap.pct
+                    replaced = true
+                end
+            end
+            if not replaced then
+                rows[#rows + 1] = { id = "meleeDps", label = "Melee DPS",
+                                    net = ctx.weaponSwap.pct }
+            end
+            table.sort(rows, function(x, y) return math.abs(x.net) > math.abs(y.net) end)
+        end
+        -- What-is-this-FOR lines (user ask 2026-10-12): when the swap moves caster
+        -- inputs, name YOUR abilities it improves in their units.
+        local okRel, rel = pcall(Tooltips._casterRelevanceLines, loadout, mapped,
+            comparedStats)
+        for i = 1, math.min(#rows, 4) do
+            local c = rows[i]
             local color = c.net >= 0 and "|cff4ade80" or "|cfff87171"
             lines[#lines + 1] = {
                 text = ("%s%+.1f%%|r %s |cff9d9d9d(vs equipped)|r"):format(
                     color, c.net, c.label),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
+        end
+        for _, l in ipairs(okRel and rel or {}) do
+            lines[#lines + 1] = { text = l, r = BODY.r, g = BODY.g, b = BODY.b, wrap = true }
         end
     elseif ok and changes and #changes > 0 then
         for i = 1, math.min(#changes, 4) do
@@ -688,6 +717,71 @@ end
 -- Indirection so itemLines can pcall the model without a hard upvalue on Impact.
 function Tooltips._itemDims(loadout, mapped)
     return HM.Impact.explainItemDelta(loadout, mapped)
+end
+
+-- "What is this FOR" (user ask 2026-10-12): when a swap moves caster inputs (spell
+-- power, school damage, healing), compute the net effect on YOUR best known damage
+-- spell and heal via abilityHit and say it in their units: "With this: Lightning
+-- Bolt +3 per hit, Healing Wave +3 per cast (p)". In-game only (IsPlayerSpell);
+-- max two lines; |delta| < 0.5 says nothing.
+local CASTER_KEYS = { "spellPower", "spellDamage", "healingPower", "school.holy",
+    "school.fire", "school.nature", "school.frost", "school.shadow", "school.arcane" }
+local knownCasterPicks -- session cache: new ranks land on the next /reload
+
+function Tooltips._casterRelevanceLines(loadout, mapped, comparedStats)
+    if not (loadout and HM.Sim and HM.Sim.abilityHit and _G.IsPlayerSpell) then
+        return {}
+    end
+    local moves = false
+    for _, k in ipairs(CASTER_KEYS) do
+        if ((mapped and mapped[k]) or 0) ~= 0
+                or ((comparedStats and comparedStats[k]) or 0) ~= 0 then
+            moves = true
+            break
+        end
+    end
+    if not moves then return {} end
+    if not knownCasterPicks then
+        local bestDmg, bestHeal
+        local spells = (HM.gen and HM.gen.spells) or {}
+        for sid, sp in pairs(spells) do
+            if _G.IsPlayerSpell(sid) then
+                if sp.dmg and not sp.wpn and (not bestDmg
+                        or (sp.level or 0) > (spells[bestDmg].level or 0)) then
+                    bestDmg = sid
+                end
+                if sp.heal and not sp.dmg and (not bestHeal
+                        or (sp.level or 0) > (spells[bestHeal].level or 0)) then
+                    bestHeal = sid
+                end
+            end
+        end
+        knownCasterPicks = { bestDmg, bestHeal }
+    end
+    -- Net-of-swap modeled loadout (baseline law: minus equipped, plus hovered).
+    local modeled = loadout
+    local function fold(bundle, sign)
+        for stat, v in pairs(bundle or {}) do
+            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps" then
+                modeled = modeled:withStatDelta(stat, sign * v,
+                    ("swap:%s"):format(stat))
+            end
+        end
+    end
+    fold(comparedStats, -1)
+    fold(mapped, 1)
+    local out = {}
+    for _, sid in ipairs(knownCasterPicks) do
+        local okB, b = pcall(HM.Sim.abilityHit, loadout, sid, {})
+        local okA, a = pcall(HM.Sim.abilityHit, modeled, sid, {})
+        if okB and okA and b and a and math.abs(a.avg - b.avg) >= 0.5 then
+            local sp = HM.gen.spells[sid]
+            local color = (a.avg > b.avg) and "|cff4ade80" or "|cfff87171"
+            out[#out + 1] = ("|cff9d9d9dWith this:|r %s %s%+.0f|r per %s (p)"):format(
+                sp.name, color, a.avg - b.avg, a.kind == "heal" and "cast" or "hit")
+        end
+    end
+    return out
 end
 
 -- Consumable-buff provider (CONSUME-buffs) --------------------------------------
@@ -844,7 +938,7 @@ function Tooltips.spellLines(spellId, loadout)
     if hit then
         -- Widest integer envelope (floor min, ceil max) - matches the game's own
         -- rendering, live-verified on Lightning Bolt r2 (25 to 30).
-        local lo, hi = HM.formulas.spellBaseDamage.display(hit.min, hit.max)
+        local lo, hi = HM.formulas.spellBaseDamage.display(hit.min, hit.max, hit.kind)
         local range = (lo == hi) and ("~%d"):format(lo) or ("~%d-%d"):format(lo, hi)
         lines[#lines + 1] = {
             text = ("%s for |cff4ade80%s|r with your gear%s"):format(

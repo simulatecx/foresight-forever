@@ -57,10 +57,14 @@ def lua_to_py(obj):
 
 
 def find_savedvars(roots: list[Path]) -> list[Path]:
+    """Accepts either the WoW parent dir (scans every install under it) or a single
+    install dir (its WTF directly) - cross-fork scoping catch 2026-10-12: the parent
+    glob swept the RETAIL install's Foresight.lua into the Forever harvest."""
     found = []
     for root in roots:
         if root.exists():
             found.extend(root.glob("*/WTF/Account/*/SavedVariables/Foresight.lua"))
+            found.extend(root.glob("WTF/Account/*/SavedVariables/Foresight.lua"))
     return found
 
 
@@ -351,6 +355,21 @@ def render_rank_rules_draft(by_talent: dict, build: str, accounts: int) -> str:
     return "\n".join(lines) + "\n"
 
 
+def archive_matches_build(data, gen) -> bool:
+    """Cross-fork guard (2026-10-12): the Forever harvest once swept the RETAIL
+    install's SavedVariables in. An archive only contributes to aggregation when the
+    build its sessions recorded matches OUR generated build; build-less archives pass
+    (legacy shape, pre-journal)."""
+    collect = (data or {}).get("collect") or {}
+    sessions = collect.get("sessions") or []
+    rows = list(sessions.values()) if isinstance(sessions, dict) else sessions
+    build = None
+    for s in rows:
+        if isinstance(s, dict) and s.get("build"):
+            build = s["build"]
+    return build is None or str(build) == str(gen.get("build") or "?")
+
+
 def aggregate_rank_rules(gen) -> None:
     """Merge per-talent rank-rule votes across archived harvests (newest per account,
     captured tooltips + the legacy probe) and write collected/rank_rules_draft.lua."""
@@ -359,10 +378,14 @@ def aggregate_rank_rules(gen) -> None:
         newest[f.name.rsplit("-", 2)[0]] = f
     merged: dict = {}
     accounts = 0
+    skipped_foreign = 0
     for account, f in newest.items():
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            continue
+        if not archive_matches_build(data, gen):
+            skipped_foreign += 1
             continue
         collect = data.get("collect") or {}
         contributed = False
@@ -383,9 +406,11 @@ def aggregate_rank_rules(gen) -> None:
     trained_backed = sum(1 for rule, basis in verdicts
                          if rule and "untrained" not in basis)
     contradicted = sum(1 for _, basis in verdicts if "contradicted" in (basis or ""))
+    foreign = (f" [{skipped_foreign} foreign-build archive(s) excluded]"
+               if skipped_foreign else "")
     print(f"\nper-talent rank rules: {decided} decided ({trained_backed} trained-backed), "
           f"{contradicted} contradicted, {len(merged)} voted total -> "
-          f"rank_rules_draft.lua (human review)")
+          f"rank_rules_draft.lua (human review){foreign}")
 
 
 # S11 observed-vs-generated: op kind -> snapshot field with a predicted flat value.
@@ -524,6 +549,8 @@ def aggregate_observed(gen) -> None:
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
+            continue
+        if not archive_matches_build(data, gen):
             continue
         obs = (data.get("collect") or {}).get("observedImpacts") or {}
         if not obs:

@@ -85,11 +85,17 @@ F.spellBaseDamage = {
         local spread = (var or 0) / 2
         return bp * (1 - spread), bp * (1 + spread)
     end,
-    -- Blizzard renders the WIDEST integer envelope (floor min, ceil max) - first live
-    -- verification caught our round-half showing 25-29 where the game says 25 to 30.
-    -- The epsilon guards float noise (Fireball's stored variance puts the raw max at
-    -- 22.0000001; naive ceil would claim 23).
-    display = function(minv, maxv)
+    -- Blizzard's rendering is KIND-SPLIT (three live verifications, 2026-10-12):
+    -- DAMAGE renders the widest integer envelope (floor min, ceil max - Lightning
+    -- Bolt raw 25.4-29.4 -> "25 to 30"); HEALS render ROUND-HALF on both ends
+    -- (Healing Wave r1 raw 36.4-47.2 -> "36 to 47", r2 raw 68.5-83.5 -> "69 to 83" -
+    -- the /foresight audit mismatches that taught us this). The epsilon guards float
+    -- noise (Fireball's stored variance puts the raw max at 22.0000001; naive ceil
+    -- would claim 23).
+    display = function(minv, maxv, kind)
+        if kind == "heal" then
+            return math.floor((minv or 0) + 0.5), math.floor((maxv or 0) + 0.5)
+        end
         return math.floor((minv or 0) + 0.0005), math.ceil((maxv or 0) - 0.0005)
     end,
 }

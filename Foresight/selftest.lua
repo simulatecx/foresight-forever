@@ -321,10 +321,13 @@ function HM.runSelftest(out)
         local mapped, unknown = HM.Tooltips.mapItemStats({
             ITEM_MOD_MANA_SHORT = 50, ITEM_MOD_HEALTH_SHORT = 30,
             RESISTANCE0_NAME = 45, ITEM_MOD_SPELL_POWER_SHORT = 12,
+            ITEM_MOD_DAMAGE_PER_SECOND_SHORT = 11.9,
             ITEM_MOD_MYSTERY_RATING_SHORT = 7,
         })
         if not (mapped.maxMana == 50 and mapped.maxHealth == 30 and mapped.armor == 45
-                and mapped.spellDamage == 12) then return false end
+                and mapped.spellPower == 12 and mapped.weaponDps == 11.9) then
+            return false
+        end
         for _, k in ipairs(unknown) do
             if k == "ITEM_MOD_MYSTERY_RATING_SHORT" then return true end
         end
@@ -470,6 +473,40 @@ function HM.runSelftest(out)
             end
         end
         return true -- no flat school op in this build's data: nothing to prove
+    end)())
+    check("display rendering is KIND-split: heals round-half, damage floor/ceil", (function()
+        -- Live-verified 2026-10-12 via /foresight audit: HW r1 raw 36.4-47.2 renders
+        -- "36 to 47"; r2 raw 68.5-83.5 renders "69 to 83" (round-half) - while LB
+        -- damage renders the widest envelope (25.4-29.4 -> "25 to 30").
+        local F = HM.formulas.spellBaseDamage
+        local hw1 = gen.spells[331]
+        local a, b = F.fn(hw1.heal.base, hw1.heal.var, hw1.heal.lvl,
+            hw1.baseLevel or hw1.level, hw1.heal.maxLvl, 13)
+        local l1, h1 = F.display(a, b, "heal")
+        local hw2 = gen.spells[332]
+        local c, d = F.fn(hw2.heal.base, hw2.heal.var, hw2.heal.lvl,
+            hw2.baseLevel or hw2.level, hw2.heal.maxLvl, 13)
+        local l2, h2 = F.display(c, d, "heal")
+        local dl, dh = F.display(25.44, 29.36) -- damage: unchanged envelope
+        return l1 == 36 and h1 == 47 and l2 == 69 and h2 == 83
+            and dl == 25 and dh == 30
+    end)())
+    check("spellPower (combined stat) feeds all six pools AND healing", (function()
+        local built = base:withStatDelta("spellPower", 8, "+8 sp"):build()
+        local heal = built.graph:value("stat.healingPower", built.ctx, {})
+        local frost = built.graph:value("stat.school.frost", built.ctx, {})
+        local max = built.graph:value("stat.spellDamage", built.ctx, {})
+        return heal == 8 and frost == 58 and max == 58
+    end)())
+    check("consistency law: the melee row equals the weapon-aware swap number", (function()
+        local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
+        local swap = { pct = 17.1, curDps = 17.7, newDps = 20.7,
+                       curSwing = 60, newSwing = 50, weaponDpsDelta = 3.7,
+                       statDpsDelta = -0.7, apDelta = -10 }
+        local text = linesText(HM.Tooltips.itemLines({ Agility = 5 }, lo,
+            { attackPower = 10 }, { weaponSwap = swap }) or {})
+        return text:find("+17.1%", 1, true) ~= nil
+            and text:find("Melee DPS |cff9d9d9d(vs equipped)", 1, true) ~= nil
     end)())
     check("lens display law: real units + vs-base indices (summary coherence)", (function()
         local D = HM.dimensions
@@ -628,7 +665,8 @@ function HM.runSelftest(out)
     check("item stat mapper translates GetItemStats keys", (function()
         local m = HM.Tooltips.mapItemStats({ ITEM_MOD_AGILITY_SHORT = 4,
             ITEM_MOD_STAMINA_SHORT = 6, ITEM_MOD_SPELL_POWER_SHORT = 10, JUNK_KEY = 9 })
-        return m.Agility == 4 and m.Stamina == 6 and m.spellDamage == 10 and m.JUNK_KEY == nil
+        -- SPELL_POWER is the classic COMBINED stat (damage all schools + healing).
+        return m.Agility == 4 and m.Stamina == 6 and m.spellPower == 10 and m.JUNK_KEY == nil
     end)())
     check("item lines show stats + dimension impact", (function()
         local text = linesText(HM.Tooltips.itemLines({ Intellect = 10, Stamina = 6 }, base))
@@ -1914,8 +1952,12 @@ function HM.runSelftest(out)
     end)())
     check("talent API shape probe runs headless + persists", (function()
         local shape = HM.Collect.probeTalentApiShape(function() end)
+        -- The CSI.GetTalentInfo call shapes are RETIRED (taint lead 2026-10-12:
+        -- failing calls carried "Lua Taint: Foresight") - presence-only now.
+        local presence =
+            shape.calls["CSI.GetTalentInfo (presence only - call shapes retired, taint lead)"]
         return shape and shape.calls
-            and shape.calls["CSI.GetTalentInfo(1,1)"].present == false
+            and presence ~= nil and presence.present == false
             and HM.db.collect.talentApiShape ~= nil
     end)())
     check("serialize renders nested tables", (function()

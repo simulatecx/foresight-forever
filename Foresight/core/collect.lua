@@ -486,16 +486,17 @@ function Collect.probeTalentApiShape(out)
         end
     end
 
+    -- TAINT LEAD (2026-10-12 harvest): the failing CSI.GetTalentInfo shape-guess
+    -- calls error with "Lua Taint: Foresight" attached - calling a spec-system query
+    -- wrong at LOGIN can taint the talent path and block protected talent actions
+    -- later ("blocked from an action only available to the Blizzard UI" on opening
+    -- talents). The question they probed is ANSWERED (S3: none-answered; the live
+    -- path is C_Traits) - so these are now PRESENCE-ONLY, never called.
     local CSI = _G.C_SpecializationInfo or {}
-    record("CSI.GetTalentInfo(1,1)", CSI.GetTalentInfo, 1, 1)
-    record("CSI.GetTalentInfo(1,1,1)", CSI.GetTalentInfo, 1, 1, 1)
-    record("CSI.GetTalentInfo{tabIndex=1,talentIndex=1}", CSI.GetTalentInfo, { tabIndex = 1, talentIndex = 1 })
-    record("CSI.GetTalentInfo{tier=1,column=1}", CSI.GetTalentInfo, { tier = 1, column = 1 })
-    record("CSI.GetTalentInfo{tier=1,column=1,groupIndex=1}", CSI.GetTalentInfo, { tier = 1, column = 1, groupIndex = 1 })
+    shape.calls["CSI.GetTalentInfo (presence only - call shapes retired, taint lead)"] =
+        { present = type(CSI.GetTalentInfo) == "function" }
     record("CSI.GetSpecialization()", CSI.GetSpecialization)
-    record("CSI.GetSpecializationInfo(1)", CSI.GetSpecializationInfo, 1)
     record("CSI.GetNumSpecializations()", CSI.GetNumSpecializations)
-    record("CSI.GetActiveSpecGroup()", CSI.GetActiveSpecGroup)
 
     -- Trait/config system (the Mainline node-based path, in case talents live there).
     local CT = _G.C_ClassTalents or {}

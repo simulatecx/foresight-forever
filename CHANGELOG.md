@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.37.1 - 2026-10-12
+
+THE AUDIT PAYS OFF + THE STORY TOOLTIP (live catches #9-#12 from one harvest + two
+screenshots).
+
+- HEAL ROUNDING LAW: /foresight audit's two "mismatches" were Healing Wave - and the
+  math proves the client renders HEALS round-half (raw 36.4-47.2 -> "36 to 47", raw
+  68.5-83.5 -> "69 to 83") while DAMAGE keeps the widest envelope (LB 25.4-29.4 ->
+  "25 to 30"). The display law is now kind-split and pinned on all three live
+  observations. Audit score after the law: 7 of 8 parseable spells confirmed.
+- TAINT LEAD RETIRED: the harvest showed the login shape-probe's failing
+  CSI.GetTalentInfo guesses carrying "Lua Taint: Foresight" - a spec-system query
+  called wrong at login can taint later protected talent actions (the "blocked"
+  dialog fired on OPENING TALENTS). Those call shapes answered their question in S3
+  (none-answered; C_Traits is the live path) and are now presence-only, never called.
+- CONSISTENCY LAW (screenshot: verdict "+17.1%" over a bottom row "-1.2% Melee DPS"):
+  for weapon hovers, the per-dimension melee row IS the weapon-aware swap number -
+  one claim, one number, everywhere. The summary stays; the contradiction dies.
+- THE COMBINED SPELL-POWER STAT (Cauldron Stirrer catch): "Increases damage and
+  healing by up to 8" now maps as spellPower = ALL six school pools AND healing
+  power (the old mapping fed damage only - heals missed it). SPELL_DAMAGE_DONE stays
+  damage-only.
+- "WHAT IS THIS FOR" LINES (user ask): when a swap moves caster inputs, the tooltip
+  names YOUR abilities in their units - "With this: Lightning Bolt +4 per hit,
+  Healing Wave +3 per cast (p)" (best known damage spell + heal, net of the swap,
+  baseline law intact, max two lines, in-game only).
+- ITEM_MOD_DAMAGE_PER_SECOND_SHORT (x1889 in the journal!) maps as display-only
+  weaponDps - the swap compare stays the DPS judge. Resistance keys remain journaled
+  (deferred: no resistance nodes yet).
+- HARVEST CROSS-FORK SCOPING: the parent-dir glob swept the RETAIL install's
+  SavedVariables into the Forever harvest. find_savedvars now accepts install roots,
+  and aggregation BUILD-FILTERS archives (foreign-build archives excluded + counted) -
+  fork corpora can never mix again.
+- Selftest 239 (+3): kind-split rendering pinned on the live numbers; spellPower
+  feeds six pools + healing; melee-row consistency.
+
+*Features:* MODEL-ability-outcomes, UI-item-tooltip, MODEL-loadout-whatif,
+DATA-formula-registry, QA-probe, QA-harvester, QA-selftest-harness
+
 ## 0.37.0 - 2026-10-12
 
 SCHOOL DAMAGE POOLS (S25, the beta-sensitive cut of the S25-S28 handoff): +Frost

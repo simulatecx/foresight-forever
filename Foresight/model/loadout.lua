@@ -384,6 +384,19 @@ function Loadout:build()
                 -- double count).
                 addGenericSpellDamage(g, "flat", d.amount,
                     d.label or "delta:spellDamage")
+            elseif d.stat == "spellPower" then
+                -- The classic COMBINED stat ("Increases damage and healing..."):
+                -- all six damage pools AND healing power (live catch 2026-10-12:
+                -- a +8 staff must raise Healing Wave too).
+                addGenericSpellDamage(g, "flat", d.amount,
+                    d.label or "delta:spellPower")
+                g:addModifier{ target = "stat.healingPower", op = "flat",
+                               value = d.amount,
+                               source = d.label or "delta:spellPower" }
+            elseif d.stat == "weaponDps" then
+                -- Display-only item stat (no graph node by design): the weapon-swap
+                -- compare owns weapon DPS; silently skip, never a note.
+                local _ = nil
             else
                 local node = STAT_NODE[d.stat] or ("stat." .. d.stat)
                 if g:getNode(node) then

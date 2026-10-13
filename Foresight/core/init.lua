@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.37.0"
+HM.version = "0.37.1"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -437,10 +437,12 @@ local function onSlash(input)
                     rows[#rows + 1] = { spellId = sid, name = sp.name, verdict = "unparsed" }
                 else
                     local d = sp.dmg or sp.heal
-                    local bLo, bHi = F.spellBaseDamage.display(F.spellBaseDamage.fn(
+                    local kind = (sp.heal and not sp.dmg) and "heal" or nil
+                    local rawLo, rawHi = F.spellBaseDamage.fn(
                         d.base, d.var, d.lvl, sp.baseLevel or sp.level, d.maxLvl,
-                        snapshot.level))
-                    local gLo, gHi = F.spellBaseDamage.display(hit.min, hit.max)
+                        snapshot.level)
+                    local bLo, bHi = F.spellBaseDamage.display(rawLo, rawHi, kind)
+                    local gLo, gHi = F.spellBaseDamage.display(hit.min, hit.max, kind)
                     local verdict
                     if tipLo == gLo and tipHi == gHi then
                         verdict = "gear"
@@ -509,7 +511,7 @@ local function onSlash(input)
             if wpn.pct then printMsg(("  x %g%% weapon damage"):format(wpn.pct)) end
             if wpn.flat then printMsg(("  + %g flat"):format(wpn.flat)) end
         else
-            local bLo, bHi = HM.formulas.spellBaseDamage.display(hit.baseMin, hit.baseMax)
+            local bLo, bHi = HM.formulas.spellBaseDamage.display(hit.baseMin, hit.baseMax, hit.kind)
             printMsg(("  base: %d-%d at your level (p)"):format(bLo, bHi))
             if (hit.power or 0) > 0 then
                 printMsg(("  + %d %s x %.3f coefficient (%s)"):format(hit.power,
@@ -524,7 +526,7 @@ local function onSlash(input)
             printMsg(("  talents: %s (%s)"):format(table.concat(parts, ", "),
                 table.concat(hit.mods or {}, ", ")))
         end
-        local fLo, fHi = HM.formulas.spellBaseDamage.display(hit.min, hit.max)
+        local fLo, fHi = HM.formulas.spellBaseDamage.display(hit.min, hit.max, hit.kind)
         printMsg(("  = ~%d-%d per %s%s"):format(fLo, fHi,
             hit.kind == "heal" and "cast" or "hit",
             hit.presumed and " (p)" or ""))
