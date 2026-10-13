@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.44.2 - 2026-10-13
+
+TAINT INCIDENT FIX + GATE (account-safety doctrine). The first live session with the
+S32 trace fired two ADDON_ACTION_FORBIDDEN events (SetPreferredGamepadInteractTarget,
+out of combat, talent UI closed) naming Foresight - journaled by the taint sentinel,
+surfaced by the harvest; every archive before v0.44.x is taint-free. Vector: the S32
+talent-frame hint was created ON PlayerSpellsFrame (an insecure region inside
+Blizzard's tree) plus a psf.foresightHint key write - the one taint-isolation-law
+violation in the v0.44.x window. The hint now lives on OUR UIParent-parented frame and
+only ANCHORS to the talent frame (the S22a overlay pattern). GATE (incident-to-gate):
+the compliance scan grows a TAINT-LAW LINT - key writes onto, or regions created on,
+Blizzard-owned objects (including file-local aliases of them) go red; proven red on
+the exact pre-fix lines, zero false positives across the other 42 files. Causality is
+presumed, not proven (the client's taint blame is fuzzy): the law violation is gone
+either way, and the next in-game session must show zero sentinel events.
+
+*Features:* SYNERGY-highlight, QA-compliance-gate
+
 ## 0.44.1 - 2026-10-13
 
 OPTIONS, IN THE UI (user ask): the options window now has click entry points, not just

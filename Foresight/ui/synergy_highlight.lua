@@ -359,27 +359,41 @@ local function hookTalentUI()
     local psf = _G.PlayerSpellsFrame
     if not (psf and psf.HookScript) then return end
     hooked = true
+    -- S32 hint: one corner line when the trace is enabled (settings-driven text).
+    -- TAINT ISOLATION LAW: the hint lives on OUR frame parented to UIParent and only
+    -- ANCHORS to the talent frame - the v0.44.0 version created it ON PlayerSpellsFrame
+    -- (a region in their tree + a key write), and the first live session fired
+    -- ADDON_ACTION_FORBIDDEN (SetPreferredGamepadInteractTarget) naming Foresight.
+    -- The compliance gate now lints that class; this is the compliant shape.
+    local hint
+    local function refreshHint()
+        local mode = HM.Settings and HM.Settings.get("actionTrigger") or "off"
+        if mode == "off" then
+            if hint then hint:Hide() end
+            return
+        end
+        if not hint then
+            hint = _G.CreateFrame("Frame", nil, _G.UIParent)
+            hint:SetFrameStrata("HIGH")
+            hint:SetSize(1, 1) -- pure anchor point; the font string overflows it
+            hint:SetPoint("BOTTOMLEFT", psf, "BOTTOMLEFT", 12, 10)
+            hint.text = hint:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+            hint.text:SetPoint("BOTTOMLEFT")
+        end
+        hint.text:SetText(("|cff9d9d9dHold %s + hover an action button to trace it|r")
+            :format(mode:upper()))
+        hint:Show()
+    end
     psf:HookScript("OnShow", function()
         if _G.C_Timer and _G.C_Timer.After then
             _G.C_Timer.After(0.3, Highlight.restoreSaved)
         end
-        -- S32 hint: one corner line when the trace is enabled (settings-driven text).
-        local mode = HM.Settings and HM.Settings.get("actionTrigger") or "off"
-        if mode ~= "off" and not psf.foresightHint then
-            local hint = psf:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-            hint:SetPoint("BOTTOMLEFT", psf, "BOTTOMLEFT", 12, 10)
-            hint:SetText(("|cff9d9d9dHold %s + hover an action button to trace it|r")
-                :format(mode:upper()))
-            psf.foresightHint = hint
-        elseif psf.foresightHint then
-            psf.foresightHint:SetShown(mode ~= "off")
-            if mode ~= "off" then
-                psf.foresightHint:SetText(("|cff9d9d9dHold %s + hover an action button to trace it|r")
-                    :format(mode:upper()))
-            end
-        end
+        refreshHint()
     end)
-    psf:HookScript("OnHide", function() pcall(Highlight.clear) end)
+    psf:HookScript("OnHide", function()
+        if hint then hint:Hide() end
+        pcall(Highlight.clear)
+    end)
 
     -- S32: hovering an action button fires GameTooltip:SetAction(slot). We read the
     -- slot's spell (GetActionInfo, read-only), check the modifier, and apply a

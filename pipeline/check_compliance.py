@@ -98,6 +98,67 @@ def dialect_scan() -> list[str]:
     return violations
 
 
+# ---- Taint-law lint -------------------------------------------------------------
+# Writing a key onto a Blizzard-owned object, or creating a REGION on one, inserts
+# insecure (tainted) state into Blizzard's frame tree; secure code that later touches
+# it gets blocked - often FAR from the source and long after. Live incident
+# 2026-10-13: a hint FontString created ON PlayerSpellsFrame plus a psf.foresightHint
+# key write; the client then fired ADDON_ACTION_FORBIDDEN on
+# SetPreferredGamepadInteractTarget naming Foresight, out of combat, talent UI closed.
+# House law (synergy_highlight.lua, hardened 2026-10-12): visuals live on OUR frames
+# and only ANCHOR to Blizzard's - this lint makes the law mechanical. Receivers
+# checked: the Blizzard globals below plus any file-local alias assigned straight
+# from one (local psf = _G.PlayerSpellsFrame). Parenting a frame TO one via
+# CreateFrame stays allowed (established, bounded practice: the FS button); regions
+# and key writes are the incident class. Function-parameter aliases are not tracked -
+# the lint is conservative, not complete.
+
+BLIZZARD_OBJECTS = [
+    "PlayerSpellsFrame", "CharacterFrame", "PaperDollFrame", "GameTooltip",
+    "ItemRefTooltip", "UIParent", "WorldFrame", "SpellBookFrame", "Minimap",
+    "PlayerFrame", "TargetFrame",
+]
+
+REGION_CREATORS = ["CreateFontString", "CreateTexture", "CreateLine",
+                   "CreateMaskTexture", "CreateAnimationGroup"]
+
+_ALIAS_RE = re.compile(
+    r"(?<![\w.])local\s+(\w+)\s*=\s*(?:_G\.)?(?:" + "|".join(BLIZZARD_OBJECTS) + r")\b"
+)
+
+
+def taint_scan() -> list[str]:
+    violations: list[str] = []
+    creators = "|".join(REGION_CREATORS)
+    for path in sorted(ADDON_DIR.rglob("*.lua")):
+        rel = path.relative_to(ADDON_DIR.parent)
+        raw_lines = path.read_text(encoding="utf-8-sig").splitlines()
+        scrubbed = _scrub_lua("\n".join(raw_lines))
+        names = set(BLIZZARD_OBJECTS)
+        for m in _ALIAS_RE.finditer(scrubbed):
+            names.add(m.group(1))
+        name_alt = "|".join(sorted(names))
+        write_re = re.compile(
+            r"(?<![\w.])(?:_G\.)?(" + name_alt + r")\.(\w+)\s*=(?!=)")
+        region_re = re.compile(
+            r"(?<![\w.])(?:_G\.)?(" + name_alt + r")\s*:\s*(" + creators + r")\s*\(")
+        for lineno, line in enumerate(scrubbed.splitlines(), 1):
+            hits: list[str] = []
+            mw = write_re.search(line)
+            if mw:
+                hits.append(f"key write onto Blizzard object ({mw.group(1)}.{mw.group(2)} = ...)")
+            mr = region_re.search(line)
+            if mr:
+                hits.append(f"region created on Blizzard object ({mr.group(1)}:{mr.group(2)}())")
+            if not hits:
+                continue
+            original = raw_lines[lineno - 1] if lineno <= len(raw_lines) else ""
+            if ALLOW_MARKER in original:
+                continue  # documented allowance (reported by the policy scan)
+            violations.append(f"{rel}:{lineno} {'; '.join(hits)} :: {original.strip()[:120]}")
+    return violations
+
+
 def scan() -> tuple[list[str], list[str]]:
     violations: list[str] = []
     allowances: list[str] = []
@@ -155,9 +216,19 @@ def main() -> int:
         for v in dialect:
             print(f"  {v}")
         return 1
+    taint = taint_scan()
+    if taint:
+        print("TAINT-LAW LINT RED - a key write or region creation on a Blizzard-owned")
+        print("object puts addon taint inside their frame tree; the client blocks a")
+        print("protected call far from the source (2026-10-13 live incident class).")
+        print("Visuals live on OUR frames, anchored - never parented - to theirs:")
+        for v in taint:
+            print(f"  {v}")
+        return 1
     files = len(list(ADDON_DIR.rglob("*.lua")))
     print(f"compliance gate green: {files} Lua files scanned, 0 violations, "
-          f"{len(allowances)} documented allowance(s); Lua 5.1 dialect lint green")
+          f"{len(allowances)} documented allowance(s); Lua 5.1 dialect lint green; "
+          f"taint-law lint green")
     return 0
 
 

@@ -577,6 +577,15 @@ honored (S30 spine) · ☑ no action-button frames touched; combat-gated · ☑ 
 (+2 state machine + resolver) · ☑ in-game gesture verify (user-confirmed 2026-10-13:
 "the alt toggle on talents works well").
 
+INCIDENT 2026-10-13 (fixed v0.44.2): the first live trace session fired
+ADDON_ACTION_FORBIDDEN x2 (SetPreferredGamepadInteractTarget) naming Foresight - the
+taint sentinel journaled it, the harvest surfaced it. Vector: the talent-UI hint was
+created ON PlayerSpellsFrame + a psf.foresightHint key write - the one taint-law
+violation in v0.44.x (all pre-v0.44 archives taint-free). Fixed: hint on our own
+UIParent frame, anchored only; compliance gained the TAINT-LAW LINT (proven red on
+the pre-fix lines). Causality presumed, not proven (client taint blame is fuzzy) ·
+☐ in-game verify: next session shows zero sentinel taint events.
+
 ### SYNERGY - impact sources that work together ◐
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +
 /foresight synergy. ALL-SOURCES SHIPPED (v0.12.0): with player context (race/class/active buffs),
