@@ -193,10 +193,15 @@ local function renderRadar(chart, yTop, innerW, r, g, b)
                 cx + nxt.x, cy + nxt.y, { r = 1, g = 0.82, b = 0.3, a = 0.9 }, 1)
         end
     end
-    -- axis tip labels (abbreviated; the full label + display-law value stays in the
-    -- rows below). Goal axis reads in class color with the star.
+    -- Axis tips: an abbreviated label + an invisible HOVER TARGET. Hovering a tip
+    -- expands that dimension's detail (value, plan projection, what it measures) so
+    -- the per-axis rows below can collapse - the raw numbers still live in the
+    -- Dimensions section above, so nothing is hidden. Goal axis reads in class color
+    -- with a star. All on our own frame (cf -> UIParent), taint-safe.
     local tips = M.radarPoints(ones, CHART_RADIUS + 16)
+    cf.tipBtns = cf.tipBtns or {}
     for i = 1, n do
+        local ax = axes[i]
         local fs = cf.labels[i]
         if not fs then
             fs = cf:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -204,15 +209,55 @@ local function renderRadar(chart, yTop, innerW, r, g, b)
         end
         fs:ClearAllPoints()
         fs:SetPoint("CENTER", cf, "TOPLEFT", cx + tips[i].x, cy + tips[i].y)
-        local ab = RADAR_ABBREV[axes[i].id] or (axes[i].label or ""):sub(1, 5)
-        if axes[i].isGoal then
-            fs:SetText(("|cff%02x%02x%02x* %s|r"):format(r * 255, g * 255, b * 255, ab))
-        else
-            fs:SetText(ab)
-        end
+        local ab = RADAR_ABBREV[ax.id] or (ax.label or ""):sub(1, 5)
+        local normalText = ax.isGoal
+            and ("|cff%02x%02x%02x* %s|r"):format(r * 255, g * 255, b * 255, ab) or ab
+        fs:SetText(normalText)
         fs:Show()
+
+        local btn = cf.tipBtns[i]
+        if not btn then
+            btn = _G.CreateFrame("Button", nil, cf)
+            cf.tipBtns[i] = btn
+            btn:SetScript("OnEnter", function(self)
+                local info = self.info
+                if not info then return end
+                if self.fs and info.hl then self.fs:SetText(info.hl) end
+                _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                _G.GameTooltip:SetText(info.label
+                    .. (info.isGoal and "  |cffffd24d(goal)|r" or ""), 1, 1, 1)
+                _G.GameTooltip:AddLine(info.value, 0.2, 1, 0.6)
+                if info.plan then
+                    _G.GameTooltip:AddLine("with your plan: " .. info.plan, 0.83, 0.72, 0.3)
+                end
+                if info.unit then
+                    _G.GameTooltip:AddLine(info.unit, 0.6, 0.6, 0.6, true)
+                end
+                _G.GameTooltip:Show()
+            end)
+            btn:SetScript("OnLeave", function(self)
+                _G.GameTooltip:Hide()
+                if self.fs and self.normalText then self.fs:SetText(self.normalText) end
+            end)
+        end
+        local dim = HM.dimensions and HM.dimensions.byId and HM.dimensions.byId(ax.id)
+        local hl = ("|cff%02x%02x%02x%s|r"):format(
+            math.min(255, r * 255 + 60), math.min(255, g * 255 + 60),
+            math.min(255, b * 255 + 60), ax.isGoal and ("* " .. ab) or ab)
+        btn.fs, btn.normalText = fs, normalText
+        btn.info = {
+            label = ax.label or ab,
+            value = HM.dimensions.display(ax.id, ax.current),
+            plan = ax.plan and HM.dimensions.display(ax.id, ax.plan) or nil,
+            unit = dim and dim.unit, isGoal = ax.isGoal, hl = hl,
+        }
+        btn:SetSize(48, 16)
+        btn:ClearAllPoints()
+        btn:SetPoint("CENTER", cf, "TOPLEFT", cx + tips[i].x, cy + tips[i].y)
+        btn:Show()
     end
     for i = n + 1, #cf.labels do cf.labels[i]:Hide() end
+    for i = n + 1, #cf.tipBtns do cf.tipBtns[i]:Hide() end
     return true
 end
 
@@ -242,14 +287,27 @@ local function layout(model)
             panel.radarChart:Hide()
         end
         if not collapsed then
+            local radarCharted = false
             if section.id == "radar" and section.chart and motion ~= "off"
                     and HM.Motion then
                 if renderRadar(section.chart, y, PANEL_WIDTH - PAD * 2, r, g, b) then
                     y = y - CHART_H - 6
+                    radarCharted = true
+                end
+            end
+            -- When the radar DREW, collapse its per-axis text rows: hover a tip for the
+            -- detail. Keep the basis line (the empty-label row). The numbers stay in the
+            -- Dimensions section above, so nothing is hidden. Text fallback (motion off)
+            -- keeps every row.
+            local rows = section.rows
+            if radarCharted then
+                rows = {}
+                for _, row in ipairs(section.rows) do
+                    if (row.label or "") == "" then rows[#rows + 1] = row end
                 end
             end
             local zebra = false
-            for _, row in ipairs(section.rows) do
+            for _, row in ipairs(rows) do
                 local f = acquire(rowPool, createRow)
                 f.tooltipText = row.tooltip
                 f.flash:Hide()

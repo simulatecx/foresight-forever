@@ -664,7 +664,11 @@ with full context - func=SetPreferredGamepadInteractTarget, open=[char+fs], upti
 panel + buttons are now UIParent children ANCHORED to the char frame (shown/hidden via
 hooks), never inside its tree. Compliance taint-law lint gained a PARENT rule (reds on
 CreateFrame into an interactive Blizzard frame; proven red on the 3 pre-fix sites).
-☐ in-game verify: character tab opens with zero taint block.
+☐ in-game verify: character tab opens with zero taint block. (v0.45.5 loaded in-game
+2026-10-13, character tab open, radar rendering, NO block popup - fix holding; awaiting
+a clean full-session confirm.) RADAR HOVER-EXPAND (v0.45.6, user tuning ask): axis tips
+hover to show the dimension's value + plan + description; per-axis rows collapse into
+the chart (numbers stay in the Dimensions section). ☐ in-game verify the hover.
 
 
 v0 engine SHIPPED (v0.10.0): group nodes by stat/spell/school/mechanic; tooltip "Synergy:" line +

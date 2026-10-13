@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.45.6 - 2026-10-13
+
+RADAR HOVER-TO-EXPAND (user ask, UI tuning). The Shape chart's eight axis tips are now
+hover targets: point at Melee (or any axis) and a tooltip expands that dimension's
+detail - its value, the plan projection if you have one, and what it actually measures
+- while the tip label brightens. With the chart carrying the detail on demand, the
+per-axis text rows under it COLLAPSE (only the basis line stays); the raw numbers
+still live in the Dimensions section at the top of the panel, so nothing is hidden.
+Text-fallback mode (uiMotion off, no chart) keeps every row as before. All hover
+widgets are on our own chart frame (UIParent-anchored), taint-safe.
+
+*Features:* UI-stats-panel
+
 ## 0.45.5 - 2026-10-13
 
 TAINT VECTOR PINNED AND FIXED (account-safety). The hardened recorder earned its keep:
