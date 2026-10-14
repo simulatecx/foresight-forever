@@ -100,8 +100,11 @@ branching talent-tree node (the impact map).
 3. Add repo secrets: `CF_API_TOKEN`, `WAGO_API_TOKEN` (optional `WOWI_API_TOKEN`).
 4. Put the CurseForge id in the TOC: `## X-Curse-Project-ID: <id>` (and `## X-Wago-ID:`).
 5. SHA-pin the action refs in the three workflows; enable branch protection on `main`.
-6. Tag a release: `git tag v0.22.0 && git push --tags` -> CI gates, packages, uploads.
-7. Upload the logo + this description on the CurseForge/Wago project pages.
+6. Rewrite `.github/RELEASE_NOTES.md` with this version's PLAYER-FACING notes (short,
+   human, "what's new for you" - not the dev CHANGELOG). This file, not CHANGELOG.md,
+   becomes the CurseForge + GitHub release notes.
+7. Tag a release: `git tag v0.22.0 && git push --tags` -> CI gates, packages, uploads.
+8. Upload the logo + this description on the CurseForge/Wago project pages.
 
 ## License & distribution (owner-confirmed 2026-10-14)
 

@@ -21,7 +21,10 @@ ignore:
     - SPRINTS.md
     - README.md
 
-# No manual-changelog: the curated CHANGELOG.md is the full project history and ships
-# in the zip, but it is far larger than GitHub's 125k release-body cap. Let the packager
-# auto-generate a per-release changelog from the commit messages since the previous tag
-# (our commits are descriptive) - that becomes the GitHub/CurseForge release notes.
+# Release notes are a short, hand-written, player-facing file - deliberately NOT the full
+# CHANGELOG.md (that is the dense dev history and is already past GitHub's 125k release-
+# body cap). Rewrite .github/RELEASE_NOTES.md with this version's notes before each tag;
+# it becomes the CurseForge + GitHub release notes. (.github is auto-excluded from the zip.)
+manual-changelog:
+    filename: .github/RELEASE_NOTES.md
+    markdown-to-bbcode: true
