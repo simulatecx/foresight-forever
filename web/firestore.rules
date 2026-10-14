@@ -19,7 +19,7 @@ service cloud.firestore {
       return d.keys().hasOnly(['v','build','class','spec','level',
                                'lenses','metrics','talents','items','observed','clientId'])
           && d.v == 1
-          && d.class is string && d.class.size() <= 16
+          && d.class is string && d.class.size() <= 16 && d.class.matches('[A-Z]+')
           // is number (not is int): the web SDK can encode integers as doubles -
           // the range clamp is what matters, not the numeric subtype.
           && d.level is number && d.level >= 1 && d.level <= 200

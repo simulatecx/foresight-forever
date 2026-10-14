@@ -57,6 +57,12 @@ const METRIC_LABELS = {
   "school.arcane": "Most Arcane Spell Damage", "school.holy": "Most Holy Spell Damage",
 };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+// Output-encode EVERY dynamic string before it touches innerHTML. Ladder/compare render
+// data from other users' contributions (metric keys, class tokens); the rules validate
+// shape, not HTML, so a crafted contribution could otherwise inject markup. Numbers are
+// safe (Math.round), but escaping them too costs nothing.
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+  (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function metricLabel(k) {
   if (METRIC_LABELS[k]) return METRIC_LABELS[k];
   if (k.startsWith("ability:")) return "Biggest " + k.slice(8);
@@ -109,9 +115,9 @@ function row(name, youText, pct, metaText) {
   const badge = top == null ? "" :
     `<span class="badge${top <= 1 ? " rank1" : ""}">top ${top}%</span>`;
   const bar = pct == null ? "" : `<span class="bar"><i style="width:${Math.max(3, Math.round(pct))}%"></i></span>`;
-  return `<div class="rowline"><span class="name">${name}${badge}</span>` +
-    `<span class="val">${youText}</span>` +
-    (metaText ? `<span class="meta">${metaText}</span>` : "") + bar + `</div>`;
+  return `<div class="rowline"><span class="name">${esc(name)}${badge}</span>` +
+    `<span class="val">${esc(youText)}</span>` +
+    (metaText ? `<span class="meta">${esc(metaText)}</span>` : "") + bar + `</div>`;
 }
 
 // ---- compare: read the bucket, rank the player ----------------------------------
@@ -123,13 +129,13 @@ async function showCompare(p) {
   try {
     const snap = await getDoc(doc(db, "aggregates", bucket));
     if (!snap.exists()) {
-      resEl.innerHTML = `<h2>${titleCase(p.class)} · level ${levelBucket(p.level)}+</h2>
+      resEl.innerHTML = `<h2>${esc(titleCase(p.class))} · level ${levelBucket(p.level)}+</h2>
         <p class="muted">No champions in your bracket yet - contribute and you'll set the first record.</p>`;
       return;
     }
     const agg = snap.data();
     if (agg.count && agg.count < (agg.minBucket || 5)) {
-      resEl.innerHTML = `<h2>${titleCase(p.class)} · level ${levelBucket(p.level)}+</h2>
+      resEl.innerHTML = `<h2>${esc(titleCase(p.class))} · level ${levelBucket(p.level)}+</h2>
         <p class="muted">Only ${agg.count} champion(s) here so far - not enough to rank (small brackets stay hidden). Check back soon.</p>`;
       return;
     }
@@ -148,7 +154,7 @@ async function showCompare(p) {
       chalRows += row(metricLabel(k), Math.round(val), pct, `record ${Math.round(s.max)} · n=${s.n}`);
     }
     resEl.innerHTML =
-      `<h2>${titleCase(p.class)} · level ${levelBucket(p.level)}+ <span class="muted">(${agg.count} champions)</span></h2>` +
+      `<h2>${esc(titleCase(p.class))} · level ${levelBucket(p.level)}+ <span class="muted">(${agg.count} champions)</span></h2>` +
       (lensRows ? `<div class="section-title">Your lenses</div>${lensRows}` : "") +
       (chalRows ? `<div class="section-title">Challenges</div>${chalRows}` : "") +
       `<p class="meta" style="margin-top:14px">Percentiles are approximate from the bracket's distribution (p).</p>`;
@@ -216,21 +222,21 @@ function renderLadder(klass) {
   const aggs = AGG_CACHE || [];
   const rows = ladderCardsFor(aggs, klass);
   if (!rows.length) {
-    board.innerHTML = `<p class="muted">No ladders yet${klass === "ALL" ? "" : " for " + titleCase(klass)} - the records are empty until champions submit. Be the first.</p>`;
+    board.innerHTML = `<p class="muted">No ladders yet${klass === "ALL" ? "" : " for " + esc(titleCase(klass))} - the records are empty until champions submit. Be the first.</p>`;
     return;
   }
   board.innerHTML = rows.map((r) =>
     `<div class="ladder-card" style="--class:${r.color}">
-       <h4>${r.label}</h4>
-       <span class="record">Record ${r.record}</span>
-       <span class="sub"> · ${titleCase(r.cls)} · level ${r.lvl}+ · ${r.n} champions</span>
+       <h4>${esc(r.label)}</h4>
+       <span class="record">Record ${esc(r.record)}</span>
+       <span class="sub"> · ${esc(titleCase(r.cls))} · level ${esc(r.lvl)}+ · ${esc(r.n)} champions</span>
      </div>`).join("");
 }
 async function initLadders() {
   const aggs = await loadAggregates();
   const sel = $("classFilter");
   const classes = ["ALL", ...Array.from(new Set(aggs.map((a) => a.class))).sort()];
-  sel.innerHTML = classes.map((c) => `<option value="${c}">${c === "ALL" ? "All classes" : titleCase(c)}</option>`).join("");
+  sel.innerHTML = classes.map((c) => `<option value="${esc(c)}">${c === "ALL" ? "All classes" : esc(titleCase(c))}</option>`).join("");
   sel.addEventListener("change", () => renderLadder(sel.value));
   renderLadder("ALL");
 }
