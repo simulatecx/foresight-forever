@@ -198,17 +198,22 @@ end
 
 if not _G.CreateFrame then return Crowd end -- headless: pure builder only
 
--- A stable, non-identifying pseudonym stored in SavedVariables (random; not derived
--- from any character/account fact). math.randomseed off the clock is fine in-client.
+-- A stable, non-identifying pseudonym stored in SavedVariables (not derived from any
+-- character/account fact) so the backend can count distinct contributors + dedup
+-- re-uploads. Built WITHOUT math.random / math.randomseed: reseeding the shared Lua RNG
+-- from addon code TAINTS it on the classic client, and secure code that later reads the
+-- RNG - the gamepad interact path - then gets blocked (ADDON_ACTION_FORBIDDEN). That was
+-- the SECOND /foresight share taint vector after the CSI one (both from v0.46.0). A dedup
+-- token only needs to be stable + collision-unlikely, so mix the wall clock with the
+-- high-res profiler (the exact sub-millisecond of first run differs per install).
 local function clientId()
     if not (HM.db and type(HM.db.collect) == "table") then return nil end
     local c = HM.db.collect
     if type(c.clientId) ~= "string" then
-        local t = (_G.time and _G.time()) or 0
-        if _G.math and math.randomseed then pcall(math.randomseed, t) end
-        local id = {}
-        for _ = 1, 16 do id[#id + 1] = ("%x"):format(math.random(0, 15)) end
-        c.clientId = table.concat(id)
+        local t = math.floor(((_G.time and _G.time()) or 0)) % 0x100000000
+        local prof = math.floor((((_G.debugprofilestop and _G.debugprofilestop()) or 0)) * 1000)
+            % 0x100000000
+        c.clientId = ("%08x%08x"):format(t, prof)
     end
     return c.clientId
 end

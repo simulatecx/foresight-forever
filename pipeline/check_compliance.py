@@ -54,6 +54,13 @@ ESCAPE_PATTERNS = [
     # (`_G.C_SpecializationInfo ~= nil`) and name strings are fine - only invocations red.
     (re.compile(r"(?<![\w.])C_SpecializationInfo\s*\.\s*\w+\s*\("),
      "C_SpecializationInfo.*() call (carries 'Lua Taint: Foresight' - presence-check only)"),
+    # math.random / math.randomseed: reseeding (or advancing) the shared Lua RNG from addon
+    # code TAINTS it on the classic client, so secure code that later reads the RNG - the
+    # gamepad interact path - gets blocked. 2026-10-14: this was the 2nd /foresight share
+    # taint vector (user confirmed unplugging the gamepad stopped the block). Derive tokens
+    # from the clock/profiler instead; add `-- compliance-allow:` if a truly non-secure need.
+    (re.compile(r"(?<![\w.])math\s*\.\s*random(seed)?\s*\("),
+     "math.random/randomseed (reseeds the shared RNG - taints the classic client; gamepad-interact block)"),
 ]
 
 ALLOW_MARKER = "-- compliance-allow:"

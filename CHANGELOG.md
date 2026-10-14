@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.46.11 - 2026-10-14
+
+ACCOUNT-SAFETY FIX (taint, part 2 - controller users). The second `/foresight share` taint
+vector: the crowd clientId pseudonym was generated with `math.randomseed` + `math.random`,
+and reseeding the shared Lua RNG from addon code TAINTS it on the classic client - so secure
+code that later reads the RNG, specifically the GAMEPAD interact path
+(`SetPreferredGamepadInteractTarget`), gets blocked. Controller players hit
+ADDON_ACTION_FORBIDDEN on share (and on the first Matrix refresh that generated the id);
+unplugging the gamepad stopped it, which pinned the cause. Fixed: the clientId is now
+derived from the wall clock + the high-resolution profiler - stable, collision-unlikely, no
+RNG. The compliance taint lint now reds any `math.random`/`math.randomseed` call so it can't
+regress. Companion to the v0.46.8 CSI fix; both vectors came from v0.46.0's crowd.lua. No
+other behavior change; existing ids are untouched. Gate 279.
+
+*Features:* CROWD-share, QA-compliance-gate
+
 ## 0.46.10 - 2026-10-14
 
 GROUND-TRUTH IMBUE ATTACK POWER (user catch: hovering Rockbiter showed our 58 vs the

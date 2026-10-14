@@ -309,6 +309,37 @@ Success. This is the first automated public release carrying the session's work 
 readout + engine card + TAINT FIX + share truncation); existing v0.46.4/0.46.5 installs
 will see "update available" (managed installs, matched to game version 1.60.1, after the
 managers' refresh cycle). RELEASE_NOTES.md consolidated the span for the notes.
+RESOLVED v0.46.11 - SECOND SHARE TAINT VECTOR (account-safety): `/foresight share` kept
+firing the taint block on v0.46.10 even AFTER the v0.46.8 CSI fix. Pinned 2026-10-14: the
+crowd clientId pseudonym was generated with `math.randomseed` + `math.random`, and
+reseeding the shared Lua RNG from addon code TAINTS it on the classic client - so the
+GAMEPAD interact secure path (`SetPreferredGamepadInteractTarget`, which reads the RNG) gets
+blocked. User CONFIRMED by unplugging the gamepad -> no block. Both share taint vectors came
+from v0.46.0's crowd.lua (CSI + the RNG reseed); removing CSI alone wasn't enough. Harvest
+caught 8 new v0.46.10 gamepad-taint events (19:45-19:46, open=[none-open]) confirming it was
+live. FIX: clientId now derived from the wall clock + high-res profiler (no RNG); compliance
+lint reds any `math.random`/`math.randomseed` so it can't regress. KEY LESSON: never
+reseed/advance the shared RNG from addon code on classic - it taints every RNG-reading
+secure op (gamepad interact the most visible). In-game re-verify queued (gamepad reconnected,
+/reload, /foresight share = no block). NOTE: existing cached clientIds are untouched.
+RETAIL INSTALL DELETED this session: `_retail_` Foresight (stale v0.37.0 addon + both SV
+files) removed to stop version confusion; only `_classic_beta_` (Forever, v0.46.10) has
+Foresight now.
+APP CHECK CONFIRMED WORKING (do NOT relax): Firestore App Check is Enforced at 98% verified
+(owner console); Playwright confirmed the client gets a valid reCAPTCHA Enterprise token +
+anon auth both succeed. The contribute `permission-denied` was a first-click warmup race,
+not a config break - retry after the page settles, or add a token pre-warm (await getToken
+before the write). Rule stays `appChecked()`.
+WEB FEEDBACK FORM built but NOT committed/deployed (pending the App Check path): `web/`
+"Send Word" panel -> a separate `feedback` collection (same project/console as
+`contributions`), create-only + App Check + shape-lock, free text capped, optional contact
+opt-in; `web/firestore.rules` + `privacy.html` updated. Deploy it with the App Check call.
+RANK-RULE clarification (user: scanned talents still show "(p) presumed"): in-game scanning
+only CAPTURES tooltips; promotion to "crowd-verified" is harvest -> review ->
+`overrides.rankRules` -> rebuild (dev-side), NOT an in-game auto-flip; and captures only
+reach disk on `/reload`/logout. PROPOSED enhancement: LIVE SELF-VERIFY - the addon consults
+the player's OWN trained scans at runtime so a trained talent flips immediately, crowd
+pipeline still ships it for everyone (awaiting owner go-ahead).
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named
