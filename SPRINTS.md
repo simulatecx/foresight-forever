@@ -267,10 +267,15 @@ suppressed / dark until baked). Baselines baked OFFLINE by `pipeline/fetch_basel
 reads the public `aggregates` with the maintainer's gcloud OAuth token (App Check blocks
 anonymous REST reads; NO service-account key in the repo) into
 `data/generated/peer_baselines.lua` (ships EMPTY, fills as the crowd grows). NEW TOC FILE
--> full client restart to load (/reload won't). REMAINING in-game: run the first real bake
-once data exists + owner is gcloud-authed (`gcloud auth login; python
-pipeline/fetch_baselines.py`); in-game verify the section renders; the leaderboard /
-all-classes view + named Armory tier come later.
+-> full client restart to load (/reload won't). BAKE PATH PROVEN END-TO-END 2026-10-14
+(commit e7ebd76): `fetch_baselines.py` ran clean - gcloud OAuth token -> Firestore REST
+read of the public `aggregates` (App Check bypassed) -> wrote valid Lua; 0 buckets today
+(no live crowd data yet - the test seed was deleted). Needed a `shutil.which("gcloud")`
+fix so Python subprocess finds `gcloud.cmd` on Windows (bare "gcloud" is shell-only).
+REMAINING in-game: owner FULL-RESTARTS + verifies the "Among your spec" section renders
+(empty state = featured challenge + be-first prompt); re-bake when real contributions
+exist; then tag v0.46.6 to publish. The leaderboard / all-classes view + named Armory tier
+come later.
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named
