@@ -2478,6 +2478,42 @@ function HM.runSelftest(out)
         return ok
     end)())
 
+    -- S13 crowd-share contract: the allow-list build leaks NOTHING but shaped game data.
+    check("crowd payload: allow-list build keeps only non-identifying game data", (function()
+        -- Feed the builder a payload STUFFED with identity + free text + timestamps, as
+        -- if a sloppy caller passed the whole collect store. None may survive.
+        local p = HM.Crowd.buildPayload({
+            build = "1.60.1", classToken = "SHAMAN", specId = 262, level = 35,
+            lenses = { spellcasting = 108.76, meleeDps = 154, bogusLens = 999 },
+            talents = { [104753] = 3, ["evil"] = 5 },
+            items = { [12345] = { c = 7, last = "2026-10-13" }, [0] = { c = 1 } },
+            observed = { [1249519] = { n = 20, stats = { attackPower = 80 },
+                                       at = "2026-10-13 11:19" } },
+            clientId = "a1b2c3d4e5",
+            -- poison: these must be impossible to carry through
+            name = "Wookie", realm = "Classic Beta PvE", account = "52959423",
+            guild = "Leeroy", reports = { "my note with PII" },
+            taintEvents = { { func = "x" } }, lastTooltipOwner = "CharacterFrame",
+            sessions = { { version = "v", at = "t" } },
+        })
+        if not p then return false end
+        -- allow-listed values present + shaped:
+        if not (p.class == "SHAMAN" and p.spec == 262 and p.level == 35
+            and p.lenses.spellcasting == 108.76 and p.lenses.bogusLens == nil
+            and p.talents[104753] == 3 and p.talents["evil"] == nil
+            and p.items[12345] == 7 and p.items[0] == nil
+            and p.observed[1249519] and p.observed[1249519].stats.attackPower == 80
+            and p.clientId == "a1b2c3d4e5") then return false, "shape" end
+        -- timestamps must be gone (items.last, observed.at):
+        if p.observed[1249519].at ~= nil then return false, "observed.at leaked" end
+        -- NONE of the forbidden/identifying keys may appear anywhere at the top level:
+        for _, k in ipairs(HM.Crowd.FORBIDDEN_KEYS) do
+            if p[k] ~= nil then return false, "leaked " .. k end
+        end
+        -- a payload with no class/level is refused entirely (nothing useful, nothing sent)
+        return HM.Crowd.buildPayload({ name = "x" }) == nil
+    end)())
+
     -- Scoreboard -------------------------------------------------------------------
     for _, c in ipairs(checks) do
         out(("%s %s%s"):format(c.ok and "PASS" or "FAIL", c.name,

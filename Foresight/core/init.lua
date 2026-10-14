@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.45.8"
+HM.version = "0.46.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -929,8 +929,21 @@ local function onSlash(input)
         else
             printMsg("export window unavailable outside the game client")
         end
+    elseif cmd == "share" then
+        -- Crowd share (S13): a SANITIZED, allow-listed payload (no name/realm/account,
+        -- no free-text notes, no timestamps) to paste into the companion web app. The
+        -- addon NEVER networks (account-safety doctrine) - you copy it out yourself.
+        local payload = HM.Crowd and HM.Crowd.payload()
+        if not payload then
+            printMsg("crowd share needs an in-game character snapshot")
+        elseif HM.showExport then
+            HM.showExport(HM.Crowd.toJSON(payload))
+            printMsg("sanitized crowd data ready - paste it at wow-foresight.firebaseapp.com to compare with your spec (only non-identifying game data: class/spec/level, your lens numbers, item IDs; no name, realm, or notes)")
+        else
+            printMsg("share window unavailable outside the game client")
+        end
     else
-        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | audit | report [note] | options | set <key> <value> | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | selftest")
+        printMsg("commands: /foresight talent <name|id> | stat <name> <amount> | advisor | build | goal <focus> | sim | oom <spell> | hit <ability> | audit | report [note] | options | set <key> <value> | focus <ability|clear> | path [dimension] | loop [id] | matrix [opacity <v>|reset] | synergy [name|clear] | affects <ability> | catalog [name] | items <stat> | buffs | imbue | plan [add|remove|clear] | panel [reset] | verify | export | share | selftest")
     end
 end
 

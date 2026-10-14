@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Foresight - compare to your spec</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <h1>Foresight <span class="brand">crowd compare</span></h1>
+    <p class="lead">
+      Paste what <code>/foresight share</code> gives you in-game to see how your
+      build stacks up against others of your spec and level. Only non-identifying
+      game data is sent - never your character name, realm, account, or notes.
+      <a href="./privacy.html">What we collect &amp; why</a>.
+    </p>
+
+    <section class="card">
+      <label for="payload">Your <code>/foresight share</code> text</label>
+      <textarea id="payload" rows="6" spellcheck="false"
+        placeholder='{"v":1,"class":"SHAMAN",...}'></textarea>
+
+      <label class="consent">
+        <input type="checkbox" id="consent" />
+        I agree to contribute this non-identifying game data to the Foresight
+        crowd dataset, used only in aggregate to power spec comparisons.
+      </label>
+
+      <div class="actions">
+        <button id="compare" disabled>Compare only</button>
+        <button id="contribute" class="primary" disabled>Contribute &amp; compare</button>
+      </div>
+      <p id="status" class="status" role="status"></p>
+    </section>
+
+    <section id="result" class="card result hidden"></section>
+
+    <footer>
+      <p>The Foresight addon never sends data on its own - this page only uploads
+      what you paste, after you opt in. <a href="./privacy.html">Privacy</a> ·
+      <a href="https://github.com/simulatecx/foresight-forever">Source</a></p>
+    </footer>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+rules_version = '2';
+
+// Foresight crowd backend (S13) - Firestore security rules.
+// THE server-side gate. The client API key is public (expected for web apps);
+// security is THESE rules + App Check, never the key. Default-deny everything;
+// the only writable path is shape-validated contributions, and the only readable
+// path is pre-suppressed aggregates. Raw contributions are NEVER client-readable.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- helpers ----------------------------------------------------------
+    function signedIn()  { return request.auth != null; }            // anonymous is fine
+    function appChecked(){ return request.app != null; }             // App Check enforced
+
+    // The exact, allow-listed payload shape (mirrors Foresight/core/crowd.lua).
+    // hasOnly() rejects ANY key not in this set - so name/realm/notes/timestamps
+    // can never be written even if a modified client tried.
+    function validContribution(d) {
+      return d.keys().hasOnly(['v','build','class','spec','level',
+                               'lenses','talents','items','observed','clientId'])
+          && d.v == 1
+          && d.class is string && d.class.size() <= 16
+          && d.level is int && d.level >= 1 && d.level <= 200
+          && (!('build' in d) || (d.build is string && d.build.size() <= 32))
+          && (!('spec' in d)  || (d.spec is int))
+          && (!('clientId' in d) || (d.clientId is string && d.clientId.size() <= 40))
+          && d.lenses is map && d.talents is map
+          && d.items is map   && d.observed is map;
+    }
+
+    // ---- contributions: write-only, shape-validated, never readable ----------
+    match /contributions/{docId} {
+      allow create: if signedIn() && appChecked()
+                    && validContribution(request.resource.data);
+      allow read, update, delete: if false;  // raw crowd rows are not client-readable
+    }
+
+    // ---- aggregates: read-only; written ONLY by Cloud Functions (admin SDK) --
+    // The function enforces small-bucket suppression (groups < MIN_BUCKET expose a
+    // count only, never percentiles) BEFORE writing these docs.
+    match /aggregates/{bucket} {
+      allow read: if true;        // public, pre-suppressed per-spec/level percentiles
+      allow write: if false;      // admin SDK bypasses rules; clients may never write
+    }
+
+    // ---- everything else: denied -------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

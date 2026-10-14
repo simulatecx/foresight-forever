@@ -203,6 +203,13 @@ real reference that stays meaningful as you grow (this is what the retired zero-
 needs: the Firebase uploader + ingestion, per-spec/level aggregates (percentiles, not
 raw PII), and a panel readout ("your Spellcasting is top ~30% of your spec at your
 level (p)"). Privacy-by-design: aggregates only, small-bucket suppression, consent.
+PHASE B FOUNDATION SHIPPED v0.46.0 (full design: `docs/S13-CROWD-BACKEND.md`): addon
+share contract `core/crowd.lua` (allow-list `/foresight share` JSON, selftest-proven
+no-PII) + `web/` app skeleton (consent, re-validate, contribute/compare) +
+`web/firestore.rules` (default-deny, App-Check + shape-locked write, aggregate-read) +
+`web/privacy.html`. REMAINING: Cloud Function aggregation (percentiles + suppression);
+Firebase console setup (owner - Firestore/Anon-Auth/App-Check/Hosting/rules deploy, see
+doc S6); pipeline bake-back `peer_baselines.lua` + in-game "vs your spec" readout.
 
 ### S14 - Buffs & consumables impact ◐  (SHIPPED code-complete v0.12.0)
 "How does a flask/elixir/food impact me while active, and what do I lose when it expires."

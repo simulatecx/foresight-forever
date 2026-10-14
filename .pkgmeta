@@ -9,6 +9,8 @@ move-folders:
 
 ignore:
     - pipeline
+    - web          # S13 companion web app (Firebase) - never ships inside the addon
+    - docs
     - mockups
     - .claude
     - CLAUDE.md

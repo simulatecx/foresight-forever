@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Foresight - privacy &amp; data</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <h1>Foresight <span class="brand">privacy</span></h1>
+    <p class="lead">Plain-language promise: we collect game data to power spec
+    comparisons, and nothing that identifies you. This page is the whole story.</p>
+
+    <section class="card">
+      <h2>What the addon collects (on your machine)</h2>
+      <p>The Foresight addon journals game data locally to its SavedVariables file -
+      item sightings, your talent build, observed buff values, your computed lens
+      numbers. It <b>never sends anything on its own</b>; it has no network access.</p>
+
+      <h2>What leaves your machine - only when you choose</h2>
+      <p>Only when you run <code>/foresight share</code> and paste the result here,
+      after ticking consent. That payload is built by an allow-list and contains
+      <b>only</b>:</p>
+      <ul>
+        <li>class, spec id, and level</li>
+        <li>your computed lens numbers (spellcasting, melee DPS, etc. - just numbers)</li>
+        <li>your talent build (node ids and ranks)</li>
+        <li>item ids you've seen, with counts</li>
+        <li>observed buff/consumable stat values</li>
+        <li>a random, non-identifying id so we can count distinct contributors and
+            avoid double-counting re-uploads</li>
+      </ul>
+
+      <h2>What we never collect</h2>
+      <p>Character name, realm, account, guild, zone, IP-linked identity, timestamps,
+      or any free text (your <code>/foresight report</code> notes stay on your machine).
+      The payload is shaped both in the addon and again in this page's rules, so these
+      cannot be sent even by a modified client.</p>
+
+      <h2>How it's used</h2>
+      <p>Aggregated only - to show "your spellcasting is around the top N% of your
+      spec at your level" and to map what items exist in the game. Brackets with fewer
+      than a handful of contributors show a count only, never a ranking. Raw
+      contributions are never shown to anyone; only the aggregates are readable.</p>
+
+      <h2>Keeping it / removing it</h2>
+      <p>Contributions are pseudonymous aggregate-source data. Since no account or
+      identity is attached, there is nothing tied to you to look up. You can stop
+      contributing at any time by simply not sharing; to request removal of a specific
+      contribution, keep the random id shown in your share text and contact us.</p>
+
+      <p class="fine">This notice updates in the same change as any data-practice
+      change. Last updated with Foresight v0.46.0.</p>
+      <p><a href="./index.html">&larr; back</a></p>
+    </section>
+  </main>
+</body>
+</html>

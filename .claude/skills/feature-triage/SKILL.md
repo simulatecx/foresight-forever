@@ -10,7 +10,9 @@ This file adds the Foresight repo bindings.
 
 `DATA-` pipeline & shipped data · `GRAPH-` impact engine & dimensions · `MODEL-`
 snapshot/loadout/impact · `CORE-` addon plumbing · `UI-` in-game surfaces · `QA-`
-verification & feedback · `PANIC-` panic advisor · `ASSIST-` what-to-press HUD.
+verification & feedback · `CROWD-` crowd data: share contract, backend, aggregation
+(the addon never networks; data leaves only by user-initiated share) · `PANIC-` panic
+advisor · `ASSIST-` what-to-press HUD.
 
 ## Shared spines (change these, update every consumer)
 

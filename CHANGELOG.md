@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.46.0 - 2026-10-13
+
+S13 CROWD BACKEND - FOUNDATION (the "compare to others in your spec" build begins).
+Full design in `docs/S13-CROWD-BACKEND.md`. This ship lays the account-safe, privacy-
+first groundwork:
+
+- ADDON SHARE CONTRACT (`core/crowd.lua`). `/foresight share` builds a sanitized JSON
+  payload by an ALLOW-LIST - only non-identifying game data (class/spec/level, your
+  computed lens numbers, talent build, item-id counts, observed buff values, and a
+  random pseudonymous contributor id). Character name, realm, account, guild,
+  timestamps, and all free text (your /foresight report notes) CANNOT appear - the
+  builder copies named fields only, and the selftest proves a payload stuffed with
+  identity + notes + timestamps emits none of it. The addon still never networks; you
+  copy the text out yourself.
+- FIRESTORE RULES (`web/firestore.rules`). Default-deny; the only write path is
+  create-only, App-Check + auth gated, and shape-validated (hasOnly allow-list) so a
+  modified client still can't add a field. Raw contributions are never client-readable;
+  only pre-suppressed aggregates are.
+- WEB APP SKELETON (`web/`) wired to the wow-foresight config: consent gate,
+  client-side re-validation mirror, contribute + compare flows, and a plain-language
+  privacy disclosure (`web/privacy.html`). The web apiKey is a public identifier, not a
+  secret - security is the rules + App Check.
+- Selftest 275 (+1): the crowd allow-list contract.
+
+Remaining (in the design doc): the Cloud Function that aggregates contributions into
+per-spec/level percentiles with small-bucket suppression; the Firebase console setup
+(owner); and the pipeline bake-back so the in-game panels show "vs your spec." Gated on
+S12 publish for real-user scale.
+
+*Features:* CROWD-share, CORE-options
+
 ## 0.45.8 - 2026-10-13
 
 OPTIONS + FLEXIBILITY PASS (user direction).
