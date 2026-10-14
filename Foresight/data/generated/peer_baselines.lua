@@ -2,4 +2,7 @@
 local _, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 HM.gen = HM.gen or {}
-HM.gen.peerBaselines = { fetchedBuild = "?", buckets = {} }
+HM.gen.peerBaselines = {
+    ["buckets"] = {},
+    ["fetchedBuild"] = "?",
+}

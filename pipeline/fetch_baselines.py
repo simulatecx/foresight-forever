@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 import urllib.request
@@ -31,8 +32,11 @@ BUCKET_FIELDS = ("class", "spec", "levelBucket", "count", "minBucket", "lenses",
 
 
 def access_token() -> str:
+    # Resolve the full path so Windows finds gcloud.cmd (a bare "gcloud" isn't on the
+    # exec PATH for subprocess there, only the shell).
+    exe = shutil.which("gcloud") or "gcloud"
     try:
-        res = subprocess.run(["gcloud", "auth", "print-access-token"],
+        res = subprocess.run([exe, "auth", "print-access-token"],
                              capture_output=True, text=True, timeout=60)
     except FileNotFoundError:
         sys.exit("gcloud not found - install the Google Cloud SDK, then `gcloud auth login`.")
