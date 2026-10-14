@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.46.5 - 2026-10-14
+
+PUBLISHING - automated CurseForge release pipeline armed. Bound the CurseForge project
+id (`## X-Curse-Project-ID: 1744126`) in the TOC and set the `CF_API_TOKEN` repo secret,
+so pushing a `vX.Y.Z` tag now runs the ship gate, packages `Foresight/` via the BigWigs
+packager, and uploads to CurseForge + GitHub Releases automatically - no more manual
+zips. This version is the first tag through that path (the v0.46.4 build was uploaded by
+hand while the project was in moderation). No addon behavior change.
+
+*Features:* QA-publish-train
+
 ## 0.46.4 - 2026-10-14
 
 REPOSITIONING (pre-publish copy). Dropped the "hardcore safety net" framing (the Panic
