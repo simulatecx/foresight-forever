@@ -12,3 +12,6 @@ pipeline/collected/
 
 # Browser-automation scratch output
 .playwright-mcp/
+
+# Firebase CLI local cache (deploy artifacts)
+.firebase/
