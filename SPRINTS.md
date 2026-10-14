@@ -256,9 +256,21 @@ TRIAL hero rotating by day-of-year ("Today: Biggest Greater Heal - submit if you
 highest!") with the standing record; THE LADDERS browser (class filter -> every
 challenge's record from public aggregates, graceful-empty); the compare now renders
 gold percentile bars + "top N%" badges + records; share-link prefill/contribute intact.
-0 console errors, mobile-friendly, no build step. REMAINING in-game: bake aggregates ->
-peer_baselines.lua -> in-game rank readout + leaderboard + the SAME daily-cycle featured
-challenge (addon computes day-of-year deterministically so in-game + web agree).
+0 console errors, mobile-friendly, no build step.
+IN-GAME PEER READOUT SHIPPED v0.46.6 (the "vs your spec" payoff): the Matrix "Among your
+spec" section ranks your lenses + challenge metrics against your class/spec/level bracket
+("Spellcasting: top ~10%, median 110") + today's featured challenge rotating by
+day-of-year to MATCH the web (date("*t").yday; D.featured mirrors web FEATURED order);
+pure `PanelModel.peerModel` + a `pctFromQuantiles` port of the web logic, selftest 278;
+`peerReadout` toggle (default on); honest degrade (be-first prompt / small-bucket
+suppressed / dark until baked). Baselines baked OFFLINE by `pipeline/fetch_baselines.py` -
+reads the public `aggregates` with the maintainer's gcloud OAuth token (App Check blocks
+anonymous REST reads; NO service-account key in the repo) into
+`data/generated/peer_baselines.lua` (ships EMPTY, fills as the crowd grows). NEW TOC FILE
+-> full client restart to load (/reload won't). REMAINING in-game: run the first real bake
+once data exists + owner is gcloud-authed (`gcloud auth login; python
+pipeline/fetch_baselines.py`); in-game verify the section renders; the leaderboard /
+all-classes view + named Armory tier come later.
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named

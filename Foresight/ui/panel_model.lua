@@ -186,6 +186,141 @@ function PanelModel.focusModel(loadout, name)
              pathway = PanelModel.pathwayModel(loadout, sid) }
 end
 
+-- Percentile (0..100) of value v within a stored quantile set {min,p25,p50,p75,p90,max}
+-- by piecewise-linear interpolation. Mirrors web/app.js pctFromQuantiles so the in-game
+-- readout and the website agree. nil if the set is too sparse to place a value.
+local function pctFromQuantiles(s, v)
+    if type(s) ~= "table" or type(v) ~= "number" then return nil end
+    local pts = {}
+    local cand = { { s.min, 0 }, { s.p25, 25 }, { s.p50, 50 },
+                   { s.p75, 75 }, { s.p90, 90 }, { s.max, 100 } }
+    for _, p in ipairs(cand) do
+        if type(p[1]) == "number" then pts[#pts + 1] = p end
+    end
+    if #pts < 2 then return nil end
+    if v <= pts[1][1] then return 0 end
+    if v >= pts[#pts][1] then return 100 end
+    for i = 2, #pts do
+        if v <= pts[i][1] then
+            local x0, y0 = pts[i - 1][1], pts[i - 1][2]
+            local x1, y1 = pts[i][1], pts[i][2]
+            if x1 == x0 then return y1 end
+            return y0 + (y1 - y0) * (v - x0) / (x1 - x0)
+        end
+    end
+    return 100
+end
+
+local function peerLevelBucket(level)
+    return math.floor((tonumber(level) or 0) / 5) * 5
+end
+
+-- Bucket id matching the backend aggregator + web: class-spec-levelBucket (spec "any"
+-- when unknown). This is the key into the baked HM.gen.peerBaselines.buckets table.
+local function peerBucketId(class, spec, level)
+    local sp = (spec ~= nil) and tostring(spec) or "any"
+    return tostring(class) .. "-" .. sp .. "-" .. tostring(peerLevelBucket(level))
+end
+
+local function peerTitleClass(c)
+    c = tostring(c or "?")
+    return c:sub(1, 1):upper() .. c:sub(2):lower()
+end
+
+-- "top N%" from a percentile (floor, min 1): p90 -> top 10%, p99.6 -> top 1%.
+local function topPct(pct)
+    if type(pct) ~= "number" then return nil end
+    return math.max(1, math.floor(100 - pct + 0.5))
+end
+
+-- Peer readout model (CROWD-share, the in-game "vs your spec"): PURE. Inputs:
+--   payload   - the player's sanitized Crowd payload ({ class, spec, level, lenses,
+--               metrics }); exactly the numbers /foresight share would send.
+--   baselines - the baked table (HM.gen.peerBaselines = { buckets = { [id] = agg } }).
+--   doy       - day-of-year (1..366), passed in so this stays testable and matches the
+--               website's rotation (the caller reads it from date("*t").yday in-game).
+-- Degrades honestly: no baked table -> available=false (feature stays dark); your bucket
+-- absent or below its suppression floor -> a note (numbers still shown), with the
+-- featured challenge's standing record so there's always something to chase.
+function PanelModel.peerModel(payload, baselines, doy)
+    payload = payload or {}
+    local buckets = type(baselines) == "table" and type(baselines.buckets) == "table"
+        and baselines.buckets or nil
+    local out = { available = buckets ~= nil, rows = {}, count = 0, enough = false }
+
+    -- Featured challenge of the day (mirrors the website's daily trial). The standing
+    -- record is the GLOBAL best across all buckets; placement is within your bucket.
+    local featList = (HM.dimensions and HM.dimensions.featured) or {}
+    if #featList > 0 then
+        local f = featList[(doy or 0) % #featList + 1]
+        local feat = { label = f.label, key = f.key }
+        if buckets then
+            for _, agg in pairs(buckets) do
+                local s = agg.metrics and agg.metrics[f.key]
+                if s and type(s.max) == "number"
+                        and (not feat.record or s.max > feat.record) then
+                    feat.record, feat.recordClass = s.max, agg.class
+                end
+            end
+        end
+        local mine = payload.metrics and payload.metrics[f.key]
+        if type(mine) == "number" then feat.you, feat.inField = mine, true end
+        out.featured = feat
+    end
+
+    if not buckets then return out end
+
+    local id = peerBucketId(payload.class, payload.spec, payload.level)
+    out.bucketId = id
+    out.bucketLabel = peerTitleClass(payload.class) .. " - level "
+        .. tostring(peerLevelBucket(payload.level)) .. "+"
+    local agg = buckets[id]
+    if not agg then
+        out.note = "No one of your spec has reported yet - /foresight share to set the first mark."
+        return out
+    end
+    out.count = agg.count or 0
+    out.enough = (agg.count or 0) >= (agg.minBucket or 5)
+    if not out.enough then
+        out.note = ("Only %d of your spec so far - not enough to rank yet (small groups stay hidden)."):format(agg.count or 0)
+        return out
+    end
+
+    -- Lens rows (your dimension indices vs the spec), in the shipped dimension order.
+    for _, dim in ipairs((HM.dimensions and HM.dimensions.list) or {}) do
+        local mine = payload.lenses and payload.lenses[dim.id]
+        local s = agg.lenses and agg.lenses[dim.id]
+        if type(mine) == "number" and s then
+            out.rows[#out.rows + 1] = {
+                kind = "lens", label = dim.label, you = mine,
+                top = topPct(pctFromQuantiles(s, mine)),
+                meta = ("median %d"):format(math.floor((s.p50 or 0) + 0.5)),
+            }
+        end
+    end
+    -- Challenge metric rows (armor, abilities, schools), sorted by label for a stable UI.
+    local mrows = {}
+    for k, mine in pairs(payload.metrics or {}) do
+        local s = agg.metrics and agg.metrics[k]
+        if type(mine) == "number" and s then
+            mrows[#mrows + 1] = {
+                kind = "metric", label = (HM.dimensions and HM.dimensions.metricLabel(k)) or k,
+                you = mine, top = topPct(pctFromQuantiles(s, mine)),
+                meta = ("record %d"):format(math.floor((s.max or 0) + 0.5)),
+            }
+        end
+    end
+    table.sort(mrows, function(a, b) return a.label < b.label end)
+    for _, r in ipairs(mrows) do out.rows[#out.rows + 1] = r end
+
+    -- Placement in today's featured challenge, within your bucket.
+    if out.featured and out.featured.inField then
+        local s = agg.metrics and agg.metrics[out.featured.key]
+        if s then out.featured.top = topPct(pctFromQuantiles(s, out.featured.you)) end
+    end
+    return out
+end
+
 -- pathways (optional): a Sim.goalPathways result - the renderer computes it on talent
 -- changes only (one evaluate per open node is too heavy for every aura tick) and
 -- passes it through; the model stays pure. focus (optional): a PanelModel.focusModel

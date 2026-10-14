@@ -2,7 +2,7 @@
 ## Title: Foresight
 ## Notes: The layman's oracle for WoW: Forever - know in plain terms what every talent point, stat, item, and buff actually does for you.
 ## Author: SimulateCX
-## Version: 0.46.5
+## Version: 0.46.6
 ## SavedVariables: ForesightDB
 ## IconTexture: Interface\Icons\Spell_Nature_FarSight
 ## X-License: MIT
@@ -28,6 +28,7 @@ data\generated\consumables.lua
 data\generated\weapon_imbues.lua
 data\generated\items.lua
 data\generated\sim_procs.lua
+data\generated\peer_baselines.lua
 data\overrides.lua
 model\snapshot.lua
 model\racials.lua

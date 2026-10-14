@@ -106,6 +106,37 @@ function D.byId(id)
     end
 end
 
+-- The featured-challenge rotation for the crowd daily trial (CROWD-share). KEEP IN SYNC
+-- with web/app.js FEATURED - same order and keys - so the in-game daily trial and the
+-- website pick the same challenge for a given day-of-year.
+D.featured = {
+    { label = "Most Armor", key = "stat.armor" },
+    { label = "Biggest Earth Shock", key = "ability:Earth Shock" },
+    { label = "Most Frost Spell Damage", key = "school.frost" },
+    { label = "Most Health", key = "stat.maxHealth" },
+    { label = "Biggest Fireball", key = "ability:Fireball" },
+    { label = "Most Fire Spell Damage", key = "school.fire" },
+    { label = "Biggest Greater Heal", key = "ability:Greater Heal" },
+}
+
+-- Human label for a crowd metric key (mirrors web/app.js metricLabel): the stat.* /
+-- school.* / ability:* families, else a generic fallback.
+local METRIC_LABELS = {
+    ["stat.armor"] = "Most Armor", ["stat.maxHealth"] = "Most Health",
+    ["stat.spellDamage"] = "Most Spell Power",
+}
+local function capFirst(s)
+    return s:sub(1, 1):upper() .. s:sub(2)
+end
+function D.metricLabel(key)
+    if type(key) ~= "string" then return "?" end
+    if METRIC_LABELS[key] then return METRIC_LABELS[key] end
+    if key:sub(1, 8) == "ability:" then return "Biggest " .. key:sub(9) end
+    if key:sub(1, 7) == "school." then return "Most " .. capFirst(key:sub(8)) .. " Spell Damage" end
+    if key:sub(1, 5) == "stat." then return "Most " .. capFirst(key:sub(6)) end
+    return "Most " .. key
+end
+
 -- THE ONE DISPLAY LAW for lens values (user catch 2026-10-12: a summary mixing real
 -- units and raw indices read as broken). Real-unit lenses say their unit; the
 -- 100-floor output indices show "+X% vs base" (score minus the no-gear floor);

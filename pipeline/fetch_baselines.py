@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Bake Firebase crowd aggregates into Foresight/data/generated/peer_baselines.lua.
+
+The addon never networks; this is an offline MAINTAINER step (like pipeline/fetch.py).
+The `aggregates` collection is world-readable by the Firestore rules, but App Check
+enforcement rejects anonymous REST reads - so we authenticate with the maintainer's own
+gcloud OAuth token (server-to-server OAuth bypasses App Check). No service-account key
+lives in the repo: run `gcloud auth login` once, then this script.
+
+Usage:
+    gcloud auth login            # if the token has expired
+    python pipeline/fetch_baselines.py [--project wow-foresight]
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import urllib.request
+from pathlib import Path
+
+DEFAULT_PROJECT = "wow-foresight"
+OUT = Path(__file__).resolve().parent.parent / "Foresight" / "data" / "generated" / "peer_baselines.lua"
+REST = ("https://firestore.googleapis.com/v1/projects/{project}"
+        "/databases/(default)/documents/aggregates?pageSize=300")
+
+# Only these aggregate fields ride into the shipped table. Timestamps (updatedAt) and the
+# bucket id are handled separately; there is no identifying data in an aggregate by design.
+BUCKET_FIELDS = ("class", "spec", "levelBucket", "count", "minBucket", "lenses", "metrics")
+
+
+def access_token() -> str:
+    try:
+        res = subprocess.run(["gcloud", "auth", "print-access-token"],
+                             capture_output=True, text=True, timeout=60)
+    except FileNotFoundError:
+        sys.exit("gcloud not found - install the Google Cloud SDK, then `gcloud auth login`.")
+    if res.returncode != 0 or not res.stdout.strip():
+        sys.exit("No gcloud access token. The aggregates read is App Check-enforced, so it "
+                 "needs an OAuth token: run `gcloud auth login`, then retry.\n"
+                 + (res.stderr or "").strip())
+    return res.stdout.strip()
+
+
+def decode(v: dict):
+    """A single Firestore typed REST value -> plain Python (timestamps dropped)."""
+    if "integerValue" in v:
+        return int(v["integerValue"])
+    if "doubleValue" in v:
+        return float(v["doubleValue"])
+    if "booleanValue" in v:
+        return bool(v["booleanValue"])
+    if "stringValue" in v:
+        return v["stringValue"]
+    if "nullValue" in v:
+        return None
+    if "mapValue" in v:
+        return {k: decode(x) for k, x in v.get("mapValue", {}).get("fields", {}).items()}
+    if "arrayValue" in v:
+        return [decode(x) for x in v.get("arrayValue", {}).get("values", [])]
+    return None  # timestampValue / referenceValue / geoPointValue never ship
+
+
+def fetch_aggregates(project: str, token: str) -> list:
+    url = REST.format(project=project)
+    docs = []
+    while True:
+        req = urllib.request.Request(url, headers={"Authorization": "Bearer " + token})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read())
+        if "error" in data:
+            sys.exit("Firestore read failed: " + data["error"].get("message", "?"))
+        docs.extend(data.get("documents", []))
+        token_next = data.get("nextPageToken")
+        if not token_next:
+            return docs
+        url = REST.format(project=project) + "&pageToken=" + token_next
+
+
+def bucket_from_doc(doc: dict) -> dict:
+    fields = doc.get("fields", {})
+    out = {}
+    for key in BUCKET_FIELDS:
+        if key in fields:
+            val = decode(fields[key])
+            if val is not None:
+                out[key] = val
+    return out
+
+
+def lua(value, indent: int = 0) -> str:
+    pad = "    " * indent
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return str(int(value)) if value.is_integer() else repr(value)
+    if isinstance(value, str):
+        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        parts = []
+        for k, val in sorted(value.items(), key=lambda kv: str(kv[0])):
+            if isinstance(k, int):
+                key = "[%d]" % k
+            else:
+                key = '["%s"]' % str(k).replace("\\", "\\\\").replace('"', '\\"')
+            parts.append("%s    %s = %s," % (pad, key, lua(val, indent + 1)))
+        return "{\n" + "\n".join(parts) + "\n" + pad + "}"
+    return "nil"
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--project", default=DEFAULT_PROJECT)
+    args = ap.parse_args()
+
+    docs = fetch_aggregates(args.project, access_token())
+    buckets = {doc["name"].split("/")[-1]: bucket_from_doc(doc) for doc in docs}
+    payload = {"fetchedBuild": "?", "buckets": buckets}
+
+    body = (
+        "-- GENERATED by pipeline/fetch_baselines.py from Firebase aggregates - DO NOT EDIT.\n"
+        "local _, HM = ...\n"
+        "if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end\n"
+        "HM.gen = HM.gen or {}\n"
+        "HM.gen.peerBaselines = " + lua(payload) + "\n"
+    )
+    OUT.write_text(body, encoding="utf-8")
+    print("wrote %d bucket(s) -> %s" % (len(buckets), OUT))
+
+
+if __name__ == "__main__":
+    main()

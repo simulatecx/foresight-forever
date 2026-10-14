@@ -2540,6 +2540,38 @@ function HM.runSelftest(out)
             and HM.Crowd.urlEncode("{}") == "%7B%7D"
     end)())
 
+    check("peer readout: percentile placement, global featured record, honest degrade", (function()
+        local baselines = { buckets = {
+            ["SHAMAN-262-35"] = {
+                class = "SHAMAN", count = 8, minBucket = 5,
+                lenses = { spellcasting = { n = 8, min = 90, p25 = 100, p50 = 110,
+                    p75 = 120, p90 = 130, max = 140, mean = 112 } },
+                metrics = { ["stat.armor"] = { n = 8, min = 400, p25 = 450, p50 = 500,
+                    p75 = 560, p90 = 620, max = 700, mean = 520 } },
+            },
+            ["WARRIOR-71-60"] = { class = "WARRIOR", count = 9, minBucket = 5,
+                metrics = { ["stat.armor"] = { n = 9, min = 1000, p25 = 1200, p50 = 1400,
+                    p75 = 1700, p90 = 2000, max = 2500, mean = 1500 } } },
+        } }
+        -- day 0 -> featured[1] = Most Armor; the record is the GLOBAL max across buckets.
+        local payload = { class = "SHAMAN", spec = 262, level = 35,
+            lenses = { spellcasting = 130 }, metrics = { ["stat.armor"] = 560 } }
+        local m = HM.PanelModel.peerModel(payload, baselines, 0)
+        if not (m and m.available and m.enough and m.count == 8) then return false, "bucket" end
+        if m.featured.key ~= "stat.armor" or m.featured.record ~= 2500 then
+            return false, "featured record (global max)"
+        end
+        local spell
+        for _, r in ipairs(m.rows) do if r.label == "Spellcasting" then spell = r end end
+        if not (spell and spell.top == 10) then return false, "lens pct" end -- 130 = p90 -> top 10%
+        -- an empty baked table is "available" but your bucket is absent -> a note, no crash
+        local empty = HM.PanelModel.peerModel(payload, { buckets = {} }, 0)
+        if not (empty.available and empty.note and not empty.enough) then return false, "degrade" end
+        -- no baked table at all -> the feature stays dark (available == false)
+        local dark = HM.PanelModel.peerModel(payload, nil, 0)
+        return dark and dark.available == false
+    end)())
+
     -- Scoreboard -------------------------------------------------------------------
     for _, c in ipairs(checks) do
         out(("%s %s%s"):format(c.ok and "PASS" or "FAIL", c.name,

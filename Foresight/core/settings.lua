@@ -52,6 +52,11 @@ Settings.KEYS = {
         label = "Panel scale",
         desc = "Scale the Foresight panels up or down so they fit alongside your other UI addons.",
     },
+    peerReadout = {
+        group = "General", type = "toggle", default = true,
+        label = "Show crowd comparison",
+        desc = "On the Matrix: how your lenses and challenge numbers rank among players of your spec, plus today's featured challenge. Shows a prompt when your spec has no crowd data yet.",
+    },
 }
 
 -- The ordered group list for the GUI (a group renders only if it owns >= 1 key).

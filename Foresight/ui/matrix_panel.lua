@@ -489,6 +489,62 @@ local function layout(model)
         return y - 4
     end
 
+    -- Crowd peer readout (CROWD-share): today's featured challenge + how your lenses and
+    -- challenge numbers place against others of your spec. Text degrades to a prompt when
+    -- data is thin; never errors. The whole block is absent unless peerModel found a table.
+    local function drawPeer(sx, sw, sy)
+        if not model.peer then return sy end
+        local p = model.peer
+        local y = sy
+        local head = acquireFS("ARTWORK", "GameFontNormalSmall")
+        head:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+        head:SetWidth(sw)
+        head:SetText("|cff33ff99Among your spec|r" .. (p.bucketLabel
+            and ("  |cff9d9d9d" .. p.bucketLabel
+                .. (p.enough and (" - " .. (p.count or 0) .. " champions") or "") .. "|r") or ""))
+        y = y - math.max(14, head:GetStringHeight() + 2)
+
+        if p.featured then
+            local f = p.featured
+            local rec = f.record and (" (record %d)"):format(math.floor(f.record + 0.5)) or ""
+            local line
+            if f.inField and f.top then
+                line = ("|cffffd24dToday - %s:|r you %d, top ~%d%%%s"):format(
+                    f.label, math.floor((f.you or 0) + 0.5), f.top, rec)
+            elseif f.inField then
+                line = ("|cffffd24dToday - %s:|r you %d%s - /foresight share to enter"):format(
+                    f.label, math.floor((f.you or 0) + 0.5), rec)
+            else
+                line = ("|cffffd24dToday - %s:|r %s"):format(f.label, f.record
+                    and ("record %d - can you beat it?"):format(math.floor(f.record + 0.5))
+                    or "no mark yet - be the first")
+            end
+            local ff = acquireFS("ARTWORK", "GameFontHighlightSmall")
+            ff:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+            ff:SetWidth(sw)
+            ff:SetText(line)
+            y = y - math.max(13, ff:GetStringHeight() + 2) - 2
+        end
+
+        if p.note then
+            local nf = acquireFS("ARTWORK", "GameFontDisableSmall")
+            nf:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+            nf:SetWidth(sw)
+            nf:SetText("|cff9d9d9d" .. p.note .. "|r")
+            y = y - math.max(12, nf:GetStringHeight() + 2)
+        end
+
+        for _, r in ipairs(p.rows) do
+            local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
+            f:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 6, y)
+            f:SetWidth(sw - 12)
+            local topTxt = r.top and ("|cff4ade80top ~%d%%|r"):format(r.top) or "|cff9d9d9d-|r"
+            f:SetText(("%s: %s  |cff9d9d9d%s|r"):format(r.label, topTxt, r.meta or ""))
+            y = y - math.max(13, f:GetStringHeight() + 1)
+        end
+        return y - 8
+    end
+
     -- Compose. Wide (stretched past the threshold) = two columns so the context runs
     -- horizontal; narrow = one column (the mobile binding at 1280x720 @ 0.65 holds).
     local TWO_COL_MIN = 500
@@ -498,7 +554,7 @@ local function layout(model)
         local rightW = innerW - gutter - leftW
         local leftX, rightX = PAD, PAD + leftW + gutter
         local ly = drawFocus(leftX, leftW, drawPathways(leftX, leftW, drawBars(leftX, leftW, y)))
-        local ry = drawGauges(rightX, rightW, drawEco(rightX, rightW, y))
+        local ry = drawPeer(rightX, rightW, drawGauges(rightX, rightW, drawEco(rightX, rightW, y)))
         y = math.min(ly, ry)
     else
         y = drawBars(PAD, innerW, y)
@@ -506,6 +562,7 @@ local function layout(model)
         y = drawFocus(PAD, innerW, y)
         y = drawEco(PAD, innerW, y)
         y = drawGauges(PAD, innerW, y)
+        y = drawPeer(PAD, innerW, y)
     end
 
     panel:SetHeight(math.max(160, -y + PAD))
@@ -567,6 +624,24 @@ function MatrixPanel.refresh()
         if HM.PanelModel.gaugeModel then
             local okg, gauges = pcall(HM.PanelModel.gaugeModel, loadout, focusName)
             model.gauges = (okg and gauges) or nil
+        end
+        -- CROWD peer readout (CROWD-share): your sanitized payload vs the baked per-spec
+        -- baselines, plus today's featured challenge. Gated by the peerReadout setting;
+        -- day-of-year from date("*t").yday matches the website's rotation. Pure model;
+        -- stays dark (model.peer nil) until the baked table ships real buckets.
+        if (not HM.Settings or HM.Settings.get("peerReadout") ~= false)
+                and HM.PanelModel.peerModel and HM.Crowd and HM.Crowd.payload then
+            local okp, payload = pcall(HM.Crowd.payload)
+            if okp and payload then
+                local doy = 1
+                if _G.date then
+                    local t = _G.date("*t")
+                    if type(t) == "table" and tonumber(t.yday) then doy = t.yday end
+                end
+                local okm, peer = pcall(HM.PanelModel.peerModel, payload,
+                    HM.gen and HM.gen.peerBaselines, doy)
+                model.peer = (okm and peer and peer.available) and peer or nil
+            end
         end
         -- v0.45.8: user-set panel scale (addon coexistence).
         if HM.Settings and HM.Settings.get then

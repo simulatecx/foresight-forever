@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.46.6 - 2026-10-14
+
+IN-GAME PEER READOUT - the payoff of the crowd data (CROWD-share). The Matrix now carries
+an "Among your spec" section: how your dimension lenses and challenge numbers (armor,
+abilities, schools) rank against others in your class/spec/level bracket ("Spellcasting:
+top ~10%, median 110"), plus TODAY'S FEATURED CHALLENGE - rotating by day-of-year to match
+the website's daily trial exactly ("Today - Biggest Earth Shock: you 240, top ~8% (record
+360)"). It is a pure model (`PanelModel.peerModel`) fed the same sanitized payload
+`/foresight share` sends, the baked per-spec baselines, and the day-of-year; it degrades
+honestly - a "be the first" prompt when your spec has no data, suppressed small brackets
+stay hidden, and the whole block is dark until baselines ship. New `peerReadout` setting
+(default on) toggles it. Baselines are baked offline by the new `pipeline/fetch_baselines.py`
+(reads the public `aggregates` with the maintainer's gcloud OAuth token - App Check blocks
+anonymous reads - and writes `data/generated/peer_baselines.lua`; no service-account key in
+the repo). Ships empty and fills as the crowd grows. Selftest 278 pins the percentile
+placement, the global featured record, and the honest degrades. NEW GENERATED FILE in the
+TOC -> a full client restart loads it (/reload will not).
+
+*Features:* CROWD-share, CORE-options
+
 ## 0.46.5 - 2026-10-14
 
 PUBLISHING - automated CurseForge release pipeline armed. Bound the CurseForge project
