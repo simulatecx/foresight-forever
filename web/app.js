@@ -8,7 +8,7 @@
 // credentials in this repo; those live only in Cloud Functions config.
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { initializeAppCheck, ReCaptchaV3Provider }
+import { initializeAppCheck, ReCaptchaEnterpriseProvider }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInAnonymously }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -27,13 +27,16 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// App Check (abuse control). Register a reCAPTCHA v3 site key in the Firebase
-// console (App Check) and paste it here. Until then, uploads will be rejected by
-// the rules' appChecked() guard - which is the safe default.
-const RECAPTCHA_SITE_KEY = "TODO-RECAPTCHA-V3-SITE-KEY";
+// App Check (abuse control) via reCAPTCHA Enterprise / "Fraud Defense" - the current
+// App Check provider (classic reCAPTCHA v3 is retired for new projects). Create a
+// reCAPTCHA Enterprise key (type: Website; domains: wow-foresight.firebaseapp.com,
+// wow-foresight.web.app, localhost) in the App Check flow, then paste the SITE KEY
+// (starts with 6L...) here. Until then, uploads stay denied by the rules' appChecked()
+// guard - the safe default.
+const RECAPTCHA_ENTERPRISE_SITE_KEY = "TODO-RECAPTCHA-ENTERPRISE-SITE-KEY";
 try {
   initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+    provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_ENTERPRISE_SITE_KEY),
     isTokenAutoRefreshEnabled: true,
   });
 } catch (e) { /* App Check not configured yet; writes stay denied by rules */ }

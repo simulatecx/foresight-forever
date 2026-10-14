@@ -83,8 +83,19 @@ These can only be done by the project owner in the console; the code is ready fo
 
 1. **Firestore**: create the database (production mode).
 2. **Authentication**: enable **Anonymous** sign-in.
-3. **App Check**: register the web app, create a **reCAPTCHA v3** site key, paste it
-   into `web/app.js` (`RECAPTCHA_SITE_KEY`), and set Firestore to **enforce** App Check.
+3. **App Check**: register the web app with **reCAPTCHA Enterprise / "Fraud Defense"**
+   (the current provider - classic reCAPTCHA v3 is retired for new projects). In the
+   flow, create a reCAPTCHA **key** of type *Website* with domains
+   `wow-foresight.firebaseapp.com`, `wow-foresight.web.app`, and `localhost` (testing);
+   paste the resulting **site key** (starts with `6L...`) into `web/app.js`
+   (`RECAPTCHA_ENTERPRISE_SITE_KEY`), then set Firestore to **enforce** App Check.
+   Note: reCAPTCHA Enterprise runs on the Google Cloud project and may require the
+   **Blaze** (pay-as-you-go) plan with a billing account linked; usage sits inside a
+   generous free tier (~10k assessments/month) so a niche addon should cost $0.
+   Interim option if you don't want billing yet: leave App Check in **monitor** (not
+   enforce) and rely on anonymous-auth + the shape-locked create-only rules as the
+   write gate for the pilot - the data is write-only, non-readable, and allow-listed,
+   so the abuse surface is small; switch to enforce when scaling.
 4. **Hosting**: `firebase init hosting` (public dir = `web/`), `firebase deploy`.
 5. **Rules**: `firebase deploy --only firestore:rules` (uses `web/firestore.rules`).
 6. **Cloud Function** (aggregation) - the one remaining code piece to write next; it
