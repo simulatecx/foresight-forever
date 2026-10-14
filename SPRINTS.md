@@ -276,6 +276,14 @@ REMAINING in-game: owner FULL-RESTARTS + verifies the "Among your spec" section 
 (empty state = featured challenge + be-first prompt); re-bake when real contributions
 exist; then tag v0.46.6 to publish. The leaderboard / all-classes view + named Armory tier
 come later.
+LEVEL/SKILL-AWARE ENGINE CARD SHIPPED v0.46.7 (same in-game review, user: "we dont have
+stormstrike" - make it dynamic to current level + skills): the Matrix eco/loop card hides
+abilities the character hasn't learned, LEADS with current biggest hits (topOutputs on
+known spells - the "rockbiter + flame shock now" ask), shows only trained loop members as
+the engine, and frames the unlearned ones as "Building toward ... (spec via talents)".
+Learned = `Spellbook.known` names + `walkTraits` rank>0; `PanelModel.ecoMembership` pure +
+selftested (gate 279); FAIL OPEN to the full loop when no spellbook data (never blanks).
+UI-matrix-panel; edits only, /reload loads it. In-game verify queued.
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named

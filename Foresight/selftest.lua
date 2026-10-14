@@ -1705,6 +1705,23 @@ function HM.runSelftest(out)
         local m = HM.PanelModel.matrixModel(base, "tampered-loop-id")
         return m.eco ~= nil and m.eco.id == "shatter"
     end)())
+    check("eco membership: learned members become the engine, unlearned go to 'building toward'", (function()
+        local loop = { enablers = { "Windfury Weapon" }, engine = { "Flurry" },
+                       payoffs = { "Stormstrike" } }
+        local m = HM.PanelModel.ecoMembership(loop, { Flurry = true })
+        if #m.nodes ~= 3 then return false, "nodes" end
+        local engine
+        for _, n in ipairs(m.nodes) do if n.tag == "Engine" then engine = n end end
+        if not (engine and engine.have[1] == "Flurry" and #engine.missing == 0) then
+            return false, "engine learned"
+        end
+        local storm, wf = false, false
+        for _, nm in ipairs(m.missing) do
+            if nm == "Stormstrike" then storm = true end
+            if nm == "Windfury Weapon" then wf = true end
+        end
+        return storm and wf -- unlearned payoff + enabler surface as 'building toward'
+    end)())
     check("matrix carries pathway rows when provided", (function()
         local candidates = {
             { label = "Int step 1/5", what = base:withStatDelta("intellect", 10, "+10 int") },

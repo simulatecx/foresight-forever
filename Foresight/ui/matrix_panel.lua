@@ -295,6 +295,19 @@ local function layout(model)
             (model.loopCount or 0) > 1 and "  |cff9d9d9d(click title to cycle)|r" or ""))
         y = y - math.max(14, goal:GetStringHeight() + 2) - 6
 
+        -- Lead with what matters for this character right now: their biggest learned hits.
+        if model.eco.nowBest and #model.eco.nowBest > 0 then
+            local parts = {}
+            for _, h in ipairs(model.eco.nowBest) do
+                parts[#parts + 1] = ("%s ~%d"):format(h.name, math.floor((h.avg or 0) + 0.5))
+            end
+            local nb = acquireFS("ARTWORK", "GameFontHighlightSmall")
+            nb:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+            nb:SetWidth(sw)
+            nb:SetText("|cff33ff99Right now -|r your biggest hits: " .. table.concat(parts, ", "))
+            y = y - math.max(13, nb:GetStringHeight() + 2) - 4
+        end
+
         if HM.Motion and motion ~= "off" and panel.CreateLine then
             -- S33 CONNECTED DIAGRAM: the loop as three linked node boxes with real
             -- connector lines (a pulse travels them in full) instead of stacked text
@@ -414,6 +427,17 @@ local function layout(model)
                 strip:SetColorTexture(c.r, c.g, c.b, 0.9)
                 y = y - 6
             end
+        end
+
+        -- Where to build next: the loop members you haven't learned yet, framed as the
+        -- goal (not as current kit). Empty when you have the whole engine / no known data.
+        if model.eco.building and #model.eco.building > 0 then
+            local bt = acquireFS("ARTWORK", "GameFontDisableSmall")
+            bt:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+            bt:SetWidth(sw)
+            bt:SetText(("|cff9d9d9dBuilding toward:|r %s |cff9d9d9d(spec via talents)|r")
+                :format(table.concat(model.eco.building, ", ")))
+            y = y - math.max(13, bt:GetStringHeight() + 2) - 4
         end
 
         -- Actionable insight box: the loop's why + its live computed numbers.

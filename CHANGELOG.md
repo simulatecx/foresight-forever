@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.46.7 - 2026-10-14
+
+LEVEL/SKILL-AWARE ENGINE CARD (user ask - "we don't have Stormstrike"). The Matrix
+ecosystem card no longer presents abilities your character hasn't learned as if they were
+yours (a low-level or non-Enhancement Shaman was shown Stormstrike). It now leads with
+your biggest hits RIGHT NOW (your learned abilities ranked by output), shows only the loop
+pieces you've actually trained as the current engine, and frames the rest as
+"Building toward: <abilities> (spec via talents)" - the future direction, not current kit.
+Learned-status comes from your known spells (`Spellbook.known`) plus trained talents
+(`walkTraits` rank > 0); the live numbers under each were already level-gated. FAIL OPEN:
+if the spellbook can't be read at all (headless / API didn't enumerate), the whole engine
+shows rather than blanking. `PanelModel.ecoMembership` is pure + selftested (gate 279).
+Edits only - `/reload` loads it.
+
+*Features:* UI-matrix-panel
+
 ## 0.46.6 - 2026-10-14
 
 IN-GAME PEER READOUT - the payoff of the crowd data (CROWD-share). The Matrix now carries

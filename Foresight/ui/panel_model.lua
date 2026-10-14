@@ -321,6 +321,77 @@ function PanelModel.peerModel(payload, baselines, doy)
     return out
 end
 
+-- Eco/loop membership (user, 2026-10-14: hide unlearned abilities, frame the rest as
+-- where to build): split a loop's enabler/engine/payoff members into what the character
+-- has learned vs not, against a name set. PURE.
+local ECO_GROUPS = {
+    { tag = "Enabler", field = "enablers",
+      desc = "Turns the engine on - without this the loop is off." },
+    { tag = "Engine", field = "engine",
+      desc = "The multiplier this loop exists for." },
+    { tag = "Payoff", field = "payoffs",
+      desc = "Cash it in right after an enabler lands." },
+}
+function PanelModel.ecoMembership(loop, knownSet)
+    knownSet = knownSet or {}
+    local nodes, missing = {}, {}
+    for _, g in ipairs(ECO_GROUPS) do
+        local have, miss = {}, {}
+        for _, name in ipairs(loop[g.field] or {}) do
+            if knownSet[name] then have[#have + 1] = name
+            else miss[#miss + 1] = name; missing[#missing + 1] = name end
+        end
+        nodes[#nodes + 1] = { tag = g.tag, desc = g.desc, have = have, missing = miss }
+    end
+    return { nodes = nodes, missing = missing }
+end
+
+-- The character's learned-ability name set: known spells (highest trained rank) + learned
+-- talents (rank > 0). Empty when we have no spellbook knowledge (headless, or the API
+-- didn't enumerate) - callers FAIL OPEN then (show the whole engine, hide nothing).
+function PanelModel._knownNameSet(loadout)
+    local set = {}
+    if HM.Spellbook and HM.Spellbook.known then
+        local ok, ids = pcall(HM.Spellbook.known)
+        if ok and type(ids) == "table" then
+            local gen = HM.gen and HM.gen.spells
+            for _, id in ipairs(ids) do
+                local s = gen and gen[id]
+                if s and s.name then set[s.name] = true end
+            end
+        end
+    end
+    if HM.TalentAPI and HM.TalentAPI.walkTraits then
+        local ok, nodes = pcall(HM.TalentAPI.walkTraits, false)
+        if ok and type(nodes) == "table" then
+            for _, n in ipairs(nodes) do
+                if (n.rank or 0) > 0 and n.name then set[n.name] = true end
+            end
+        end
+    end
+    return set
+end
+
+-- The character's current biggest hits (learned abilities ranked by output) - the "what
+-- matters right now" lead for the engine card. {} when the spellbook/sim aren't available.
+function PanelModel._topHits(loadout, n)
+    n = n or 3
+    if not (HM.Spellbook and HM.Spellbook.known and HM.Sim and HM.Sim.topOutputs) then
+        return {}
+    end
+    local okk, known = pcall(HM.Spellbook.known)
+    if not okk or type(known) ~= "table" or #known == 0 then return {} end
+    local okt, tops = pcall(HM.Sim.topOutputs, loadout, known, n)
+    if not okt or type(tops) ~= "table" then return {} end
+    local out = {}
+    for _, e in ipairs(tops.damage or {}) do
+        if e.name and e.avg and #out < n then
+            out[#out + 1] = { name = e.name, avg = e.avg }
+        end
+    end
+    return out
+end
+
 -- pathways (optional): a Sim.goalPathways result - the renderer computes it on talent
 -- changes only (one evaluate per open node is too heavy for every aura tick) and
 -- passes it through; the model stays pure. focus (optional): a PanelModel.focusModel
@@ -370,18 +441,35 @@ function PanelModel.matrixModel(loadout, activeLoopId, pathways, focus)
     local eco
     if active then
         local okc, computed = pcall(active.compute, loadout)
+        -- Learned-aware engine card (user, 2026-10-14): show only the loop members the
+        -- character has learned, and collect the rest as "where to build". FAIL OPEN:
+        -- with no spellbook knowledge at all (headless / API didn't enumerate) show the
+        -- whole loop rather than blanking it.
+        local knownSet = PanelModel._knownNameSet(loadout)
+        local haveKnowledge = next(knownSet) ~= nil
+        local mem = PanelModel.ecoMembership(active, knownSet)
+        local nodes, building = {}, {}
+        for _, g in ipairs(mem.nodes) do
+            local members = {}
+            if haveKnowledge then
+                for _, nm in ipairs(g.have) do members[#members + 1] = nm end
+                for _, nm in ipairs(g.missing) do building[#building + 1] = nm end
+            else
+                for _, nm in ipairs(g.have) do members[#members + 1] = nm end
+                for _, nm in ipairs(g.missing) do members[#members + 1] = nm end
+            end
+            if #members > 0 then
+                nodes[#nodes + 1] = { tag = g.tag, desc = g.desc,
+                    title = table.concat(members, " / ") }
+            end
+        end
         eco = {
             id = active.id, name = active.name, insight = active.insight,
             confidence = active.confidence,
             computed = okc and computed or {},
-            nodes = {
-                { tag = "Enabler", title = table.concat(active.enablers, " / "),
-                  desc = "Turns the engine on - without this the loop is off." },
-                { tag = "Engine", title = table.concat(active.engine, " / "),
-                  desc = "The multiplier this loop exists for." },
-                { tag = "Payoff", title = table.concat(active.payoffs, " / "),
-                  desc = "Cash it in right after an enabler lands." },
-            },
+            nodes = nodes,
+            building = building,
+            nowBest = PanelModel._topHits(loadout, 3),
         }
     end
 

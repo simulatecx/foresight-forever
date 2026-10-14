@@ -1,8 +1,6 @@
-## 0.46.6
+## 0.46.7
 
-New - see how you stack up. Open the Foresight Matrix and you'll find an "Among your spec"
-panel: how your spellcasting, armor, biggest hits and more rank against other players of
-your class and level, plus a featured challenge that changes daily (the same one running
-at wow-foresight.web.app). It fills in as more players share their characters - until your
-bracket has data it'll invite you to set the first mark. Toggle it any time with
-/foresight options.
+The engine panel now follows your character. Instead of naming abilities you haven't
+learned yet, the Matrix leads with your biggest hits right now and shows only the engine
+pieces you've actually trained - with the rest framed as what to build toward through
+talents. Low-level characters finally see their real kit, not a spec they don't have yet.
