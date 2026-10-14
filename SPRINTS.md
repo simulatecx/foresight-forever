@@ -176,14 +176,19 @@ data-freshness); PUBLIC GitHub remote `simulatecx/foresight-forever` (decision 2
 public - the crowd-harvested `pipeline/collected/` corpus is gitignored and never
 publishes, so "our data stays ours"); action refs SHA-pinned + dependabot; branch
 protection (CI gate required on PRs, force-push/deletion blocked, owner direct-push kept
-for the solo-dev flow). CurseForge project **"Foresight - Forever"** created; first
-public build **v0.46.4 submitted manually 2026-10-13 and in moderation** (built via
-`python zipfile`, forward-slash entries, gate-green; `dist/` gitignored). MIT +
-open-distribution on the page (owner-confirmed, docs/CURSEFORGE.md). Remaining: CurseForge
-moderation approval -> then upload logo + listing copy; Overwolf API-key application in
-progress (owner) -> once granted, add `CF_API_TOKEN` + `## X-Curse-Project-ID:` to TOC and
-switch to the automated tag path (tag v* -> CI packages/uploads); Wago registration;
-`WAGO_API_TOKEN`. Threat-model publish bindings (DATAFLOW 4b/4c).
+for the solo-dev flow). CurseForge project **"Foresight - Forever"** (id `1744126`)
+created; first public build v0.46.4 submitted manually 2026-10-13 (new-project
+moderation). **AUTOMATED RELEASE TRAIN PROVEN LIVE 2026-10-14 (v0.46.5):** tag `v*` ->
+gate -> BigWigs packager -> uploaded to CurseForge (project 1744126, game version 1.60.1)
++ GitHub Releases, both confirmed Success. Fixes that got it green: (a) dropped `.pkgmeta`
+`manual-changelog` (the full CHANGELOG.md overflowed GitHub's 125k release-body cap -> now
+auto-generates a per-tag changelog from commit messages; retro-tagged v0.46.4 to bound the
+range); (b) the publish credential is the CurseForge **Upload API Token**
+(legacy.curseforge.com/account/api-tokens, header `x-api-token`) set as the `CF_API_TOKEN`
+secret - NOT the Overwolf/Core API key (console.curseforge.com, approval-gated, for
+*reading* mod data; unused here). MIT + open-distribution on the page (docs/CURSEFORGE.md).
+Remaining: CurseForge moderation approval -> upload logo + listing copy; Wago slug +
+`WAGO_API_TOKEN` (optional). Threat-model publish bindings (DATAFLOW 4b/4c).
 
 ### S13 - Crowd scale-up ◐  (phase A shipped v0.15.0)
 PHASE A DONE: item-sightings journal (equipped+bags at login/logout, IDs only, capped) +
