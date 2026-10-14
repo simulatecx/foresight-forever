@@ -33,7 +33,7 @@ const app = initializeApp(firebaseConfig);
 // wow-foresight.web.app, localhost) in the App Check flow, then paste the SITE KEY
 // (starts with 6L...) here. Until then, uploads stay denied by the rules' appChecked()
 // guard - the safe default.
-const RECAPTCHA_ENTERPRISE_SITE_KEY = "TODO-RECAPTCHA-ENTERPRISE-SITE-KEY";
+const RECAPTCHA_ENTERPRISE_SITE_KEY = "6LdlDe4tAAAAADDs-IpXu1osYeWMC2FcwKeiApQd";
 try {
   initializeAppCheck(app, {
     provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_ENTERPRISE_SITE_KEY),

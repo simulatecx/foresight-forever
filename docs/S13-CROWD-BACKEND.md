@@ -110,10 +110,28 @@ now, baked into the addon via the pipeline later.
 
 - ☑ Addon share contract (`core/crowd.lua`): allow-list payload + JSON encoder +
   `/foresight share`; selftest-pinned (no PII/timestamp can leak).
-- ☑ Firestore rules (deny-all / validated-write / aggregate-read).
-- ☑ Web app skeleton (consent gate, client re-validation, contribute + compare).
+- ☑ Firestore rules (deny-all / validated-write / aggregate-read) - **deployed** to
+  wow-foresight. Numeric fields use `is number` not `is int` (the web SDK can encode
+  integers as doubles; the range clamp is the real check).
+- ☑ Web app (`web/`) - **deployed** to https://wow-foresight.web.app (Firebase
+  Hosting). App Check uses the real reCAPTCHA Enterprise key
+  `6LdlDe4t...` (public client id). JS/HTML served no-cache + the module import is
+  versioned (`app.js?v=N`) so deploys aren't masked by the browser cache - bump N on
+  change.
 - ☑ Privacy disclosure (`web/privacy.html`).
+- ☑ `firebase.json` / `.firebaserc` deploy config; `web/` excluded from the addon
+  package (`.pkgmeta`).
+- ☑ END-TO-END TESTED (2026-10-14, Playwright): page loads clean (0 console errors
+  with the real key); client validation gates correctly; **Compare read works**
+  (graceful empty-bucket message); **Contribute** passes auth + shape + write (proven
+  with the gate temporarily relaxed, then restored) - the only pending item is App
+  Check token validation into `request.app`, which was still propagating on the
+  minutes-old key. Test contribution was deleted; no residual data.
+- ◐ App Check propagation: the key is correctly configured (domains
+  web.app/firebaseapp.com/localhost, SCORE). Writes start succeeding once Firestore's
+  backend validates the new key (minutes to ~1h). If it persists, confirm App Check is
+  **Enforced** for Firestore in the console and the web App Check provider is
+  registered to this key.
 - ☐ Cloud Function aggregation (percentiles + suppression) - next.
-- ☐ Firebase console setup (section 6) - owner.
 - ☐ Pipeline bake-back `peer_baselines.lua` + in-addon "vs your spec" readout.
 - ☐ Gated on S12 publish for real-user scale.

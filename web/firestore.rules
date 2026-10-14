@@ -20,9 +20,11 @@ service cloud.firestore {
                                'lenses','talents','items','observed','clientId'])
           && d.v == 1
           && d.class is string && d.class.size() <= 16
-          && d.level is int && d.level >= 1 && d.level <= 200
+          // is number (not is int): the web SDK can encode integers as doubles -
+          // the range clamp is what matters, not the numeric subtype.
+          && d.level is number && d.level >= 1 && d.level <= 200
           && (!('build' in d) || (d.build is string && d.build.size() <= 32))
-          && (!('spec' in d)  || (d.spec is int))
+          && (!('spec' in d)  || (d.spec is number))
           && (!('clientId' in d) || (d.clientId is string && d.clientId.size() <= 40))
           && d.lenses is map && d.talents is map
           && d.items is map   && d.observed is map;

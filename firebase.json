@@ -1,0 +1,22 @@
+{
+  "firestore": {
+    "rules": "web/firestore.rules",
+    "indexes": "web/firestore.indexes.json"
+  },
+  "hosting": {
+    "public": "web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "firestore.rules",
+      "firestore.indexes.json"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|html)",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache, max-age=0" }]
+      }
+    ]
+  }
+}

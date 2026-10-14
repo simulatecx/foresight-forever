@@ -208,8 +208,16 @@ share contract `core/crowd.lua` (allow-list `/foresight share` JSON, selftest-pr
 no-PII) + `web/` app skeleton (consent, re-validate, contribute/compare) +
 `web/firestore.rules` (default-deny, App-Check + shape-locked write, aggregate-read) +
 `web/privacy.html`. REMAINING: Cloud Function aggregation (percentiles + suppression);
-Firebase console setup (owner - Firestore/Anon-Auth/App-Check/Hosting/rules deploy, see
-doc S6); pipeline bake-back `peer_baselines.lua` + in-game "vs your spec" readout.
+pipeline bake-back `peer_baselines.lua` + in-game "vs your spec" readout.
+DEPLOYED + TESTED LIVE 2026-10-14: rules + hosting on wow-foresight
+(https://wow-foresight.web.app); owner did the console setup (Firestore / Anonymous
+auth / App Check "Fraud Defense" / Hosting). Playwright E2E: page clean, validation
+gates, Compare read works, Contribute passes auth+shape+write (App Check token still
+PROPAGATING on the minutes-old reCAPTCHA Enterprise key - resolves backend-side; key
+config verified: domains web.app/firebaseapp.com/localhost, SCORE). Added
+firebase.json/.firebaserc; rule numeric fields use `is number`; JS no-cache + versioned
+import. STILL REMAINING: Cloud Function aggregation; pipeline bake-back + in-game
+readout; confirm Contribute once App Check propagates.
 
 ### S14 - Buffs & consumables impact ◐  (SHIPPED code-complete v0.12.0)
 "How does a flask/elixir/food impact me while active, and what do I lose when it expires."
