@@ -1,15 +1,16 @@
 # Foresight
 
-The hardcore player's safety net for official **WoW: Forever**. Foresight answers the
-question every talent point and every stat on gear raises: *"+2 Spirit - so what?"*
-Answers always end in human terms: extra casts per fight, seconds of regen saved,
-hits you can survive.
+The layman's oracle for official **WoW: Forever**. Foresight answers the question every
+talent point and every stat on gear raises: *"+2 Spirit - so what?"* Answers always end
+in human terms: extra casts per fight, seconds of regen saved, damage per swing. It's
+not here to simplify the game or play it for you - it's here to give you insight, built
+on a crowd-sourced, live-verified Forever database that sharpens as more players use it.
 
-Three pillars:
+Three pillars (the first is the shipped core; the others are the roadmap):
 
-1. **Talent Impact Map** - what each talent actually does to *your* character, with
-   what-if modelling before you commit a point (it matters when respecs are expensive
-   and deaths are permanent).
+1. **Talent, Item & Consumable Impact Map** - what each talent, stat, item, and buff
+   actually does to *your* character, with what-if modelling before you commit - plus
+   the opt-in crowd compare (ladders + daily challenges at wow-foresight.web.app).
 2. **Panic Advisor** - what to press when things go wrong (planned).
 3. **What-to-press HUD** - suggest-only rotation help (planned).
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.46.4 - 2026-10-14
+
+REPOSITIONING (pre-publish copy). Dropped the "hardcore safety net" framing (the Panic
+pillar isn't built) in favour of what Foresight actually is today: the layman's oracle
+for Forever - insight, not simplification - built on a crowd-sourced, live-verified
+Forever database. Updated the addon's TOC Notes, the README intro, and the CurseForge
+listing copy (`docs/CURSEFORGE.md`) to match. No behavior change.
+
+*Features:* (none - copy only)
+
 ## 0.46.3 - 2026-10-14
 
 ABILITY-HIT CHALLENGES (the "Biggest Earth Shock" layer). `/foresight share` now ranks

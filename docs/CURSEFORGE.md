@@ -23,31 +23,51 @@ account-safety and "specific addon" doctrine). The three share the generated dat
 
 ## Short summary (CurseForge tagline, ~1 sentence)
 
-> Foresight shows what every talent point, stat, item, and buff actually does for YOUR
-> character on WoW: Forever - in plain terms, before you commit.
+> The layman's oracle for WoW: Forever - see, in plain terms, what every talent, stat,
+> and item actually does for YOUR character, built on a crowd-sourced Forever database.
 
 ## Listing description (marketing copy)
 
-> **Know before you commit.** On a hardcore realm a wasted talent point or the wrong
-> trinket can end a character. Foresight answers the question every choice raises -
-> *"+2 Spirit, so what?"* - in human terms: extra casts per fight, seconds of regen
-> saved, damage per swing, hits you can survive.
+Positioning (user, 2026-10-14): NOT hardcore (Panic isn't built), NOT "simplify the
+game" - it's an INSIGHT tool and a community-built Forever DB. Keep the founder voice.
+
+> **The layman's oracle for WoW: Forever.**
 >
-> - **Talent Impact Map** - hover any talent and see exactly which of your abilities it
->   changes and what it does for your character right now.
+> I've played since 2007 and still can't always tell what a new piece of gear really
+> does for my character - is this trinket an upgrade? what is "+2 Spirit" actually worth?
+> Foresight is the tool I always wanted: it reads the game's own numbers and answers in
+> plain language - extra casts per fight, seconds of regen saved, damage per swing, how
+> far a single talent point moves the needle.
+>
+> It isn't here to simplify the game or play it for you. It's here to give you
+> **insight** - so you understand your choices and make them yourself.
+>
+> **What it shows you**
+> - **Talent Impact Map** - hover any talent and see which of your abilities it changes,
+>   and what it does for your character right now.
 > - **Stat & gear clarity** - what +Agility, a new weapon, or a flask is really worth,
->   compared against what you have equipped.
-> - **Synergies** - the Diablo-style "show me everything that scales with Intellect",
->   including the chains (Intellect -> Attack Power via Mental Dexterity).
+>   measured against what you already have equipped.
+> - **Synergies** - "show me everything that scales with Intellect," including the chains
+>   (Intellect -> Attack Power via Mental Dexterity).
 > - **Weapon imbue sim** - Rockbiter vs Flametongue on your actual weapon, as numbers.
-> - **Future-build planner** - plan the gear and talents you're hunting and see the net
->   impact before you get them.
+> - **Future-build planner** - plan the gear and talents you're chasing and see the net
+>   impact before you earn them.
 >
-> Every number comes straight from the live Forever client data (Forever-verified, with
-> the patch shown), never guessed. **Account-safe by construction:** display-and-advice
-> only - it never casts, targets, moves, or automates anything, never reads memory, and
-> never touches the network. The full source is public and a static compliance gate
-> blocks any release that could break those promises.
+> **Built on a crowd-sourced Forever database.** Forever is new, and much about it isn't
+> documented yet. Foresight learns from the people who use it: opt in and your anonymous
+> game data helps build an open, live-verified database of what gear, talents, and
+> consumables truly do - never guessed. Then compare your build against others of your
+> spec, chase the daily challenges, and climb the ladders at wow-foresight.web.app. The
+> more players who use it, the sharper it gets - and we'll keep expanding it, for
+> ourselves and everyone who uses it.
+>
+> **Account-safe by construction.** Display-and-advice only - it never casts, targets,
+> moves, uses items, or automates anything, never reads memory, and never touches the
+> network. Every number comes straight from the live Forever client data. The full
+> source is public and a static compliance gate blocks any release that could break
+> those promises.
+>
+> *In-game: `/foresight` (or `/fore`). `/foresight selftest` runs the built-in checks.*
 
 ## Logo - FINALIZED 2026-10-11
 
