@@ -3,46 +3,89 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Foresight - compare to your spec</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%2333ff99'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="./style.css" />
+  <title>Foresight - the Armory of Forever</title>
+  <meta name="description" content="How your build stacks up against your spec on WoW: Forever - daily trials, ladders, and honest numbers." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23c8a24c'/%3E%3Ccircle cx='8' cy='8' r='3' fill='%231a1510'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./style.css?v=7" />
 </head>
 <body>
-  <main class="wrap">
-    <h1>Foresight <span class="brand">crowd compare</span></h1>
-    <p class="lead">
-      Paste what <code>/foresight share</code> gives you in-game to see how your
-      build stacks up against others of your spec and level. Only non-identifying
-      game data is sent - never your character name, realm, account, or notes.
-      <a href="./privacy.html">What we collect &amp; why</a>.
-    </p>
+  <div class="vignette" aria-hidden="true"></div>
 
-    <section class="card">
-      <label for="payload">Your <code>/foresight share</code> text</label>
-      <textarea id="payload" rows="6" spellcheck="false"
-        placeholder='{"v":1,"class":"SHAMAN",...}'></textarea>
+  <header class="masthead reveal">
+    <div class="sigil" aria-hidden="true"><span></span></div>
+    <h1>Foresight</h1>
+    <p class="kicker">The Armory of <em>Forever</em></p>
+  </header>
 
-      <label class="consent">
-        <input type="checkbox" id="consent" />
-        I agree to contribute this non-identifying game data to the Foresight
-        crowd dataset, used only in aggregate to power spec comparisons.
-      </label>
+  <!-- DAILY TRIAL -->
+  <section class="trial reveal" id="dailyTrial" aria-live="polite">
+    <div class="trial-band">
+      <span class="trial-eyebrow">Today's Trial</span>
+      <h2 class="trial-title" id="trialTitle">&nbsp;</h2>
+      <p class="trial-sub" id="trialSub">Loading today's challenge…</p>
+      <div class="trial-record" id="trialRecord"></div>
+      <a class="btn btn-gold" href="#consult">Submit your champion</a>
+    </div>
+  </section>
 
-      <div class="actions">
-        <button id="compare" disabled>Compare only</button>
-        <button id="contribute" class="primary" disabled>Contribute &amp; compare</button>
+  <main class="scroll">
+    <!-- CONSULT -->
+    <section class="panel reveal" id="consult">
+      <div class="panel-head"><h3>Consult the Oracle</h3></div>
+      <div class="panel-body">
+        <p class="lead">
+          In-game, type <code>/foresight share</code> and copy the link it gives you -
+          paste it here (or into your address bar) to see where your build ranks.
+          Only non-identifying game data travels; never your character name, realm, or notes.
+          <a href="./privacy.html">What we collect &amp; why</a>.
+        </p>
+        <label for="payload" class="field-label">Your <code>/foresight share</code> text</label>
+        <textarea id="payload" rows="4" spellcheck="false"
+          placeholder='Paste your /foresight share text or link here…'></textarea>
+
+        <label class="consent">
+          <input type="checkbox" id="consent" />
+          <span>I agree to contribute this non-identifying game data to the Foresight
+          ladders, used only in aggregate.</span>
+        </label>
+
+        <div class="actions">
+          <button id="compare" class="btn" disabled>Read the Omens</button>
+          <button id="contribute" class="btn btn-gold" disabled>Contribute &amp; Compare</button>
+        </div>
+        <p id="status" class="status" role="status"></p>
       </div>
-      <p id="status" class="status" role="status"></p>
     </section>
 
-    <section id="result" class="card result hidden"></section>
+    <!-- RESULT -->
+    <section class="panel result hidden reveal" id="result" aria-live="polite"></section>
 
-    <footer>
-      <p>The Foresight addon never sends data on its own - this page only uploads
-      what you paste, after you opt in. <a href="./privacy.html">Privacy</a> ·
-      <a href="https://github.com/simulatecx/foresight-forever">Source</a></p>
-    </footer>
+    <!-- LADDERS -->
+    <section class="panel reveal" id="ladders">
+      <div class="panel-head">
+        <h3>The Ladders</h3>
+        <div class="ladder-filter">
+          <label for="classFilter">Class</label>
+          <select id="classFilter"></select>
+        </div>
+      </div>
+      <div class="panel-body">
+        <p class="lead">Every challenge, every spec - the standing records across all who've
+        submitted. Small brackets stay hidden until enough champions answer the call.</p>
+        <div id="ladderBoard" class="ladder-board"><p class="muted">Summoning the ladders…</p></div>
+      </div>
+    </section>
   </main>
-  <script type="module" src="./app.js?v=6"></script>
+
+  <footer class="footer">
+    <p>The Foresight addon never sends data on its own - this page only uploads what you
+    paste, after you opt in.</p>
+    <p><a href="./privacy.html">Privacy</a> · <a href="https://github.com/simulatecx/foresight-forever">Source</a> · WoW: Forever</p>
+  </footer>
+
+  <script type="module" src="./app.js?v=7"></script>
 </body>
 </html>

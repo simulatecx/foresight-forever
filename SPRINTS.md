@@ -240,6 +240,16 @@ via the Armory tier, showing name + optional Twitch handle (both consent-gated, 
 S8/S8a); (c) in-game "your rank / vs your spec" readout + show-hide toggle; ability
 challenges for each class AND an all-classes view. Then: talent-copy import; a
 "report a feature" + voting board. Talent sharing deferred.
+WEB ARMORY REDESIGN SHIPPED 2026-10-14 (frontend-design skill): the site went from a
+textarea to a Blizzard character-sheet - Cinzel/Spectral type, dark stone + gold
+filigree, ornate framed panels w/ corner diamonds, class colours. New surfaces: a DAILY
+TRIAL hero rotating by day-of-year ("Today: Biggest Greater Heal - submit if you're the
+highest!") with the standing record; THE LADDERS browser (class filter -> every
+challenge's record from public aggregates, graceful-empty); the compare now renders
+gold percentile bars + "top N%" badges + records; share-link prefill/contribute intact.
+0 console errors, mobile-friendly, no build step. REMAINING in-game: bake aggregates ->
+peer_baselines.lua -> in-game rank readout + leaderboard + the SAME daily-cycle featured
+challenge (addon computes day-of-year deterministically so in-game + web agree).
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named
