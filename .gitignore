@@ -15,3 +15,7 @@ pipeline/collected/
 
 # Firebase CLI local cache (deploy artifacts)
 .firebase/
+
+# Cloud Functions deps (installed on deploy)
+functions/node_modules/
+web/node_modules/

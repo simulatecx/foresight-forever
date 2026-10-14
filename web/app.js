@@ -85,6 +85,24 @@ $("consent").addEventListener("change", refreshButtons);
 
 // ---- compare: read the pre-suppressed aggregate for this class/spec/level -------
 function levelBucket(level) { return Math.floor(level / 5) * 5; } // 5-level buckets
+
+// Estimate a value's percentile (0-100) from the bucket's stored quantiles, by
+// piecewise-linear interpolation over (min,0) (p25,25) (p50,50) (p75,75) (p90,90)
+// (max,100). "top ~N%" = 100 - percentile.
+function pctFromQuantiles(s, v) {
+  const pts = [[s.min, 0], [s.p25, 25], [s.p50, 50], [s.p75, 75], [s.p90, 90], [s.max, 100]]
+    .filter((p) => typeof p[0] === "number");
+  if (pts.length < 2) return null;
+  if (v <= pts[0][0]) return 0;
+  if (v >= pts[pts.length - 1][0]) return 100;
+  for (let i = 1; i < pts.length; i++) {
+    if (v <= pts[i][0]) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+      return x1 === x0 ? y1 : y0 + (y1 - y0) * (v - x0) / (x1 - x0);
+    }
+  }
+  return 100;
+}
 async function showCompare(p) {
   const bucket = `${p.class}-${p.spec ?? "any"}-${levelBucket(p.level)}`;
   const resEl = $("result");
@@ -103,13 +121,17 @@ async function showCompare(p) {
       return;
     }
     const rows = Object.entries(p.lenses || {}).map(([id, val]) => {
-      const pct = agg.percentileOf ? agg.percentileOf[id] : null; // function-provided
-      return `<li><b>${id}</b>: ${val}${pct != null
-        ? ` - top ~${100 - pct}% of your spec (p)` : ""}</li>`;
+      const stats = agg.lenses ? agg.lenses[id] : null;
+      if (!stats) return `<li><b>${id}</b>: ${val}</li>`;
+      const pct = pctFromQuantiles(stats, val);
+      const top = pct == null ? null : Math.max(1, Math.round(100 - pct));
+      return `<li><b>${id}</b>: ${val}${top != null
+        ? ` - <b>top ~${top}%</b> of your spec <span class="fine">(n=${stats.n}, median ${Math.round(stats.p50)})</span>`
+        : ""}</li>`;
     }).join("");
     resEl.innerHTML = `<h2>Your spec, level ~${levelBucket(p.level)}+
       (${agg.count} contributors)</h2><ul>${rows}</ul>
-      <p class="fine">Aggregate percentiles; (p) = presumed until the bracket is large.</p>`;
+      <p class="fine">Percentiles are approximate from the bracket's distribution (p).</p>`;
   } catch (e) {
     resEl.innerHTML = `<p>Couldn't load peer data (${e.code || e.message}).</p>`;
   }

@@ -106,6 +106,42 @@ Decisions already made (safe defaults, change if you want): anonymous auth (fric
 over sign-in; web-paste over a file-reading companion exe; compare shown in the web app
 now, baked into the addon via the pipeline later.
 
+## 8. Opt-in identifying tier: shareable builds + Armory link (user ask 2026-10-14)
+
+Players want to OPT IN to publish their **full talent tree** and **WoW Armory profile
+link**, and (future) let others **copy** a build. This is a deliberately IDENTIFYING
+feature - an Armory link is `.../character/<realm>/<name>`, i.e. name + realm = PII -
+so it is a SEPARATE tier from the anonymous crowd data, governed by privacy-by-design:
+
+- **Two tiers, never mixed.** Tier 1 = the anonymous `contributions` (today; no
+  identity, ever). Tier 2 = `sharedBuilds` (new): the user CHOOSES to be identifiable,
+  the way linking your Warcraft Logs / Armory is a choice. Tier 2 never changes Tier 1.
+- **Separate explicit consent.** A distinct checkbox, not the anonymous one: "Publish
+  my build and Armory link so others can view/copy it - this makes my character name
+  and realm public." Default off. Its own disclosure paragraph in `privacy.html`.
+- **Shape (allow-list):** `{ v, class, spec, level, talentString (the game's import
+  string), armoryUrl (validated: host is the official Armory domain, length-capped),
+  clientId }`. NO free text, no notes. `talentString` is opaque game data; `armoryUrl`
+  is the only identifying field and only because the user is publishing it on purpose.
+- **Rules:** `sharedBuilds` is publicly READABLE (that's the point - others copy it),
+  create gated by auth + App Check + shape; update/delete only via the owner's
+  `clientId` match (so a person can pull their own shared build). This is a PUBLIC
+  projection by consent, kept thin (no stats dump, no observations).
+- **Erasure:** because it's identity-by-choice, self-service removal is required - a
+  "remove my shared build" action keyed off the clientId in the user's share text, plus
+  an ops delete. (Tier 1 needs none; Tier 2 does.)
+- **The "copy talents" future (data-only law):** importing someone's `talentString`
+  is DATA parsing that feeds the planner/what-if only - NEVER loadstring, never an
+  automated apply of protected talent operations (the suggest-only + untrusted-input
+  laws). The addon shows "here's their build; here's the diff vs yours," you spend the
+  points yourself.
+- **Policy-practice sync:** `privacy.html` + any T&Cs land the Tier-2 paragraph in the
+  SAME change that ships the collection.
+
+Status: ☐ designed, not built - it introduces PII (by consent) + a public surface, so
+it ships only after the owner confirms this approach (section 6-style console review +
+this design). Build order TBD with the owner.
+
 ## 7. Build status
 
 - ☑ Addon share contract (`core/crowd.lua`): allow-list payload + JSON encoder +
@@ -132,6 +168,25 @@ now, baked into the addon via the pipeline later.
   backend validates the new key (minutes to ~1h). If it persists, confirm App Check is
   **Enforced** for Firestore in the console and the web App Check provider is
   registered to this key.
-- ☐ Cloud Function aggregation (percentiles + suppression) - next.
+- ☑ Cloud Function aggregation (`functions/index.js`) - **deployed + proven live**
+  (2026-10-14). `aggregateOnWrite` (Firestore trigger) + `aggregateDaily` (scheduled),
+  Node 22. Dedups by clientId, groups per class/spec/level-bucket, writes per-lens
+  QUANTILES (min/p25/p50/p75/p90/max/mean) with MIN_BUCKET=5 suppression; carries no
+  clientIds/raw rows. The web Compare places your value against the quantiles (tested:
+  7-contributor bucket → "spellcasting 118 = top ~8%", "meleeDps 145 = top ~90%"). Test
+  data was seeded then fully deleted.
+  - Owner IAM note (Gen2 first-time): the compute SA
+    `443733238250-compute@developer.gserviceaccount.com` was granted
+    `roles/cloudbuild.builds.builder` (to build) and `roles/datastore.user` (to read
+    contributions / write aggregates). Both done.
+- ◐ App Check WRITE gate: contributions still deny client writes until the new
+  reCAPTCHA Enterprise key's App Check tokens validate into `request.app` (propagation;
+  key config verified correct). Reads + aggregation are unaffected. Confirm a real
+  Contribute once it propagates; if it lingers, ensure the web App Check provider is
+  registered to the key and Firestore App Check is Enforced.
 - ☐ Pipeline bake-back `peer_baselines.lua` + in-addon "vs your spec" readout.
 - ☐ Gated on S12 publish for real-user scale.
+- ☐ OPT-IN IDENTIFYING TIER (user ask 2026-10-14): share full talent tree + WoW Armory
+  profile link. The Armory link contains character name+realm = **PII** - must be a
+  SEPARATE explicit opt-in, stored apart from the anonymous contributions, with its own
+  consent + disclosure (see section 8).

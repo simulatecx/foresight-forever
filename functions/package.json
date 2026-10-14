@@ -1,0 +1,14 @@
+{
+  "name": "foresight-functions",
+  "description": "Foresight crowd aggregation (S13): contributions -> per-spec percentiles",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^7.4.0"
+  }
+}

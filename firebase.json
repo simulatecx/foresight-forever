@@ -3,6 +3,10 @@
     "rules": "web/firestore.rules",
     "indexes": "web/firestore.indexes.json"
   },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
   "hosting": {
     "public": "web",
     "ignore": [

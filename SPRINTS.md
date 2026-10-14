@@ -216,8 +216,20 @@ gates, Compare read works, Contribute passes auth+shape+write (App Check token s
 PROPAGATING on the minutes-old reCAPTCHA Enterprise key - resolves backend-side; key
 config verified: domains web.app/firebaseapp.com/localhost, SCORE). Added
 firebase.json/.firebaserc; rule numeric fields use `is number`; JS no-cache + versioned
-import. STILL REMAINING: Cloud Function aggregation; pipeline bake-back + in-game
-readout; confirm Contribute once App Check propagates.
+import. CLOUD FUNCTION AGGREGATION SHIPPED + PROVEN LIVE 2026-10-14 (functions/index.js,
+Node 22): aggregateOnWrite (Firestore trigger) + aggregateDaily; dedups by clientId,
+per class/spec/level-bucket quantiles (min/p25/p50/p75/p90/max) with MIN_BUCKET=5
+suppression; web Compare places your value → percentile (tested: 7-contributor bucket,
+"spellcasting 118 = top ~8%", "meleeDps 145 = top ~90%"; seeded data then deleted).
+Owner IAM grants (Gen2): compute SA got roles/cloudbuild.builds.builder +
+roles/datastore.user. STILL REMAINING: pipeline bake-back `peer_baselines.lua` +
+in-game "vs your spec" readout; confirm a real Contribute once App Check propagates
+(write gate pending token validation; reads/aggregation unaffected).
+OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
+talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
+collection (own consent/disclosure, public-by-choice, erasure path), enabling a future
+data-only "copy talents" import (never loadstring). Ships only after owner confirms the
+approach.
 
 ### S14 - Buffs & consumables impact ◐  (SHIPPED code-complete v0.12.0)
 "How does a flask/elixir/food impact me while active, and what do I lose when it expires."
