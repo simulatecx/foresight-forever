@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.46.1 - 2026-10-14
+
+ONE-LINK CROWD SHARE + the aggregator went live. `/foresight share` now hands you a
+single link with your sanitized data packed into the URL fragment (#d=...): copy it,
+paste it into your browser's address bar, and the compare page opens pre-filled and
+auto-ranks you against your spec - no separate data paste. The addon still never
+networks; your clipboard carries it, and nothing uploads until you opt in on the site.
+The fragment is client-side only (never sent to a server). Behind it, the S13 Cloud
+Function aggregation is deployed and proven live (per-spec/level quantiles with
+small-bucket suppression; the web compare places your value against them). Selftest
+276 (+1): the share-link packs data into the fragment, unreserved-safe.
+
+*Features:* CROWD-share
+
 ## 0.46.0 - 2026-10-13
 
 S13 CROWD BACKEND - FOUNDATION (the "compare to others in your spec" build begins).

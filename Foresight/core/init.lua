@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.46.0"
+HM.version = "0.46.1"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -937,8 +937,12 @@ local function onSlash(input)
         if not payload then
             printMsg("crowd share needs an in-game character snapshot")
         elseif HM.showExport then
-            HM.showExport(HM.Crowd.toJSON(payload))
-            printMsg("sanitized crowd data ready - paste it at wow-foresight.firebaseapp.com to compare with your spec (only non-identifying game data: class/spec/level, your lens numbers, item IDs; no name, realm, or notes)")
+            -- One link with your sanitized data packed into it: CTRL+C, paste into your
+            -- browser's address bar, and the compare opens pre-filled. The addon still
+            -- never networks - your clipboard carries it, and nothing uploads until you
+            -- opt in on the site.
+            HM.showExport(HM.Crowd.shareUrl(payload))
+            printMsg("crowd compare link ready - press CTRL+C, then paste it into your browser's address bar. Only non-identifying game data travels (class/spec/level, your lens numbers, item IDs; no name, realm, or notes).")
         else
             printMsg("share window unavailable outside the game client")
         end

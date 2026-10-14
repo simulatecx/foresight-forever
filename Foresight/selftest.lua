@@ -2513,6 +2513,17 @@ function HM.runSelftest(out)
         -- a payload with no class/level is refused entirely (nothing useful, nothing sent)
         return HM.Crowd.buildPayload({ name = "x" }) == nil
     end)())
+    check("crowd share link: data packed into the URL fragment, unreserved-safe", (function()
+        local url = HM.Crowd.shareUrl({ v = 1, class = "SHAMAN", level = 35 })
+        if type(url) ~= "string" then return false end
+        local base, frag = url:match("^(https://[%w%.%-]+)/#d=(.+)$")
+        if base ~= "https://wow-foresight.web.app" then return false, "base" end
+        -- the fragment must be percent-encoded (JSON braces/quotes escaped, not raw)
+        if frag:find("[{}\"]") then return false, "unescaped" end
+        -- encoding leaves unreserved chars alone and escapes the rest as %XX
+        return HM.Crowd.urlEncode("AZ-az.09~") == "AZ-az.09~"
+            and HM.Crowd.urlEncode("{}") == "%7B%7D"
+    end)())
 
     -- Scoreboard -------------------------------------------------------------------
     for _, c in ipairs(checks) do

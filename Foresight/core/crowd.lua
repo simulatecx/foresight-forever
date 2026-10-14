@@ -164,6 +164,25 @@ function Crowd.toJSON(v)
     return "null"
 end
 
+-- The companion site. The share flow hands the user ONE link with their sanitized
+-- data packed into the URL fragment (#d=...): they copy it in-game, paste it into their
+-- browser, and the site opens pre-filled. The fragment is client-side only - it is not
+-- sent to any server until the user explicitly consents and contributes.
+Crowd.SITE_URL = "https://wow-foresight.web.app"
+
+-- Percent-encode to RFC-3986 unreserved (A-Z a-z 0-9 - _ . ~); decodeURIComponent
+-- reverses it on the web side. Our JSON is ASCII, so byte-wise encoding is exact.
+function Crowd.urlEncode(s)
+    return (tostring(s):gsub("[^%w%-_%.~]", function(c)
+        return ("%%%02X"):format(c:byte())
+    end))
+end
+
+function Crowd.shareUrl(payload)
+    if not payload then return nil end
+    return Crowd.SITE_URL .. "/#d=" .. Crowd.urlEncode(Crowd.toJSON(payload))
+end
+
 if not _G.CreateFrame then return Crowd end -- headless: pure builder only
 
 -- A stable, non-identifying pseudonym stored in SavedVariables (random; not derived

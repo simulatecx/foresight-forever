@@ -142,6 +142,20 @@ $("compare").addEventListener("click", async () => {
   if (p) await showCompare(p);
 });
 
+// Prefill from an in-game share link (#d=<url-encoded JSON>): the player copies one
+// link in-game and pastes it into the address bar - the compare opens ready. The
+// fragment is never sent to a server; contributing still needs the explicit opt-in.
+(function fromShareLink() {
+  const m = (location.hash || "").match(/[#&]d=([^&]+)/);
+  if (!m) return;
+  try {
+    $("payload").value = decodeURIComponent(m[1]);
+    refreshButtons();
+    const p = parsePayload();
+    if (p) { setStatus("Loaded from your link - comparing...", "ok"); showCompare(p); }
+  } catch (e) { setStatus("That share link looked malformed - paste your data manually.", "warn"); }
+})();
+
 $("contribute").addEventListener("click", async () => {
   const p = parsePayload();
   if (!p) return;
