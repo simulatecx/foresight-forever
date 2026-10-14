@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.46.9 - 2026-10-14
+
+SMALLER SHARE LINK. `/foresight share` was producing an enormous URL because it packed the
+full item-sightings and observed-buff journals (potentially hundreds of entries) into the
+link fragment. Those aren't needed for the compare, so the link now carries only the
+compare-essential data: class/level, your computed lenses, the challenge metrics, and your
+talent build. The item/observed journals stay recorded locally (a dedicated bulk path can
+contribute the item DB later without a giant URL). Buckets and rankings are unchanged;
+`buildPayload` still sanitizes items/observed for any future bulk path (selftest intact).
+Gate 279.
+
+*Features:* CROWD-share
+
 ## 0.46.8 - 2026-10-14
 
 ACCOUNT-SAFETY FIX (taint). `/foresight share` - and, since v0.46.6, every Matrix refresh

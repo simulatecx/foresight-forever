@@ -1,6 +1,5 @@
-## 0.46.8
+## 0.46.9
 
-Fixes a case where using `/foresight share` (or opening the Matrix) could trip WoW's
-"action blocked" protection. Sharing and the crowd comparison are safe to use again.
-Comparisons now group by class and level; per-spec grouping returns once we can read it
-without tripping that protection.
+The `/foresight share` link is much shorter now - it carries only what the comparison
+needs (your class, level, lens numbers, challenge numbers, and talents) instead of your
+whole item and buff history. Easier to copy; the same comparison on the other end.

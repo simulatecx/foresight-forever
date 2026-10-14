@@ -268,7 +268,6 @@ function Crowd.payload()
             end
         end
     end
-    local collect = (HM.db and HM.db.collect) or {}
     -- Spec id is deliberately NOT read here: C_SpecializationInfo calls carry
     -- "Lua Taint: Foresight" (apiWatch-confirmed; the v0.37.1 lead). This payload runs on
     -- /foresight share AND every Matrix refresh (the peer readout), so a tainted CSI call
@@ -276,6 +275,11 @@ function Crowd.payload()
     -- block). Forever uses classic talent trees, not retail specs - buckets are per-class
     -- ("any" spec) until a TAINT-SAFE spec signal exists (e.g. the dominant talent tree).
     local specId = nil
+    -- The share link is COMPARE-focused and kept COMPACT (user 2026-10-14: the URL was
+    -- huge): class/level, the computed lenses, the challenge metrics, and the talent
+    -- build. The bulk item-sightings + observed-buff journals are NOT packed into the link
+    -- - they stay journaled locally, and a dedicated path can contribute the item DB later
+    -- without a giant URL. buildPayload leaves items/observed as empty maps (rules accept).
     return Crowd.buildPayload({
         build = HM.gen and HM.gen.build,
         classToken = snapshot.classToken,
@@ -284,8 +288,6 @@ function Crowd.payload()
         lenses = lenses,
         metrics = metrics,
         talents = talents,
-        items = collect.itemSightings,
-        observed = collect.observedImpacts,
         clientId = clientId(),
     })
 end

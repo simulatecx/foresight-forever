@@ -293,6 +293,11 @@ action (ADDON_ACTION_FORBIDDEN on share). FIX: removed the CSI call; buckets are
 compliance lint now reds any `C_SpecializationInfo.*()` invocation (presence checks + name
 strings allowed). Gate 279. In-game re-verify share = zero taint queued. A safe spec signal
 (dominant talent tree via walkTraits) could restore per-spec buckets later.
+SHARE LINK TRUNCATED v0.46.9 (user: the share URL was huge): the one-link `#d=` payload
+now carries only the compare-essential data (class/level, lenses, metrics, talent build),
+NOT the bulk item-sightings + observed-buff journals (those stay local; a dedicated bulk
+path can contribute the item DB later). `buildPayload` still sanitizes items/observed for
+that future path (selftest intact). Buckets/rankings unchanged.
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named
@@ -812,6 +817,14 @@ Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 - ☐ GRAPH-rotation-weights: fold cast-time/cost/cooldown mods into throughput via per-spell
   rotation weights (today they surface via tooltips only).
 - ☐ Per-ability base threat + stance/form multipliers for GRAPH-threat (overrides, k-of-n).
+- ☐ DATA-live-imbue-ap (user catch 2026-10-14, Rockbiter hover: WoW 75 AP vs our 58):
+  weapon-imbue (and other `linearToMax-presumed`) attack-power values render from the
+  stored classic-presumed `maxValue` with NO level-scaling applied (`ui/tooltips.lua`
+  describeOp uses `op.maxValue`; `model/imbues.lua` line ~45 same), so the number is
+  stale/low vs the live level-scaled client value. FIX (ground-truth doctrine): read the
+  AP from the live spell tooltip we're decorating and use that (fall back to the presumed
+  value when unreadable), and/or record the observed value as an override correction. Also
+  corrects the imbue DPS compare (same `maxValue` source). In-game-only - verify live.
 
 ## Shipped (archived)
 - ☑ S6 Crowd data-collection loop (2026-10-10): collector + harvester + gated deploy;
