@@ -1,7 +1,7 @@
-// Foresight crowd web app (S13). Account-safe companion: the WoW addon never networks;
-// this page uploads ONLY what the user pastes, after explicit opt-in. Everything is
-// re-validated client-side (defense in depth on the addon's allow-list) and gated
-// server-side by firestore.rules. The apiKey is a PUBLIC web id, not a secret.
+// Foresight crowd compare - companion site for the WoW: Forever addon.
+// The addon never networks; this page only uploads what the user pastes, with consent.
+// The Firebase config below is the public client config - access is controlled by the
+// Firestore security rules, not by keeping it secret.
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider }
@@ -57,10 +57,8 @@ const METRIC_LABELS = {
   "school.arcane": "Most Arcane Spell Damage", "school.holy": "Most Holy Spell Damage",
 };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-// Output-encode EVERY dynamic string before it touches innerHTML. Ladder/compare render
-// data from other users' contributions (metric keys, class tokens); the rules validate
-// shape, not HTML, so a crafted contribution could otherwise inject markup. Numbers are
-// safe (Math.round), but escaping them too costs nothing.
+// Escape anything inserted into innerHTML - the ladder shows strings submitted by other
+// users (metric keys, class), so this prevents HTML injection.
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
   (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function metricLabel(k) {
