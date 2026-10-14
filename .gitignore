@@ -19,3 +19,6 @@ pipeline/collected/
 # Cloud Functions deps (installed on deploy)
 functions/node_modules/
 web/node_modules/
+
+# Local packaged addon zips (build artifacts)
+dist/
