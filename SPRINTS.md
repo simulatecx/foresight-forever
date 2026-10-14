@@ -302,8 +302,13 @@ WEB PASTE FIX 2026-10-14 (user pasted the share URL into the textarea -> "doesn'
 like valid data"): `web/app.js` parsePayload now accepts a pasted share LINK or bare
 `#d=...` fragment (extract + decodeURIComponent), not only raw JSON - the in-game text
 says "paste it here". Deployed to wow-foresight (app.js?v=9). CurseForge now shows ~14
-downloads (project appears approved/live; still only manual v0.46.4 + automated v0.46.5
-uploaded - 0.46.6-0.46.9 not tagged yet).
+downloads (project approved/LIVE).
+**v0.46.9 TAGGED + PUBLISHED 2026-10-14** (user go-ahead): release.yml ran green -> CF
+project 1744126 (`Foresight-v0.46.9-forever.zip`, 1.60.1 release) + GitHub Release, both
+Success. This is the first automated public release carrying the session's work (peer
+readout + engine card + TAINT FIX + share truncation); existing v0.46.4/0.46.5 installs
+will see "update available" (managed installs, matched to game version 1.60.1, after the
+managers' refresh cycle). RELEASE_NOTES.md consolidated the span for the notes.
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named
