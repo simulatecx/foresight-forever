@@ -176,10 +176,14 @@ data-freshness); PUBLIC GitHub remote `simulatecx/foresight-forever` (decision 2
 public - the crowd-harvested `pipeline/collected/` corpus is gitignored and never
 publishes, so "our data stays ours"); action refs SHA-pinned + dependabot; branch
 protection (CI gate required on PRs, force-push/deletion blocked, owner direct-push kept
-for the solo-dev flow). Remaining (user account actions): register CurseForge + Wago
-project slugs, add `CF_API_TOKEN`/`WAGO_API_TOKEN` repo secrets, project IDs in the TOC
-(or slug-resolve), then tag the first release. Threat-model publish bindings (DATAFLOW
-4b/4c).
+for the solo-dev flow). CurseForge project **"Foresight - Forever"** created; first
+public build **v0.46.4 submitted manually 2026-10-13 and in moderation** (built via
+`python zipfile`, forward-slash entries, gate-green; `dist/` gitignored). MIT +
+open-distribution on the page (owner-confirmed, docs/CURSEFORGE.md). Remaining: CurseForge
+moderation approval -> then upload logo + listing copy; Overwolf API-key application in
+progress (owner) -> once granted, add `CF_API_TOKEN` + `## X-Curse-Project-ID:` to TOC and
+switch to the automated tag path (tag v* -> CI packages/uploads); Wago registration;
+`WAGO_API_TOKEN`. Threat-model publish bindings (DATAFLOW 4b/4c).
 
 ### S13 - Crowd scale-up ◐  (phase A shipped v0.15.0)
 PHASE A DONE: item-sightings journal (equipped+bags at login/logout, IDs only, capped) +
