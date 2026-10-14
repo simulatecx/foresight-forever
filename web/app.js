@@ -33,7 +33,7 @@ try {
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ---- allow-list mirror (matches Foresight/core/crowd.lua) -----------------------
+// Keep this allow-list in sync with Foresight/core/crowd.lua.
 const ALLOW = ["v", "build", "class", "spec", "level", "lenses", "metrics", "talents",
                "items", "observed", "clientId"];
 function sanitize(raw) {
@@ -48,7 +48,7 @@ function sanitize(raw) {
   return out;
 }
 
-// ---- labels + class colours -----------------------------------------------------
+// Labels and class colours.
 const METRIC_LABELS = {
   "stat.armor": "Most Armor", "stat.maxHealth": "Most Health",
   "stat.spellDamage": "Most Spell Power",
@@ -75,7 +75,7 @@ const CLASS_COLORS = {
 const classColor = (c) => CLASS_COLORS[c] || "#c8a24c";
 const titleCase = (c) => c ? c.charAt(0) + c.slice(1).toLowerCase() : c;
 
-// ---- percentile from stored quantiles -------------------------------------------
+// Turn a stored quantile set into a percentile for the player's value.
 function levelBucket(level) { return Math.floor(level / 5) * 5; }
 function pctFromQuantiles(s, v) {
   const pts = [[s.min, 0], [s.p25, 25], [s.p50, 50], [s.p75, 75], [s.p90, 90], [s.max, 100]]
@@ -92,7 +92,7 @@ function pctFromQuantiles(s, v) {
   return 100;
 }
 
-// ---- UI wiring ------------------------------------------------------------------
+// UI wiring.
 const $ = (id) => document.getElementById(id);
 const statusEl = $("status");
 function setStatus(msg, kind) { statusEl.textContent = msg || ""; statusEl.className = "status" + (kind ? " " + kind : ""); }
@@ -118,7 +118,7 @@ function row(name, youText, pct, metaText) {
     (metaText ? `<span class="meta">${esc(metaText)}</span>` : "") + bar + `</div>`;
 }
 
-// ---- compare: read the bucket, rank the player ----------------------------------
+// Compare: read the player's bucket and rank them in it.
 async function showCompare(p) {
   const bucket = `${p.class}-${p.spec == null ? "any" : p.spec}-${levelBucket(p.level)}`;
   const resEl = $("result");
@@ -162,7 +162,7 @@ async function showCompare(p) {
   }
 }
 
-// ---- aggregates feed (daily trial + ladders) ------------------------------------
+// Aggregates feed, shared by the daily trial and the ladders.
 let AGG_CACHE = null;
 async function loadAggregates() {
   if (AGG_CACHE) return AGG_CACHE;
@@ -200,7 +200,7 @@ async function renderDailyTrial() {
     : "No champion has answered yet - be the first.";
 }
 
-// ---- the ladders: every challenge record, by class -----------------------------
+// The ladders: every challenge record, filterable by class.
 function ladderCardsFor(aggs, klass) {
   const rows = [];
   for (const a of aggs) {
@@ -239,7 +239,7 @@ async function initLadders() {
   renderLadder("ALL");
 }
 
-// ---- share-link prefill (#d=<url-encoded JSON>) ---------------------------------
+// Prefill from a share link (#d=<url-encoded JSON>).
 function fromShareLink() {
   const m = (location.hash || "").match(/[#&]d=([^&]+)/);
   if (!m) return;
@@ -267,7 +267,7 @@ $("contribute").addEventListener("click", async () => {
   }
 });
 
-// ---- boot -----------------------------------------------------------------------
+// Boot.
 renderDailyTrial();
 initLadders();
 fromShareLink();

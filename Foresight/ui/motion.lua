@@ -94,7 +94,7 @@ end
 
 if not _G.CreateFrame then return Motion end -- headless: pure helpers only
 
--- ---- Tween driver (self-stopping OnUpdate) --------------------------------------
+-- Tween driver (self-stopping OnUpdate).
 
 local driver = _G.CreateFrame("Frame")
 local tweens = {}
@@ -149,7 +149,7 @@ function Motion.cancelOwner(owner)
     end
 end
 
--- ---- Common motions --------------------------------------------------------------
+-- Common motions.
 
 -- Sweep a fill texture's width from -> to (the bar transition). Instant at off.
 function Motion.sweepWidth(owner, region, fromW, toW, dur)
@@ -205,7 +205,7 @@ function Motion.stopPulse(region)
     end
 end
 
--- ---- Lines (pooled per parent frame; frames are singletons) ----------------------
+-- Lines (pooled per parent frame; frames are singletons).
 
 local linePools = {}
 
@@ -244,7 +244,7 @@ function Motion.line(frame, anchor, x1, y1, x2, y2, color, thickness)
     return l
 end
 
--- ---- Polygon fill (SetVertexOffset triangle fan; pooled per parent) --------------
+-- Polygon fill (SetVertexOffset triangle fan; pooled per parent).
 
 local triPools = {}
 
@@ -295,7 +295,7 @@ function Motion.drawFan(frame, anchor, cx, cy, points, color)
     return true
 end
 
--- ---- Radial gauges (Cooldown swipe over a masked disc; pooled per parent) --------
+-- Radial gauges (Cooldown swipe over a masked disc; pooled per parent).
 
 local gaugePools = {}
 

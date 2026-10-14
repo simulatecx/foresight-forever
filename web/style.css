@@ -61,7 +61,7 @@ code {
   padding: 1px 6px; border-radius: 3px; border: 1px solid var(--line-soft);
 }
 
-/* ---- masthead -------------------------------------------------------------- */
+/* Masthead. */
 .masthead { position: relative; z-index: 1; text-align: center; padding: 54px 20px 10px; }
 .sigil {
   width: 58px; height: 58px; margin: 0 auto 10px; position: relative;
@@ -89,7 +89,7 @@ code {
 }
 .kicker em { color: var(--gold-br); font-style: normal; }
 
-/* ---- the gold-framed panel (the recurring Armory frame) -------------------- */
+/* The gold-framed panel - the recurring Armory frame. */
 .panel, .trial {
   position: relative; z-index: 1;
   background:
@@ -128,7 +128,7 @@ code {
 .lead { color: var(--ink-dim); margin-top: 0; }
 .muted { color: var(--muted); }
 
-/* ---- daily trial hero ------------------------------------------------------ */
+/* Daily trial hero. */
 .trial { max-width: 860px; margin: 18px auto 2px; overflow: hidden; }
 .trial-band { position: relative; padding: 30px 28px 26px; text-align: center; }
 .trial-band::before { /* traveling sheen */
@@ -150,7 +150,7 @@ code {
 .trial-sub { margin: 0 auto 14px; max-width: 46ch; color: var(--ink-dim); }
 .trial-record { margin-bottom: 16px; min-height: 1em; color: var(--gold-br); font-weight: 600; letter-spacing: .02em; }
 
-/* ---- forms + buttons ------------------------------------------------------- */
+/* Forms and buttons. */
 .field-label { display: block; font-family: "Cinzel", serif; font-size: 12px;
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-dim); margin: 6px 0 6px; }
 textarea {
@@ -184,7 +184,7 @@ a.btn { display: inline-block; border-bottom: none; }
 .status { min-height: 1.2em; margin: 12px 0 0; color: var(--ink-dim); font-style: italic; }
 .status.ok { color: var(--ok); } .status.warn { color: var(--warn); }
 
-/* ---- results + ladder rows ------------------------------------------------- */
+/* Results and ladder rows. */
 .result h2, .result h3 { font-family: "Cinzel", serif; letter-spacing: 0.1em; color: var(--gold-br); }
 .result h2 { font-size: 17px; text-transform: uppercase; margin: 2px 0 14px; }
 .result .section-title { margin: 22px 0 10px; font-size: 13px; }
@@ -223,7 +223,7 @@ select {
 .ladder-card .record { color: var(--gold-br); font-weight: 600; }
 .ladder-card .sub { color: var(--muted); font-size: 12px; }
 
-/* ---- footer + reveal ------------------------------------------------------- */
+/* Footer and reveal animation. */
 .footer { position: relative; z-index: 1; text-align: center; color: var(--muted);
   font-size: 13px; padding: 30px 20px 50px; border-top: 1px solid var(--line-soft); margin-top: 20px; }
 .footer a { color: var(--ink-dim); }
