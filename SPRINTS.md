@@ -225,11 +225,18 @@ Owner IAM grants (Gen2): compute SA got roles/cloudbuild.builds.builder +
 roles/datastore.user. STILL REMAINING: pipeline bake-back `peer_baselines.lua` +
 in-game "vs your spec" readout; confirm a real Contribute once App Check propagates
 (write gate pending token validation; reads/aggregation unaffected).
+CHALLENGES / GAMIFICATION SHIPPED + PROVEN LIVE 2026-10-14 (v0.46.2, user ask): the
+crowd payload carries a generic `metrics` map (key->number: stat.armor, stat.maxHealth,
+school.<frost/fire/...>); aggregator builds per-metric quantiles with MAX = the live
+record; web compare shows a Challenges block ("Most Frost Spell Damage: you 50 - top
+~31% (record 70)"). Anonymous, non-identifying; extensible (new challenge = new key).
+NEXT: ability-hit challenges ("Biggest Earth Shock" - needs the spellbook enumeration +
+ability name plumbing); named + weekly leaderboards via the opt-in Armory tier below.
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
-collection (own consent/disclosure, public-by-choice, erasure path), enabling a future
-data-only "copy talents" import (never loadstring). Ships only after owner confirms the
-approach.
+collection (own consent/disclosure, public-by-choice, erasure path), enabling named
+leaderboards ("submit your character to the Earthshock challenge") + a future data-only
+"copy talents" import (never loadstring). Ships only after owner confirms the approach.
 
 ### S14 - Buffs & consumables impact ◐  (SHIPPED code-complete v0.12.0)
 "How does a flask/elixir/food impact me while active, and what do I lose when it expires."

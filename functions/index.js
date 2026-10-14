@@ -82,7 +82,19 @@ async function rebuild() {
           .filter((v) => typeof v === "number").sort((a, b) => a - b);
         if (vals.length >= MIN_BUCKET) lenses[lid] = quantiles(vals);
       }
-      doc = { ...base, lenses };
+      // CHALLENGE METRICS: dynamic key set (union across members) - any metric with
+      // enough values gets quantiles. `max` is the current challenge record.
+      const metrics = {};
+      const metricKeys = new Set();
+      for (const m of members) {
+        if (m.metrics) for (const k of Object.keys(m.metrics)) metricKeys.add(k);
+      }
+      for (const k of metricKeys) {
+        const vals = members.map((m) => m.metrics && m.metrics[k])
+          .filter((v) => typeof v === "number").sort((a, b) => a - b);
+        if (vals.length >= MIN_BUCKET) metrics[k] = quantiles(vals);
+      }
+      doc = { ...base, lenses, metrics };
     }
     batch.set(db.collection("aggregates").doc(id), doc);
     if (++pending >= 450) await flush();

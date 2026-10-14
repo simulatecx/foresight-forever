@@ -2513,6 +2513,19 @@ function HM.runSelftest(out)
         -- a payload with no class/level is refused entirely (nothing useful, nothing sent)
         return HM.Crowd.buildPayload({ name = "x" }) == nil
     end)())
+    check("crowd metrics: challenge numbers allow-listed, non-numbers dropped", (function()
+        local p = HM.Crowd.buildPayload({
+            classToken = "SHAMAN", level = 35,
+            metrics = { ["stat.armor"] = 512, ["school.frost"] = 40.5,
+                        ["stat.maxHealth"] = 4884, bad = "not a number",
+                        ["way-too-long-a-metric-key-name-here"] = 5 },
+        })
+        if not p or type(p.metrics) ~= "table" then return false end
+        return p.metrics["stat.armor"] == 512 and p.metrics["school.frost"] == 40.5
+            and p.metrics["stat.maxHealth"] == 4884
+            and p.metrics.bad == nil
+            and p.metrics["way-too-long-a-metric-key-name-here"] == nil
+    end)())
     check("crowd share link: data packed into the URL fragment, unreserved-safe", (function()
         local url = HM.Crowd.shareUrl({ v = 1, class = "SHAMAN", level = 35 })
         if type(url) ~= "string" then return false end

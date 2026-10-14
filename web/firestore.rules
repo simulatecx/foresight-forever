@@ -17,7 +17,7 @@ service cloud.firestore {
     // can never be written even if a modified client tried.
     function validContribution(d) {
       return d.keys().hasOnly(['v','build','class','spec','level',
-                               'lenses','talents','items','observed','clientId'])
+                               'lenses','metrics','talents','items','observed','clientId'])
           && d.v == 1
           && d.class is string && d.class.size() <= 16
           // is number (not is int): the web SDK can encode integers as doubles -
@@ -26,6 +26,7 @@ service cloud.firestore {
           && (!('build' in d) || (d.build is string && d.build.size() <= 32))
           && (!('spec' in d)  || (d.spec is number))
           && (!('clientId' in d) || (d.clientId is string && d.clientId.size() <= 40))
+          && (!('metrics' in d) || d.metrics is map)
           && d.lenses is map && d.talents is map
           && d.items is map   && d.observed is map;
     }

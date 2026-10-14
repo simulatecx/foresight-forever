@@ -65,10 +65,22 @@ function Crowd.buildPayload(inp)
         spec = clampInt(inp.specId, 0, 100000), -- numeric spec id only (no name)
         level = level,
         lenses = {},
+        metrics = {},
         talents = {},
         items = {},
         observed = {},
     }
+
+    -- CHALLENGE METRICS (the gamified layer): concrete, non-identifying numbers we can
+    -- rank into challenges ("Most Armor", "Most Frost Spell Damage", and - once ability
+    -- hits are added - "Biggest Earth Shock"). A GENERIC key->number map so a new
+    -- challenge is just a new key, never a schema change. Short string keys, numbers.
+    for k, val in pairs(type(inp.metrics) == "table" and inp.metrics or {}) do
+        if type(k) == "string" and #k <= 24 then
+            local n = clampNum(val)
+            if n then out.metrics[k] = n end
+        end
+    end
 
     -- Computed dimension indices (numbers only).
     local allowLens = {}
@@ -221,6 +233,16 @@ function Crowd.payload()
         local nid = t.nodeId or t.nodeID
         if nid then talents[nid] = t.rank or 0 end
     end
+    -- Challenge metrics from live stats (all non-identifying numbers).
+    local st = snapshot.stats or {}
+    local metrics = {
+        ["stat.armor"] = st.armor,
+        ["stat.maxHealth"] = st.maxHealth,
+        ["stat.spellDamage"] = st.spellDamage,
+    }
+    for school, v in pairs(type(st.schoolDamage) == "table" and st.schoolDamage or {}) do
+        metrics["school." .. tostring(school)] = v
+    end
     local collect = (HM.db and HM.db.collect) or {}
     -- spec id (numeric only) via the guarded API; nil if unavailable.
     local specId
@@ -234,6 +256,7 @@ function Crowd.payload()
         specId = specId,
         level = snapshot.level,
         lenses = lenses,
+        metrics = metrics,
         talents = talents,
         items = collect.itemSightings,
         observed = collect.observedImpacts,

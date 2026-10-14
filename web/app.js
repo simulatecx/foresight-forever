@@ -45,8 +45,20 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ---- client-side allow-list mirror (must match Foresight/core/crowd.lua) --------
-const ALLOW = ["v", "build", "class", "spec", "level", "lenses", "talents",
+const ALLOW = ["v", "build", "class", "spec", "level", "lenses", "metrics", "talents",
                "items", "observed", "clientId"];
+
+// Friendly names for the challenge metrics (the gamified layer). Keys that aren't
+// listed fall back to a title-cased version, so new metrics still display.
+const METRIC_LABELS = {
+  "stat.armor": "Most Armor", "stat.maxHealth": "Most Health",
+  "stat.spellDamage": "Most Spell Power",
+  "school.frost": "Most Frost Spell Damage", "school.fire": "Most Fire Spell Damage",
+  "school.nature": "Most Nature Spell Damage", "school.shadow": "Most Shadow Spell Damage",
+  "school.arcane": "Most Arcane Spell Damage", "school.holy": "Most Holy Spell Damage",
+};
+const metricLabel = (k) => METRIC_LABELS[k]
+  || ("Most " + k.replace(/^.*\./, "").replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase()));
 function sanitize(raw) {
   if (typeof raw !== "object" || raw === null) return null;
   if (raw.v !== 1) return null;
@@ -129,8 +141,23 @@ async function showCompare(p) {
         ? ` - <b>top ~${top}%</b> of your spec <span class="fine">(n=${stats.n}, median ${Math.round(stats.p50)})</span>`
         : ""}</li>`;
     }).join("");
+    // CHALLENGES: rank the concrete metrics. `max` of the bucket is the current
+    // record; the player sees where they stand and how far off the record they are.
+    let challenges = "";
+    if (agg.metrics && p.metrics) {
+      const crows = Object.entries(p.metrics).map(([k, val]) => {
+        const stats = agg.metrics[k];
+        if (!stats) return "";
+        const pct = pctFromQuantiles(stats, val);
+        const top = pct == null ? null : Math.max(1, Math.round(100 - pct));
+        const record = Math.round(stats.max);
+        return `<li><b>${metricLabel(k)}</b>: you ${Math.round(val)}${top != null
+          ? ` - <b>top ~${top}%</b>` : ""} <span class="fine">(record ${record}, n=${stats.n})</span></li>`;
+      }).filter(Boolean).join("");
+      if (crows) challenges = `<h2>Challenges - your spec, level ~${levelBucket(p.level)}+</h2><ul>${crows}</ul>`;
+    }
     resEl.innerHTML = `<h2>Your spec, level ~${levelBucket(p.level)}+
-      (${agg.count} contributors)</h2><ul>${rows}</ul>
+      (${agg.count} contributors)</h2><ul>${rows}</ul>${challenges}
       <p class="fine">Percentiles are approximate from the bracket's distribution (p).</p>`;
   } catch (e) {
     resEl.innerHTML = `<p>Couldn't load peer data (${e.code || e.message}).</p>`;

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.46.2 - 2026-10-14
+
+CROWD CHALLENGES - the gamified layer. Beyond the abstract lenses, `/foresight share`
+now carries concrete, rankable CHALLENGE METRICS (a generic key->number map, so a new
+challenge is just a new key, never a schema change): Most Armor, Most Health, and the
+six Most <School> Spell Damage (Frost/Fire/…). The aggregator produces per-metric
+quantiles with the bucket MAX as the live record, and the web compare shows a
+Challenges block - "Most Frost Spell Damage: you 50 - top ~31% (record 70)". Still
+non-identifying + anonymous; proven end-to-end live. Ability-hit challenges (the
+"Biggest Earth Shock" headline) and named/weekly leaderboards are the next steps - the
+latter via the opt-in Armory tier (doc S8). Selftest 277 (+1): challenge metrics
+allow-listed, non-numbers dropped.
+
+*Features:* CROWD-share
+
 ## 0.46.1 - 2026-10-14
 
 ONE-LINK CROWD SHARE + the aggregator went live. `/foresight share` now hands you a
