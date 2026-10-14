@@ -298,6 +298,12 @@ now carries only the compare-essential data (class/level, lenses, metrics, talen
 NOT the bulk item-sightings + observed-buff journals (those stay local; a dedicated bulk
 path can contribute the item DB later). `buildPayload` still sanitizes items/observed for
 that future path (selftest intact). Buckets/rankings unchanged.
+WEB PASTE FIX 2026-10-14 (user pasted the share URL into the textarea -> "doesn't look
+like valid data"): `web/app.js` parsePayload now accepts a pasted share LINK or bare
+`#d=...` fragment (extract + decodeURIComponent), not only raw JSON - the in-game text
+says "paste it here". Deployed to wow-foresight (app.js?v=9). CurseForge now shows ~14
+downloads (project appears approved/live; still only manual v0.46.4 + automated v0.46.5
+uploaded - 0.46.6-0.46.9 not tagged yet).
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named

@@ -96,7 +96,15 @@ function pctFromQuantiles(s, v) {
 const $ = (id) => document.getElementById(id);
 const statusEl = $("status");
 function setStatus(msg, kind) { statusEl.textContent = msg || ""; statusEl.className = "status" + (kind ? " " + kind : ""); }
-function parsePayload() { try { return sanitize(JSON.parse($("payload").value.trim())); } catch { return null; } }
+function parsePayload() {
+  let raw = $("payload").value.trim();
+  if (!raw) return null;
+  // Accept a pasted share LINK (or a bare "#d=..." fragment), not only raw JSON - the
+  // in-game instruction says you can paste the link right here, so honour that.
+  const m = raw.match(/[#&]d=([^&\s]+)/);
+  if (m) { try { raw = decodeURIComponent(m[1]); } catch { return null; } }
+  try { return sanitize(JSON.parse(raw)); } catch { return null; }
+}
 function refreshButtons() {
   const ok = parsePayload() !== null;
   $("compare").disabled = !ok;
