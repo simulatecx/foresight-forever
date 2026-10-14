@@ -958,7 +958,10 @@ end
 -- absolute "hits for ~X-Y" lead line; the coefficient block translates your Spell/
 -- Healing Power per cast. Spells without decoded fields keep the coefficient-only
 -- block (nil-degrade: no absolute line is ever invented).
-function Tooltips.spellLines(spellId, loadout)
+-- live (optional, in-game): ground-truth values the client already states on the hovered
+-- tooltip - { attackPower = <n> } corrects a linearToMax-presumed imbue AP (user catch:
+-- Rockbiter showed our classic-presumed 58 vs the client's level-scaled 75). nil headless.
+function Tooltips.spellLines(spellId, loadout, live)
     if not loadout then return nil end
     local spell = HM.gen and HM.gen.spells and HM.gen.spells[spellId]
     if not spell then return nil end
@@ -1010,7 +1013,14 @@ function Tooltips.spellLines(spellId, loadout)
                         r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
                 end
             else
-                local desc = describeOp(op)
+                local desc
+                if op.kind == "attackPower" and live and live.attackPower then
+                    -- Ground truth: the client already states the level-scaled value, so
+                    -- use it instead of our classic-presumed maxValue (75, not 58).
+                    desc = ("%d Attack Power"):format(live.attackPower)
+                else
+                    desc = describeOp(op)
+                end
                 if desc then
                     lines[#lines + 1] = {
                         text = "|cff9d9d9dIts buff gives you:|r " .. desc,
@@ -1477,6 +1487,24 @@ function Tooltips.abilityMapLines(spellId, spellName)
     return lines
 end
 
+-- Ground-truth read: pull a stat value the client already printed on the hovered tooltip,
+-- so our line matches the game instead of a classic-presumed estimate. Returns the attack
+-- power the imbue/buff grants (e.g. Rockbiter "...attack power by 75"), or nil if absent.
+local function liveAttackPower(tip)
+    local name = tip.GetName and tip:GetName()
+    if not (name and type(tip.NumLines) == "function") then return nil end
+    for i = 1, (tip:NumLines() or 0) do
+        local fs = _G[name .. "TextLeft" .. i]
+        local txt = fs and fs.GetText and fs:GetText()
+        if type(txt) == "string" then
+            local low = txt:lower()
+            local n = low:match("attack power by (%d+)") or low:match("(%d+)%s+attack power")
+            if n then return tonumber(n) end
+        end
+    end
+    return nil
+end
+
 local function injectSpell(tip, spellId)
     if injectedTips[tip] then return end
     local spellName
@@ -1489,8 +1517,9 @@ local function injectSpell(tip, spellId)
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
+    local live = { attackPower = liveAttackPower(tip) }
     local lines = (spellId and (Tooltips.imbueLines(spellId, loadout)
-        or Tooltips.spellLines(spellId, loadout))) or nil
+        or Tooltips.spellLines(spellId, loadout, live))) or nil
     -- Append the "which talents modify this" block (its own header if it stands alone).
     local map = Tooltips.abilityMapLines(spellId, spellName)
     if map then

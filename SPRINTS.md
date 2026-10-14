@@ -828,14 +828,14 @@ Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 - ☐ GRAPH-rotation-weights: fold cast-time/cost/cooldown mods into throughput via per-spell
   rotation weights (today they surface via tooltips only).
 - ☐ Per-ability base threat + stance/form multipliers for GRAPH-threat (overrides, k-of-n).
-- ☐ DATA-live-imbue-ap (user catch 2026-10-14, Rockbiter hover: WoW 75 AP vs our 58):
-  weapon-imbue (and other `linearToMax-presumed`) attack-power values render from the
-  stored classic-presumed `maxValue` with NO level-scaling applied (`ui/tooltips.lua`
-  describeOp uses `op.maxValue`; `model/imbues.lua` line ~45 same), so the number is
-  stale/low vs the live level-scaled client value. FIX (ground-truth doctrine): read the
-  AP from the live spell tooltip we're decorating and use that (fall back to the presumed
-  value when unreadable), and/or record the observed value as an override correction. Also
-  corrects the imbue DPS compare (same `maxValue` source). In-game-only - verify live.
+- ◐ DATA-live-imbue-ap (user catch 2026-10-14, Rockbiter hover: WoW 75 AP vs our 58):
+  weapon-imbue `linearToMax-presumed` AP rendered from the stored classic-presumed
+  `maxValue`, stale/low vs the live level-scaled client value. DONE v0.46.10: the
+  spell-tooltip "Its buff gives you: N Attack Power" line now reads the AP the client
+  prints on the hovered tooltip (`ui/tooltips.lua` `liveAttackPower` -> `spellLines` live
+  param), falling back to `maxValue` only when unreadable. REMAINING: the imbue
+  DPS-per-swing compare (`imbueLines` / `Imbues.compare`) still uses `maxValue` - feed it
+  the live AP too, or record an observed override. In-game verify.
 
 ## Shipped (archived)
 - ☑ S6 Crowd data-collection loop (2026-10-10): collector + harvester + gated deploy;

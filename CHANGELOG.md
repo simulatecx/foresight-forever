@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.46.10 - 2026-10-14
+
+GROUND-TRUTH IMBUE ATTACK POWER (user catch: hovering Rockbiter showed our 58 vs the
+client's 75). When you hover a weapon-imbue / buff spell, the "Its buff gives you: N Attack
+Power" line now reads the attack-power value the GAME already prints on that tooltip (the
+live, level-scaled number) instead of our stored classic-presumed `maxValue`. It falls back
+to the presumed value only when the client doesn't state one (headless / unreadable), so
+the number matches what you see on the skill. The imbue DPS-per-swing compare still uses
+the presumed value - that's the remaining half of the backlog item (`DATA-live-imbue-ap`).
+In-game verify queued.
+
+*Features:* UI-spell-tooltip
+
 ## 0.46.9 - 2026-10-14
 
 SMALLER SHARE LINK. `/foresight share` was producing an enormous URL because it packed the
