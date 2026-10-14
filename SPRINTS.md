@@ -230,8 +230,16 @@ crowd payload carries a generic `metrics` map (key->number: stat.armor, stat.max
 school.<frost/fire/...>); aggregator builds per-metric quantiles with MAX = the live
 record; web compare shows a Challenges block ("Most Frost Spell Damage: you 50 - top
 ~31% (record 70)"). Anonymous, non-identifying; extensible (new challenge = new key).
-NEXT: ability-hit challenges ("Biggest Earth Shock" - needs the spellbook enumeration +
-ability name plumbing); named + weekly leaderboards via the opt-in Armory tier below.
+ABILITY-HIT CHALLENGES SHIPPED 2026-10-14 (v0.46.3): /foresight share ranks the
+player's own known abilities (Spellbook.known + Sim.topOutputs) and shares top 6 dmg +
+3 heal as "ability:<name>" -> hit; per-class automatic (each class surfaces its own
+spells). Rides the generic metrics pipeline (aggregator per-ability quantiles, max =
+record; web shows "Biggest Earth Shock: you X - top Y%"). Anonymous (name is game data).
+APPROVED NEXT (owner 2026-10-14): a+b+c with a toggle - (b) opt-in NAMED leaderboards
+via the Armory tier, showing name + optional Twitch handle (both consent-gated, doc
+S8/S8a); (c) in-game "your rank / vs your spec" readout + show-hide toggle; ability
+challenges for each class AND an all-classes view. Then: talent-copy import; a
+"report a feature" + voting board. Talent sharing deferred.
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named

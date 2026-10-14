@@ -2517,14 +2517,16 @@ function HM.runSelftest(out)
         local p = HM.Crowd.buildPayload({
             classToken = "SHAMAN", level = 35,
             metrics = { ["stat.armor"] = 512, ["school.frost"] = 40.5,
-                        ["stat.maxHealth"] = 4884, bad = "not a number",
-                        ["way-too-long-a-metric-key-name-here"] = 5 },
+                        ["stat.maxHealth"] = 4884, ["ability:Earth Shock"] = 240,
+                        bad = "not a number",
+                        [("ability:" .. ("x"):rep(48))] = 5 }, -- >48 chars, dropped
         })
         if not p or type(p.metrics) ~= "table" then return false end
         return p.metrics["stat.armor"] == 512 and p.metrics["school.frost"] == 40.5
             and p.metrics["stat.maxHealth"] == 4884
+            and p.metrics["ability:Earth Shock"] == 240  -- ability-hit challenge metric
             and p.metrics.bad == nil
-            and p.metrics["way-too-long-a-metric-key-name-here"] == nil
+            and p.metrics[("ability:" .. ("x"):rep(48))] == nil
     end)())
     check("crowd share link: data packed into the URL fragment, unreserved-safe", (function()
         local url = HM.Crowd.shareUrl({ v = 1, class = "SHAMAN", level = 35 })

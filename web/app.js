@@ -57,8 +57,14 @@ const METRIC_LABELS = {
   "school.nature": "Most Nature Spell Damage", "school.shadow": "Most Shadow Spell Damage",
   "school.arcane": "Most Arcane Spell Damage", "school.holy": "Most Holy Spell Damage",
 };
-const metricLabel = (k) => METRIC_LABELS[k]
-  || ("Most " + k.replace(/^.*\./, "").replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase()));
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+function metricLabel(k) {
+  if (METRIC_LABELS[k]) return METRIC_LABELS[k];
+  if (k.startsWith("ability:")) return "Biggest " + k.slice(8);      // "Biggest Earth Shock"
+  if (k.startsWith("school.")) return "Most " + cap(k.slice(7)) + " Spell Damage";
+  if (k.startsWith("stat.")) return "Most " + cap(k.slice(5));
+  return "Most " + k;
+}
 function sanitize(raw) {
   if (typeof raw !== "object" || raw === null) return null;
   if (raw.v !== 1) return null;

@@ -138,9 +138,23 @@ so it is a SEPARATE tier from the anonymous crowd data, governed by privacy-by-d
 - **Policy-practice sync:** `privacy.html` + any T&Cs land the Tier-2 paragraph in the
   SAME change that ships the collection.
 
-Status: ☐ designed, not built - it introduces PII (by consent) + a public surface, so
-it ships only after the owner confirms this approach (section 6-style console review +
-this design). Build order TBD with the owner.
+### 8a. Named leaderboards + Twitch handle (owner-approved 2026-10-14)
+
+The opt-in tier now also powers NAMED leaderboards: anonymous challenges show the top
+number + your percentile; if a player opts in, the leaderboard shows their **name** and,
+if they choose to include it, a **Twitch handle**. Both are identifying/voluntary:
+- Add `twitch` to the Tier-2 allow-list (validated: handle charset, length-capped);
+  it is OPTIONAL and only stored because the player typed it to be shown.
+- The leaderboard view reads Tier-2 docs (public by consent) and renders name (+ twitch
+  link) next to the record; anonymous Tier-1 contributors are never named.
+- Consent copy covers BOTH: "…shows my character name and realm, and my Twitch handle
+  if I enter one, publicly on leaderboards." Disclosure + erasure as in §8.
+
+Status: APPROVED by owner; build order = after the anonymous ability-hit challenges
+(shipped v0.46.3). Builds next: the `sharedBuilds`/leaderboard collection + rules +
+opt-in UI (name + optional Twitch) + the leaderboard view; then the in-game rank
+readout + the show/hide toggle. Talent-copy import and a feature-request+voting board
+are groomed for after.
 
 ## 7. Build status
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.46.3 - 2026-10-14
+
+ABILITY-HIT CHALLENGES (the "Biggest Earth Shock" layer). `/foresight share` now ranks
+your OWN known abilities by computed hit (via the spellbook + `Sim.topOutputs`) and
+shares the top few as `ability:<name>` -> hit numbers - so every class automatically
+surfaces its signature spells (Earth Shock, Fireball, Greater Heal, …). They ride the
+same generic metrics pipeline shipped in v0.46.2: the aggregator builds per-ability
+quantiles with the bucket max as the record, and the web compare shows "Biggest Earth
+Shock: you X - top ~Y% (record Z)". Still anonymous game data (the ability name is not
+identity). Selftest 277 pins the ability metric key (accepted up to 48 chars, overlong
+dropped). Named/weekly leaderboards (who holds the record, with an opt-in Twitch
+handle) ride the opt-in Armory tier - next.
+
+*Features:* CROWD-share
+
 ## 0.46.2 - 2026-10-14
 
 CROWD CHALLENGES - the gamified layer. Beyond the abstract lenses, `/foresight share`

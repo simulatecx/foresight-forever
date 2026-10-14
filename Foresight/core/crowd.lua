@@ -75,8 +75,9 @@ function Crowd.buildPayload(inp)
     -- rank into challenges ("Most Armor", "Most Frost Spell Damage", and - once ability
     -- hits are added - "Biggest Earth Shock"). A GENERIC key->number map so a new
     -- challenge is just a new key, never a schema change. Short string keys, numbers.
+    -- key cap 48: fits "ability:<spell name>" (e.g. "ability:Greater Healing Wave").
     for k, val in pairs(type(inp.metrics) == "table" and inp.metrics or {}) do
-        if type(k) == "string" and #k <= 24 then
+        if type(k) == "string" and #k <= 48 then
             local n = clampNum(val)
             if n then out.metrics[k] = n end
         end
@@ -216,9 +217,10 @@ end
 function Crowd.payload()
     local snapshot = HM.Snapshot and HM.Snapshot.capture()
     if not snapshot then return nil, "not in game" end
+    local loadout = HM.Loadout and HM.Loadout.fromSnapshot(snapshot)
     local lenses = {}
-    if HM.Impact and HM.Impact.evaluate then
-        local ok, results = pcall(HM.Impact.evaluate, HM.Loadout.fromSnapshot(snapshot))
+    if loadout and HM.Impact and HM.Impact.evaluate then
+        local ok, results = pcall(HM.Impact.evaluate, loadout)
         if ok and results then
             for id, r in pairs(results) do
                 if type(r) == "table" and type(r.score) == "number" then
@@ -242,6 +244,29 @@ function Crowd.payload()
     }
     for school, v in pairs(type(st.schoolDamage) == "table" and st.schoolDamage or {}) do
         metrics["school." .. tostring(school)] = v
+    end
+    -- ABILITY-HIT CHALLENGES (per class, automatically): rank the player's OWN known
+    -- abilities by computed hit and share the top few as "ability:<name>" -> hit. Each
+    -- class surfaces its own signature spells (Earth Shock, Fireball, …); the backend
+    -- ranks them into "Biggest <ability>" challenges. The ability name is game data,
+    -- not identity. Guarded + bounded (top 6 damage + top 3 heals).
+    if loadout and HM.Spellbook and HM.Spellbook.known and HM.Sim and HM.Sim.topOutputs then
+        local okk, known = pcall(HM.Spellbook.known)
+        if okk and type(known) == "table" and #known > 0 then
+            local okt, tops = pcall(HM.Sim.topOutputs, loadout, known, 6)
+            if okt and type(tops) == "table" then
+                for _, e in ipairs(tops.damage or {}) do
+                    if e.name and e.avg then metrics["ability:" .. e.name] = e.avg end
+                end
+                local heals = 0
+                for _, e in ipairs(tops.heal or {}) do
+                    if heals < 3 and e.name and e.avg then
+                        metrics["ability:" .. e.name] = e.avg
+                        heals = heals + 1
+                    end
+                end
+            end
+        end
     end
     local collect = (HM.db and HM.db.collect) or {}
     -- spec id (numeric only) via the guarded API; nil if unavailable.
