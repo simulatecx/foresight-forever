@@ -269,12 +269,13 @@ function Crowd.payload()
         end
     end
     local collect = (HM.db and HM.db.collect) or {}
-    -- spec id (numeric only) via the guarded API; nil if unavailable.
-    local specId
-    if _G.C_SpecializationInfo and _G.C_SpecializationInfo.GetSpecialization then
-        local ok, s = pcall(_G.C_SpecializationInfo.GetSpecialization)
-        if ok then specId = s end
-    end
+    -- Spec id is deliberately NOT read here: C_SpecializationInfo calls carry
+    -- "Lua Taint: Foresight" (apiWatch-confirmed; the v0.37.1 lead). This payload runs on
+    -- /foresight share AND every Matrix refresh (the peer readout), so a tainted CSI call
+    -- propagates and the client blocks the next protected action (the 2026-10-14 share
+    -- block). Forever uses classic talent trees, not retail specs - buckets are per-class
+    -- ("any" spec) until a TAINT-SAFE spec signal exists (e.g. the dominant talent tree).
+    local specId = nil
     return Crowd.buildPayload({
         build = HM.gen and HM.gen.build,
         classToken = snapshot.classToken,

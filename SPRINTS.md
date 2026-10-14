@@ -284,6 +284,15 @@ the engine, and frames the unlearned ones as "Building toward ... (spec via tale
 Learned = `Spellbook.known` names + `walkTraits` rank>0; `PanelModel.ecoMembership` pure +
 selftested (gate 279); FAIL OPEN to the full loop when no spellbook data (never blanks).
 UI-matrix-panel; edits only, /reload loads it. In-game verify queued.
+TAINT FIX v0.46.8 (ACCOUNT-SAFETY, user hit it on `/foresight share`): Crowd.payload
+called `C_SpecializationInfo.GetSpecialization()` for the bucket spec; CSI calls carry
+"Lua Taint: Foresight" (the v0.37.1 lead) and the payload now runs every Matrix refresh
+(peer readout) - the tainted call propagated and the client blocked the next protected
+action (ADDON_ACTION_FORBIDDEN on share). FIX: removed the CSI call; buckets are per-class
+("any" spec) - also correct for Forever's classic talent trees (no retail specs). HARDEN:
+compliance lint now reds any `C_SpecializationInfo.*()` invocation (presence checks + name
+strings allowed). Gate 279. In-game re-verify share = zero taint queued. A safe spec signal
+(dominant talent tree via walkTraits) could restore per-spec buckets later.
 OPT-IN IDENTIFYING TIER (user ask 2026-10-14, DESIGNED not built - doc S8): share full
 talent tree + WoW Armory link (= name+realm = PII) as a SEPARATE opt-in `sharedBuilds`
 collection (own consent/disclosure, public-by-choice, erasure path), enabling named

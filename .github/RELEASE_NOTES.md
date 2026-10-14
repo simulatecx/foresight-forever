@@ -1,6 +1,6 @@
-## 0.46.7
+## 0.46.8
 
-The engine panel now follows your character. Instead of naming abilities you haven't
-learned yet, the Matrix leads with your biggest hits right now and shows only the engine
-pieces you've actually trained - with the rest framed as what to build toward through
-talents. Low-level characters finally see their real kit, not a spec they don't have yet.
+Fixes a case where using `/foresight share` (or opening the Matrix) could trip WoW's
+"action blocked" protection. Sharing and the crowd comparison are safe to use again.
+Comparisons now group by class and level; per-spec grouping returns once we can read it
+without tripping that protection.

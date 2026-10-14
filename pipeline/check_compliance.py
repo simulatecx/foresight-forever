@@ -48,6 +48,12 @@ ESCAPE_PATTERNS = [
     (re.compile(r"(?<![\w.])loadstring\s*\("), "loadstring() (no dynamic code)"),
     (re.compile(r"(?<![\w.])dofile\s*\("), "dofile() (no file execution)"),
     (re.compile(r"(?<![\w.])loadfile\s*\("), "loadfile() (no file loading)"),
+    # C_SpecializationInfo CALLS carry "Lua Taint: Foresight" (apiWatch-confirmed; the
+    # v0.37.1 lead, re-hit 2026-10-14 when /foresight share's payload called
+    # GetSpecialization and the client blocked the next protected action). Presence checks
+    # (`_G.C_SpecializationInfo ~= nil`) and name strings are fine - only invocations red.
+    (re.compile(r"(?<![\w.])C_SpecializationInfo\s*\.\s*\w+\s*\("),
+     "C_SpecializationInfo.*() call (carries 'Lua Taint: Foresight' - presence-check only)"),
 ]
 
 ALLOW_MARKER = "-- compliance-allow:"

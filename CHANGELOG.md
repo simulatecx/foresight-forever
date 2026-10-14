@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.46.8 - 2026-10-14
+
+ACCOUNT-SAFETY FIX (taint). `/foresight share` - and, since v0.46.6, every Matrix refresh
+through the peer readout - called `C_SpecializationInfo.GetSpecialization()` to tag the
+crowd bucket by spec. But C_SpecializationInfo calls carry "Lua Taint: Foresight"
+(apiWatch-confirmed; the v0.37.1 lead), so that tainted call propagated and the client
+blocked the next protected action - the ADDON_ACTION_FORBIDDEN you hit on `/foresight
+share`. Removed the CSI call entirely: crowd buckets are now per-class ("any" spec), which
+also suits Forever's classic talent trees (there are no retail specs to read anyway). The
+compliance taint lint now reds ANY `C_SpecializationInfo.*()` invocation so this can't
+regress (presence checks and name strings stay allowed). No other behavior change; the
+peer readout and the engine card are unchanged. Gate 279.
+
+*Features:* CROWD-share, QA-compliance-gate
+
 ## 0.46.7 - 2026-10-14
 
 LEVEL/SKILL-AWARE ENGINE CARD (user ask - "we don't have Stormstrike"). The Matrix
