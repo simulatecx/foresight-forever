@@ -88,6 +88,40 @@ local function impactLine(talentId, rank)
     return ("%s %+.1f"):format(best.label, best.d)
 end
 
+-- Whole-build impact: fold EVERY planned talent onto your live loadout and diff the outcome
+-- lenses - "what does this build do for you". Only for your OWN class (folding another class's
+-- talents onto your character is meaningless). nil-degrades; never errors into the UI.
+local function buildSummaryText()
+    if state.class ~= playerClass() then return nil end
+    if not next(state.build) then return nil end
+    if not (HM.Snapshot and HM.Loadout and HM.Impact and HM.Impact.evaluate) then return nil end
+    local ok, snap = pcall(HM.Snapshot.capture)
+    if not ok or type(snap) ~= "table" then return nil end
+    local base = HM.Loadout.fromSnapshot(snap)
+    if not (base and base.withTalent) then return nil end
+    local planned = base
+    for tid, rank in pairs(state.build) do planned = planned:withTalent(tid, rank) end
+    local okb, before = pcall(HM.Impact.evaluate, base)
+    local okp, after = pcall(HM.Impact.evaluate, planned)
+    if not (okb and okp and type(before) == "table" and type(after) == "table") then return nil end
+    local changes = {}
+    for id, r in pairs(after) do
+        local b = before[id]
+        if type(r) == "table" and type(b) == "table" and type(r.score) == "number" and type(b.score) == "number" then
+            local d = r.score - b.score
+            if math.abs(d) >= 0.05 then changes[#changes + 1] = { label = r.label or id, d = d } end
+        end
+    end
+    if #changes == 0 then return nil end
+    table.sort(changes, function(a, b) return math.abs(a.d) > math.abs(b.d) end)
+    local parts = {}
+    for i = 1, math.min(5, #changes) do
+        local col = changes[i].d >= 0 and "|cff6fcf7a" or "|cffe0704a"
+        parts[#parts + 1] = ("%s %s%+.1f|r"):format(changes[i].label, col, changes[i].d)
+    end
+    return "This build: " .. table.concat(parts, "  ·  ")
+end
+
 -- ---- tooltip ---------------------------------------------------------------------------
 local function showTip(button, talentId)
     local g = HM.gen or {}
@@ -119,6 +153,7 @@ local function refreshHeader()
     frame.title:SetText(("Talent Planner  -  %s"):format(state.class or "?"))
     frame.points:SetText(("%d points planned  (%d available at level %d)")
         :format(total, budget, _G.UnitLevel and _G.UnitLevel("player") or 0))
+    if frame.summary then frame.summary:SetText(buildSummaryText() or "") end
 end
 
 local function paintButton(btn, talentId)
@@ -357,6 +392,12 @@ local function ensureFrame()
     frame.points = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     frame.points:SetPoint("TOPLEFT", PAD, -36)
     frame.points:SetTextColor(0.8, 0.75, 0.6)
+
+    -- Whole-build impact readout ("This build: Spellcasting +4.2 ...") - the talent-impact payoff.
+    frame.summary = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    frame.summary:SetPoint("TOPLEFT", PAD, -52)
+    frame.summary:SetWidth(3 * (TREE_W + 10))
+    frame.summary:SetJustifyH("LEFT")
 
     local close = _G.CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 2, 2)
