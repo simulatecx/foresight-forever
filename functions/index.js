@@ -110,90 +110,98 @@ async function rebuild() {
   // CHOSEN handle (not a real name), class/level, the value, an optional armory link, and
   // buff provenance - never a clientId, never PII. The metric key is a valid Firestore doc
   // id (no "/" in any key: stat.armor, school.frost, "ability:Earth Shock").
-  const named = rows.filter((c) => c.named === true && typeof c.name === "string"
-    && c.name.length > 0 && c.class && typeof c.level === "number");
-  const boards = new Map(); // metricKey -> [{ value, class, level, name, armory, buffs }]
-  for (const c of named) {
-    if (!c.metrics) continue;
-    for (const [k, v] of Object.entries(c.metrics)) {
-      if (typeof v !== "number") continue;
-      if (!boards.has(k)) boards.set(k, []);
-      boards.get(k).push({
-        value: v, class: c.class, level: c.level, name: c.name,
-        armory: typeof c.armory === "string" ? c.armory : null,
-        buffs: (c.buffs && typeof c.buffs === "object") ? c.buffs : null,
-      });
-    }
-  }
-  const seenMetrics = new Set();
-  for (const [k, entries] of boards) {
-    entries.sort((a, b) => b.value - a.value);
-    batch.set(db.collection("leaderboards").doc(k), {
-      metric: k, updatedAt: FieldValue.serverTimestamp(),
-      entries: entries.slice(0, LEADERBOARD_TOP_N),
-    });
-    seenMetrics.add(k);
-    if (++pending >= 450) await flush();
-  }
-
-  // ITEM POPULARITY + OBSERVED-BUFF CANDIDATES (S34f): turn the raw items/observed journals
-  // into usable crowd data. Non-identifying (item ids + counts; buff spellId + stat values).
-  // Written to the public `crowdInsights` collection, kept OUT of `aggregates` so the peer
-  // baseline bake stays clean. `rows` is already deduped by clientId, so re-uploads don't
-  // double-count. Observed candidates feed overrides ONLY through the reviewed harvest
-  // (k-of-n + human PR) - NEVER auto-shipped.
-  const itemCounts = new Map();
-  for (const c of rows) {
-    if (!c.items || typeof c.items !== "object") continue;
-    for (const [iid, cnt] of Object.entries(c.items)) {
-      const n = typeof cnt === "number" ? cnt : 0;
-      if (n > 0) itemCounts.set(iid, (itemCounts.get(iid) || 0) + n);
-    }
-  }
-  const topItems = [...itemCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, ITEM_POPULARITY_TOP_N);
-  batch.set(db.collection("crowdInsights").doc("itemPopularity"), {
-    updatedAt: FieldValue.serverTimestamp(), count: topItems.length,
-    items: Object.fromEntries(topItems),
-  });
-  if (++pending >= 450) await flush();
-
-  const obs = new Map(); // `${spellId}|${statKey}` -> [values]
-  for (const c of rows) {
-    if (!c.observed || typeof c.observed !== "object") continue;
-    for (const [sid, entry] of Object.entries(c.observed)) {
-      const stats = entry && entry.stats;
-      if (!stats || typeof stats !== "object") continue;
-      for (const [k, v] of Object.entries(stats)) {
+  // Both blocks below (named leaderboards + item/observed insights) are NEWER than the core
+  // per-spec aggregates committed above, so the whole section is isolated in try/catch: a
+  // bug in this code must NEVER block the proven aggregates commit. The final flush() always
+  // runs; `extra` carries the counts for the return (0s if this section failed).
+  let extra = { boards: 0, items: 0, observed: 0 };
+  try {
+    const named = rows.filter((c) => c.named === true && typeof c.name === "string"
+      && c.name.length > 0 && c.class && typeof c.level === "number");
+    const boards = new Map(); // metricKey -> [{ value, class, level, name, armory, buffs }]
+    for (const c of named) {
+      if (!c.metrics) continue;
+      for (const [k, v] of Object.entries(c.metrics)) {
         if (typeof v !== "number") continue;
-        const key = `${sid}|${k}`;
-        if (!obs.has(key)) obs.set(key, []);
-        obs.get(key).push(v);
+        if (!boards.has(k)) boards.set(k, []);
+        boards.get(k).push({
+          value: v, class: c.class, level: c.level, name: c.name,
+          armory: typeof c.armory === "string" ? c.armory : null,
+          buffs: (c.buffs && typeof c.buffs === "object") ? c.buffs : null,
+        });
       }
     }
+    const seenMetrics = new Set();
+    for (const [k, entries] of boards) {
+      entries.sort((a, b) => b.value - a.value);
+      batch.set(db.collection("leaderboards").doc(k), {
+        metric: k, updatedAt: FieldValue.serverTimestamp(),
+        entries: entries.slice(0, LEADERBOARD_TOP_N),
+      });
+      seenMetrics.add(k);
+      if (++pending >= 450) await flush();
+    }
+
+    // ITEM POPULARITY + OBSERVED-BUFF CANDIDATES (S34f): the raw items/observed journals ->
+    // usable crowd data. Non-identifying (item ids + counts; buff spellId + stat values).
+    // Public `crowdInsights` collection, kept OUT of `aggregates` so the peer bake stays
+    // clean. `rows` is already deduped by clientId. Observed candidates feed overrides ONLY
+    // via the reviewed harvest (k-of-n + human PR) - NEVER auto-shipped.
+    const itemCounts = new Map();
+    for (const c of rows) {
+      if (!c.items || typeof c.items !== "object") continue;
+      for (const [iid, cnt] of Object.entries(c.items)) {
+        const n = typeof cnt === "number" ? cnt : 0;
+        if (n > 0) itemCounts.set(iid, (itemCounts.get(iid) || 0) + n);
+      }
+    }
+    const topItems = [...itemCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, ITEM_POPULARITY_TOP_N);
+    batch.set(db.collection("crowdInsights").doc("itemPopularity"), {
+      updatedAt: FieldValue.serverTimestamp(), count: topItems.length,
+      items: Object.fromEntries(topItems),
+    });
+    if (++pending >= 450) await flush();
+
+    const obs = new Map(); // `${spellId}|${statKey}` -> [values]
+    for (const c of rows) {
+      if (!c.observed || typeof c.observed !== "object") continue;
+      for (const [sid, entry] of Object.entries(c.observed)) {
+        const stats = entry && entry.stats;
+        if (!stats || typeof stats !== "object") continue;
+        for (const [k, v] of Object.entries(stats)) {
+          if (typeof v !== "number") continue;
+          const key = `${sid}|${k}`;
+          if (!obs.has(key)) obs.set(key, []);
+          obs.get(key).push(v);
+        }
+      }
+    }
+    const observedBuffs = {};
+    for (const [key, vals] of obs) {
+      const sep = key.lastIndexOf("|");
+      const sid = key.slice(0, sep), statKey = key.slice(sep + 1);
+      const n = vals.length;
+      const mean = vals.reduce((a, b) => a + b, 0) / n;
+      const variance = vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n;
+      const cv = mean !== 0 ? Math.sqrt(variance) / Math.abs(mean) : (variance === 0 ? 0 : 1);
+      if (!observedBuffs[sid]) observedBuffs[sid] = {};
+      observedBuffs[sid][statKey] = {
+        n, mean: Math.round(mean * 100) / 100, cv: Math.round(cv * 1000) / 1000,
+        verified: n >= OBSERVED_MIN && cv <= OBSERVED_CV_MAX,
+      };
+    }
+    batch.set(db.collection("crowdInsights").doc("observedBuffs"), {
+      updatedAt: FieldValue.serverTimestamp(), minBucket: OBSERVED_MIN, cvMax: OBSERVED_CV_MAX,
+      observed: observedBuffs,
+    });
+    if (++pending >= 450) await flush();
+    extra = { boards: seenMetrics.size, items: topItems.length, observed: Object.keys(observedBuffs).length };
+  } catch (e) {
+    console.error("[aggregate] leaderboards/insights failed (core aggregates unaffected):", e);
   }
-  const observedBuffs = {};
-  for (const [key, vals] of obs) {
-    const sep = key.lastIndexOf("|");
-    const sid = key.slice(0, sep), statKey = key.slice(sep + 1);
-    const n = vals.length;
-    const mean = vals.reduce((a, b) => a + b, 0) / n;
-    const variance = vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n;
-    const cv = mean !== 0 ? Math.sqrt(variance) / Math.abs(mean) : (variance === 0 ? 0 : 1);
-    if (!observedBuffs[sid]) observedBuffs[sid] = {};
-    observedBuffs[sid][statKey] = {
-      n, mean: Math.round(mean * 100) / 100, cv: Math.round(cv * 1000) / 1000,
-      verified: n >= OBSERVED_MIN && cv <= OBSERVED_CV_MAX,
-    };
-  }
-  batch.set(db.collection("crowdInsights").doc("observedBuffs"), {
-    updatedAt: FieldValue.serverTimestamp(), minBucket: OBSERVED_MIN, cvMax: OBSERVED_CV_MAX,
-    observed: observedBuffs,
-  });
-  if (++pending >= 450) await flush();
 
   await flush();
-  return { buckets: buckets.size, boards: seenMetrics.size,
-           items: topItems.length, observed: Object.keys(observedBuffs).length };
+  return { buckets: buckets.size, ...extra };
 }
 
 // Recompute when a contribution lands (pilot: full rebuild; bounded by MAX_READ).
