@@ -109,10 +109,20 @@ Lua 5.1, no-PII anon tier, k-of-n+review for overrides) bind every story.
   run `push_verified.py --write`, `fetch_verified.py` bake, then in-game confirm a fresh
   character shows green "crowd-verified" not "(p)" -> flip ☑. *Fit & Overlap:* CROWD->DATA,
   Enhance the `peer_baselines` bake pattern + the rank-rule resolution order (no parallel one).
-- **S34c Identifying show-off tier ☐** (web asks #2 + #3): opt-in named leaderboards (chosen
-  handle + optional armory link, OFF by default, `named`-gated) with buff provenance on
-  records. OWNER DECISION PENDING: handle+armory (planner default) vs real character
-  name/realm - same opt-in gate either way. Updates `privacy.html` in the same change.
+- **S34c Identifying show-off tier ◐** (web asks #2 + #3; built & gated 2026-10-14):
+  OWNER CHOSE handle+armory. Opt-in named leaderboards, OFF by default. Schema gains
+  `named` (bool gate), `name`/`armory` (identifying tier, allowed ONLY when `named==true` -
+  enforced in the generated Firestore rule + the web sanitize + the addon builder), `buffs`
+  (anon provenance). New settings `named`/`handle`/`armory` (a new `text` setting type +
+  GUI EditBox); `Crowd.payload({contribute=true})` gathers them (gated behind the opt-in)
+  plus active-buff names - skipped on the per-refresh peer readout. `functions/index.js`
+  builds `leaderboards/<metricKey>` top-25 from named rows only; `web/` gains a Champions
+  section + a named-submission consent notice; `privacy.html` discloses the tier. Gate 290
+  (+1; anonymous-promise selftest proves name/armory never ride without opt-in, incl. a
+  javascript: armory reject). PENDING (owner): deploy rules+functions+hosting, browser-verify
+  the Champions render + consent at a narrow viewport, in-game verify the opt-in + GUI text
+  box at 1280x720/0.65 -> flip ☑. *Fit & Overlap:* CROWD, Enhance CROWD-share (new tier on
+  the same single-source contract).
 - **S34d `/foresight coverage` + inspect-scan readout ☐** - how much of the all-class talent
   roster the owner has captured/verified, to target gaps. Chat output, no new frame.
 - **S34e Zero-click self-verify ☐** - auto-probe trained talents on talent-frame open

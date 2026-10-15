@@ -57,6 +57,25 @@ Settings.KEYS = {
         label = "Show crowd comparison",
         desc = "On the Matrix: how your lenses and challenge numbers rank among players of your spec, plus today's featured challenge. Shows a prompt when your spec has no crowd data yet.",
     },
+    -- Opt-in SHOW-OFF tier (S34c). OFF by default; your numbers feed the anonymous crowd
+    -- averages either way. On = when you Contribute, your chosen handle (+ optional armory)
+    -- rides along and can appear on the public "champions" ladders. Revocable: turn it off.
+    named = {
+        group = "General", type = "toggle", default = false,
+        label = "Show me on public leaderboards",
+        desc = "Opt in to appear by your chosen handle on the public champion ladders (Biggest Armor, etc.) when you Contribute. Off = you stay anonymous (your numbers still feed the crowd averages). Set your handle below.",
+    },
+    handle = {
+        group = "General", type = "text", default = "", max = 32,
+        label = "Leaderboard handle",
+        desc = "The display name shown on the public ladders when the opt-in above is on. A nickname you choose - not your real name. Up to 32 characters.",
+    },
+    armory = {
+        group = "General", type = "text", default = "", max = 200,
+        pattern = "^https://[%w%._~:/%?#@!%$&%*%+,;=%%%(%)%-]+$",
+        label = "Armory link (optional)",
+        desc = "Optional https:// link to your armory/character page, shown beside your handle on the ladders. Leave blank for none.",
+    },
 }
 
 -- The ordered group list for the GUI (a group renders only if it owns >= 1 key).
@@ -73,6 +92,14 @@ function Settings.validate(key, raw)
     elseif spec.type == "slider" then
         local n = tonumber(raw)
         if n and n >= spec.min and n <= spec.max then return n end
+    elseif spec.type == "text" then
+        -- Heal a stored value: strip control chars, trim, cap, pattern-or-default. Empty is
+        -- always valid (unset). A non-matching stored value degrades to the default ("").
+        local s = tostring(raw or ""):gsub("%c", ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if spec.max and #s > spec.max then s = s:sub(1, spec.max) end
+        if s == "" then return "" end
+        if spec.pattern and not s:match(spec.pattern) then return spec.default or "" end
+        return s
     end
     return spec.default
 end
@@ -91,6 +118,14 @@ function Settings.coerce(key, text)
         local n = tonumber(text)
         if n then return Settings.validate(key, n) end
         return nil
+    elseif spec.type == "text" then
+        -- Slash input is strict: empty clears it; a non-empty value that fails the pattern
+        -- is rejected (nil) so the user gets the usage line, not a silent wipe to default.
+        local s = tostring(text or ""):gsub("%c", ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if s == "" then return "" end
+        if spec.max and #s > spec.max then s = s:sub(1, spec.max) end
+        if spec.pattern and not s:match(spec.pattern) then return nil end
+        return s
     end
     return nil
 end
@@ -146,7 +181,8 @@ function Settings.usage(key)
     if not spec then return key end
     if spec.type == "toggle" then return key .. " on|off"
     elseif spec.type == "enum" then return key .. " " .. table.concat(spec.values, "|")
-    elseif spec.type == "slider" then return ("%s %.1f-%.1f"):format(key, spec.min, spec.max) end
+    elseif spec.type == "slider" then return ("%s %.1f-%.1f"):format(key, spec.min, spec.max)
+    elseif spec.type == "text" then return key .. " <text>" end
     return key
 end
 

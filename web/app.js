@@ -63,6 +63,12 @@ function sanitize(raw) {
   for (const b of BANNED) if (b in raw) return null;
   const out = {};
   for (const k of ALLOW) if (k in raw) out[k] = raw[k];
+  // Identifying fields (handle/armory) require the explicit opt-in flag; strip them when
+  // it's absent. The Firestore rules enforce the same gate server-side - this is defense
+  // in depth + keeps anonymous payloads clean. Schema-driven so it tracks new tiers.
+  if (out.named !== true) {
+    for (const f of CROWD_SCHEMA.fields) if (f.tier === "identifying") delete out[f.key];
+  }
   return out;
 }
 
@@ -129,6 +135,18 @@ function refreshButtons() {
   const ok = p !== null;
   $("contribute").disabled = !(ok && $("consent").checked);
   const raw = $("payload").value.trim();
+  // Named opt-in heads-up: if this payload carries the show-off opt-in, say plainly that the
+  // chosen handle + build will be shown publicly on the ladders (policy-practice honesty).
+  const notice = $("namedNotice");
+  if (notice) {
+    if (ok && p.named === true) {
+      const who = (typeof p.name === "string" && p.name) ? `"${esc(p.name)}"` : "your chosen handle";
+      notice.innerHTML = `You opted in to the public ladders: ${who}${p.armory ? " and your armory link" : ""} and your build will be shown publicly as a champion. Everyone else stays anonymous - turn it off in-game with <code>/foresight set named off</code>.`;
+      notice.classList.remove("hidden");
+    } else {
+      notice.classList.add("hidden");
+    }
+  }
   if (!ok) {
     lastCompared = "";
     if (raw) setStatus("That doesn't look like valid /foresight share data.", "warn");
@@ -329,6 +347,45 @@ function renderLadder(klass) {
     + (cards || `<p class="muted">No records unlocked yet${forKlass} - the first bracket to reach 5 sets one.</p>`)
     + fillingBlock;
 }
+// CHAMPIONS (S34c show-off tier): the named top-N for today's featured metric, from the
+// backend `leaderboards/<metricKey>` doc (only opt-in named submissions appear here).
+function championCard(e, rank) {
+  const color = classColor(e.class);
+  const name = esc(e.name || "Champion");
+  const safeArmory = (typeof e.armory === "string" && /^https:\/\//.test(e.armory)) ? e.armory : null;
+  const who = safeArmory
+    ? `<a href="${esc(safeArmory)}" target="_blank" rel="noopener noreferrer nofollow" style="color:${color}">${name}</a>`
+    : `<span style="color:${color}">${name}</span>`;
+  const buffs = (e.buffs && typeof e.buffs === "object") ? Object.values(e.buffs) : [];
+  const buffRow = buffs.length
+    ? `<span class="champion-buffs">with ${buffs.slice(0, 8).map((b) => esc(b)).join(", ")}</span>` : "";
+  return `<div class="ladder-card champion" style="--class:${color}">
+    <h4><span class="champion-rank">#${rank}</span> ${who}</h4>
+    <span class="record">${esc(Math.round(e.value))}</span>
+    <span class="sub"> · ${esc(titleCase(e.class))} · level ${esc(e.level)}</span>
+    ${buffRow}
+  </div>`;
+}
+async function renderChampions() {
+  const board = $("championBoard");
+  if (!board) return;
+  const now = new Date();
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  const f = FEATURED[doy % FEATURED.length];
+  try {
+    const snap = await getDoc(doc(db, "leaderboards", f.key));
+    const entries = (snap.exists() && Array.isArray(snap.data().entries)) ? snap.data().entries : [];
+    if (!entries.length) {
+      board.innerHTML = `<p class="muted">No champion has stepped forward for <b>${esc(f.label)}</b> yet - opt in in-game and be the first to claim it.</p>`;
+      return;
+    }
+    board.innerHTML = `<h4 class="ladder-subhead">${esc(f.label)}</h4>` +
+      entries.map((e, i) => championCard(e, i + 1)).join("");
+  } catch (e) {
+    board.innerHTML = `<p class="muted">Couldn't summon the champions (${esc(e.code || e.message)}).</p>`;
+  }
+}
+
 async function initLadders() {
   const aggs = await loadAggregates();
   const sel = $("classFilter");
@@ -406,5 +463,6 @@ if ($("fbSubmit")) $("fbSubmit").addEventListener("click", async () => {
 
 // Boot.
 renderDailyTrial();
+renderChampions();
 initLadders();
 fromShareLink();

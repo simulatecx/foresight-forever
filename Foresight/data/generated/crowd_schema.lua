@@ -7,8 +7,8 @@ if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 HM.gen = HM.gen or {}
 HM.gen.crowdSchema = {
     version = 1,
-    allow = { "v", "build", "class", "spec", "level", "lenses", "metrics", "talents", "items", "observed", "clientId" },
-    anonAllow = { "v", "build", "class", "spec", "level", "lenses", "metrics", "talents", "items", "observed", "clientId" },
-    forbidden = { "name", "realm", "account", "guild", "reports", "taintEvents", "lastTooltipOwner", "sessions", "notes", "at" },
-    caps = { build = 32, class = 16, clientId = 40, items = 500, observed = 150 },
+    allow = { "v", "build", "class", "spec", "level", "lenses", "metrics", "talents", "items", "observed", "clientId", "named", "name", "armory", "buffs" },
+    anonAllow = { "v", "build", "class", "spec", "level", "lenses", "metrics", "talents", "items", "observed", "clientId", "named", "buffs" },
+    forbidden = { "realm", "account", "guild", "reports", "taintEvents", "lastTooltipOwner", "sessions", "notes", "at" },
+    caps = { armory = 200, buffs = 40, build = 32, class = 16, clientId = 40, items = 500, name = 32, observed = 150 },
 }

@@ -124,6 +124,30 @@ local function renderKey(key, y, innerX, innerW)
             if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
         end)
         widgets[#widgets + 1] = sl
+    elseif spec.type == "text" then
+        -- Editable text (handle / armory). EditBox lives on OUR row frame (taint-safe,
+        -- same as the slider); commits on Enter or focus-loss through the validated store.
+        local eb = _G.CreateFrame("EditBox", nil, row, "InputBoxTemplate")
+        eb:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, -2)
+        eb:SetSize(160, 20)
+        eb:SetAutoFocus(false)
+        eb:SetMaxLetters(spec.max or 200)
+        eb:SetText(tostring(value or ""))
+        eb:SetCursorPosition(0)
+        local function commit()
+            local clean = HM.Settings.setValue(key, eb:GetText())
+            eb:SetText(tostring(clean or ""))
+            eb:SetCursorPosition(0)
+            eb:ClearFocus()
+            if HM.StatsPanel and HM.StatsPanel.refresh then pcall(HM.StatsPanel.refresh) end
+            if HM.MatrixPanel and HM.MatrixPanel.refresh then pcall(HM.MatrixPanel.refresh) end
+        end
+        eb:SetScript("OnEnterPressed", commit)
+        eb:SetScript("OnEditFocusLost", commit)
+        eb:SetScript("OnEscapePressed", function()
+            eb:SetText(tostring(HM.Settings.get(key) or "")); eb:SetCursorPosition(0); eb:ClearFocus()
+        end)
+        widgets[#widgets + 1] = eb
     end
     return y - ROW_STEP
 end

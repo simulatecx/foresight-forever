@@ -236,6 +236,18 @@ select {
 .ladder-card.filling { background: rgba(0,0,0,0.12); border-style: dashed; opacity: 0.85; }
 .ladder-card.filling .sub { color: var(--gold); }
 
+/* Champions (opt-in named show-off tier). */
+.ladder-card.champion h4 { display: flex; align-items: baseline; gap: 8px; font-size: 15px; }
+.ladder-card.champion .champion-rank { color: var(--gold-br); font-family: "Cinzel", serif; font-size: 13px; }
+.ladder-card.champion a { text-decoration: none; border-bottom: 1px dotted currentColor; }
+.ladder-card.champion a:hover { text-decoration: none; opacity: 0.85; }
+.ladder-card.champion .champion-buffs { display: block; margin-top: 4px; color: var(--ink-dim);
+  font-size: 12px; font-style: italic; }
+.named-notice { margin: -4px 0 10px; padding: 9px 12px; border: 1px solid var(--gold);
+  border-radius: 3px; background: rgba(200,162,76,0.10); color: var(--gold-br);
+  font-size: 13px; line-height: 1.45; }
+.named-notice code { color: var(--ink); }
+
 /* Footer and reveal animation. */
 .footer { position: relative; z-index: 1; text-align: center; color: var(--muted);
   font-size: 13px; padding: 30px 20px 50px; border-top: 1px solid var(--line-soft); margin-top: 20px; }

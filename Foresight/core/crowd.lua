@@ -142,6 +142,39 @@ function Crowd.buildPayload(inp)
         out.clientId = inp.clientId
     end
 
+    -- OPT-IN SHOW-OFF TIER (S34c): the player may CHOOSE to appear on the public named
+    -- leaderboards. This is the ONLY path identifying fields (a chosen handle + optional
+    -- armory URL) ever enter the payload, and ONLY when inp.named == true (the explicit
+    -- opt-in). A payload built without opt-in can never carry them - the exact mirror of
+    -- the Firestore rule (name/armory require named==true). The handle is a nickname, NOT
+    -- a real name; no realm/account/guild ever travels (still forbidden).
+    if inp.named == true then
+        out.named = true
+        if type(inp.name) == "string" then
+            local h = inp.name:gsub("^%s+", ""):gsub("%s+$", ""):sub(1, 32)
+            if #h > 0 then out.name = h end
+        end
+        if type(inp.armory) == "string" then
+            local a = inp.armory:gsub("%s", ""):sub(1, 200)
+            -- https only + the exact allow-listed charset the Firestore rule enforces, so an
+            -- armory the addon accepts is never rejected server-side (no injection chars).
+            if a:match("^https://[%w%._~:/%?#@!%$&%*%+,;=%%%(%)%-]+$") then out.armory = a end
+        end
+    end
+
+    -- BUFF PROVENANCE (anon game data): active buff spellId -> short name, capped at 40, so
+    -- a record can show "with: Flask of ..., Blessing of ..." ("buffed send" honesty). Names
+    -- are game strings (not user text); capped and the web escapes them on render.
+    local buffs, nb = {}, 0
+    for id, name in pairs(type(inp.buffs) == "table" and inp.buffs or {}) do
+        local sid = clampInt(id, 1)
+        if sid and nb < 40 and type(name) == "string" and #name > 0 then
+            buffs[sid] = name:sub(1, 40)
+            nb = nb + 1
+        end
+    end
+    if nb > 0 then out.buffs = buffs end
+
     return out
 end
 
@@ -253,8 +286,32 @@ local function clientId()
     return c.clientId
 end
 
--- Gather the live inputs and build the sanitized payload (in-game).
-function Crowd.payload()
+-- Active consumable-buff provenance for a contribute: spellId -> short readable name.
+-- Reuses the secret-safe Snapshot.captureActiveBuffs (degrades to none in aura-secret
+-- contexts); names come from the generated consumable/spell tables. Gathered ONLY for an
+-- actual Contribute (not the per-refresh peer readout) - the aura scan isn't free.
+local function activeBuffNames()
+    local out = {}
+    if not (HM.Snapshot and HM.Snapshot.captureActiveBuffs) then return out end
+    local ok, active = pcall(HM.Snapshot.captureActiveBuffs)
+    if not ok or type(active) ~= "table" then return out end
+    local cons = HM.gen and HM.gen.consumables
+    local spells = HM.gen and HM.gen.spells
+    for _, b in ipairs(active) do
+        local sid = b.spellId
+        local nm = (cons and b.itemId and cons[b.itemId] and cons[b.itemId].name)
+            or (spells and spells[sid] and spells[sid].name)
+        if sid and nm then out[sid] = nm end
+    end
+    return out
+end
+
+-- Gather the live inputs and build the sanitized payload (in-game). `opts.contribute`
+-- additionally gathers the opt-in show-off fields (handle/armory, only if the player
+-- turned the opt-in on) + active buff provenance - skipped for the per-refresh peer
+-- readout so the Matrix hot path stays cheap and taint-light.
+function Crowd.payload(opts)
+    opts = opts or {}
     local snapshot = HM.Snapshot and HM.Snapshot.capture()
     if not snapshot then return nil, "not in game" end
     local collect = (HM.db and HM.db.collect) or {}
@@ -316,6 +373,20 @@ function Crowd.payload()
     -- block). Forever uses classic talent trees, not retail specs - buckets are per-class
     -- ("any" spec) until a TAINT-SAFE spec signal exists (e.g. the dominant talent tree).
     local specId = nil
+    -- Opt-in show-off fields + buff provenance: only for an actual Contribute, and the
+    -- handle/armory only when the player turned the opt-in ON. buildPayload re-checks the
+    -- gate (named==true) so nothing identifying can slip through without the opt-in.
+    local named, handle, armory, buffs = nil, nil, nil, nil
+    if opts.contribute then
+        if HM.Settings and HM.Settings.get("named") == true then
+            named = true
+            local h = HM.Settings.get("handle")
+            local a = HM.Settings.get("armory")
+            if type(h) == "string" and #h > 0 then handle = h end
+            if type(a) == "string" and #a > 0 then armory = a end
+        end
+        buffs = activeBuffNames()
+    end
     -- SCAN -> DB (user 2026-10-14: "anything I scan should go into our DB"). The local
     -- item-sightings and observed-buff journals ride the contribute payload so the crowd
     -- DB receives them alongside the compare fields. They're CAPPED (most-seen items first)
@@ -336,6 +407,7 @@ function Crowd.payload()
         items = Crowd.topSightings(collect.itemSightings, 100),
         observed = Crowd.capMap(collect.observedImpacts, 40),
         clientId = clientId(),
+        named = named, name = handle, armory = armory, buffs = buffs,
     })
 end
 

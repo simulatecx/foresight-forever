@@ -12,7 +12,11 @@
     { "key": "talents",  "tier": "anon", "kind": "map",                               "required": true,  "doc": "nodeId->rank talent build shape (game data)" },
     { "key": "items",    "tier": "anon", "kind": "map",    "maxSize": 500,            "required": true,  "doc": "itemId->count sightings (server map-size cap)" },
     { "key": "observed", "tier": "anon", "kind": "map",    "maxSize": 150,            "required": true,  "doc": "spellId->observed buff stats (server map-size cap)" },
-    { "key": "clientId", "tier": "anon", "kind": "string", "maxSize": 40,             "required": false, "doc": "pseudonymous dedup token, not identity" }
+    { "key": "clientId", "tier": "anon", "kind": "string", "maxSize": 40,             "required": false, "doc": "pseudonymous dedup token, not identity" },
+    { "key": "named",    "tier": "anon", "kind": "bool",                               "required": false, "doc": "opt-in flag: show me on named leaderboards; GATES name/armory" },
+    { "key": "name",     "tier": "identifying", "kind": "string", "maxSize": 32,       "required": false, "doc": "chosen display HANDLE (not legal name); allowed only when named==true" },
+    { "key": "armory",   "tier": "identifying", "kind": "string", "maxSize": 200, "matches": "https://[A-Za-z0-9._~:/?#@!$&*+,;=%()-]+", "required": false, "doc": "optional armory URL (https only, charset-locked); allowed only when named==true" },
+    { "key": "buffs",    "tier": "anon", "kind": "map", "maxSize": 40,                 "required": false, "doc": "buff provenance spellId->name (game data, shown on records)" }
   ],
-  "forbidden": ["name", "realm", "account", "guild", "reports", "taintEvents", "lastTooltipOwner", "sessions", "notes", "at"]
+  "forbidden": ["realm", "account", "guild", "reports", "taintEvents", "lastTooltipOwner", "sessions", "notes", "at"]
 }

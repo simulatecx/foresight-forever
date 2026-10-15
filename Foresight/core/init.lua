@@ -933,7 +933,7 @@ local function onSlash(input)
         -- Crowd share (S13): a SANITIZED, allow-listed payload (no name/realm/account,
         -- no free-text notes, no timestamps) to paste into the companion web app. The
         -- addon NEVER networks (account-safety doctrine) - you copy it out yourself.
-        local payload = HM.Crowd and HM.Crowd.payload()
+        local payload = HM.Crowd and HM.Crowd.payload({ contribute = true })
         if not payload then
             printMsg("crowd share needs an in-game character snapshot")
         elseif HM.showExport then

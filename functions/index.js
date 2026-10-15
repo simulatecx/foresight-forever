@@ -15,6 +15,7 @@ const db = getFirestore();
 
 const MIN_BUCKET = 5; // suppress percentiles below this many distinct contributors
 const MAX_READ = 50000; // pilot-scale cap; revisit with indexed per-bucket queries later
+const LEADERBOARD_TOP_N = 25; // named champions shown per metric (S34c)
 const LENS_IDS = ["spellcasting", "meleeDps", "rangedDps", "healing",
                   "survivability", "sustain", "threat", "tankability"];
 
@@ -99,8 +100,41 @@ async function rebuild() {
     batch.set(db.collection("aggregates").doc(id), doc);
     if (++pending >= 450) await flush();
   }
+
+  // NAMED LEADERBOARDS (S34c show-off tier): top-N per metric drawn ONLY from opt-in
+  // `named` submissions. Anonymous rows still feed the quantiles above but never appear as
+  // a named row. These docs are public-readable (leaderboards/{metricKey}); they carry a
+  // CHOSEN handle (not a real name), class/level, the value, an optional armory link, and
+  // buff provenance - never a clientId, never PII. The metric key is a valid Firestore doc
+  // id (no "/" in any key: stat.armor, school.frost, "ability:Earth Shock").
+  const named = rows.filter((c) => c.named === true && typeof c.name === "string"
+    && c.name.length > 0 && c.class && typeof c.level === "number");
+  const boards = new Map(); // metricKey -> [{ value, class, level, name, armory, buffs }]
+  for (const c of named) {
+    if (!c.metrics) continue;
+    for (const [k, v] of Object.entries(c.metrics)) {
+      if (typeof v !== "number") continue;
+      if (!boards.has(k)) boards.set(k, []);
+      boards.get(k).push({
+        value: v, class: c.class, level: c.level, name: c.name,
+        armory: typeof c.armory === "string" ? c.armory : null,
+        buffs: (c.buffs && typeof c.buffs === "object") ? c.buffs : null,
+      });
+    }
+  }
+  const seenMetrics = new Set();
+  for (const [k, entries] of boards) {
+    entries.sort((a, b) => b.value - a.value);
+    batch.set(db.collection("leaderboards").doc(k), {
+      metric: k, updatedAt: FieldValue.serverTimestamp(),
+      entries: entries.slice(0, LEADERBOARD_TOP_N),
+    });
+    seenMetrics.add(k);
+    if (++pending >= 450) await flush();
+  }
+
   await flush();
-  return buckets.size;
+  return { buckets: buckets.size, boards: seenMetrics.size };
 }
 
 // Recompute when a contribution lands (pilot: full rebuild; bounded by MAX_READ).

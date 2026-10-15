@@ -29,7 +29,7 @@ service cloud.firestore {
     // never hand-edit between the markers (the ship gate fails on drift).
     // BEGIN generated validContribution
     function validContribution(d) {
-      return d.keys().hasOnly(['v', 'build', 'class', 'spec', 'level', 'lenses', 'metrics', 'talents', 'items', 'observed', 'clientId'])
+      return d.keys().hasOnly(['v', 'build', 'class', 'spec', 'level', 'lenses', 'metrics', 'talents', 'items', 'observed', 'clientId', 'named', 'name', 'armory', 'buffs'])
           && d.v == 1
           && (!('build' in d) || (d.build is string && d.build.size() <= 32))
           && d.class is string && d.class.size() <= 16 && d.class.matches('[A-Z]+')
@@ -40,7 +40,11 @@ service cloud.firestore {
           && d.talents is map
           && d.items is map && d.items.size() <= 500
           && d.observed is map && d.observed.size() <= 150
-          && (!('clientId' in d) || (d.clientId is string && d.clientId.size() <= 40));
+          && (!('clientId' in d) || (d.clientId is string && d.clientId.size() <= 40))
+          && (!('named' in d) || (d.named is bool))
+          && (!('name' in d) || (('named' in d) && d.named == true && d.name is string && d.name.size() <= 32))
+          && (!('armory' in d) || (('named' in d) && d.named == true && d.armory is string && d.armory.size() <= 200 && d.armory.matches('https://[A-Za-z0-9._~:/?#@!$&*+,;=%()-]+')))
+          && (!('buffs' in d) || (d.buffs is map && d.buffs.size() <= 40));
     }
     // END generated validContribution
 
@@ -72,6 +76,16 @@ service cloud.firestore {
     // count only, never percentiles) BEFORE writing these docs.
     match /aggregates/{bucket} {
       allow read: if true;        // public, pre-suppressed per-spec/level percentiles
+      allow write: if false;      // admin SDK bypasses rules; clients may never write
+    }
+
+    // ---- leaderboards: read-only; written ONLY by Cloud Functions (admin SDK) --
+    // Named "champions" per metric (S34c show-off tier). Built by the aggregator from ONLY
+    // opt-in named submissions; each entry carries a CHOSEN handle (not a real name),
+    // class/level, value, optional armory link + buff provenance - never a clientId, never
+    // PII. Public-readable so the web ladders can show them; clients may never write.
+    match /leaderboards/{metricKey} {
+      allow read: if true;
       allow write: if false;      // admin SDK bypasses rules; clients may never write
     }
 

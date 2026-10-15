@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=9" />
+  <link rel="stylesheet" href="./style.css?v=10" />
 </head>
 <body>
   <div class="vignette" aria-hidden="true"></div>
@@ -51,6 +51,7 @@
           <span>I agree to contribute this non-identifying game data to the Foresight
           ladders, used only in aggregate.</span>
         </label>
+        <p id="namedNotice" class="named-notice hidden" role="status"></p>
 
         <div class="actions">
           <button id="contribute" class="btn btn-gold" disabled>Contribute &amp; see your standings</button>
@@ -61,6 +62,17 @@
 
     <!-- RESULT -->
     <section class="panel result hidden reveal" id="result" aria-live="polite"></section>
+
+    <!-- CHAMPIONS (opt-in show-off tier) -->
+    <section class="panel reveal" id="champions">
+      <div class="panel-head"><h3>Today's Champions</h3></div>
+      <div class="panel-body">
+        <p class="lead">The players topping today's trial who chose to step into the light.
+        Opt in in-game with <code>/foresight set named on</code> and a handle to join them -
+        everyone else stays anonymous, always.</p>
+        <div id="championBoard" class="ladder-board"><p class="muted">Summoning the champions…</p></div>
+      </div>
+    </section>
 
     <!-- LADDERS -->
     <section class="panel reveal" id="ladders">
@@ -115,6 +127,6 @@
     <p><a href="./privacy.html">Privacy</a> · <a href="https://github.com/simulatecx/foresight-forever">Source</a> · WoW: Forever</p>
   </footer>
 
-  <script type="module" src="./app.js?v=14"></script>
+  <script type="module" src="./app.js?v=15"></script>
 </body>
 </html>

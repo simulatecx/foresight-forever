@@ -29,6 +29,7 @@
         <li>your talent build (node ids and ranks)</li>
         <li>item ids you've seen, with counts</li>
         <li>observed buff/consumable stat values</li>
+        <li>the names of buffs active on you at submission (record context - "buffed send")</li>
         <li>a random, non-identifying id so we can count distinct contributors and
             avoid double-counting re-uploads</li>
       </ul>
@@ -37,7 +38,23 @@
       <p>Character name, realm, account, guild, zone, IP-linked identity, timestamps,
       or any free text (your <code>/foresight report</code> notes stay on your machine).
       The payload is shaped both in the addon and again in this page's rules, so these
-      cannot be sent even by a modified client.</p>
+      cannot be sent even by a modified client. (The optional public-ladder handle described
+      below is a nickname <em>you</em> choose - not your character name, realm, or real name.)</p>
+
+      <h2>If you opt in to the public ladders (off by default)</h2>
+      <p>You can choose to appear by name on the public "champion" ladders. This is
+      <b>off unless you turn it on</b> in-game (<code>/foresight set named on</code>) and set a
+      handle. When on - and only then - your submission also carries:</p>
+      <ul>
+        <li>a <b>display handle you choose</b> (a nickname - not your character name, realm,
+            or real name)</li>
+        <li>an optional armory/character link, if you add one</li>
+      </ul>
+      <p>Those, alongside your class, level, the metric value, and your active-buff names, are
+      shown publicly on the ladders. Anonymous contributors are never named and never appear
+      as a champion row - their numbers still feed the aggregate averages. This is fully
+      revocable: turn it off with <code>/foresight set named off</code> and future submissions
+      are anonymous again (already-submitted public entries clear on the next aggregation).</p>
 
       <h2>Feedback you send (the "Send Word" form)</h2>
       <p>If you use the feedback form, the message you type is sent to the Foresight team -
@@ -59,7 +76,7 @@
       contribution, keep the random id shown in your share text and contact us.</p>
 
       <p class="fine">This notice updates in the same change as any data-practice
-      change. Last updated with Foresight v0.46.0.</p>
+      change. Last updated with Foresight v0.48.0 (opt-in public-ladder tier, S34c).</p>
       <p><a href="./index.html">&larr; back</a></p>
     </section>
   </main>

@@ -49,8 +49,11 @@ def load_schema() -> dict:
     for f in fields:
         if f["tier"] not in ("anon", "identifying"):
             raise ValueError(f"crowd-schema.json: field {f['key']} has unknown tier {f['tier']!r}")
-        if f["kind"] not in ("const", "string", "number", "map"):
+        if f["kind"] not in ("const", "string", "number", "map", "bool"):
             raise ValueError(f"crowd-schema.json: field {f['key']} has unknown kind {f['kind']!r}")
+    # Identifying-tier fields are gated behind a 'named' boolean; it must exist to gate them.
+    if any(f["tier"] == "identifying" for f in fields) and not any(f["key"] == "named" for f in fields):
+        raise ValueError("crowd-schema.json: identifying fields require a 'named' gate field")
     return schema
 
 
@@ -155,6 +158,8 @@ def _rule_clause(f: dict) -> str:
         if "maxSize" in f:
             c.append(f"d.{k}.size() <= {int(f['maxSize'])}")
         return " && ".join(c)
+    if kind == "bool":
+        return f"d.{k} is bool"
     raise ValueError(f"unknown kind {kind}")
 
 
@@ -165,13 +170,18 @@ def emit_rules_block(schema: dict) -> str:
     clauses = [f"d.keys().hasOnly(['{hasonly}'])"]
     for f in schema["fields"]:
         clause = _rule_clause(f)
-        # 'const' and 'required' fields are asserted unconditionally; optional fields are
-        # only checked when present. (All of today's fields are anon; the identifying tier
-        # will add a `named`-gated guard here when it lands - Story C.)
-        if f["kind"] == "const" or f.get("required"):
+        key = f["key"]
+        if f["tier"] == "identifying":
+            # Identifying fields (name/armory) may appear ONLY when the opt-in flag
+            # named==true. Guard the 'named' presence first so d.named can't error when
+            # absent. This is the anonymous promise, enforced server-side.
+            clauses.append(f"(!('{key}' in d) || (('named' in d) && d.named == true && {clause}))")
+        elif f["kind"] == "const" or f.get("required"):
+            # const + required fields are asserted unconditionally.
             clauses.append(clause)
         else:
-            clauses.append(f"(!('{f['key']}' in d) || ({clause}))")
+            # optional anon fields are only checked when present.
+            clauses.append(f"(!('{key}' in d) || ({clause}))")
     body = "\n          && ".join(clauses)
     return (
         "    function validContribution(d) {\n"

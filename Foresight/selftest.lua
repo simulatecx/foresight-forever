@@ -2626,6 +2626,10 @@ function HM.runSelftest(out)
             and p.items[12345] == 7 and p.items[0] == nil
             and p.observed[1249519] and p.observed[1249519].stats.attackPower == 80
             and p.clientId == "a1b2c3d4e5") then return false, "shape" end
+        -- the anonymous promise: the stuffed name + NO opt-in -> no identifying fields:
+        if p.named ~= nil or p.name ~= nil or p.armory ~= nil then
+            return false, "identifying leaked without opt-in"
+        end
         -- timestamps must be gone (items.last, observed.at):
         if p.observed[1249519].at ~= nil then return false, "observed.at leaked" end
         -- NONE of the forbidden/identifying keys may appear anywhere at the top level:
@@ -2634,6 +2638,37 @@ function HM.runSelftest(out)
         end
         -- a payload with no class/level is refused entirely (nothing useful, nothing sent)
         return HM.Crowd.buildPayload({ name = "x" }) == nil
+    end)())
+    -- S34c show-off tier: handle/armory ride ONLY with the explicit opt-in; buffs are anon.
+    check("crowd show-off tier: handle/armory ride ONLY with the opt-in", (function()
+        -- No opt-in -> identifying fields dropped even when present (the anonymous promise).
+        local anon = HM.Crowd.buildPayload({
+            classToken = "MAGE", level = 60, lenses = {}, talents = {},
+            name = "Spotlight", armory = "https://wow.example/c/x",
+        })
+        if not anon then return false, "anon payload" end
+        if anon.named ~= nil or anon.name ~= nil or anon.armory ~= nil then
+            return false, "identifying leaked without opt-in"
+        end
+        -- Opt-in -> named==true unlocks the trimmed handle + a valid https armory + buffs.
+        local named = HM.Crowd.buildPayload({
+            classToken = "MAGE", level = 60, lenses = {}, talents = {},
+            named = true, name = "  Spotlight  ", armory = "https://wow.example/c/x",
+            buffs = { [17628] = "Flask of Supreme Power", [1243] = "Power Word: Fortitude",
+                      [0] = "bad id", [999] = 12345 },
+        })
+        if not named then return false, "named payload" end
+        if not (named.named == true and named.name == "Spotlight"
+            and named.armory == "https://wow.example/c/x") then return false, "named shape" end
+        if named.buffs[17628] ~= "Flask of Supreme Power"
+            or named.buffs[1243] ~= "Power Word: Fortitude" then return false, "buff name" end
+        if named.buffs[0] ~= nil or named.buffs[999] ~= nil then return false, "buff shape" end
+        -- An injection / non-https armory never survives the shape check.
+        local evil = HM.Crowd.buildPayload({
+            classToken = "MAGE", level = 60, lenses = {}, talents = {},
+            named = true, name = "x", armory = "javascript:alert(1)",
+        })
+        return evil ~= nil and evil.armory == nil and evil.named == true
     end)())
     -- SCAN -> DB (S33): the item/observed journals ride the contribute payload, CAPPED.
     check("scan-to-DB: top-sightings cap keeps the most-seen items", (function()
