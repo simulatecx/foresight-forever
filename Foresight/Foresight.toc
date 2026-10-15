@@ -29,6 +29,7 @@ data\generated\weapon_imbues.lua
 data\generated\items.lua
 data\generated\sim_procs.lua
 data\generated\peer_baselines.lua
+data\generated\crowd_schema.lua
 data\overrides.lua
 model\snapshot.lua
 model\racials.lua

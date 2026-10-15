@@ -2648,6 +2648,39 @@ function HM.runSelftest(out)
             and HM.Crowd.urlEncode("{}") == "%7B%7D"
     end)())
 
+    -- Story A: the allow-list is single-sourced (data/crowd-schema.json -> crowd_schema.lua
+    -- + web sanitize + Firestore rules). These assert the ADDON side is wired to that one
+    -- source so the builder can't drift from the server gate; the Python gate separately
+    -- checks the web + rules mirrors regenerate identically from the same JSON.
+    check("crowd schema: payload keys are all declared in the single-source allow-list", (function()
+        local schema = HM.gen and HM.gen.crowdSchema
+        if type(schema) ~= "table" or type(schema.allow) ~= "table" then
+            return false, "crowd_schema.lua not loaded"
+        end
+        local allowed = {}
+        for _, k in ipairs(schema.allow) do allowed[k] = true end
+        local p = HM.Crowd.buildPayload({
+            build = "1.60.1", classToken = "MAGE", specId = 62, level = 60,
+            lenses = { spellcasting = 100 }, metrics = { ["stat.armor"] = 10 },
+            talents = { [1] = 1 }, items = { [5] = { c = 2 } },
+            observed = { [9] = { n = 1, stats = { armor = 3 } } }, clientId = "tok",
+        })
+        if not p then return false, "no payload" end
+        for k in pairs(p) do
+            if not allowed[k] then return false, "undeclared key " .. tostring(k) end
+        end
+        return true
+    end)())
+    check("crowd schema: forbidden list + version are the single source (no hand-copy)", (function()
+        local schema = HM.gen and HM.gen.crowdSchema
+        if type(schema) ~= "table" then return false, "crowd_schema.lua not loaded" end
+        if HM.Crowd.SCHEMA ~= schema.version then return false, "SCHEMA version drift" end
+        local a, b = HM.Crowd.FORBIDDEN_KEYS, schema.forbidden
+        if type(b) ~= "table" or #a ~= #b then return false, "forbidden length" end
+        for i = 1, #a do if a[i] ~= b[i] then return false, "forbidden[" .. i .. "]" end end
+        return true
+    end)())
+
     check("peer readout: percentile placement, global featured record, honest degrade", (function()
         local baselines = { buckets = {
             ["SHAMAN-262-35"] = {

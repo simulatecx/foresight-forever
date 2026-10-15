@@ -45,6 +45,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S31 Expanded Character Tab (top outputs, ledger, radar) | 3 | ◐ |
 | S32 Action-bar synergy trigger (hold ALT, trace the button) | 3 | ☑ |
 | S33 UI dynamics: motion spine, eco diagram, radar chart, gauges | 3 | ◐ |
+| S34 Crowd pipeline hardening: single-source allow-list, verified-rules bake, show-off tier, coverage, auto-verify | - | ◐ |
 
 ## Active / next
 
@@ -81,6 +82,37 @@ S2 (talent tooltips) and S5 (stats panel) are code-complete and gated; both flip
 once their in-game render is confirmed in the S3 session.
 
 ## Roadmap to endstate (ordered)
+
+### S34 - Crowd pipeline hardening wave ◐  (full spec: `docs/HANDOFF-next-build-wave.md`)
+Make "the owner plays -> everyone gets it in-game-ready" real, add an opt-in show-off tier,
+and harden the crowd contract against drift. Seven stories, build order A..G. Ships as the
+0.48.0 minor once in-game confirmed (CurseForge tag only then). House laws (never-networks,
+Lua 5.1, no-PII anon tier, k-of-n+review for overrides) bind every story.
+- **S34a Single-source the payload allow-list ☑** (prerequisite, built + gated 2026-10-14):
+  the three hand-synced copies (addon `buildPayload`, web `sanitize`, `firestore.rules`)
+  now derive from ONE schema `data/crowd-schema.json`; `pipeline/gen_crowd_schema.py`
+  regenerates `data/generated/crowd_schema.lua` + `web/crowd-schema.js` + the
+  `validContribution` block, and the ship gate fails on any drift. Kills the PII-drift risk
+  before Story C adds fields. No payload behaviour change (gate 287, +2). Also the
+  `CROWD-companion` prerequisite. *Fit & Overlap:* CORE/DATA, Enhance (refactor the existing
+  contract to one source, no parallel one).
+- **S34b Verified-rules table + owner push + bake-back ☐** (the core ask): a `verifiedRules`
+  Firestore collection (owner/admin-write only), `pipeline/push_verified.py` (owner scans by
+  playing -> confirmed rank-rules), and a bake into `data/generated/verified_rules.lua` so a
+  fresh character sees crowd-verified rules without scanning. *Enhance* the `peer_baselines`
+  bake pattern + the `formulas.lua` rank-rule resolution order.
+- **S34c Identifying show-off tier ☐** (web asks #2 + #3): opt-in named leaderboards (chosen
+  handle + optional armory link, OFF by default, `named`-gated) with buff provenance on
+  records. OWNER DECISION PENDING: handle+armory (planner default) vs real character
+  name/realm - same opt-in gate either way. Updates `privacy.html` in the same change.
+- **S34d `/foresight coverage` + inspect-scan readout ☐** - how much of the all-class talent
+  roster the owner has captured/verified, to target gaps. Chat output, no new frame.
+- **S34e Zero-click self-verify ☐** - auto-probe trained talents on talent-frame open
+  (debounced, out of combat, `autoVerify` default ON); "nobody wants to scan."
+- **S34f Backend aggregation of items + observed buffs ☐** - turn the raw `items`/`observed`
+  rows into item popularity + k-of-n crowd-verified buff values (`functions/index.js`).
+- **S34g Restore App Check on writes ☐** (when the Firebase App Check backend is fixed) -
+  re-add `&& appChecked()` to the contribute + feedback create rules.
 
 ### S7 - Talent Impact Map completion ◐
 Make the talent map whole now that C_Traits coverage exists.

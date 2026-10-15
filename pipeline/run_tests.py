@@ -76,6 +76,14 @@ def main() -> int:
         return 1
     print("observed compare green: confirmed/mismatch/learned verdicts + draft render")
 
+    # Crowd-schema parity gate: the allow-list lives in ONE place (data/crowd-schema.json);
+    # the addon builder, web sanitize, and Firestore rules are generated from it. Fail if
+    # any committed mirror drifted, so a new field can't land in one and leak past another.
+    import gen_crowd_schema
+
+    if not gen_crowd_schema.check():
+        return 1
+
     lua = lupa.LuaRuntime(unpack_returned_tuples=True)
     load_chunk = lua.eval(
         """

@@ -21,7 +21,13 @@ if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 local Crowd = {}
 HM.Crowd = Crowd
 
-Crowd.SCHEMA = 1
+-- The allow-list contract is single-sourced in data/crowd-schema.json and generated into
+-- HM.gen.crowdSchema (data/generated/crowd_schema.lua, loaded before this file) alongside
+-- the web sanitize + Firestore rules. Reading the version + forbidden list from there means
+-- the builder below can never drift from the server gate. The literal fallbacks keep the
+-- pure builder working if the generated table is somehow absent (e.g. a standalone load).
+local SCHEMA = HM.gen and HM.gen.crowdSchema
+Crowd.SCHEMA = (SCHEMA and SCHEMA.version) or 1
 
 -- The lens ids that may be shared (the computed dimension indices - pure numbers, no
 -- identity). Derived from the shipped dimension roster so it can't drift.
@@ -141,7 +147,8 @@ end
 
 -- The explicit DENY list, kept as an assertion the selftest checks: these keys must
 -- NEVER appear in a payload. (Belt-and-suspenders on top of the allow-list build.)
-Crowd.FORBIDDEN_KEYS = {
+-- Single-sourced from the generated schema; the literal is a headless-safe fallback.
+Crowd.FORBIDDEN_KEYS = (SCHEMA and SCHEMA.forbidden) or {
     "name", "realm", "account", "guild", "reports", "taintEvents",
     "lastTooltipOwner", "sessions", "notes", "at",
 }

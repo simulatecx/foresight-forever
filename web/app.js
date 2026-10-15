@@ -10,6 +10,9 @@ import { getAuth, signInAnonymously }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, doc, getDoc, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// The allow-list contract, single-sourced (data/crowd-schema.json) and shared with the
+// addon builder + the Firestore rules. Generated - see pipeline/gen_crowd_schema.py.
+import { CROWD_SCHEMA } from "./crowd-schema.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtlBj2Khodgq8d4aE2RKWwayPWrAeWwL8",
@@ -48,16 +51,16 @@ async function ensureAppCheck() {
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Keep this allow-list in sync with Foresight/core/crowd.lua.
-const ALLOW = ["v", "build", "class", "spec", "level", "lenses", "metrics", "talents",
-               "items", "observed", "clientId"];
+// Allow-list + banned keys are the generated schema's - the SAME source the addon builder
+// and the Firestore rules derive from, so the three can never drift apart.
+const ALLOW = CROWD_SCHEMA.allow;
+const BANNED = CROWD_SCHEMA.forbidden;
 function sanitize(raw) {
   if (typeof raw !== "object" || raw === null) return null;
-  if (raw.v !== 1) return null;
+  if (raw.v !== CROWD_SCHEMA.version) return null;
   if (typeof raw.class !== "string" || !/^[A-Z]+$/.test(raw.class)) return null;
   if (!Number.isInteger(raw.level) || raw.level < 1 || raw.level > 200) return null;
-  const banned = ["name", "realm", "account", "guild", "reports", "notes"];
-  for (const b of banned) if (b in raw) return null;
+  for (const b of BANNED) if (b in raw) return null;
   const out = {};
   for (const k of ALLOW) if (k in raw) out[k] = raw[k];
   return out;

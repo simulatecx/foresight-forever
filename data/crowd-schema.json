@@ -1,0 +1,18 @@
+{
+  "$doc": "SINGLE SOURCE for the Foresight crowd-share allow-list (S13 / CROWD-share). Edit THIS file, then run `python pipeline/gen_crowd_schema.py` to regenerate the three mirrors: Foresight/data/generated/crowd_schema.lua (addon), web/crowd-schema.js (web sanitize), and the validContribution block in web/firestore.rules (server gate). The ship gate (pipeline/run_tests.py) fails if any committed mirror has drifted from this file, so a new field can never silently land in one consumer and leak past another. DATA-MINIMIZATION LAW: this is an ALLOW-LIST - only the fields named here may leave a player's machine. 'tier' is 'anon' (non-identifying game data, the only tier today) or 'identifying' (opt-in, off by default - gated behind a 'named' flag; reserved for the show-off tier). See docs/S13-CROWD-BACKEND.md and Foresight/core/crowd.lua.",
+  "schemaVersion": 1,
+  "fields": [
+    { "key": "v",        "tier": "anon", "kind": "const",  "value": 1,               "required": true,  "doc": "payload schema version" },
+    { "key": "build",    "tier": "anon", "kind": "string", "maxSize": 32,             "required": false, "doc": "client build id (game data, not identity)" },
+    { "key": "class",    "tier": "anon", "kind": "string", "maxSize": 16, "matches": "[A-Z]+", "required": true, "doc": "class token (e.g. SHAMAN), not identity" },
+    { "key": "spec",     "tier": "anon", "kind": "number",                            "required": false, "doc": "numeric spec id only, never a name" },
+    { "key": "level",    "tier": "anon", "kind": "number", "min": 1, "max": 200,      "required": true,  "doc": "character level" },
+    { "key": "lenses",   "tier": "anon", "kind": "map",                               "required": true,  "doc": "computed dimension indices (numbers only)" },
+    { "key": "metrics",  "tier": "anon", "kind": "map",                               "required": false, "doc": "challenge key->number map (gamified layer)" },
+    { "key": "talents",  "tier": "anon", "kind": "map",                               "required": true,  "doc": "nodeId->rank talent build shape (game data)" },
+    { "key": "items",    "tier": "anon", "kind": "map",    "maxSize": 500,            "required": true,  "doc": "itemId->count sightings (server map-size cap)" },
+    { "key": "observed", "tier": "anon", "kind": "map",    "maxSize": 150,            "required": true,  "doc": "spellId->observed buff stats (server map-size cap)" },
+    { "key": "clientId", "tier": "anon", "kind": "string", "maxSize": 40,             "required": false, "doc": "pseudonymous dedup token, not identity" }
+  ],
+  "forbidden": ["name", "realm", "account", "guild", "reports", "taintEvents", "lastTooltipOwner", "sessions", "notes", "at"]
+}

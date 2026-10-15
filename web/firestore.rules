@@ -19,27 +19,30 @@ service cloud.firestore {
     // both create rules once the Firebase App Check / reCAPTCHA Enterprise backend is fixed.
     function appChecked(){ return request.app != null; }
 
-    // The exact, allow-listed payload shape (mirrors Foresight/core/crowd.lua).
-    // hasOnly() rejects ANY key not in this set - so name/realm/notes/timestamps
-    // can never be written even if a modified client tried.
+    // The exact, allow-listed payload shape. GENERATED from data/crowd-schema.json by
+    // pipeline/gen_crowd_schema.py - the addon payload builder, the web sanitize, and
+    // this server gate all derive from that ONE source, so a new field can never drift
+    // into one consumer and leak past another. hasOnly() rejects ANY key not in the set,
+    // so name/realm/notes/timestamps can never be written even by a modified client.
+    // 'is number' (not 'is int'): the web SDK can encode integers as doubles, so the
+    // range clamp is what matters, not the numeric subtype. Edit the JSON + regenerate;
+    // never hand-edit between the markers (the ship gate fails on drift).
+    // BEGIN generated validContribution
     function validContribution(d) {
-      return d.keys().hasOnly(['v','build','class','spec','level',
-                               'lenses','metrics','talents','items','observed','clientId'])
+      return d.keys().hasOnly(['v', 'build', 'class', 'spec', 'level', 'lenses', 'metrics', 'talents', 'items', 'observed', 'clientId'])
           && d.v == 1
-          && d.class is string && d.class.size() <= 16 && d.class.matches('[A-Z]+')
-          // is number (not is int): the web SDK can encode integers as doubles -
-          // the range clamp is what matters, not the numeric subtype.
-          && d.level is number && d.level >= 1 && d.level <= 200
           && (!('build' in d) || (d.build is string && d.build.size() <= 32))
-          && (!('spec' in d)  || (d.spec is number))
-          && (!('clientId' in d) || (d.clientId is string && d.clientId.size() <= 40))
-          && (!('metrics' in d) || d.metrics is map)
-          && d.lenses is map && d.talents is map
-          // items/observed are the scan-to-DB journals (addon self-caps at 100/40); the
-          // server caps the map sizes too so a modified client can't balloon the doc.
-          && d.items is map    && d.items.size() <= 500
-          && d.observed is map && d.observed.size() <= 150;
+          && d.class is string && d.class.size() <= 16 && d.class.matches('[A-Z]+')
+          && (!('spec' in d) || (d.spec is number))
+          && d.level is number && d.level >= 1 && d.level <= 200
+          && d.lenses is map
+          && (!('metrics' in d) || (d.metrics is map))
+          && d.talents is map
+          && d.items is map && d.items.size() <= 500
+          && d.observed is map && d.observed.size() <= 150
+          && (!('clientId' in d) || (d.clientId is string && d.clientId.size() <= 40));
     }
+    // END generated validContribution
 
     // The feedback shape: a kind, the message, an OPTIONAL contact + context. Free text,
     // so it is capped and write-only - never client-readable, never shown publicly.
