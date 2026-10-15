@@ -96,11 +96,19 @@ Lua 5.1, no-PII anon tier, k-of-n+review for overrides) bind every story.
   before Story C adds fields. No payload behaviour change (gate 287, +2). Also the
   `CROWD-companion` prerequisite. *Fit & Overlap:* CORE/DATA, Enhance (refactor the existing
   contract to one source, no parallel one).
-- **S34b Verified-rules table + owner push + bake-back ☐** (the core ask): a `verifiedRules`
-  Firestore collection (owner/admin-write only), `pipeline/push_verified.py` (owner scans by
-  playing -> confirmed rank-rules), and a bake into `data/generated/verified_rules.lua` so a
-  fresh character sees crowd-verified rules without scanning. *Enhance* the `peer_baselines`
-  bake pattern + the `formulas.lua` rank-rule resolution order.
+- **S34b Verified-rules table + owner push + bake-back ◐** (the core ask - addon + tools
+  built & gated 2026-10-14): `verifiedRules` Firestore collection (read:true / write:false,
+  owner gcloud-authed only - rule added to `web/firestore.rules`); `pipeline/push_verified.py`
+  votes the owner's local captures with the harvest analyzer and writes TRAINED-BACKED rules
+  (dry-run default, `--write` + read-back to commit); `pipeline/fetch_verified.py` bakes the
+  collection into `data/generated/verified_rules.lua` (ships empty-safe); `formulas.F.crowdRule`
+  consumes it as the "crowd" tier BENEATH hand-curated `overrides.rankRules`, above presumed,
+  below the player's own scan + datamined values (resolution-order + empty-safe selftests,
+  gate 289). Dry-run already decided 26 rules from the owner's real scans. PENDING (owner,
+  outward-facing): deploy the `verifiedRules` rule (`firebase deploy --only firestore:rules`),
+  run `push_verified.py --write`, `fetch_verified.py` bake, then in-game confirm a fresh
+  character shows green "crowd-verified" not "(p)" -> flip ☑. *Fit & Overlap:* CROWD->DATA,
+  Enhance the `peer_baselines` bake pattern + the rank-rule resolution order (no parallel one).
 - **S34c Identifying show-off tier ☐** (web asks #2 + #3): opt-in named leaderboards (chosen
   handle + optional armory link, OFF by default, `named`-gated) with buff provenance on
   records. OWNER DECISION PENDING: handle+armory (planner default) vs real character

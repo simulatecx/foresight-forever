@@ -1960,6 +1960,38 @@ function HM.runSelftest(out)
         return approx(fromValues, 13) and approx(stillValues, 13)
             and approx(fromOverride, 200) and approx(fromDefault, 40)
     end)())
+    -- S34b: the owner/crowd-verified bake (HM.gen.verifiedRules) is the "crowd" tier BENEATH
+    -- the hand-curated overrides.rankRules and ABOVE presumed; the player's own scan and
+    -- datamined values still outrank it (self-scan > overrides, proven by the self-verify
+    -- tests above, transitively puts scan over the bake too).
+    check("verified-rules bake: crowd tier beneath overrides, above presumed (S34b)", (function()
+        HM.gen.verifiedRules = HM.gen.verifiedRules or {}
+        local tid = 26
+        HM.overrides.rankRules[tid] = nil
+        HM.gen.verifiedRules[tid] = nil
+        local presumed = HM.formulas.talentRankValueFor(tid, 100, 2, 5)       -- 100*2/5 = 40
+        HM.gen.verifiedRules[tid] = "perRank"                                 -- bake settles it
+        local fromVerified = HM.formulas.talentRankValueFor(tid, 100, 2, 5)   -- 100*2 = 200
+        local verifiedSrc = HM.formulas.rankRuleSource(tid, {})
+        local verifiedMark = HM.formulas.rankRuleMark(tid, {})
+        HM.overrides.rankRules[tid] = "maxTotal"                             -- override wins tie
+        local overrideWins = HM.formulas.talentRankValueFor(tid, 100, 2, 5)  -- 100*2/5 = 40
+        HM.overrides.rankRules[tid] = nil
+        HM.gen.verifiedRules[tid] = nil
+        return approx(presumed, 40) and approx(fromVerified, 200)
+            and verifiedSrc == "crowd" and verifiedMark == ""
+            and approx(overrideWins, 40)
+    end)())
+    check("verified-rules bake: empty/absent table keeps today's behaviour (S34b)", (function()
+        local saved = HM.gen.verifiedRules
+        HM.gen.verifiedRules = {}
+        local empty = HM.formulas.talentRankValueFor(26, 100, 2, 5)   -- presumed 40
+        local srcEmpty = HM.formulas.rankRuleSource(26, {})
+        HM.gen.verifiedRules = nil
+        local absent = HM.formulas.talentRankValueFor(26, 100, 2, 5)  -- presumed 40
+        HM.gen.verifiedRules = saved
+        return approx(empty, 40) and approx(absent, 40) and srcEmpty == "presumed"
+    end)())
     check("datamined values drop the (p); missing values keep it", (function()
         local marked = HM.formulas.rankRuleMark(nil, { { maxValue = 100, values = { 1, 2 } } })
         local unmarked = HM.formulas.rankRuleMark(nil, { { maxValue = 100 } })

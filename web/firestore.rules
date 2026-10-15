@@ -75,6 +75,18 @@ service cloud.firestore {
       allow write: if false;      // admin SDK bypasses rules; clients may never write
     }
 
+    // ---- verifiedRules: read-only; written ONLY by the owner's gcloud-authed tool --
+    // Owner/crowd-verified per-talent rank rules (doc id = talentId), baked into the addon
+    // by pipeline/fetch_verified.py so fresh characters get them without scanning. A client
+    // may NEVER write here: pipeline/push_verified.py authenticates as the project owner via
+    // a gcloud OAuth token (server-to-server bypasses these rules, like the Cloud Functions
+    // admin SDK). Crowd votes still reach rank rules only through the reviewed overrides
+    // path, never straight to this table. Non-identifying game data (no PII).
+    match /verifiedRules/{talentId} {
+      allow read: if true;        // public, non-identifying rank-rule strings
+      allow write: if false;      // owner gcloud/admin only; clients may never write
+    }
+
     // ---- everything else: denied -------------------------------------------
     match /{document=**} {
       allow read, write: if false;

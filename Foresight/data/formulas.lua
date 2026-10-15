@@ -285,6 +285,21 @@ function F.selfVerifiedRule(talentId)
     return F.selfVerifiedRules()[talentId]
 end
 
+-- The CROWD tier of rank rules, in precedence order: hand-curated overrides.rankRules
+-- (k-of-n + human-reviewed PR) outrank the owner/crowd-pushed verified bake
+-- (HM.gen.verifiedRules, from the verifiedRules Firestore collection via
+-- pipeline/fetch_verified.py). Both display as "crowd"; the player's own selfVerifiedRule
+-- still outranks both (local ground truth) and datamined op.values outrank everything.
+-- Returns a rule string ("perRank" | "maxTotal") or nil. Empty/absent bake = no-op.
+function F.crowdRule(talentId)
+    if talentId == nil then return nil end
+    local overrides = HM.overrides and HM.overrides.rankRules
+    if overrides and overrides[talentId] ~= nil then return overrides[talentId] end
+    local baked = HM.gen and HM.gen.verifiedRules
+    if baked and baked[talentId] ~= nil then return baked[talentId] end
+    return nil
+end
+
 -- PER-TALENT rank value - THE one resolution path (S11 + S21 + S33), in order:
 --   (1) op.values[rank] - datamined per-rank spell decode (S21), the truth, no rule;
 --   (2) selfVerifiedRule(talentId) - the PLAYER'S OWN scanned rule (S33); local ground
@@ -302,9 +317,7 @@ function F.talentRankValueFor(talentId, maxValue, rank, maxRank, values)
         local v = values[rank or 0]
         if type(v) == "number" then return v end
     end
-    local rules = HM.overrides and HM.overrides.rankRules
-    local rule = F.selfVerifiedRule(talentId)
-        or (talentId and rules and rules[talentId])
+    local rule = F.selfVerifiedRule(talentId) or F.crowdRule(talentId)
     if rule == "perRank" then
         return (maxValue or 0) * (rank or 0)
     end
@@ -324,8 +337,7 @@ function F.rankRuleMark(talentId, ops)
         if all then return "" end
     end
     if talentId and F.selfVerifiedRule(talentId) then return "" end
-    local rules = HM.overrides and HM.overrides.rankRules
-    if talentId and rules and rules[talentId] then return "" end
+    if talentId and F.crowdRule(talentId) then return "" end
     return F.presumedMark(F.talentRankValue)
 end
 
@@ -340,8 +352,7 @@ function F.rankRuleSource(talentId, ops)
         if all then return "datamined" end
     end
     if talentId and F.selfVerifiedRule(talentId) then return "scan" end
-    local rules = HM.overrides and HM.overrides.rankRules
-    if talentId and rules and rules[talentId] then return "crowd" end
+    if talentId and F.crowdRule(talentId) then return "crowd" end
     return "presumed"
 end
 
