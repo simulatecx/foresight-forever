@@ -196,6 +196,34 @@ function Crowd.shareUrl(payload)
     return Crowd.SITE_URL .. "/#d=" .. Crowd.urlEncode(Crowd.toJSON(payload))
 end
 
+-- Pick the N most-seen item sightings (highest count first) for the capped contribute.
+-- Returns { [itemId] = count }; buildPayload re-clamps and strips the timestamp. Pure
+-- utility - defined above the headless guard so the builder/tests can reach it.
+function Crowd.topSightings(map, n)
+    if type(map) ~= "table" then return nil end
+    local arr = {}
+    for id, e in pairs(map) do
+        local c = (type(e) == "table" and tonumber(e.c)) or tonumber(e) or 1
+        arr[#arr + 1] = { id = id, c = c }
+    end
+    table.sort(arr, function(a, b) return a.c > b.c end)
+    local out = {}
+    for i = 1, math.min(#arr, n or 100) do out[arr[i].id] = arr[i].c end
+    return out
+end
+
+-- Take up to N entries of a map, order-agnostic (observed journal is already bounded).
+function Crowd.capMap(map, n)
+    if type(map) ~= "table" then return nil end
+    local out, i = {}, 0
+    for k, v in pairs(map) do
+        i = i + 1
+        if i > (n or 40) then break end
+        out[k] = v
+    end
+    return out
+end
+
 if not _G.CreateFrame then return Crowd end -- headless: pure builder only
 
 -- A stable, non-identifying pseudonym stored in SavedVariables (not derived from any
@@ -222,6 +250,7 @@ end
 function Crowd.payload()
     local snapshot = HM.Snapshot and HM.Snapshot.capture()
     if not snapshot then return nil, "not in game" end
+    local collect = (HM.db and HM.db.collect) or {}
     local loadout = HM.Loadout and HM.Loadout.fromSnapshot(snapshot)
     local lenses = {}
     if loadout and HM.Impact and HM.Impact.evaluate then
@@ -280,11 +309,15 @@ function Crowd.payload()
     -- block). Forever uses classic talent trees, not retail specs - buckets are per-class
     -- ("any" spec) until a TAINT-SAFE spec signal exists (e.g. the dominant talent tree).
     local specId = nil
-    -- The share link is COMPARE-focused and kept COMPACT (user 2026-10-14: the URL was
-    -- huge): class/level, the computed lenses, the challenge metrics, and the talent
-    -- build. The bulk item-sightings + observed-buff journals are NOT packed into the link
-    -- - they stay journaled locally, and a dedicated path can contribute the item DB later
-    -- without a giant URL. buildPayload leaves items/observed as empty maps (rules accept).
+    -- SCAN -> DB (user 2026-10-14: "anything I scan should go into our DB"). The local
+    -- item-sightings and observed-buff journals ride the contribute payload so the crowd
+    -- DB receives them alongside the compare fields. They're CAPPED (most-seen items first)
+    -- to keep the share link usable - the earlier "huge URL" was an uncapped dump; the
+    -- exhaustive, uncapped export stays the job of the future read-only companion app
+    -- (reads SavedVariables directly, no URL limit). The browser COMPARE ignores these two
+    -- fields entirely; only the backend DB consumes them. buildPayload sanitizes both
+    -- (drops timestamps, clamps ids/counts, filters stat keys); the Firestore rules
+    -- shape-lock already allow 'items'/'observed' as size-capped maps.
     return Crowd.buildPayload({
         build = HM.gen and HM.gen.build,
         classToken = snapshot.classToken,
@@ -293,6 +326,8 @@ function Crowd.payload()
         lenses = lenses,
         metrics = metrics,
         talents = talents,
+        items = Crowd.topSightings(collect.itemSightings, 100),
+        observed = Crowd.capMap(collect.observedImpacts, 40),
         clientId = clientId(),
     })
 end

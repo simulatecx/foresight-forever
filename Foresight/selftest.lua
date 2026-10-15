@@ -1842,6 +1842,63 @@ function HM.runSelftest(out)
             and (lines[1].right or ""):find("crowd%-verified") ~= nil
     end)())
 
+    -- LIVE SELF-VERIFY (S33): the player's OWN captured tooltip settles the rank rule,
+    -- outranks the shipped crowd rule, and flips the (p) mark to "from your scan". Uses a
+    -- throwaway gen talent + capture so the vote is deterministic (cleaned up after).
+    check("a trained scan verifies the rank rule and corrects the value", (function()
+        local TID = 990001
+        gen.talents[TID] = { name = "ZZ Selftest Talent", maxRank = 5 }
+        gen.talentImpacts[TID] = { ops = { { property = "crit", maxValue = 100 } } }
+        HM.db.collect = HM.db.collect or {}
+        HM.db.collect.talentTooltips = HM.db.collect.talentTooltips or {}
+        -- rank 2, perRank truth: tooltip shows 100*2 = 200 (NOT maxTotal's 100*2/5 = 40).
+        -- Colour codes + the Rank line are deliberately present to prove they're ignored.
+        HM.db.collect.talentTooltips[TID] = {
+            rank = 2, maxRank = 5, name = "ZZ Selftest Talent",
+            text = "ZZ Selftest Talent\nRank |cffffffff2|r/5\nIncreases crit by 200.",
+        }
+        local rule = HM.formulas.selfVerifiedRule(TID)
+        local val = HM.formulas.talentRankValueFor(TID, 100, 2, 5)
+        local src = HM.formulas.rankRuleSource(TID, gen.talentImpacts[TID].ops)
+        local mark = HM.formulas.rankRuleMark(TID, gen.talentImpacts[TID].ops)
+        HM.db.collect.talentTooltips[TID] = nil
+        gen.talents[TID] = nil
+        gen.talentImpacts[TID] = nil
+        return rule == "perRank" and approx(val, 200) and src == "scan" and mark == ""
+    end)())
+    check("the player's own scan outranks the shipped crowd rule", (function()
+        local TID = 990003
+        gen.talents[TID] = { name = "ZZ Conflict Talent", maxRank = 5 }
+        gen.talentImpacts[TID] = { ops = { { property = "crit", maxValue = 100 } } }
+        HM.overrides.rankRules[TID] = "maxTotal" -- crowd says maxTotal...
+        HM.db.collect.talentTooltips = HM.db.collect.talentTooltips or {}
+        HM.db.collect.talentTooltips[TID] = { -- ...but the player's scan proves perRank
+            rank = 2, maxRank = 5, name = "ZZ Conflict Talent",
+            text = "ZZ Conflict Talent\nRank 2/5\nIncreases crit by 200.",
+        }
+        local val = HM.formulas.talentRankValueFor(TID, 100, 2, 5)
+        HM.db.collect.talentTooltips[TID] = nil
+        HM.overrides.rankRules[TID] = nil
+        gen.talents[TID] = nil
+        gen.talentImpacts[TID] = nil
+        return approx(val, 200) -- perRank from the scan, not maxTotal's 40
+    end)())
+    check("an ambiguous scan fabricates no rule (honest degrade)", (function()
+        local TID = 990002
+        gen.talents[TID] = { name = "ZZ Ambiguous Talent", maxRank = 1 } -- maxRank 1: A==B
+        gen.talentImpacts[TID] = { ops = { { property = "crit", maxValue = 100 } } }
+        HM.db.collect.talentTooltips = HM.db.collect.talentTooltips or {}
+        HM.db.collect.talentTooltips[TID] = {
+            rank = 1, maxRank = 1, name = "ZZ Ambiguous Talent",
+            text = "ZZ Ambiguous Talent\nRank 1/1\nIncreases crit by 100.",
+        }
+        local rule = HM.formulas.selfVerifiedRule(TID)
+        HM.db.collect.talentTooltips[TID] = nil
+        gen.talents[TID] = nil
+        gen.talentImpacts[TID] = nil
+        return rule == nil
+    end)())
+
     -- Rank-rule truth (S21): datamined per-rank values outrank the rule system.
     -- Find a generated talent whose ops carry values arrays (31 decoded this build).
     local valTalentId, valOp
@@ -2529,6 +2586,24 @@ function HM.runSelftest(out)
         end
         -- a payload with no class/level is refused entirely (nothing useful, nothing sent)
         return HM.Crowd.buildPayload({ name = "x" }) == nil
+    end)())
+    -- SCAN -> DB (S33): the item/observed journals ride the contribute payload, CAPPED.
+    check("scan-to-DB: top-sightings cap keeps the most-seen items", (function()
+        local map = {}
+        for i = 1, 150 do map[1000 + i] = { c = i, last = "2026-10-14" } end -- counts 1..150
+        local top = HM.Crowd.topSightings(map, 100)
+        local n = 0
+        for _ in pairs(top) do n = n + 1 end
+        -- exactly 100 kept, and the lowest counts (ids 1001..1050, c=1..50) are dropped
+        return n == 100 and top[1150] == 150 and top[1051] == 51 and top[1050] == nil
+    end)())
+    check("scan-to-DB: capMap bounds the observed journal", (function()
+        local map = {}
+        for i = 1, 90 do map[2000 + i] = { n = 1, stats = { attackPower = i } } end
+        local capped = HM.Crowd.capMap(map, 40)
+        local n = 0
+        for _ in pairs(capped) do n = n + 1 end
+        return n == 40 and HM.Crowd.topSightings(nil) == nil and HM.Crowd.capMap(nil) == nil
     end)())
     check("crowd metrics: challenge numbers allow-listed, non-numbers dropped", (function()
         local p = HM.Crowd.buildPayload({

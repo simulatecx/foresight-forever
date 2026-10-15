@@ -35,7 +35,10 @@ service cloud.firestore {
           && (!('clientId' in d) || (d.clientId is string && d.clientId.size() <= 40))
           && (!('metrics' in d) || d.metrics is map)
           && d.lenses is map && d.talents is map
-          && d.items is map   && d.observed is map;
+          // items/observed are the scan-to-DB journals (addon self-caps at 100/40); the
+          // server caps the map sizes too so a modified client can't balloon the doc.
+          && d.items is map    && d.items.size() <= 500
+          && d.observed is map && d.observed.size() <= 150;
     }
 
     // The feedback shape: a kind, the message, an OPTIONAL contact + context. Free text,

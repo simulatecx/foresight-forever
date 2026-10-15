@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.47.0 - 2026-10-14
+
+YOUR OWN SCANS NOW COUNT (S33). Two features that make the addon trust what you've seen
+in-game over what it shipped guessing.
+
+LIVE SELF-VERIFY. When you hover a talent you've trained, Foresight now scores your own
+captured tooltip against how the value should scale - the exact check the offline data
+pipeline runs, now done live in the client (colour codes and the "Rank N/M" line are
+stripped so they can't skew it). A decisive capture settles that talent's rank rule for
+your character, overriding even the shipped crowd rule (your client's truth wins), and the
+honesty line turns green: "verified from your scan" instead of "(p) rank rule presumed".
+Ambiguous captures change nothing - a scan can only confirm or correct, never make the
+number worse.
+
+SCAN -> DB. The items you've seen and the buffs you've observed now travel with your
+Contribute upload (capped to the most-seen, so your share link stays usable) and reach the
+crowd database - so the ladders can grow on everything you scan, not just your lenses and
+talent build. The browser compare ignores these; only the backend reads them. The fully
+exhaustive export remains the job of the future read-only companion app.
+
+Gate 284.
+
+*Features:* DATA-formula-registry, CROWD-share
+
 ## 0.46.14 - 2026-10-14
 
 ONE MASTER BUTTON (user restructure of the 0.46.13 buttons). The character-sheet Foresight

@@ -123,18 +123,17 @@ function Tooltips.talentLines(talentId, currentRank, loadout)
     local maxRank = summary.maxRank or 1
     local lines = {}
 
-    -- Per-talent honesty: datamined per-rank values (S21) or a crowd-verified rank
-    -- rule (overrides.rankRules) drop the presumed mark for THIS talent, in green.
-    local datamined = true
-    for _, op in ipairs(summary.ops) do
-        if not op.values then datamined = false end
-    end
-    datamined = datamined and #summary.ops > 0
-    local verified = F.rankRuleMark and F.rankRuleMark(talentId, summary.ops) == ""
+    -- Per-talent honesty: datamined per-rank values (S21), the PLAYER'S OWN scan (S33),
+    -- or a crowd-verified rank rule (overrides.rankRules) each drop the presumed mark for
+    -- THIS talent, in green. The player's own scan is called out by name.
+    local source = (F.rankRuleSource and F.rankRuleSource(talentId, summary.ops)) or "presumed"
+    local verified = source ~= "presumed"
+    local label = (source == "datamined" and "rank values datamined")
+        or (source == "scan" and "verified from your scan")
+        or (source == "crowd" and "rank rule crowd-verified")
+        or "(p) rank rule presumed"
     lines[#lines + 1] = {
-        kind = "double", left = "Foresight",
-        right = (verified and datamined and "rank values datamined")
-            or (verified and "rank rule crowd-verified") or "(p) rank rule presumed",
+        kind = "double", left = "Foresight", right = label,
         r = BRAND.r, g = BRAND.g, b = BRAND.b,
         r2 = verified and 0.29 or GREY.r, g2 = verified and 0.87 or GREY.g,
         b2 = verified and 0.50 or GREY.b,
@@ -207,15 +206,21 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
     local F = HM.formulas
     local maxRank = node.maxRank or 1
     local lines = {}
-    -- Honesty header via the ONE mark: datamined per-rank values (S21) or a verified
-    -- rank rule (bridged through the classic talent id) drop the (p).
+    -- Honesty header via the ONE source resolver: datamined per-rank values (S21), the
+    -- player's own scan (S33), or a verified rank rule (bridged through the classic talent
+    -- id) settle the scaling. datamined/crowd stay silent (as before); the player's own
+    -- scan gets an affirmative green line; presumed keeps the grey (p).
     local bridgedTalent = HM.TalentAPI and HM.TalentAPI.talentForSpell and node.spellID
         and tonumber(HM.TalentAPI.talentForSpell(node.spellID)) or nil
-    local presumed = F.rankRuleMark(bridgedTalent, node.ops) ~= ""
+    local source = (F.rankRuleSource and F.rankRuleSource(bridgedTalent, node.ops)) or "presumed"
+    local right = (source == "scan" and "verified from your scan")
+        or (source == "presumed" and "(p) rank rule presumed") or nil
     lines[#lines + 1] = {
-        kind = "double", left = "Foresight",
-        right = presumed and "(p) rank rule presumed" or nil,
-        r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
+        kind = "double", left = "Foresight", right = right,
+        r = BRAND.r, g = BRAND.g, b = BRAND.b,
+        r2 = (source == "scan") and 0.29 or GREY.r,
+        g2 = (source == "scan") and 0.87 or GREY.g,
+        b2 = (source == "scan") and 0.50 or GREY.b,
     }
 
     local affected, seen = {}, {}

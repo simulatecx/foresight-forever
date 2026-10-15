@@ -378,6 +378,23 @@ contributions + feedback create rules (kept anon-auth + hasOnly shape-lock + sma
 suppression); both writes verified working, test rows deleted. RESTORE `&& appChecked()`
 once the Firebase/reCAPTCHA Enterprise backend validation is fixed (documented in
 web/firestore.rules). The feedback form is now fully live.
+LIVE SELF-VERIFY + SCAN->DB SHIPPED v0.47.0 (S33, user: "do the live self-verify and scan,
+then deploy to curseforge"). (1) LIVE SELF-VERIFY: `formulas.lua` now scores the player's
+OWN captured talent tooltips (`db.collect.talentTooltips`) in-Lua against the harvest's two
+hypotheses (maxTotal `v*R/maxRank` vs perRank `v*R`, +/1000 ms variant), stripping colour
+codes + the "Rank N/M" line so their digits can't pollute the vote; a decisive, non-
+conflicting TRAINED capture settles that talent's rule for THIS client via `selfVerifiedRule`
+(priority 2, ABOVE the shipped crowd rule - local ground truth), and `rankRuleSource` flips
+the tooltip header green to "verified from your scan" (talentLines + nodeImpactLines).
+Ambiguous/conflicting votes record nothing (presumed stands - confirm-or-correct-only,
+never worse). Cached by a key+rank signature. This answers the user's v0.46.10 complaint
+("talents I've scanned still say rank rule presumed"). (2) SCAN->DB: `Crowd.payload()` now
+rides the item-sightings + observed-buff journals (capped via `Crowd.topSightings`/`capMap`:
+100 items most-seen-first / 40 observed) so everything scanned reaches the DB; browser
+compare ignores them, only the backend reads them; `firestore.rules` shape-lock them as
+size-capped maps (<=500/<=150). Exhaustive uncapped export stays the future companion app.
+NEXT: backend item/observed aggregation; restore App Check writes. Gate 284. Deploy as the
+CurseForge catch-up release (publishes 0.46.11-0.47.0 at once; CF was stuck at 0.46.10).
 RETAIL INSTALL DELETED this session: `_retail_` Foresight (stale v0.37.0 addon + both SV
 files) removed to stop version confusion; only `_classic_beta_` (Forever, v0.46.10) has
 Foresight now.

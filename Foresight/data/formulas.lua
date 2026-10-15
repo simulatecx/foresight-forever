@@ -151,21 +151,152 @@ F.talentRankValue = {
     end,
 }
 
--- PER-TALENT rank value - THE one resolution path (S11 + S21), in order:
+-- LIVE SELF-VERIFY (S33) - the player's OWN captured talent tooltips are ground truth
+-- for THIS client. A trained capture (rank>0) is scored against two hypotheses exactly
+-- the way the offline harvest does (pipeline/harvest.py analyze_rank_rule), ported to
+-- Lua: maxTotal => tooltip at rank R shows |maxValue|*R/maxRank; perRank => |maxValue|*R
+-- (each with a /1000 ms->s variant). Whichever prediction appears among the tooltip's own
+-- numbers wins. When a talent's captures settle a single, non-conflicting rule, that rule
+-- drives this client's value path and the (p) mark flips to "verified from your scan".
+-- Ambiguous or conflicting votes record nothing and the shipped/presumed rule stands - a
+-- scan can only confirm or correct, never make the display worse.
+local selfVerifyCache, selfVerifyStamp = nil, nil
+
+-- Collect the description numbers from a captured tooltip for the vote. WoW escape codes
+-- (colour |cAARRGGBB..|r, textures |T..|t, hyperlinks |H..|h) are stripped first so their
+-- hex digits can't pollute the numbers; the name line and the "Rank N/M" line are skipped
+-- exactly as the offline harvest's clean_tip_text does (their numbers aren't effect values).
+local function tooltipNumbers(text)
+    local s = tostring(text or "")
+    s = s:gsub("|[cC]%x%x%x%x%x%x%x%x", ""):gsub("|[rR]", "")
+    s = s:gsub("|[tT].-|[tT]", ""):gsub("|[hH].-|[hH]", ""):gsub("|[hH]", "")
+    local nums, first = {}, true
+    for line in (s .. "\n"):gmatch("([^\n]*)\n") do
+        local skip = first
+        first = false
+        if line:find("Rank", 1, true) and line:match("%d+%s*/%s*%d+") then skip = true end
+        if line:find("Press F6", 1, true) then skip = true end
+        if not skip then
+            for n in line:gmatch("%d+%.?%d*") do nums[#nums + 1] = tonumber(n) end
+        end
+    end
+    return nums
+end
+
+local function approxIn(nums, target)
+    for i = 1, #nums do
+        if math.abs(nums[i] - target) < 0.01 then return true end
+    end
+    return false
+end
+
+local function buildSelfVerified()
+    local rules = {}
+    local collect = HM.db and HM.db.collect
+    local tips = collect and collect.talentTooltips
+    local gen = HM.gen
+    if type(tips) ~= "table" or not gen or type(gen.talents) ~= "table" then
+        return rules
+    end
+    local byName = {} -- talent name -> id (mirrors harvest talents_by_name; first wins)
+    for tid, t in pairs(gen.talents) do
+        if type(t) == "table" and t.name and byName[t.name] == nil then
+            byName[t.name] = tid
+        end
+    end
+    local impactsAll = gen.talentImpacts or {}
+    for _, e in pairs(tips) do
+        if type(e) == "table" and type(e.rank) == "number" and e.rank > 0 then
+            local rank = e.rank
+            local name = e.name or (e.text and tostring(e.text):match("^([^\n]+)"))
+            -- Resolve the capture to a talentId by name (classic) OR by the spell bridge
+            -- (Forever trait nodes carry a spellID; node names needn't match talent names).
+            local tid = name and byName[name]
+            if tid == nil and e.spellID and HM.TalentAPI and HM.TalentAPI.talentForSpell then
+                tid = tonumber(HM.TalentAPI.talentForSpell(e.spellID))
+            end
+            local talent = tid and gen.talents[tid]
+            local impacts = tid and impactsAll[tid]
+            if talent and type(impacts) == "table" and type(impacts.ops) == "table" then
+                local maxRank = talent.maxRank or 1
+                local nums = tooltipNumbers(e.text)
+                local verdict = nil -- "maxTotal" | "perRank" | false (conflict)
+                if maxRank > 0 and #nums > 0 then
+                    for _, op in ipairs(impacts.ops) do
+                        local v = math.abs(op.maxValue or 0)
+                        if v > 0 then
+                            local hitA = approxIn(nums, v * rank / maxRank)
+                                or approxIn(nums, v / 1000 * rank / maxRank)
+                            local hitB = approxIn(nums, v * rank)
+                                or approxIn(nums, v / 1000 * rank)
+                            local this = (hitA and not hitB and "maxTotal")
+                                or (hitB and not hitA and "perRank") or nil
+                            if this then
+                                if verdict == nil then verdict = this
+                                elseif verdict ~= this then verdict = false end
+                            end
+                        end
+                    end
+                end
+                if verdict and verdict ~= false then rules[tid] = verdict end
+            end
+        end
+    end
+    return rules
+end
+
+-- Lazy, cached map of talentId -> player-verified rule. A cheap signature (capture count
+-- plus the sum of ranks) rebuilds it when a new tooltip is captured OR an untrained
+-- capture is upgraded to a trained one (the no-downgrade replace), without rebuilding on
+-- every op lookup.
+function F.selfVerifiedRules()
+    local collect = HM.db and HM.db.collect
+    local tips = collect and collect.talentTooltips
+    -- Signature folds in each capture's KEY and rank (order-independent sum), not just the
+    -- count+ranksum: adding talent A rank 2 and later a DIFFERENT talent B rank 2 to the
+    -- same base would otherwise collide and return a stale map.
+    local n, sig = 0, 0
+    if type(tips) == "table" then
+        for k, e in pairs(tips) do
+            n = n + 1
+            local kn = tonumber(k) or 0
+            local rk = (type(e) == "table" and type(e.rank) == "number" and e.rank) or 0
+            sig = sig + kn * 31 + rk
+        end
+    end
+    local stamp = n * 1000000007 + sig
+    if selfVerifyCache == nil or selfVerifyStamp ~= stamp then
+        selfVerifyCache = buildSelfVerified()
+        selfVerifyStamp = stamp
+    end
+    return selfVerifyCache
+end
+
+function F.selfVerifiedRule(talentId)
+    if talentId == nil then return nil end
+    return F.selfVerifiedRules()[talentId]
+end
+
+-- PER-TALENT rank value - THE one resolution path (S11 + S21 + S33), in order:
 --   (1) op.values[rank] - datamined per-rank spell decode (S21), the truth, no rule;
---   (2) overrides.rankRules[talentId] - crowd-verified rule ("maxTotal" = value*N/maxRank,
+--   (2) selfVerifiedRule(talentId) - the PLAYER'S OWN scanned rule (S33); local ground
+--       truth outranks the shipped crowd rule;
+--   (3) overrides.rankRules[talentId] - crowd-verified rule ("maxTotal" = value*N/maxRank,
 --       "perRank" = value*N); entries arrive ONLY from the harvest draft
 --       (collected/rank_rules_draft.lua) after human review;
---   (3) the global presumed default above, still tagged (p).
+--   (4) the global presumed default above, still tagged (p).
 -- `values` is the generated per-op array (present only where every rank spell carried
 -- aligned effect rows); callers pass op.values through - never a second math path.
+-- Both "maxTotal" and the presumed default compute value*rank/maxRank, so only "perRank"
+-- branches; everything else falls through to the one fn.
 function F.talentRankValueFor(talentId, maxValue, rank, maxRank, values)
     if type(values) == "table" then
         local v = values[rank or 0]
         if type(v) == "number" then return v end
     end
     local rules = HM.overrides and HM.overrides.rankRules
-    local rule = talentId and rules and rules[talentId]
+    local rule = F.selfVerifiedRule(talentId)
+        or (talentId and rules and rules[talentId])
     if rule == "perRank" then
         return (maxValue or 0) * (rank or 0)
     end
@@ -173,9 +304,9 @@ function F.talentRankValueFor(talentId, maxValue, rank, maxRank, values)
 end
 
 -- The honesty mark for a specific talent's rank scaling: datamined per-rank values
--- (every op carries a values array) drop the (p), crowd-verified talents drop it too;
--- everything else keeps the global presumed mark. ops optional (the generated op list
--- for this talent/node).
+-- (every op carries a values array) drop the (p), the player's own scan drops it, and
+-- crowd-verified talents drop it too; everything else keeps the global presumed mark.
+-- ops optional (the generated op list for this talent/node).
 function F.rankRuleMark(talentId, ops)
     if type(ops) == "table" and #ops > 0 then
         local all = true
@@ -184,9 +315,26 @@ function F.rankRuleMark(talentId, ops)
         end
         if all then return "" end
     end
+    if talentId and F.selfVerifiedRule(talentId) then return "" end
     local rules = HM.overrides and HM.overrides.rankRules
     if talentId and rules and rules[talentId] then return "" end
     return F.presumedMark(F.talentRankValue)
+end
+
+-- Which source settles this talent's rank scaling, for the honesty header:
+-- "datamined" | "scan" (the player's own capture) | "crowd" | "presumed".
+function F.rankRuleSource(talentId, ops)
+    if type(ops) == "table" and #ops > 0 then
+        local all = true
+        for _, op in ipairs(ops) do
+            if type(op) ~= "table" or not op.values then all = false end
+        end
+        if all then return "datamined" end
+    end
+    if talentId and F.selfVerifiedRule(talentId) then return "scan" end
+    local rules = HM.overrides and HM.overrides.rankRules
+    if talentId and rules and rules[talentId] then return "crowd" end
+    return "presumed"
 end
 
 -- Threat model (GRAPH-threat). v0 is own-state only: a 100% baseline modified by the

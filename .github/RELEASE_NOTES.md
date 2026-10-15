@@ -1,5 +1,7 @@
-## 0.46.14
+## 0.47.0
 
-Simpler character-sheet buttons: **FS** now opens your stats and the Matrix together in one
-click, with **Share** and **Options** beside it. The Matrix is draggable and stays put once
-open. Fully controller-friendly - no typing needed.
+Your own scans now count. Hover a talent you've trained and Foresight checks your real
+in-game tooltip to settle how it scales - the honesty line turns green ("verified from your
+scan") instead of showing a presumed guess. And the items you've seen and buffs you've
+observed now ride along when you Contribute, so the crowd ladders grow on everything you
+scan. A scan can only confirm or correct a number, never make it worse.
