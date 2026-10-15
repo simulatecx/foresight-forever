@@ -89,6 +89,16 @@ service cloud.firestore {
       allow write: if false;      // admin SDK bypasses rules; clients may never write
     }
 
+    // ---- crowdInsights: read-only; written ONLY by Cloud Functions (admin SDK) --
+    // Item popularity + observed-buff candidate values (S34f), aggregated from the raw
+    // items/observed journals. Non-identifying (item ids + counts; buff spellId + stat
+    // values). Observed candidates feed overrides ONLY via the reviewed harvest (k-of-n +
+    // human PR), never auto-shipped. Kept out of `aggregates` so the peer bake stays clean.
+    match /crowdInsights/{doc} {
+      allow read: if true;
+      allow write: if false;      // admin SDK bypasses rules; clients may never write
+    }
+
     // ---- verifiedRules: read-only; written ONLY by the owner's gcloud-authed tool --
     // Owner/crowd-verified per-talent rank rules (doc id = talentId), baked into the addon
     // by pipeline/fetch_verified.py so fresh characters get them without scanning. A client

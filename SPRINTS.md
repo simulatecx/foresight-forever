@@ -123,12 +123,21 @@ Lua 5.1, no-PII anon tier, k-of-n+review for overrides) bind every story.
   the Champions render + consent at a narrow viewport, in-game verify the opt-in + GUI text
   box at 1280x720/0.65 -> flip ☑. *Fit & Overlap:* CROWD, Enhance CROWD-share (new tier on
   the same single-source contract).
-- **S34d `/foresight coverage` + inspect-scan readout ☐** - how much of the all-class talent
-  roster the owner has captured/verified, to target gaps. Chat output, no new frame.
-- **S34e Zero-click self-verify ☐** - auto-probe trained talents on talent-frame open
-  (debounced, out of combat, `autoVerify` default ON); "nobody wants to scan."
-- **S34f Backend aggregation of items + observed buffs ☐** - turn the raw `items`/`observed`
-  rows into item popularity + k-of-n crowd-verified buff values (`functions/index.js`).
+- **S34d `/foresight coverage` + inspect-scan readout ◐** (built & gated 2026-10-14):
+  `Collect.coverage` (pure, selftest-pinned) + the `coverage` slash command print
+  "<captured>/<total multi-rank> captured across N classes; <verified> verified (own scan +
+  shipped); missing classes: ...". Inspect-scan readout: a throttled, read-only line when
+  captures land while the Blizzard InspectFrame is open. Gate 291. Pending: in-game verify.
+- **S34e Zero-click self-verify ◐** (built & gated 2026-10-14): `Collect.hookAutoVerify`
+  hooks `PlayerSpellsFrame:OnShow` (HookScript - the taint-safe pattern, lint-clean) and
+  runs the read-only `probeTalentTooltips` pass debounced + out of combat; `autoVerify`
+  setting default ON. Gate 293. Pending: in-game verify (no taint on a controller; the
+  trained talents flip to "verified from your scan" with no hover).
+- **S34f Backend aggregation of items + observed buffs ◐** (built 2026-10-14): `functions/`
+  aggregates the raw items/observed rows into `crowdInsights/itemPopularity` (top-1000) +
+  `crowdInsights/observedBuffs` (per spellId+stat n/mean/cv, `verified` at n>=5 & cv<=0.1 -
+  a reviewed-harvest candidate, never auto-shipped). Rule added; doc'd in S13-CROWD-BACKEND.
+  Pending: deploy + an emulator/live write check.
 - **S34g Restore App Check on writes ☐** (when the Firebase App Check backend is fixed) -
   re-add `&& appChecked()` to the contribute + feedback create rules.
 

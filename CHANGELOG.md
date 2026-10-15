@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.48.0 - 2026-10-14
+
+THE CROWD PIPELINE WAVE (S34). Your scans now become everyone's in-game-ready data, there's
+an opt-in way to show off, and the whole crowd contract got hardened against leaks.
+
+OWNER SCANS -> EVERYONE BENEFITS. When the maintainer verifies a talent's rank scaling just
+by playing (hovering it trained, or inspecting other players), a new tool pushes those
+confirmed rules to a shared table, and the addon bakes them in - so a brand-new character
+sees "rank rule crowd-verified" (green) instead of "(p) presumed", with zero scanning. Your
+OWN scan still wins on your own client, and datamined values still beat everything; the
+baked table slots in just beneath the hand-curated corrections.
+
+SHOW YOURSELF ON THE LADDERS (opt-in, OFF by default). Turn on `/foresight set named on` and
+pick a handle, and when you Contribute you can appear by that handle on the public champion
+ladders (Biggest Armor, Biggest Earth Shock, ...), with the buffs you had shown for honesty.
+Everyone else stays anonymous - their numbers still feed the averages, they just never get a
+named row. It's a nickname you choose, never your real name, and it's fully revocable.
+
+ZERO-CLICK VERIFY. Open your talents and Foresight now scans the ones you've trained
+automatically (out of combat, once per open) - no hover, no command. Toggle it with
+`/foresight set autoVerify off`.
+
+KNOW YOUR GAPS. `/foresight coverage` tells you how much of the all-class talent roster
+you've captured and verified, and which classes you still haven't seen - inspect players of
+those classes to fill them in (inspecting already captures).
+
+UNDER THE HOOD. The crowd allow-list that decides what may ever leave your machine now lives
+in ONE place and is generated into the addon, the website, and the server rules together, so
+a new field can never slip past one of them (a privacy-safety hardening). The backend also
+began turning your item sightings and observed buffs into item-popularity and
+crowd-verified-value data. Gate 293.
+
+*Features:* CROWD-share, DATA-formula-registry, DATA-overrides, UI-coverage, CORE-bootstrap, CROWD-companion
+
 ## 0.47.1 - 2026-10-14
 
 FIX: the v0.47.0 live self-verify could break the character/Matrix panel. Its rank-rule

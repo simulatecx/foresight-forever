@@ -1584,6 +1584,36 @@ end
 -- node. This is the authoritative rank-scaling ground truth (the classic SetTalent probe
 -- is dead on Forever), gathered passively as the player mouses over talents - the harvest
 -- compares these numbers against the generated ops to settle each (p) rank rule.
+-- Inspect-scan readout (S34d): when captures land while INSPECTING another player (the way
+-- the owner fills cross-class coverage), confirm with ONE throttled line per burst. Entirely
+-- read-only + pcall-guarded + debounced through C_Timer - it never spams and never touches a
+-- protected path (inspecting + capturing already happen; this is just the acknowledgement).
+local inspectPending, inspectTimer = 0, false
+local function inspectShown()
+    local ok, shown = pcall(function()
+        local f = _G.InspectFrame
+        return f and f.IsShown and f:IsShown()
+    end)
+    return ok and shown and true or false
+end
+local function noteInspectCapture()
+    if not inspectShown() then return end
+    inspectPending = inspectPending + 1
+    if inspectTimer or not (_G.C_Timer and _G.C_Timer.After) then return end
+    inspectTimer = true
+    _G.C_Timer.After(1.5, function()
+        inspectTimer = false
+        local n = inspectPending
+        inspectPending = 0
+        if n <= 0 then return end
+        local cls = ""
+        local ok, locName = pcall(function() return _G.UnitClass and _G.UnitClass("target") end)
+        if ok and type(locName) == "string" and locName ~= "" then cls = " " .. locName end
+        (HM.print or print)(("captured %d talent%s from an inspected%s player - /foresight coverage for the tally")
+            :format(n, n == 1 and "" or "s", cls))
+    end)
+end
+
 local function journalTalentTooltip(tip, nodeId, snap)
     if not (HM.db and type(HM.db.collect) == "table") then return end
     if type(tip.NumLines) ~= "function" then return end
@@ -1615,6 +1645,7 @@ local function journalTalentTooltip(tip, nodeId, snap)
             text = table.concat(lines, "\n"),
             at = _G.date and _G.date("%Y-%m-%d %H:%M:%S") or "?",
         }
+        pcall(noteInspectCapture)
     end
 end
 

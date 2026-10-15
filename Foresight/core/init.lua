@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.47.1"
+HM.version = "0.48.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -922,6 +922,26 @@ local function onSlash(input)
         HM.Collect.verify(printMsg)
         HM.Collect.probeTalentApiShape(printMsg)
         HM.Collect.probeTalentTooltips(printMsg)
+    elseif cmd == "coverage" then
+        -- S34d: how much of the all-class multi-rank talent roster you've captured + how
+        -- much has a settled rule (own scan + shipped overrides + the crowd/owner bake).
+        -- Inspect other-class players to fill the gaps - inspecting already captures.
+        local verifiedRules = {}
+        local selfR = HM.formulas and HM.formulas.selfVerifiedRules and HM.formulas.selfVerifiedRules()
+        for tid, r in pairs(type(selfR) == "table" and selfR or {}) do verifiedRules[tid] = r end
+        for tid, r in pairs(HM.overrides and HM.overrides.rankRules or {}) do
+            if verifiedRules[tid] == nil then verifiedRules[tid] = r end
+        end
+        for tid, r in pairs(HM.gen and HM.gen.verifiedRules or {}) do
+            if verifiedRules[tid] == nil then verifiedRules[tid] = r end
+        end
+        local tips = HM.db and HM.db.collect and HM.db.collect.talentTooltips
+        local cov = HM.Collect.coverage(HM.gen, tips, verifiedRules)
+        local nCov = #cov.classesCovered
+        printMsg(("talent coverage: %d/%d multi-rank talents captured across %d class%s; %d verified (own scan + shipped)")
+            :format(cov.captured, cov.total, nCov, nCov == 1 and "" or "es", cov.verified))
+        printMsg("missing classes: " .. (#cov.classesMissing > 0
+            and table.concat(cov.classesMissing, ", ") or "none - every class seen"))
     elseif cmd == "export" then
         local payload = HM.db and HM.db.collect or {}
         if HM.showExport then

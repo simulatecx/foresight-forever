@@ -57,6 +57,11 @@ Settings.KEYS = {
         label = "Show crowd comparison",
         desc = "On the Matrix: how your lenses and challenge numbers rank among players of your spec, plus today's featured challenge. Shows a prompt when your spec has no crowd data yet.",
     },
+    autoVerify = {
+        group = "General", type = "toggle", default = true,
+        label = "Auto-verify on talent open",
+        desc = "When you open your talents, Foresight scans the ones you've trained so their rank rules verify themselves - no hover, no command. Off = verify only on hover or /foresight verify.",
+    },
     -- Opt-in SHOW-OFF tier (S34c). OFF by default; your numbers feed the anonymous crowd
     -- averages either way. On = when you Contribute, your chosen handle (+ optional armory)
     -- rides along and can appear on the public "champions" ladders. Revocable: turn it off.

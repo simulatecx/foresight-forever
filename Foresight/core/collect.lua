@@ -608,6 +608,51 @@ end
 -- Automatic collection pass: runs verify + the API-shape and tooltip probes once per
 -- login, silently (persists for the harvester; one summary line to chat). Means a
 -- player never has to type /foresight verify for us to gather data - a reload is enough.
+-- Coverage tally (S34d): how much of the all-class MULTI-RANK talent roster the player has
+-- captured, and how much has a settled rank rule. Pure over its inputs (generated roster +
+-- capture store + a verified-rule map) so the selftest feeds a fixture. Captures are keyed
+-- by nodeId but carry a name; we bridge to the roster by NAME (the classic overlap, same as
+-- formulas.selfVerifiedRules), so the owner's gaps surface by class. Single-rank talents are
+-- excluded - they have no rank rule to learn, so they're not a coverage goal.
+function Collect.coverage(gen, tips, verifiedRules)
+    gen = type(gen) == "table" and gen or {}
+    tips = type(tips) == "table" and tips or {}
+    verifiedRules = type(verifiedRules) == "table" and verifiedRules or {}
+    local talents = type(gen.talents) == "table" and gen.talents or {}
+    local classNames = type(gen.classNames) == "table" and gen.classNames or {}
+    local total, verified, byName, classesWithRoster = 0, 0, {}, {}
+    for tid, t in pairs(talents) do
+        if type(t) == "table" and (t.maxRank or 1) > 1 then
+            total = total + 1
+            if t.name and byName[t.name] == nil then byName[t.name] = tid end
+            if t.classId then classesWithRoster[t.classId] = true end
+            if verifiedRules[tid] ~= nil then verified = verified + 1 end
+        end
+    end
+    local capturedIds = {}
+    for _, e in pairs(tips) do
+        if type(e) == "table" then
+            local name = e.name or (type(e.text) == "string" and e.text:match("^([^\n]+)"))
+            local tid = name and byName[name]
+            if tid then capturedIds[tid] = true end
+        end
+    end
+    local captured, classCovered = 0, {}
+    for tid in pairs(capturedIds) do
+        captured = captured + 1
+        local t = talents[tid]
+        if t and t.classId then classCovered[t.classId] = true end
+    end
+    local covered, missing = {}, {}
+    for cid in pairs(classesWithRoster) do
+        local nm = classNames[cid] or ("class " .. tostring(cid))
+        if classCovered[cid] then covered[#covered + 1] = nm else missing[#missing + 1] = nm end
+    end
+    table.sort(covered); table.sort(missing)
+    return { captured = captured, total = total, verified = verified,
+             classesCovered = covered, classesMissing = missing }
+end
+
 function Collect.autoCollect()
     local silent = function() end
     local v = Collect.verify(silent)
@@ -621,18 +666,50 @@ function Collect.autoCollect()
         :format(v and #v.results or 0, flagged, probe and #probe.talents or 0))
 end
 
+-- S34e zero-click self-verify: scan trained talents the moment the talent frame opens, so a
+-- player never has to hover or type a command ("nobody wants to scan"). The frame is
+-- load-on-demand (Blizzard_PlayerSpells), so we try to hook on login AND when that addon
+-- loads. COMPLIANT shape: HookScript("OnShow") adds our handler without touching Blizzard's
+-- frame tree (no key write / region / parenting - the same pattern synergy_highlight uses).
+-- Gated by the autoVerify setting (ON), debounced to once per open, and NEVER in combat;
+-- probeTalentTooltips is a read-only scan on OUR own ForesightScanTooltip, so there is no
+-- protected-path or taint risk (it's the exact pass /foresight verify runs).
+local autoVerifyHooked = false
+function Collect.hookAutoVerify()
+    if autoVerifyHooked then return end
+    local psf = _G.PlayerSpellsFrame
+    if not (psf and psf.HookScript) then return end
+    autoVerifyHooked = true
+    local pending = false
+    psf:HookScript("OnShow", function()
+        if HM.Settings and HM.Settings.get("autoVerify") == false then return end
+        if pending then return end
+        if _G.InCombatLockdown and _G.InCombatLockdown() then return end
+        pending = true
+        local fire = function()
+            pending = false
+            if _G.InCombatLockdown and _G.InCombatLockdown() then return end
+            pcall(Collect.probeTalentTooltips, function() end)
+        end
+        if _G.C_Timer and _G.C_Timer.After then _G.C_Timer.After(0.3, fire) else fire() end
+    end)
+    psf:HookScript("OnHide", function() pending = false end)
+end
+
 -- Wire events (in-game only).
 if _G.CreateFrame then
     local f = _G.CreateFrame("Frame")
     f:RegisterEvent("PLAYER_LOGIN")
     f:RegisterEvent("PLAYER_LEVEL_UP")
     f:RegisterEvent("PLAYER_LOGOUT")
+    pcall(f.RegisterEvent, f, "ADDON_LOADED")
     pcall(f.RegisterEvent, f, "UNIT_AURA")
     pcall(f.RegisterEvent, f, "PLAYER_EQUIPMENT_CHANGED")
     local obsPending
     f:SetScript("OnEvent", function(_, event, arg1)
         if event == "PLAYER_LOGIN" then
             Collect.onLogin()
+            pcall(Collect.hookAutoVerify) -- talent frame may already exist (hook OnShow)
             -- Defer the probe pass one frame so all addons/APIs have finished loading.
             if _G.C_Timer and _G.C_Timer.After then
                 _G.C_Timer.After(1, function()
@@ -642,6 +719,8 @@ if _G.CreateFrame then
             else
                 pcall(Collect.autoCollect)
             end
+        elseif event == "ADDON_LOADED" and arg1 == "Blizzard_PlayerSpells" then
+            pcall(Collect.hookAutoVerify) -- the LoD talent UI just created its frame
         elseif event == "PLAYER_LEVEL_UP" then
             Collect.onLevelUp(arg1)
             gearDirty = true -- a level-up moves stats; never attribute that to a buff

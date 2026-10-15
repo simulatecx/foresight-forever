@@ -200,7 +200,26 @@ are groomed for after.
   registered to the key and Firestore App Check is Enforced.
 - ☐ Pipeline bake-back `peer_baselines.lua` + in-addon "vs your spec" readout.
 - ☐ Gated on S12 publish for real-user scale.
-- ☐ OPT-IN IDENTIFYING TIER (user ask 2026-10-14): share full talent tree + WoW Armory
-  profile link. The Armory link contains character name+realm = **PII** - must be a
-  SEPARATE explicit opt-in, stored apart from the anonymous contributions, with its own
-  consent + disclosure (see section 8).
+- ☑ OPT-IN IDENTIFYING TIER (S34c, 2026-10-14): shipped as a CHOSEN HANDLE + optional
+  armory link (owner decision - a nickname, not a character name/realm, so no new PII class
+  beyond what the user types). OFF by default; `name`/`armory` are gated behind `named==true`
+  in the generated Firestore rule + web sanitize + addon builder (single-source schema, so
+  the gate can't drift). `functions/index.js` builds `leaderboards/<metricKey>` top-25 from
+  named rows only; anonymous rows feed the quantiles but never a named row. `privacy.html`
+  discloses it. Pending: in-game + in-browser verify.
+
+## S34f - item popularity + observed-buff aggregation (2026-10-14)
+
+The raw `items` / `observed` journals (arriving on every Contribute since v0.47.0) are now
+aggregated by `functions/index.js` into the public `crowdInsights` collection (read-only;
+admin-SDK write only; kept OUT of `aggregates` so the peer bake stays clean):
+- `crowdInsights/itemPopularity` - `{ items: { itemId: totalCount }, count }`, the top
+  `ITEM_POPULARITY_TOP_N` (1000) items by summed sightings. Deduped by clientId (re-uploads
+  don't double-count). Purely informational ("what gear is common").
+- `crowdInsights/observedBuffs` - `{ observed: { spellId: { statKey: { n, mean, cv, verified } } } }`.
+  For each buff spellId + stat key, the aggregator collects observed values and computes
+  n, mean, and coefficient of variation. **k-of-n law:** a value is flagged `verified: true`
+  ONLY when `n >= OBSERVED_MIN` (5) AND `cv <= OBSERVED_CV_MAX` (0.1, i.e. a stable value).
+  This is a CANDIDATE signal for correcting presumed buff values - it feeds
+  `overrides.lua`/`verifiedBuffs` ONLY through the existing reviewed harvest path (human PR),
+  NEVER auto-shipped to clients. No PII (buff spellId + numeric stat values only).

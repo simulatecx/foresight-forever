@@ -16,6 +16,9 @@ const db = getFirestore();
 const MIN_BUCKET = 5; // suppress percentiles below this many distinct contributors
 const MAX_READ = 50000; // pilot-scale cap; revisit with indexed per-bucket queries later
 const LEADERBOARD_TOP_N = 25; // named champions shown per metric (S34c)
+const ITEM_POPULARITY_TOP_N = 1000; // bound the item-popularity doc size (S34f)
+const OBSERVED_MIN = 5; // k-of-n: an observed buff value is a verified candidate at >= this
+const OBSERVED_CV_MAX = 0.1; // ...and only when its coefficient of variation is this low
 const LENS_IDS = ["spellcasting", "meleeDps", "rangedDps", "healing",
                   "survivability", "sustain", "threat", "tankability"];
 
@@ -133,8 +136,64 @@ async function rebuild() {
     if (++pending >= 450) await flush();
   }
 
+  // ITEM POPULARITY + OBSERVED-BUFF CANDIDATES (S34f): turn the raw items/observed journals
+  // into usable crowd data. Non-identifying (item ids + counts; buff spellId + stat values).
+  // Written to the public `crowdInsights` collection, kept OUT of `aggregates` so the peer
+  // baseline bake stays clean. `rows` is already deduped by clientId, so re-uploads don't
+  // double-count. Observed candidates feed overrides ONLY through the reviewed harvest
+  // (k-of-n + human PR) - NEVER auto-shipped.
+  const itemCounts = new Map();
+  for (const c of rows) {
+    if (!c.items || typeof c.items !== "object") continue;
+    for (const [iid, cnt] of Object.entries(c.items)) {
+      const n = typeof cnt === "number" ? cnt : 0;
+      if (n > 0) itemCounts.set(iid, (itemCounts.get(iid) || 0) + n);
+    }
+  }
+  const topItems = [...itemCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, ITEM_POPULARITY_TOP_N);
+  batch.set(db.collection("crowdInsights").doc("itemPopularity"), {
+    updatedAt: FieldValue.serverTimestamp(), count: topItems.length,
+    items: Object.fromEntries(topItems),
+  });
+  if (++pending >= 450) await flush();
+
+  const obs = new Map(); // `${spellId}|${statKey}` -> [values]
+  for (const c of rows) {
+    if (!c.observed || typeof c.observed !== "object") continue;
+    for (const [sid, entry] of Object.entries(c.observed)) {
+      const stats = entry && entry.stats;
+      if (!stats || typeof stats !== "object") continue;
+      for (const [k, v] of Object.entries(stats)) {
+        if (typeof v !== "number") continue;
+        const key = `${sid}|${k}`;
+        if (!obs.has(key)) obs.set(key, []);
+        obs.get(key).push(v);
+      }
+    }
+  }
+  const observedBuffs = {};
+  for (const [key, vals] of obs) {
+    const sep = key.lastIndexOf("|");
+    const sid = key.slice(0, sep), statKey = key.slice(sep + 1);
+    const n = vals.length;
+    const mean = vals.reduce((a, b) => a + b, 0) / n;
+    const variance = vals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n;
+    const cv = mean !== 0 ? Math.sqrt(variance) / Math.abs(mean) : (variance === 0 ? 0 : 1);
+    if (!observedBuffs[sid]) observedBuffs[sid] = {};
+    observedBuffs[sid][statKey] = {
+      n, mean: Math.round(mean * 100) / 100, cv: Math.round(cv * 1000) / 1000,
+      verified: n >= OBSERVED_MIN && cv <= OBSERVED_CV_MAX,
+    };
+  }
+  batch.set(db.collection("crowdInsights").doc("observedBuffs"), {
+    updatedAt: FieldValue.serverTimestamp(), minBucket: OBSERVED_MIN, cvMax: OBSERVED_CV_MAX,
+    observed: observedBuffs,
+  });
+  if (++pending >= 450) await flush();
+
   await flush();
-  return { buckets: buckets.size, boards: seenMetrics.size };
+  return { buckets: buckets.size, boards: seenMetrics.size,
+           items: topItems.length, observed: Object.keys(observedBuffs).length };
 }
 
 // Recompute when a contribution lands (pilot: full rebuild; bounded by MAX_READ).

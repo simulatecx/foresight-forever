@@ -2670,6 +2670,48 @@ function HM.runSelftest(out)
         })
         return evil ~= nil and evil.armory == nil and evil.named == true
     end)())
+    -- S34d coverage tally: multi-rank captures + verified count + missing classes, over a
+    -- fixture roster (single-rank talents excluded; name-bridged captures; class gaps).
+    check("coverage tally: multi-rank captures, verified count, missing classes", (function()
+        local gen = {
+            classNames = { [1] = "Warrior", [8] = "Mage" },
+            talents = {
+                [10] = { name = "Cruelty", classId = 1, maxRank = 5 },
+                [11] = { name = "Deflection", classId = 1, maxRank = 5 },
+                [12] = { name = "Impact", classId = 8, maxRank = 2 },
+                [13] = { name = "Tactical Mastery", classId = 1, maxRank = 1 }, -- single-rank
+            },
+        }
+        local tips = {
+            [900] = { name = "Cruelty" }, [901] = { name = "Impact" },
+            [902] = { name = "Nonexistent" }, [903] = { name = "Tactical Mastery" },
+        }
+        local cov = HM.Collect.coverage(gen, tips, { [10] = "maxTotal", [12] = "perRank" })
+        if not (cov.total == 3 and cov.captured == 2 and cov.verified == 2) then return false, "counts" end
+        if #cov.classesMissing ~= 0 or #cov.classesCovered ~= 2 then return false, "classes" end
+        local cov2 = HM.Collect.coverage(gen, { [900] = { name = "Cruelty" } }, {})
+        return cov2.captured == 1 and cov2.verified == 0
+            and #cov2.classesMissing == 1 and cov2.classesMissing[1] == "Mage"
+    end)())
+    -- S34c settings `text` type: the handle/armory levers trim, cap, and pattern-check.
+    check("settings text type: handle trims+caps, armory is https-locked", (function()
+        local S = HM.Settings
+        if S.validate("handle", "  Spotlight  ") ~= "Spotlight" then return false, "handle trim" end
+        if #S.validate("handle", ("x"):rep(50)) ~= 32 then return false, "handle cap" end
+        if S.validate("armory", "https://wow.example/c/x") ~= "https://wow.example/c/x" then
+            return false, "armory ok"
+        end
+        if S.validate("armory", "javascript:alert(1)") ~= "" then return false, "armory heal" end
+        if S.coerce("armory", "javascript:alert(1)") ~= nil then return false, "armory reject" end
+        return S.coerce("armory", "") == "" and S.coerce("handle", "Nick") == "Nick"
+    end)())
+    -- S34e auto-verify: the opt-out toggle exists, defaults ON, heals bad values to ON.
+    check("auto-verify setting: defaults ON, validates as a toggle", (function()
+        local spec = HM.Settings and HM.Settings.KEYS and HM.Settings.KEYS.autoVerify
+        if not (spec and spec.type == "toggle" and spec.default == true) then return false, "spec" end
+        return HM.Settings.validate("autoVerify", false) == false
+            and HM.Settings.validate("autoVerify", "garbage") == true
+    end)())
     -- SCAN -> DB (S33): the item/observed journals ride the contribute payload, CAPPED.
     check("scan-to-DB: top-sightings cap keeps the most-seen items", (function()
         local map = {}
