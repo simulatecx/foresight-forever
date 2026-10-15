@@ -31,6 +31,22 @@ service cloud.firestore {
           && d.items is map   && d.observed is map;
     }
 
+    // The feedback shape: a kind, the message, an OPTIONAL contact + context. Free text,
+    // so it is capped and write-only - never client-readable, never shown publicly.
+    function validFeedback(d) {
+      return d.keys().hasOnly(['type','message','contact','context'])
+          && d.type is string && d.type.size() <= 16
+          && d.message is string && d.message.size() > 0 && d.message.size() <= 2000
+          && (!('contact' in d)  || (d.contact is string && d.contact.size() <= 120))
+          && (!('context' in d)  || (d.context is string && d.context.size() <= 300));
+    }
+
+    // ---- feedback: write-only, shape-validated, never readable ---------------
+    match /feedback/{docId} {
+      allow create: if signedIn() && appChecked() && validFeedback(request.resource.data);
+      allow read, update, delete: if false;  // the team reads it in the console, not the client
+    }
+
     // ---- contributions: write-only, shape-validated, never readable ----------
     match /contributions/{docId} {
       allow create: if signedIn() && appChecked()

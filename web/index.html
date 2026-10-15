@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=7" />
+  <link rel="stylesheet" href="./style.css?v=8" />
 </head>
 <body>
   <div class="vignette" aria-hidden="true"></div>
@@ -78,6 +78,36 @@
         <div id="ladderBoard" class="ladder-board"><p class="muted">Summoning the ladders…</p></div>
       </div>
     </section>
+
+    <!-- FEEDBACK -->
+    <section class="panel reveal" id="feedback">
+      <div class="panel-head"><h3>Send Word</h3></div>
+      <div class="panel-body">
+        <p class="lead">Found something off, or have an idea? Tell the people building
+        Foresight - only what you type here is sent, and we read every one.</p>
+        <label for="fbType" class="field-label">Kind</label>
+        <select id="fbType">
+          <option value="bug">Something's wrong (a bug)</option>
+          <option value="idea">An idea or request</option>
+          <option value="other">Something else</option>
+        </select>
+        <label for="fbMessage" class="field-label">Your message</label>
+        <textarea id="fbMessage" rows="4" maxlength="2000" spellcheck="true"
+          placeholder="What happened, or what you'd like to see…"></textarea>
+        <label for="fbContact" class="field-label">Contact (optional)</label>
+        <input id="fbContact" type="text" maxlength="120" autocomplete="off"
+          placeholder="Only if you want a reply - Discord / email / Twitch. Blank = anonymous." />
+        <label class="consent">
+          <input type="checkbox" id="fbConsent" />
+          <span>I understand this message (and any contact I add) is sent to the Foresight
+          team, and I won't include anything sensitive.</span>
+        </label>
+        <div class="actions">
+          <button id="fbSubmit" class="btn btn-gold" disabled>Send Word</button>
+        </div>
+        <p id="fbStatus" class="status" role="status"></p>
+      </div>
+    </section>
   </main>
 
   <footer class="footer">
@@ -86,6 +116,6 @@
     <p><a href="./privacy.html">Privacy</a> · <a href="https://github.com/simulatecx/foresight-forever">Source</a> · WoW: Forever</p>
   </footer>
 
-  <script type="module" src="./app.js?v=9"></script>
+  <script type="module" src="./app.js?v=12"></script>
 </body>
 </html>

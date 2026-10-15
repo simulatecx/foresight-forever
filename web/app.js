@@ -4,7 +4,7 @@
 // Firestore security rules, not by keeping it secret.
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { initializeAppCheck, ReCaptchaEnterpriseProvider }
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, getToken }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, signInAnonymously }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -23,12 +23,27 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 const RECAPTCHA_ENTERPRISE_SITE_KEY = "6LdlDe4tAAAAADDs-IpXu1osYeWMC2FcwKeiApQd";
+let appCheck = null;
 try {
-  initializeAppCheck(app, {
+  appCheck = initializeAppCheck(app, {
     provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_ENTERPRISE_SITE_KEY),
     isTokenAutoRefreshEnabled: true,
   });
-} catch (e) { /* App Check not configured yet; writes stay denied by rules */ }
+  console.info("[Foresight] App Check initialized");
+} catch (e) {
+  // Don't swallow silently - a failed init means writes carry no token and get
+  // permission-denied, which looks like a rules bug but isn't.
+  console.error("[Foresight] App Check init FAILED:", (e && (e.message || e.code)) || e);
+}
+
+// Make sure an App Check token is actually ready before a write (contribute/feedback):
+// forces the fetch, eliminates the first-call race, and turns a silent permission-denied
+// into a clear reason in the console. Returns "ok" or a short diagnostic string.
+async function ensureAppCheck() {
+  if (!appCheck) return "no-appcheck-instance (init failed - see console error above)";
+  try { const t = await getToken(appCheck, false); return (t && t.token) ? "ok" : "empty-token"; }
+  catch (e) { return "token-error: " + ((e && (e.code || e.message)) || e); }
+}
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -265,13 +280,52 @@ $("contribute").addEventListener("click", async () => {
   setStatus("Signing the ledger…");
   try {
     await signInAnonymously(auth);
+    const ac = await ensureAppCheck();
+    if (ac !== "ok") console.warn("[Foresight] App Check not ready at contribute:", ac);
     setStatus("Entering you on the ladder…");
     await addDoc(collection(db, "contributions"), p);
     setStatus("Entered - your deeds are recorded. Reading the ladder…", "ok");
     AGG_CACHE = null; // the ladder just changed
     await showCompare(p);
   } catch (e) {
-    setStatus("Submission failed: " + (e.code || e.message) + " (App Check / Auth may still be warming up).", "warn");
+    console.error("[Foresight] contribute failed:", e);
+    setStatus("Submission failed: " + (e.code || e.message) + " (see browser console for details).", "warn");
+  }
+});
+
+// Feedback - writes to the `feedback` collection (separate from contributions, same
+// project). Only what the user types is sent; contact is optional and opt-in.
+const fbStatus = $("fbStatus");
+function setFb(msg, kind) { if (fbStatus) { fbStatus.textContent = msg || ""; fbStatus.className = "status" + (kind ? " " + kind : ""); } }
+function fbRefresh() {
+  const b = $("fbSubmit");
+  if (b) b.disabled = !($("fbMessage").value.trim().length > 0 && $("fbConsent").checked);
+}
+// Guard the wiring: a stale cached index.html (without the feedback markup) loading against
+// this script must not throw on a missing element and halt the rest of app.js (the boot).
+if ($("fbMessage")) $("fbMessage").addEventListener("input", fbRefresh);
+if ($("fbConsent")) $("fbConsent").addEventListener("change", fbRefresh);
+if ($("fbSubmit")) $("fbSubmit").addEventListener("click", async () => {
+  const message = $("fbMessage").value.trim().slice(0, 2000);
+  if (!message) return;
+  const fb = { type: $("fbType").value || "other", message };
+  const contact = $("fbContact").value.trim().slice(0, 120);
+  if (contact) fb.contact = contact;
+  // If they pasted a share link above, attach one line of non-identifying context.
+  const p = parsePayload();
+  if (p) fb.context = `${p.class || "?"} lvl ${p.level || "?"} v${p.build || "?"}`.slice(0, 300);
+  setFb("Sending…");
+  try {
+    await signInAnonymously(auth);
+    const ac = await ensureAppCheck();
+    if (ac !== "ok") console.warn("[Foresight] App Check not ready at feedback:", ac);
+    await addDoc(collection(db, "feedback"), fb);
+    setFb("Sent - thank you. The team reads every one.", "ok");
+    $("fbMessage").value = ""; $("fbContact").value = ""; $("fbConsent").checked = false;
+    fbRefresh();
+  } catch (e) {
+    console.error("[Foresight] feedback failed:", e);
+    setFb("Couldn't send: " + (e.code || e.message) + " (see browser console for details).", "warn");
   }
 });
 
