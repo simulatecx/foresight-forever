@@ -1021,6 +1021,19 @@ over every impact source (`/foresight catalog`), the query spine for synergy/sea
 Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 
 ## Backlog (not yet scheduled)
+- ☐ DATA-freshness AUTO-SYNC completion (owner asked 2026-10-15 "do we auto-stay-in-sync
+  with WoW updates or wait for crowdsourcing?"). The STRUCTURAL game data (talents/spells/
+  items/trait trees) comes from the client DB2 via wago.tools (`fetch.py` -> `generate.py`) -
+  deterministic, NOT crowdsourced. `.github/workflows/data-freshness.yml` scaffolds a daily
+  fetch+generate+gate, BUT `fetch.py` hardcodes `DEFAULT_BUILD` (no latest-build detect) and
+  the PR/issue steps are stubbed - so a new Forever build is NOT auto-picked-up today; a patch
+  = manual `fetch.py --build <new>` + `generate.py` + gate + version bump. TO MAKE IT
+  CONTINUOUS: (1) query wago.tools for the latest Forever build id, (2) fetch+generate+gate it,
+  (3) auto-open a regen PR (or auto-ship after gate). Crowdsourcing is a SEPARATE layer - it
+  only fills the gaps the raw data leaves (rank-scaling presumptions, buff magnitudes), it does
+  not keep structural data in sync. (Verified-rule feed itself is continuous + version-free into
+  Firestore via push_verified/bake, but captures reach disk only on /reload/logout and only
+  TRAINED hovers decide a rule; those baked rules reach players on the next addon version.)
 - ☐ Options GUI menu: one panel listing every /foresight setting (standing toggle,
   opacity, goal, focus) - groomed via S27; until then /foresight set is the lever.
 - ☐ DATA-proc-families: pipeline decode of proc rates beyond critHaste (Nightfall /
