@@ -88,6 +88,11 @@ Make "the owner plays -> everyone gets it in-game-ready" real, add an opt-in sho
 and harden the crowd contract against drift. Seven stories, build order A..G. Ships as the
 0.48.0 minor once in-game confirmed (CurseForge tag only then). House laws (never-networks,
 Lua 5.1, no-PII anon tier, k-of-n+review for overrides) bind every story.
+FIREBASE DEPLOYED 2026-10-14: firestore rules + hosting + functions live on `wow-foresight`
+(web show-off/Champions UI, `verifiedRules`/`leaderboards`/`crowdInsights` collections, named
+leaderboard + item/observed aggregation). Code pushed to `main`. STILL OWNER-GATED: the
+CurseForge ADDON release (tag `v0.48.0`) waits on an in-game confirm; App Check restore (G)
+waits on the Firebase backend fix.
 - **S34a Single-source the payload allow-list ☑** (prerequisite, built + gated 2026-10-14):
   the three hand-synced copies (addon `buildPayload`, web `sanitize`, `firestore.rules`)
   now derive from ONE schema `data/crowd-schema.json`; `pipeline/gen_crowd_schema.py`
@@ -104,11 +109,11 @@ Lua 5.1, no-PII anon tier, k-of-n+review for overrides) bind every story.
   collection into `data/generated/verified_rules.lua` (ships empty-safe); `formulas.F.crowdRule`
   consumes it as the "crowd" tier BENEATH hand-curated `overrides.rankRules`, above presumed,
   below the player's own scan + datamined values (resolution-order + empty-safe selftests,
-  gate 289). Dry-run already decided 26 rules from the owner's real scans. PENDING (owner,
-  outward-facing): deploy the `verifiedRules` rule (`firebase deploy --only firestore:rules`),
-  run `push_verified.py --write`, `fetch_verified.py` bake, then in-game confirm a fresh
-  character shows green "crowd-verified" not "(p)" -> flip ☑. *Fit & Overlap:* CROWD->DATA,
-  Enhance the `peer_baselines` bake pattern + the rank-rule resolution order (no parallel one).
+  gate 289). DEPLOYED 2026-10-14: `verifiedRules` rule live; `push_verified.py --write`
+  pushed + read-back-verified 26 owner-trained rules; `fetch_verified.py` baked them into
+  `verified_rules.lua` (shipped in 0.48.0). PENDING: in-game confirm a FRESH character shows
+  green "crowd-verified" not "(p)" -> flip ☑. *Fit & Overlap:* CROWD->DATA, Enhance the
+  `peer_baselines` bake pattern + the rank-rule resolution order (no parallel one).
 - **S34c Identifying show-off tier ◐** (web asks #2 + #3; built & gated 2026-10-14):
   OWNER CHOSE handle+armory. Opt-in named leaderboards, OFF by default. Schema gains
   `named` (bool gate), `name`/`armory` (identifying tier, allowed ONLY when `named==true` -

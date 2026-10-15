@@ -7,4 +7,31 @@
 local _, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 HM.gen = HM.gen or {}
-HM.gen.verifiedRules = {}
+HM.gen.verifiedRules = {
+    [1003] = "maxTotal",
+    [1181] = "maxTotal",
+    [1201] = "maxTotal",
+    [131] = "perRank",
+    [147] = "maxTotal",
+    [157] = "maxTotal",
+    [1581] = "perRank",
+    [1601] = "maxTotal",
+    [1630] = "perRank",
+    [182] = "maxTotal",
+    [186] = "maxTotal",
+    [201] = "maxTotal",
+    [204] = "maxTotal",
+    [276] = "maxTotal",
+    [343] = "maxTotal",
+    [347] = "maxTotal",
+    [403] = "maxTotal",
+    [406] = "perRank",
+    [408] = "maxTotal",
+    [613] = "perRank",
+    [614] = "maxTotal",
+    [641] = "maxTotal",
+    [796] = "perRank",
+    [808] = "maxTotal",
+    [81] = "maxTotal",
+    [824] = "perRank",
+}
