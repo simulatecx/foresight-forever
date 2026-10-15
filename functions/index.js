@@ -125,7 +125,8 @@ async function rebuild() {
         if (typeof v !== "number") continue;
         if (!boards.has(k)) boards.set(k, []);
         boards.get(k).push({
-          value: v, class: c.class, level: c.level, name: c.name,
+          value: v, class: c.class, race: typeof c.race === "string" ? c.race : null,
+          level: c.level, name: c.name,
           armory: typeof c.armory === "string" ? c.armory : null,
           buffs: (c.buffs && typeof c.buffs === "object") ? c.buffs : null,
         });

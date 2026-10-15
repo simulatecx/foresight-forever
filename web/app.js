@@ -189,24 +189,25 @@ async function showCompare(p) {
         <p class="muted">Only ${agg.count} champion(s) here so far - not enough to rank (small brackets stay hidden). Check back soon.</p>`;
       return;
     }
-    // DAILY ACHIEVEMENT - today's featured challenge (same day-of-year pick as the hero)
-    // and your standing on it, surfaced first.
-    const now = new Date();
-    const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-    const feat = FEATURED[doy % FEATURED.length];
-    const fVal = p.metrics && p.metrics[feat.key];
-    const fAgg = agg.metrics && agg.metrics[feat.key];
-    let dailyHtml;
-    if (typeof fVal === "number" && fAgg) {
-      dailyHtml = row(feat.label, Math.round(fVal), pctFromQuantiles(fAgg, fVal), `record ${Math.round(fAgg.max)} · n=${fAgg.n}`);
-    } else if (fAgg) {
-      dailyHtml = `<p class="meta">Today's trial is <b>${esc(feat.label)}</b> - standing record ${Math.round(fAgg.max)}. Your submission didn't include it.</p>`;
-    } else {
-      dailyHtml = `<p class="meta">Today's trial is <b>${esc(feat.label)}</b> - no mark in your bracket yet. Be the first.</p>`;
+    // TODAY'S CHALLENGES - your standing on the Daily Stat + your class's Daily Spell.
+    const spell = dailySpellFor(p.class);
+    const daily = [[dailyStatKey(), "Daily Stat"]];
+    if (spell) daily.push(["ability:" + spell, "Daily Spell"]);
+    const dailyKeys = new Set(daily.map(([k]) => k));
+    let dailyHtml = "";
+    for (const [key, kind] of daily) {
+      const v = p.metrics && p.metrics[key];
+      const s = agg.metrics && agg.metrics[key];
+      if (typeof v === "number" && s) {
+        dailyHtml += row(`${kind}: ${metricLabel(key)}`, Math.round(v), pctFromQuantiles(s, v), `record ${Math.round(s.max)} · n=${s.n}`);
+      } else if (s) {
+        dailyHtml += `<p class="meta"><b>${esc(kind)}: ${esc(metricLabel(key))}</b> - record ${Math.round(s.max)}; your submission didn't include it.</p>`;
+      } else {
+        dailyHtml += `<p class="meta"><b>${esc(kind)}: ${esc(metricLabel(key))}</b> - no mark in your bracket yet. Be the first.</p>`;
+      }
     }
 
-    // OVERALL SUBMISSIONS - everything you've submitted: all lenses + challenge metrics
-    // (today's featured one is shown above, so it's skipped here).
+    // OVERALL - everything else you submitted (the two daily ones are shown above).
     let overall = "";
     for (const [id, val] of Object.entries(p.lenses || {})) {
       const s = agg.lenses && agg.lenses[id];
@@ -214,14 +215,14 @@ async function showCompare(p) {
       overall += row(id, Math.round(val), pctFromQuantiles(s, val), `n=${s.n}, median ${Math.round(s.p50)}`);
     }
     for (const [k, val] of Object.entries(p.metrics || {})) {
-      if (k === feat.key) continue;
+      if (dailyKeys.has(k)) continue;
       const s = agg.metrics && agg.metrics[k];
       if (!s) continue;
       overall += row(metricLabel(k), Math.round(val), pctFromQuantiles(s, val), `record ${Math.round(s.max)} · n=${s.n}`);
     }
     resEl.innerHTML =
-      `<h2>${esc(titleCase(p.class))} · level ${levelBucket(p.level)}+ <span class="muted">(${agg.count} champions)</span></h2>` +
-      `<div class="section-title">Daily Achievement</div>${dailyHtml}` +
+      `<h2>${raceClass(p)} · level ${levelBucket(p.level)}+ <span class="muted">(${agg.count} champions)</span></h2>` +
+      `<div class="section-title">Today's Challenges</div>${dailyHtml}` +
       (overall ? `<div class="section-title">Overall Submissions</div>${overall}` : "") +
       `<p class="meta" style="margin-top:14px">Percentiles are approximate from the bracket's distribution (p).</p>`;
     resEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -256,35 +257,72 @@ function tallyFor(aggs, klass) {
   return { champions, brackets };
 }
 
-// Daily rotating trial - deterministic by day-of-year so everyone sees the same one.
-const FEATURED = [
-  { label: "Most Armor", key: "stat.armor" },
-  { label: "Biggest Earth Shock", key: "ability:Earth Shock" },
-  { label: "Most Frost Spell Damage", key: "school.frost" },
-  { label: "Most Health", key: "stat.maxHealth" },
-  { label: "Biggest Fireball", key: "ability:Fireball" },
-  { label: "Most Fire Spell Damage", key: "school.fire" },
-  { label: "Biggest Greater Heal", key: "ability:Greater Heal" },
-];
-async function renderDailyTrial() {
+// ---- Daily challenges: two rotations, deterministic by day-of-year (everyone sees the
+// same ones). (1) a class-agnostic Daily Stat, (2) a Daily Spell resolved PER CLASS. -------
+function dayIndex() {
   const now = new Date();
-  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-  const f = FEATURED[doy % FEATURED.length];
-  $("trialTitle").textContent = f.label;
-  $("trialSub").textContent = "Top the ladder for this one and the crown is yours. Submit today if you're the highest!";
-  const aggs = await loadAggregates();
+  return Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+}
+const DAILY_STATS = ["stat.armor", "stat.maxHealth", "stat.spellDamage",
+  "school.frost", "school.fire", "school.nature", "school.shadow", "school.arcane", "school.holy"];
+function dailyStatKey() { return DAILY_STATS[dayIndex() % DAILY_STATS.length]; }
+
+// Each class's signature abilities; the metric key the addon shares is `ability:<name>`.
+const CLASS_SPELLS = {
+  WARRIOR: ["Mortal Strike", "Execute", "Overpower"],
+  PALADIN: ["Judgement", "Holy Light", "Hammer of Wrath"],
+  HUNTER:  ["Aimed Shot", "Arcane Shot", "Multi-Shot"],
+  ROGUE:   ["Sinister Strike", "Eviscerate", "Backstab"],
+  PRIEST:  ["Smite", "Greater Heal", "Mind Blast"],
+  SHAMAN:  ["Earth Shock", "Lightning Bolt", "Healing Wave"],
+  MAGE:    ["Fireball", "Frostbolt", "Arcane Missiles"],
+  WARLOCK: ["Shadow Bolt", "Immolate", "Corruption"],
+  DRUID:   ["Wrath", "Starfire", "Healing Touch"],
+};
+const CLASS_ORDER = ["WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "SHAMAN", "MAGE", "WARLOCK", "DRUID"];
+function dailySpellFor(cls) {
+  const list = CLASS_SPELLS[cls];
+  return list ? list[dayIndex() % list.length] : null;
+}
+// Record for a metric across buckets (optionally class-scoped), from the aggregates.
+function recordFor(aggs, metric, klass) {
   let best = null;
   for (const a of aggs) {
-    const s = a.metrics && a.metrics[f.key];
-    if (s && typeof s.max === "number" && (!best || s.max > best.max)) best = { max: s.max, cls: a.class };
+    if (klass && a.class !== klass) continue;
+    const s = a.metrics && a.metrics[metric];
+    if (s && typeof s.max === "number" && (!best || s.max > best.value)) best = { value: s.max, cls: a.class };
   }
-  if (best) {
-    $("trialRecord").textContent = `Standing record: ${Math.round(best.max)} (${titleCase(best.cls)})`;
-  } else {
-    const t = tallyFor(aggs, "ALL");
-    $("trialRecord").textContent = t.champions > 0
-      ? `${t.champions} champion${t.champions === 1 ? "" : "s"} entered so far - the record unlocks when a bracket reaches 5.`
-      : "No champion has answered yet - be the first.";
+  return best;
+}
+
+function renderDailyChallenges() {
+  const aggs = AGG_CACHE || [], lb = LB_CACHE || new Map();
+  // Daily Stat card
+  const statKey = dailyStatKey();
+  if ($("dailyStatTitle")) $("dailyStatTitle").textContent = metricLabel(statKey);
+  if ($("dailyStatRecord")) {
+    const rec = recordFor(aggs, statKey, null);
+    $("dailyStatRecord").innerHTML = rec
+      ? `Record <b>${Math.round(rec.value)}</b> &middot; ${esc(titleCase(rec.cls))}`
+      : `<span class="muted">No mark yet - be the first to set it.</span>`;
+  }
+  // Daily Spell by Class list
+  const list = $("dailySpellList");
+  if (list) {
+    list.innerHTML = CLASS_ORDER.map((cls) => {
+      const spell = dailySpellFor(cls);
+      if (!spell) return "";
+      const metric = "ability:" + spell;
+      const champ = (lb.get(metric) || []).filter((e) => e.class === cls).sort((a, b) => b.value - a.value)[0];
+      const rec = champ ? null : recordFor(aggs, metric, cls);
+      const lead = champ
+        ? `<span class="cs-lead">${Math.round(champ.value)} <span class="cs-by">${charLabel(champ)}</span></span>`
+        : rec ? `<span class="cs-lead">${Math.round(rec.value)}</span>`
+        : `<span class="cs-none">be the first</span>`;
+      return `<div class="cs-row" style="--class:${classColor(cls)}">
+        <span class="cs-class">${esc(titleCase(cls))}</span>
+        <span class="cs-spell">${esc(spell)}</span>${lead}</div>`;
+    }).join("");
   }
 }
 
@@ -329,12 +367,22 @@ function statCategory(k) {
 const STAT_TYPES = [["all", "All stats"], ["survival", "Survival"], ["power", "Spell power"],
   ["school", "Spell schools"], ["ability", "Abilities"]];
 
-// A character's display label: chosen handle if named, else race + class (race is shown the
-// moment the addon sends it; until then it falls back to class cleanly - never a real name).
+// Race token -> readable label. Tokens are locale-free CamelCase ("NightElf", "Scourge");
+// map the few that differ from their common name, else split CamelCase ("NightElf" -> "Night
+// Elf"). Shown the moment the addon sends it; absent on older submissions (falls back cleanly).
+const RACE_LABELS = { Scourge: "Undead", NightElf: "Night Elf", Skyborne: "Skyborne" };
+function raceLabel(r) {
+  return r ? (RACE_LABELS[r] || String(r).replace(/([a-z])([A-Z])/g, "$1 $2")) : "";
+}
+// "Orc Shaman" when race is known, else "Shaman" - used in the meta line + anon fallback.
+function raceClass(e) {
+  const cls = titleCase(e && e.class) || "Adventurer";
+  return e && e.race ? esc(raceLabel(e.race) + " " + cls) : esc(cls);
+}
+// A character's primary label: chosen handle if named, else race + class (never a real name).
 function charLabel(e) {
   if (e && typeof e.name === "string" && e.name) return esc(e.name);
-  const cls = titleCase(e && e.class) || "Adventurer";
-  return e && e.race ? esc(titleCase(e.race) + " " + cls) : esc(cls);
+  return raceClass(e);
 }
 function armoryWrap(e, inner, color) {
   const safe = (e && typeof e.armory === "string" && /^https:\/\//.test(e.armory)) ? e.armory : null;
@@ -387,7 +435,7 @@ function renderLadders() {
       return `<div class="lad-row" style="--class:${classColor(e.class)}">
         <span class="lad-rank">${i + 1}</span>
         <span class="lad-name">${armoryWrap(e, charLabel(e), classColor(e.class))}
-          <span class="lad-meta">${esc(titleCase(e.class))} · lvl ${esc(e.level)}</span>
+          <span class="lad-meta">${raceClass(e)} · lvl ${esc(e.level)}</span>
           ${buffLine(e, "row-buffs")}</span>
         <span class="lad-val">${esc(Math.round(e.value))}${pct}</span></div>`;
     }).join("");
@@ -447,7 +495,7 @@ function renderChampions() {
     const pct = top != null ? `<span class="pct">top ${top}%</span>` : "";
     return `<div class="champ-card" style="--class:${color}">
       <div class="champ-name">${armoryWrap(e, charLabel(e), color)}</div>
-      <div class="champ-class">${esc(titleCase(e.class))} · level ${esc(e.level)}</div>
+      <div class="champ-class">${raceClass(e)} · level ${esc(e.level)}</div>
       <div class="champ-stat">${esc(metricLabel(metric))}</div>
       <div class="champ-val">${esc(Math.round(e.value))}${pct}</div>
       ${buffLine(e, "champ-buffs")}</div>`;
@@ -469,6 +517,7 @@ async function initLadders() {
   }
   renderLadders();
   renderChampions();
+  renderDailyChallenges();
 }
 
 // Prefill from a share link (#d=<url-encoded JSON>).
@@ -553,6 +602,5 @@ if (navToggle && navEl) {
 }
 
 // Boot.
-renderDailyTrial();
-initLadders();   // loads aggregates + leaderboards, then renders ladders + champions
+initLadders();   // loads aggregates + leaderboards, then renders ladders + champions + dailies
 fromShareLink();

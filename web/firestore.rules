@@ -29,10 +29,11 @@ service cloud.firestore {
     // never hand-edit between the markers (the ship gate fails on drift).
     // BEGIN generated validContribution
     function validContribution(d) {
-      return d.keys().hasOnly(['v', 'build', 'class', 'spec', 'level', 'lenses', 'metrics', 'talents', 'items', 'observed', 'clientId', 'named', 'name', 'armory', 'buffs'])
+      return d.keys().hasOnly(['v', 'build', 'class', 'race', 'spec', 'level', 'lenses', 'metrics', 'talents', 'items', 'observed', 'clientId', 'named', 'name', 'armory', 'buffs'])
           && d.v == 1
           && (!('build' in d) || (d.build is string && d.build.size() <= 32))
           && d.class is string && d.class.size() <= 16 && d.class.matches('[A-Z]+')
+          && (!('race' in d) || (d.race is string && d.race.size() <= 24 && d.race.matches('[A-Za-z]+')))
           && (!('spec' in d) || (d.spec is number))
           && d.level is number && d.level >= 1 && d.level <= 200
           && d.lenses is map

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=13" />
+  <link rel="stylesheet" href="./style.css?v=14" />
 </head>
 <body>
   <div class="vignette" aria-hidden="true"></div>
@@ -43,10 +43,19 @@
     <!-- ============ 1. TODAY'S CHALLENGE + UPLOAD ============ -->
     <section class="trial reveal" id="challenge" aria-live="polite">
       <div class="trial-band">
-        <span class="trial-eyebrow">Today's Challenge</span>
-        <h2 class="trial-title" id="trialTitle">&nbsp;</h2>
-        <p class="trial-sub" id="trialSub">Loading today's challenge…</p>
-        <div class="trial-record" id="trialRecord"></div>
+        <span class="trial-eyebrow">Today's Challenges</span>
+        <div class="challenge-cards">
+          <div class="challenge-card" id="dailyStatCard">
+            <span class="cc-kind">Daily Stat</span>
+            <h2 class="cc-title" id="dailyStatTitle">&nbsp;</h2>
+            <div class="cc-record" id="dailyStatRecord"></div>
+          </div>
+          <div class="challenge-card" id="dailySpellCard">
+            <span class="cc-kind">Daily Spell &middot; by class</span>
+            <div class="cc-spells" id="dailySpellList"><p class="muted">Loading…</p></div>
+          </div>
+        </div>
+        <p class="trial-sub">Upload your character below to enter today's challenges and claim the top spot.</p>
       </div>
       <div class="trial-upload">
         <label for="payload" class="field-label">Upload your character</label>
@@ -144,6 +153,6 @@
     <p><a href="./privacy.html">Privacy</a> · <a href="https://github.com/simulatecx/foresight-forever">Source</a> · WoW: Forever</p>
   </footer>
 
-  <script type="module" src="./app.js?v=17"></script>
+  <script type="module" src="./app.js?v=18"></script>
 </body>
 </html>

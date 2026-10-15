@@ -77,6 +77,12 @@ function Crowd.buildPayload(inp)
         observed = {},
     }
 
+    -- Race token (anon GAME data, like class - "Orc", "Scourge", "NightElf"). Racials shift
+    -- hit/stat baselines, so it's useful context on the ladders. Letters only, capped; never
+    -- identity. Absent on older submissions (added S34, 2026-10-15).
+    local race = type(inp.race) == "string" and inp.race:match("^%a+$")
+    if race then out.race = race:sub(1, 24) end
+
     -- CHALLENGE METRICS (the gamified layer): concrete, non-identifying numbers we can
     -- rank into challenges ("Most Armor", "Most Frost Spell Damage", and - once ability
     -- hits are added - "Biggest Earth Shock"). A GENERIC key->number map so a new
@@ -399,6 +405,7 @@ function Crowd.payload(opts)
     return Crowd.buildPayload({
         build = HM.gen and HM.gen.build,
         classToken = snapshot.classToken,
+        race = snapshot.raceToken,
         specId = specId,
         level = snapshot.level,
         lenses = lenses,

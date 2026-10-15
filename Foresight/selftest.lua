@@ -2610,7 +2610,7 @@ function HM.runSelftest(out)
         -- Feed the builder a payload STUFFED with identity + free text + timestamps, as
         -- if a sloppy caller passed the whole collect store. None may survive.
         local p = HM.Crowd.buildPayload({
-            build = "1.60.1", classToken = "SHAMAN", specId = 262, level = 35,
+            build = "1.60.1", classToken = "SHAMAN", race = "Scourge", specId = 262, level = 35,
             lenses = { spellcasting = 108.76, meleeDps = 154, bogusLens = 999 },
             talents = { [104753] = 3, ["evil"] = 5 },
             items = { [12345] = { c = 7, last = "2026-10-13" }, [0] = { c = 1 } },
@@ -2630,7 +2630,11 @@ function HM.runSelftest(out)
             and p.talents[104753] == 3 and p.talents["evil"] == nil
             and p.items[12345] == 7 and p.items[0] == nil
             and p.observed[1249519] and p.observed[1249519].stats.attackPower == 80
-            and p.clientId == "a1b2c3d4e5") then return false, "shape" end
+            and p.clientId == "a1b2c3d4e5" and p.race == "Scourge") then return false, "shape" end
+        -- race is letters-only game data: a token with digits/symbols is dropped, not stored.
+        if HM.Crowd.buildPayload({ classToken = "MAGE", level = 10, race = "Orc123" }).race ~= nil then
+            return false, "bad race leaked"
+        end
         -- the anonymous promise: the stuffed name + NO opt-in -> no identifying fields:
         if p.named ~= nil or p.name ~= nil or p.armory ~= nil then
             return false, "identifying leaked without opt-in"

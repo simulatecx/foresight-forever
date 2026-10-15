@@ -5,6 +5,7 @@
     { "key": "v",        "tier": "anon", "kind": "const",  "value": 1,               "required": true,  "doc": "payload schema version" },
     { "key": "build",    "tier": "anon", "kind": "string", "maxSize": 32,             "required": false, "doc": "client build id (game data, not identity)" },
     { "key": "class",    "tier": "anon", "kind": "string", "maxSize": 16, "matches": "[A-Z]+", "required": true, "doc": "class token (e.g. SHAMAN), not identity" },
+    { "key": "race",     "tier": "anon", "kind": "string", "maxSize": 24, "matches": "[A-Za-z]+", "required": false, "doc": "race token (e.g. Orc, Scourge) - game data, not identity; racials shift hit/stat baselines" },
     { "key": "spec",     "tier": "anon", "kind": "number",                            "required": false, "doc": "numeric spec id only, never a name" },
     { "key": "level",    "tier": "anon", "kind": "number", "min": 1, "max": 200,      "required": true,  "doc": "character level" },
     { "key": "lenses",   "tier": "anon", "kind": "map",                               "required": true,  "doc": "computed dimension indices (numbers only)" },

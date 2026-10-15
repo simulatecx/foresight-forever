@@ -7,6 +7,7 @@ export const CROWD_SCHEMA = {
     { key: "v", tier: "anon", kind: "const", value: 1, required: true },
     { key: "build", tier: "anon", kind: "string", maxSize: 32, required: false },
     { key: "class", tier: "anon", kind: "string", maxSize: 16, matches: "[A-Z]+", required: true },
+    { key: "race", tier: "anon", kind: "string", maxSize: 24, matches: "[A-Za-z]+", required: false },
     { key: "spec", tier: "anon", kind: "number", required: false },
     { key: "level", tier: "anon", kind: "number", min: 1, max: 200, required: true },
     { key: "lenses", tier: "anon", kind: "map", required: true },
@@ -20,7 +21,7 @@ export const CROWD_SCHEMA = {
     { key: "armory", tier: "identifying", kind: "string", maxSize: 200, matches: "https://[A-Za-z0-9._~:/?#@!$&*+,;=%()-]+", required: false },
     { key: "buffs", tier: "anon", kind: "map", maxSize: 40, required: false },
   ],
-  allow: ["v", "build", "class", "spec", "level", "lenses", "metrics", "talents", "items", "observed", "clientId", "named", "name", "armory", "buffs"],
+  allow: ["v", "build", "class", "race", "spec", "level", "lenses", "metrics", "talents", "items", "observed", "clientId", "named", "name", "armory", "buffs"],
   forbidden: ["realm", "account", "guild", "reports", "taintEvents", "lastTooltipOwner", "sessions", "notes", "at"],
-  caps: {"build": 32, "class": 16, "items": 500, "observed": 150, "clientId": 40, "name": 32, "armory": 200, "buffs": 40},
+  caps: {"build": 32, "class": 16, "race": 24, "items": 500, "observed": 150, "clientId": 40, "name": 32, "armory": 200, "buffs": 40},
 };
