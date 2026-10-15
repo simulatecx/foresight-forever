@@ -19,6 +19,29 @@ DEFAULT_TARGETS = [
 ]
 
 
+def verify_layout(target: Path) -> list[str]:
+    """Every .lua the TOC lists must exist on disk at the target.
+
+    The client reports a bare "Error loading <file>" when a TOC-referenced file is
+    missing (e.g. a copy that landed the repo root instead of the addon, so
+    data\\formulas.lua is absent and HM.formulas is never set). We'd rather fail the
+    deploy here than let that reach the game. Returns the list of missing files.
+    """
+    toc = target / "Foresight.toc"
+    if not toc.exists():
+        return ["Foresight.toc"]
+    missing = []
+    for raw in toc.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.lower().endswith(".lua"):
+            rel = line.replace("\\", "/")
+            if not (target / rel).exists():
+                missing.append(rel)
+    return missing
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", type=Path, default=None)
@@ -46,8 +69,14 @@ def main() -> int:
         if target.exists():
             shutil.rmtree(target)
         shutil.copytree(ADDON_SRC, target, ignore=shutil.ignore_patterns("*.pyc"))
+        missing = verify_layout(target)
+        if missing:
+            print(f"DEPLOY BROKEN - {len(missing)} TOC-referenced file(s) missing at {target}:")
+            for m in missing[:20]:
+                print(f"  - {m}")
+            return 1
         files = len(list(target.rglob("*.*")))
-        print(f"deployed {files} files -> {target}")
+        print(f"deployed {files} files -> {target} (TOC layout verified)")
     print("in-game: /reload (or relog), then /foresight verify")
     return 0
 
