@@ -495,11 +495,15 @@ function Collect.probeTalentApiShape(out)
     -- later ("blocked from an action only available to the Blizzard UI" on opening
     -- talents). The question they probed is ANSWERED (S3: none-answered; the live
     -- path is C_Traits) - so these are now PRESENCE-ONLY, never called.
-    local CSI = _G.C_SpecializationInfo or {}
-    shape.calls["CSI.GetTalentInfo (presence only - call shapes retired, taint lead)"] =
-        { present = type(CSI.GetTalentInfo) == "function" }
-    record("CSI.GetSpecialization()", CSI.GetSpecialization)
-    record("CSI.GetNumSpecializations()", CSI.GetNumSpecializations)
+    -- C_SpecializationInfo is RETIRED from Foresight: its calls carry "Lua Taint: Foresight"
+    -- and taint the environment at login (this probe runs once per login via verify), so the
+    -- client then blocks the next protected op - on a controller, the gamepad interact path
+    -- (SetPreferredGamepadInteractTarget), out of combat, nothing open (2026-10-14 live). The
+    -- v0.37.1 fix retired GetTalentInfo but LEFT GetSpecialization/GetNumSpecializations being
+    -- CALLED here (via record -> pcall) - that was the remaining vector. Record ONLY that the
+    -- namespace exists; never alias it, reference a member, or call in. Live path is C_Traits.
+    shape.calls["C_SpecializationInfo (present; never called - taint)"] =
+        { present = _G.C_SpecializationInfo ~= nil }
 
     -- Trait/config system (the Mainline node-based path, in case talents live there).
     local CT = _G.C_ClassTalents or {}

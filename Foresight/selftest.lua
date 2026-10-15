@@ -2415,12 +2415,12 @@ function HM.runSelftest(out)
     end)())
     check("talent API shape probe runs headless + persists", (function()
         local shape = HM.Collect.probeTalentApiShape(function() end)
-        -- The CSI.GetTalentInfo call shapes are RETIRED (taint lead 2026-10-12:
-        -- failing calls carried "Lua Taint: Foresight") - presence-only now.
-        local presence =
-            shape.calls["CSI.GetTalentInfo (presence only - call shapes retired, taint lead)"]
+        -- C_SpecializationInfo is RETIRED (its calls carry "Lua Taint: Foresight" and taint
+        -- the login env -> gamepad interact block, 2026-10-14). The probe records ONLY the
+        -- namespace's presence - it never aliases, references a member, or calls in.
+        local presence = shape.calls["C_SpecializationInfo (present; never called - taint)"]
         return shape and shape.calls
-            and presence ~= nil and presence.present == false
+            and presence ~= nil and presence.present == false  -- headless: no CSI namespace
             and HM.db.collect.talentApiShape ~= nil
     end)())
     check("serialize renders nested tables", (function()

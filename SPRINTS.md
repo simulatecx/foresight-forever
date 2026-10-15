@@ -322,6 +322,20 @@ lint reds any `math.random`/`math.randomseed` so it can't regress. KEY LESSON: n
 reseed/advance the shared RNG from addon code on classic - it taints every RNG-reading
 secure op (gamepad interact the most visible). In-game re-verify queued (gamepad reconnected,
 /reload, /foresight share = no block). NOTE: existing cached clientIds are untouched.
+CORRECTION + REAL CONTROLLER VECTOR (v0.46.12): the RNG fix above was a genuine latent bug
+but NOT the user's active vector - the clientId is CACHED, so clientId() returns early and
+never reseeds (RNG only bites a BRAND-NEW install's first generation). The taint kept
+firing on v0.46.11 (8+ gamepad events captured 2026-10-14 20:08, open=[none-open], on the
+v0.46.11 session). THE LIVE VECTOR: `core/collect.lua` `probeTalentApiShape` (run once per
+login via `/foresight verify`) still CALLED `C_SpecializationInfo.GetSpecialization` +
+`GetNumSpecializations` through its `record()` helper, hidden behind a `local CSI =` alias
+the direct-call lint didn't see. CSI calls carry Foresight taint -> login env tainted ->
+every gamepad interact blocked all session. v0.37.1 retired GetTalentInfo but left these
+two. FIX: probe records only `_G.C_SpecializationInfo ~= nil` (namespace presence) - no
+alias, no member touch, no call; compliance lint now also reds aliasing C_SpecializationInfo
+to a local. THREE taint sites total, all fixed: crowd.lua CSI (0.46.8) + crowd.lua RNG
+(0.46.11) + collect.lua login CSI probe (0.46.12). In-game re-verify queued (gamepad in,
+/reload, use the controller = no block).
 RETAIL INSTALL DELETED this session: `_retail_` Foresight (stale v0.37.0 addon + both SV
 files) removed to stop version confusion; only `_classic_beta_` (Forever, v0.46.10) has
 Foresight now.

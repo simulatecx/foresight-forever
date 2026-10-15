@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.46.12 - 2026-10-14
+
+ACCOUNT-SAFETY FIX (taint - the actual controller vector). The login taint-block on gamepads
+persisted after v0.46.8 (CSI-in-share) and v0.46.11 (RNG) because the LIVE source was
+elsewhere: the once-per-login talent-API shape probe (`core/collect.lua`, run via
+`/foresight verify`) still CALLED `C_SpecializationInfo.GetSpecialization` and
+`GetNumSpecializations` through its `record()` helper - hidden behind a `CSI` alias that the
+direct-call lint didn't see. Those CSI calls carry "Lua Taint: Foresight" and run at login,
+so the environment was tainted and every gamepad interact
+(`SetPreferredGamepadInteractTarget`) got blocked - out of combat, nothing open, matching the
+captured events (8+ on 2026-10-14; the user confirmed unplugging the controller stopped them,
+and the clientId was cached so the RNG path wasn't re-running). Fixed: the probe now records
+ONLY that the C_SpecializationInfo namespace exists - it never aliases it, touches a member,
+or calls in (the live talent path is C_Traits). The v0.37.1 fix had retired GetTalentInfo but
+left these two. Compliance lint now also reds aliasing `C_SpecializationInfo` to a local, so
+an alias can never hide a tainting call again. Gate 279.
+
+*Features:* QA-verify-command, QA-compliance-gate
+
 ## 0.46.11 - 2026-10-14
 
 ACCOUNT-SAFETY FIX (taint, part 2 - controller users). The second `/foresight share` taint

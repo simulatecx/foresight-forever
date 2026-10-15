@@ -61,6 +61,12 @@ ESCAPE_PATTERNS = [
     # from the clock/profiler instead; add `-- compliance-allow:` if a truly non-secure need.
     (re.compile(r"(?<![\w.])math\s*\.\s*random(seed)?\s*\("),
      "math.random/randomseed (reseeds the shared RNG - taints the classic client; gamepad-interact block)"),
+    # Don't ALIAS C_SpecializationInfo to a local - an alias hides tainting calls from the
+    # direct-call rule above (2026-10-14: `local CSI = _G.C_SpecializationInfo` let
+    # `record(.., CSI.GetSpecialization)` call CSI at login and taint the gamepad path).
+    # Reference _G.C_SpecializationInfo inline and only `~= nil` presence-check it.
+    (re.compile(r"(?<![\w.])local\s+\w+\s*=\s*(?:_G\s*\.\s*)?C_SpecializationInfo\b"),
+     "aliasing C_SpecializationInfo to a local (hides tainting calls - reference it inline, presence-check only)"),
 ]
 
 ALLOW_MARKER = "-- compliance-allow:"
