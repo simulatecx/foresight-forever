@@ -10,7 +10,14 @@ service cloud.firestore {
 
     // ---- helpers ----------------------------------------------------------
     function signedIn()  { return request.auth != null; }            // anonymous is fine
-    function appChecked(){ return request.app != null; }             // App Check enforced
+    // appChecked() is TEMPORARILY NOT CALLED on the write rules (2026-10-14). The reCAPTCHA
+    // Enterprise App Check token validates client-side (getToken returns a valid 956-char
+    // token) but the backend does not set request.app on writes - every create got
+    // permission-denied even with a good token + valid shape (browser-reproduced). To
+    // unblock contribute + feedback we rely on anonymous-auth + the hasOnly shape-lock (no
+    // PII can be written) + small-bucket suppression on reads. RESTORE `&& appChecked()` on
+    // both create rules once the Firebase App Check / reCAPTCHA Enterprise backend is fixed.
+    function appChecked(){ return request.app != null; }
 
     // The exact, allow-listed payload shape (mirrors Foresight/core/crowd.lua).
     // hasOnly() rejects ANY key not in this set - so name/realm/notes/timestamps
@@ -43,13 +50,13 @@ service cloud.firestore {
 
     // ---- feedback: write-only, shape-validated, never readable ---------------
     match /feedback/{docId} {
-      allow create: if signedIn() && appChecked() && validFeedback(request.resource.data);
+      allow create: if signedIn() && validFeedback(request.resource.data);  // restore && appChecked() when fixed
       allow read, update, delete: if false;  // the team reads it in the console, not the client
     }
 
     // ---- contributions: write-only, shape-validated, never readable ----------
     match /contributions/{docId} {
-      allow create: if signedIn() && appChecked()
+      allow create: if signedIn()  // restore && appChecked() when the backend is fixed
                     && validContribution(request.resource.data);
       allow read, update, delete: if false;  // raw crowd rows are not client-readable
     }
