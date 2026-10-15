@@ -333,9 +333,22 @@ the direct-call lint didn't see. CSI calls carry Foresight taint -> login env ta
 every gamepad interact blocked all session. v0.37.1 retired GetTalentInfo but left these
 two. FIX: probe records only `_G.C_SpecializationInfo ~= nil` (namespace presence) - no
 alias, no member touch, no call; compliance lint now also reds aliasing C_SpecializationInfo
-to a local. THREE taint sites total, all fixed: crowd.lua CSI (0.46.8) + crowd.lua RNG
-(0.46.11) + collect.lua login CSI probe (0.46.12). In-game re-verify queued (gamepad in,
-/reload, use the controller = no block).
+to a local. THREE addon taint sites found + fixed as real hardening: crowd.lua CSI
+(0.46.8) + crowd.lua RNG (0.46.11) + collect.lua login CSI probe (0.46.12).
+** DEFINITIVE ROOT CAUSE (taint.log, 2026-10-14) - NONE of the above was the gamepad
+block.** The user captured `_classic_beta_/Logs/taint.log` via `/console taintLog 2`: the
+block comes from BLIZZARD's chat parser - `ChatFrame1EditBox:ParseText` ->
+`ImportAllListsToHash` -> `secureexecuterange()` reads every addon's `SLASH_*` globals; our
+`SLASH_FORESIGHT1/2/3` (tainted simply because an addon set them - UNAVOIDABLE, every
+addon's are) taint that secure execution, and on a CONTROLLER the gamepad interact op
+(`SetPreferredGamepadInteractTarget`) in it is then blocked. Fires on TYPING any
+`/foresight` command; gamepad-only. NOT a Foresight defect and NOT code-fixable on our side
+(no addon can set a non-tainting global). THE FIX = UI BUTTONS (the user's standing "no
+slash commands, all UI" directive): a gamepad player who CLICKS Share / Matrix / Options
+never routes through the chat-parse path, so no taint, no block. Slash commands stay for
+keyboard users (harmless there). Worth a Forever beta bug report (secure ImportAllListsToHash
+tainting gamepad interact from addon slash globals). The 0.46.8/0.46.11/0.46.12 fixes still
+stand as legit taint hygiene + the lints prevent regression. NEXT: build the UI buttons.
 RETAIL INSTALL DELETED this session: `_retail_` Foresight (stale v0.37.0 addon + both SV
 files) removed to stop version confusion; only `_classic_beta_` (Forever, v0.46.10) has
 Foresight now.
