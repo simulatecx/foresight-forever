@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.49.0"
+HM.version = "0.49.1"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -834,7 +834,7 @@ local function onSlash(input)
         printMsg(("%s: %d mana per %.1fs cast = %.0f mana/s drain"):format(
             oom.name, oom.cost, oom.castSec, oom.drainPerSec))
         printMsg(("  chain-casting empties your pool in ~%ds (~%d casts)"):format(
-            oom.seconds, oom.casts))
+            math.floor(oom.seconds + 0.5), math.floor(oom.casts + 0.5)))
         for _, n in ipairs(oom.notes) do printMsg("  " .. n) end
     elseif cmd == "path" then
         -- Goal pathways: rank your UNSPENT talent steps by what they do for a

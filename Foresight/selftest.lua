@@ -2704,6 +2704,21 @@ function HM.runSelftest(out)
         local ranks = FT2.nodeRanks(back)
         return ranks[82000] == 5 and ranks[82010] == 2
     end)())
+    check("FT2 interop: checksum-valid but MALFORMED payload fails safely (nil, never errors)", (function()
+        local FT2 = HM.FT2
+        if not FT2 then return false, "no FT2" end
+        -- A node id that needs a 6-byte varint (> 2^35) encodes with a VALID Adler-32, but
+        -- exceeds var_decode's 5-byte cap on the way back in. Before the off-nil guard this
+        -- raised (nil+1 arithmetic) instead of returning nil - the untrusted-input law says a
+        -- foreign/corrupt code must fail SAFELY. pcall proves no error escapes.
+        local code = FT2.encode({ kind = 0, classID = 8, totalPoints = 1,
+            nodes = { { id = 2 ^ 36, ranks = 1, entryID = 1, posX = 0, posY = 0 } } })
+        if type(code) ~= "string" then return false, "encode" end
+        local ok, res = pcall(FT2.decode, code)
+        if not ok then return false, "decode RAISED on malformed payload" end
+        if res ~= nil then return false, "accepted malformed payload" end
+        return true
+    end)())
 
     -- S13 crowd-share contract: the allow-list build leaks NOTHING but shaped game data.
     check("crowd payload: allow-list build keeps only non-identifying game data", (function()

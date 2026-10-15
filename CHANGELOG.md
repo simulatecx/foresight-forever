@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.49.1 - 2026-10-15
+
+Hardening pass from a full product-wide code verification - no new features, all safety/
+correctness fixes.
+
+- **Foreign/corrupt talent share-codes always fail safely now.** A hand-crafted FT2 code
+  whose checksum happened to validate could previously trigger a Lua error while decoding;
+  it now cleanly reports an invalid code (the untrusted-input rule: never execute or trip on
+  someone else's data).
+- **`/foresight oom` shows whole seconds again** - it was formatting a fractional time
+  oddly on the live client.
+- **Honest numbers where data could be fractional.** A few advisory lines (weapon-imbue proc
+  chance, Windfury bonus Attack Power, the threat-standing %) now print the exact value
+  instead of silently rounding down if future data ever carries a fraction.
+- Internal: the talent-planner Save no longer risks tripping on a missing class.
+
+*Features:* UI-talent-planner, SIM-engine (hardening only)
+
 ## 0.49.0 - 2026-10-15
 
 GEAR -> YOUR SPELLS. An item tooltip now answers "what does this do to the spells I actually

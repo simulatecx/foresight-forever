@@ -433,7 +433,7 @@ function Sim.meleeCascade(loadout, opts)
         if wf then
             local wfDps = wf.evPerSwing * swingsPerSec
             dps = dps + wfDps
-            steps[#steps + 1] = ("%s: %d%% per hit -> %d extra attacks at +%d AP = ~%.0f burst, ~+%.1f DPS%s (p)")
+            steps[#steps + 1] = ("%s: %g%% per hit -> %d extra attacks at +%g AP = ~%.0f burst, ~+%.1f DPS%s (p)")
                 :format(opts.imbue.name or "Windfury", wf.chance, wf.count, wf.bonusAp,
                     wf.burst, wfDps, wf.baseKnown and "" or " - weapon damage unknown here")
             if uptime > 0 then
@@ -492,7 +492,7 @@ function Sim.standing(results, stats)
     local name, detail
     if threat and threat >= 110 and lean ~= "offense" then
         name = "Threat Anchor"
-        detail = ("threat at %d%% of baseline - built to hold attention"):format(threat)
+        detail = ("threat at %.0f%% of baseline - built to hold attention"):format(threat)
     elseif lo > 0 and lo >= hi * 0.8 and lo >= sta * 0.8 then
         -- Hybrid = real investment in BOTH scaling families, measured where units
         -- match: Strength (physical) running level with Intellect (magical).

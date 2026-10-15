@@ -341,7 +341,7 @@ local function makeButtonBar()
     frame.nameBox = box
     tbtn("Save", 362, function()
         local name = (box:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
-        if name == "" then name = state.class .. " build" end
+        if name == "" then name = (state.class or "Unnamed") .. " build" end
         local s = TB().encode(state.class, state.build)
         if s then planDb().builds[name] = s; state.name = name; box:SetText(""); refreshChips() end
     end)

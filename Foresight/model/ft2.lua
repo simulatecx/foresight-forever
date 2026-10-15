@@ -88,8 +88,13 @@ local function var_encode(n)
     return table.concat(out)
 end
 
--- Returns value, nextOffset or nil on malformed/overlong.
+-- Returns value, nextOffset or nil on malformed/overlong. A nil off means a PRIOR read
+-- already failed (var_decode returns a bare nil, so `v, off = var_decode()` nils off); stop
+-- here so we never call str:byte(nil) (which returns byte 1, not nil) and then do nil+1.
+-- This is what keeps a checksum-valid but truncated/overlong foreign payload failing SAFELY
+-- (nil) instead of erroring - the untrusted-input law.
 local function var_decode(str, off)
+    if not off then return nil end
     local result, shift, count = 0, 1, 0
     while true do
         count = count + 1

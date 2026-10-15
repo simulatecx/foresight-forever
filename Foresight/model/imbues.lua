@@ -69,7 +69,7 @@ function Imbues.compare(snapshot, ids)
                     local ev = p.chance / 100 * p.damage
                     perSwing = perSwing + ev
                     perSec = perSec + ev / speed
-                    notes[#notes + 1] = ("%d%% on hit: %g %s (~%.1f per swing; fast weapons proc more)")
+                    notes[#notes + 1] = ("%g%% on hit: %g %s (~%.1f per swing; fast weapons proc more)")
                         :format(p.chance, p.damage, p.school or "", ev)
                 elseif p.damage then
                     notes[#notes + 1] = ("chance on hit: %g %s - proc rate not in the data (unverified)")
@@ -84,13 +84,13 @@ function Imbues.compare(snapshot, ids)
                 if wf then
                     perSwing = perSwing + wf.evPerSwing
                     perSec = perSec + (speed > 0 and wf.evPerSwing / speed or 0)
-                    notes[#notes + 1] = ("%d%% on hit: %d extra attacks at +%d AP = ~%.0f burst (~%.1f per swing%s)")
+                    notes[#notes + 1] = ("%g%% on hit: %d extra attacks at +%g AP = ~%.0f burst (~%.1f per swing%s)")
                         :format(wf.chance, wf.count, wf.bonusAp, wf.burst, wf.evPerSwing,
                             wf.baseKnown and "" or "; weapon damage unknown here")
                 end
             end
             if e.chance and perSwing == 0 and #notes == 0 then
-                notes[#notes + 1] = ("%d%% on hit: extra effect (see the spell tooltip)"):format(e.chance)
+                notes[#notes + 1] = ("%g%% on hit: extra effect (see the spell tooltip)"):format(e.chance)
                 curation = true
             end
             rows[#rows + 1] = {

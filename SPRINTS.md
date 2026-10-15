@@ -167,6 +167,26 @@ gear + when nothing moves. ☑ every item type (melee/caster/heal) via `Sim.topO
 `spellImpact` toggle. ☑ retired the caster-only prior art (no parallel line). ☑ selftest
 (ranks Fireball under +spell-power; empty-candidate degrade) - gate 297/297. ☑ shipped v0.49.0.
 
+### Verification pass (2026-10-15, full product-wide audit) ☑  -> v0.49.1
+Six parallel read-only subsystem audits (engine, panels/stats, overlays/taint, share/crowd,
+planner, tooltips) against a green gate. Verdict: structurally sound. FIXED + shipped v0.49.1:
+☑ FT2.decode safe-fail - a checksum-valid but truncated/overlong foreign code raised (nil+1 in
+  var_decode) instead of returning nil; one off-nil guard + a selftest fixture (gate 298/298).
+☑ `/foresight oom` floored (fractional seconds truncated oddly via `%ds` on 5.1).
+☑ honest-number hardening: data-sourced magnitudes (imbue proc chance, Windfury bonus AP,
+  threat %) moved off `%d` (silent floor on the 5.1 client; the lupa 5.5 harness can't catch it
+  because current data is integer) to `%g`/`%.0f`.
+☑ planner Save nil-class guard.
+TRACKED REFINEMENTS (deferred - want in-game eyes, not an un-eyeballed numbers-shift mid-release):
+☐ `CONSISTENCY-itemfold`: unify `Impact.compareItems` onto the single modeled-loadout net-swap
+  (−equipped +hovered, one diff) so it matches `itemVerdict`/`itemSpellImpacts` exactly instead
+  of the two-base-relative subtraction (~0.5pp gap on non-linear lenses; different-metric, not a
+  visible contradiction). Touches impact.lua + the selftest compare assertions.
+☐ `UI-display-consolidation`: the panels/Matrix hand-roll `|cff..|r` colors + the cascade chip
+  instead of delegating to `ui/display.lua`; colors match by hand today (hence 3 near-identical
+  golds/greys), so it's drift-risk not a bug. A Display-adoption sweep would make the grammar
+  single-source.
+
 ### S36 - HeroLog-style progression (SCOPING ONLY, not built) ☐  (ref: CurseForge herolog-collector)
 *Fit & Overlap - Category CROWD -> QA. Verdict: ENHANCE the crowd/companion spine, do NOT fork
 it. HeroLog = own-character progression logger -> companion upload -> team activity-feed website
