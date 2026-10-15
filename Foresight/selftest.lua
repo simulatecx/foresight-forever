@@ -1898,6 +1898,22 @@ function HM.runSelftest(out)
         gen.talentImpacts[TID] = nil
         return rule == nil
     end)())
+    check("self-verify degrades safely when the spell bridge throws (never breaks eval)", (function()
+        -- The real v0.47.0 break: this runs on the hot value path over user-editable
+        -- captures + a client API; a throw cascades and kills the panel. Prove it's caught.
+        local savedAPI = HM.TalentAPI
+        HM.TalentAPI = { talentForSpell = function() error("boom") end }
+        HM.db.collect.talentTooltips = HM.db.collect.talentTooltips or {}
+        HM.db.collect.talentTooltips[990009] = { -- unresolvable by name -> forces the bridge
+            rank = 2, maxRank = 5, name = "ZZ No Such Talent Name", spellID = 12345,
+            text = "ZZ No Such Talent Name\nRank 2/5\nIncreases crit by 200.",
+        }
+        local okRules, res = pcall(HM.formulas.selfVerifiedRules)
+        local okVal, val = pcall(HM.formulas.talentRankValueFor, 26, -500, 2, 5)
+        HM.db.collect.talentTooltips[990009] = nil
+        HM.TalentAPI = savedAPI
+        return okRules and type(res) == "table" and okVal and approx(val, -200)
+    end)())
 
     -- Rank-rule truth (S21): datamined per-rank values outrank the rule system.
     -- Find a generated talent whose ops carry values arrays (31 decoded this build).

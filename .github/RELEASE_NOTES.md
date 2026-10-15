@@ -1,7 +1,6 @@
-## 0.47.0
+## 0.47.1
 
-Your own scans now count. Hover a talent you've trained and Foresight checks your real
-in-game tooltip to settle how it scales - the honesty line turns green ("verified from your
-scan") instead of showing a presumed guess. And the items you've seen and buffs you've
-observed now ride along when you Contribute, so the crowd ladders grow on everything you
-scan. A scan can only confirm or correct a number, never make it worse.
+Fixes a crash from 0.47.0: the new "verified from your scan" check could break the
+character/Matrix panel on a bad saved capture. It's now fully fail-safe - a scan can only
+ever help, never error. The Matrix also now opens right beside your character stats panel
+when you press FS (drag it anywhere and it remembers).

@@ -213,7 +213,8 @@ local function buildSelfVerified()
             -- (Forever trait nodes carry a spellID; node names needn't match talent names).
             local tid = name and byName[name]
             if tid == nil and e.spellID and HM.TalentAPI and HM.TalentAPI.talentForSpell then
-                tid = tonumber(HM.TalentAPI.talentForSpell(e.spellID))
+                local okb, bridged = pcall(HM.TalentAPI.talentForSpell, e.spellID)
+                tid = okb and tonumber(bridged) or nil
             end
             local talent = tid and gen.talents[tid]
             local impacts = tid and impactsAll[tid]
@@ -266,7 +267,14 @@ function F.selfVerifiedRules()
     end
     local stamp = n * 1000000007 + sig
     if selfVerifyCache == nil or selfVerifyStamp ~= stamp then
-        selfVerifyCache = buildSelfVerified()
+        -- FAIL-SAFE: this runs on the hot value path (every impact eval + talent tooltip)
+        -- over user-editable SavedVariables and a client API (talentForSpell). A throw here
+        -- would cascade and break the whole panel/eval, so any error degrades to "no
+        -- self-verified rules" - the shipped/presumed rule stands, never an error (the
+        -- secret-value / never-error doctrine). Cached either way so a bad store isn't
+        -- re-walked every lookup.
+        local ok, built = pcall(buildSelfVerified)
+        selfVerifyCache = (ok and type(built) == "table") and built or {}
         selfVerifyStamp = stamp
     end
     return selfVerifyCache

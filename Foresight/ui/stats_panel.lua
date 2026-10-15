@@ -402,6 +402,10 @@ function StatsPanel.toggle()
     StatsPanel.refresh()
 end
 
+-- The stats-panel frame, so the Matrix can open right beside it (FS master button opens
+-- the pair adjacent). Returns nil out of game / before creation.
+function StatsPanel.getFrame() return panel end
+
 -- Clear the saved position and re-dock beside the character frame.
 function StatsPanel.resetPosition()
     if not panel then return end

@@ -54,6 +54,18 @@ local function restorePosition()
     local pos = HM.PanelModel.normalizePanelPos(uiState().pos)
     if pos then
         panel:SetPoint(pos.point, _G.UIParent, pos.relPoint, pos.x, pos.y)
+        return
+    end
+    -- No saved position: open the Matrix RIGHT BESIDE the character stats panel so the FS
+    -- master button reveals them as an adjacent pair (user 2026-10-14). Anchored to
+    -- UIParent via the stats panel's current screen rect (keeps the drag-save path simple -
+    -- the Matrix stays UIParent-relative, never a child of the stats frame); falls back to
+    -- a fixed centre-right spot when the stats panel isn't up. Once the user drags it, the
+    -- saved position above wins and this default no longer applies.
+    local stats = HM.StatsPanel and HM.StatsPanel.getFrame and HM.StatsPanel.getFrame()
+    if stats and stats:IsShown() and stats:GetRight() and stats:GetTop() then
+        panel:SetPoint("TOPLEFT", _G.UIParent, "BOTTOMLEFT",
+            stats:GetRight() + 8, stats:GetTop())
     else
         panel:SetPoint("CENTER", _G.UIParent, "CENTER", 220, 40)
     end
@@ -687,7 +699,10 @@ function MatrixPanel.setShown(show)
         return
     end
     panel:SetShown(show and true or false)
-    if show then MatrixPanel.refresh() end
+    if show then
+        restorePosition() -- re-anchor on open: beside the stats panel, or the user's drag
+        MatrixPanel.refresh()
+    end
 end
 
 function MatrixPanel.toggle()

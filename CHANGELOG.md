@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.47.1 - 2026-10-14
+
+FIX: the v0.47.0 live self-verify could break the character/Matrix panel. Its rank-rule
+check runs on the hot path (every impact calc and talent tooltip) over your saved captures
+and a client API, and a single bad capture or a throwing lookup cascaded into a full panel
+error. That whole computation is now fail-safe: any error degrades to "no self-verified
+rules" (the shipped/presumed rule simply stands) and is caught per-capture, so one odd entry
+can never break the panel. Also: the Matrix now opens RIGHT BESIDE the character stats panel
+when you press FS (until you drag it somewhere you prefer, which is then remembered). Gate 285.
+
+*Features:* DATA-formula-registry, UI-matrix
+
 ## 0.47.0 - 2026-10-14
 
 YOUR OWN SCANS NOW COUNT (S33). Two features that make the addon trust what you've seen
