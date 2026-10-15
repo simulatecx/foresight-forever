@@ -661,6 +661,27 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
             }
         end
     end
+    -- GEAR -> YOUR SPELLS (ITEM-spellimpact): the per-ability drill-down under the verdict -
+    -- which of YOUR top spells this item lifts most, ranked. Every item type (a Strength item
+    -- ranks your strikes, a +spell-damage item your casts). Not on equipped gear (baseline
+    -- law: it's already in the numbers). Toggle: /foresight set spellImpact off.
+    if not equipped and (not HM.showSetting or HM.showSetting("spellImpact")) then
+        local okS, rows = pcall(HM.Impact.itemSpellImpacts, loadout, mapped, comparedStats)
+        if okS and type(rows) == "table" and #rows > 0 then
+            lines[#lines + 1] = {
+                text = (comparedStats and "|cff9d9d9dBest for your spells (vs equipped):|r"
+                    or "|cff9d9d9dBest for your spells:|r") .. " (p)",
+                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+            }
+            for _, s in ipairs(rows) do
+                local color = s.pct >= 0 and "|cff4ade80" or "|cfff87171"
+                lines[#lines + 1] = {
+                    text = ("  %s %s%+.1f%%|r"):format(s.name, color, s.pct),
+                    r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+                }
+            end
+        end
+    end
     -- S20 coaching attribution, BENEATH the verdict it never alters: fires only when
     -- the item's largest stat is the mechanism-dead stat for the focus lens.
     local okCoach, coach = pcall(HM.Impact.coachingItemLine, loadout, mapped)
@@ -732,10 +753,9 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
             end
             table.sort(rows, function(x, y) return math.abs(x.net) > math.abs(y.net) end)
         end
-        -- What-is-this-FOR lines (user ask 2026-10-12): when the swap moves caster
-        -- inputs, name YOUR abilities it improves in their units.
-        local okRel, rel = pcall(Tooltips._casterRelevanceLines, loadout, mapped,
-            comparedStats)
+        -- The per-ability "what is this FOR" drill-down is now the unified
+        -- Impact.itemSpellImpacts block above (every item type, ranked over YOUR top
+        -- spells), shown for both the added and the vs-equipped case.
         for i = 1, math.min(#rows, 4) do
             local c = rows[i]
             local color = c.net >= 0 and "|cff4ade80" or "|cfff87171"
@@ -744,9 +764,6 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
                     color, c.net, c.label),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
-        end
-        for _, l in ipairs(okRel and rel or {}) do
-            lines[#lines + 1] = { text = l, r = BODY.r, g = BODY.g, b = BODY.b, wrap = true }
         end
     elseif ok and changes and #changes > 0 then
         for i = 1, math.min(#changes, 4) do
@@ -808,71 +825,9 @@ function Tooltips._planRelevanceLine(loadout, mapped, comparedStats)
         :format(bestName, bestDelta, bestKind == "heal" and "cast" or "hit")
 end
 
--- "What is this FOR" (user ask 2026-10-12): when a swap moves caster inputs (spell
--- power, school damage, healing), compute the net effect on YOUR best known damage
--- spell and heal via abilityHit and say it in their units: "With this: Lightning
--- Bolt +3 per hit, Healing Wave +3 per cast (p)". In-game only (IsPlayerSpell);
--- max two lines; |delta| < 0.5 says nothing.
-local CASTER_KEYS = { "spellPower", "spellDamage", "healingPower", "school.holy",
-    "school.fire", "school.nature", "school.frost", "school.shadow", "school.arcane" }
-local knownCasterPicks -- session cache: new ranks land on the next /reload
-
-function Tooltips._casterRelevanceLines(loadout, mapped, comparedStats)
-    if not (loadout and HM.Sim and HM.Sim.abilityHit and _G.IsPlayerSpell) then
-        return {}
-    end
-    local moves = false
-    for _, k in ipairs(CASTER_KEYS) do
-        if ((mapped and mapped[k]) or 0) ~= 0
-                or ((comparedStats and comparedStats[k]) or 0) ~= 0 then
-            moves = true
-            break
-        end
-    end
-    if not moves then return {} end
-    if not knownCasterPicks then
-        local bestDmg, bestHeal
-        local spells = (HM.gen and HM.gen.spells) or {}
-        for sid, sp in pairs(spells) do
-            if _G.IsPlayerSpell(sid) then
-                if sp.dmg and not sp.wpn and (not bestDmg
-                        or (sp.level or 0) > (spells[bestDmg].level or 0)) then
-                    bestDmg = sid
-                end
-                if sp.heal and not sp.dmg and (not bestHeal
-                        or (sp.level or 0) > (spells[bestHeal].level or 0)) then
-                    bestHeal = sid
-                end
-            end
-        end
-        knownCasterPicks = { bestDmg, bestHeal }
-    end
-    -- Net-of-swap modeled loadout (baseline law: minus equipped, plus hovered).
-    local modeled = loadout
-    local function fold(bundle, sign)
-        for stat, v in pairs(bundle or {}) do
-            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps"
-                    and not stat:find("^resist%.") then
-                modeled = modeled:withStatDelta(stat, sign * v,
-                    ("swap:%s"):format(stat))
-            end
-        end
-    end
-    fold(comparedStats, -1)
-    fold(mapped, 1)
-    local out = {}
-    for _, sid in ipairs(knownCasterPicks) do
-        local okB, b = pcall(HM.Sim.abilityHit, loadout, sid, {})
-        local okA, a = pcall(HM.Sim.abilityHit, modeled, sid, {})
-        if okB and okA and b and a and math.abs(a.avg - b.avg) >= 0.5 then
-            local sp = HM.gen.spells[sid]
-            local color = (a.avg > b.avg) and "|cff4ade80" or "|cfff87171"
-            out[#out + 1] = ("|cff9d9d9dWith this:|r %s %s%+.0f|r per %s (p)"):format(
-                sp.name, color, a.avg - b.avg, a.kind == "heal" and "cast" or "hit")
-        end
-    end
-    return out
-end
+-- (The caster-only "What is this FOR" lines were unified into
+-- Impact.itemSpellImpacts - every item type, ranked over YOUR top spells, rendered in
+-- itemLines for both the added and vs-equipped cases. See model/impact.lua.)
 
 -- Consumable-buff provider (CONSUME-buffs) --------------------------------------
 

@@ -437,6 +437,72 @@ function Impact.itemDerivedLines(loadout, statDeltas, removedStats)
     return derivedChainLines(loadout, modeled, true)
 end
 
+-- GEAR -> YOUR SPELLS (ITEM-spellimpact): which of the player's ACTUAL top abilities this
+-- item lifts, ranked by the % change to each spell's average hit/heal. Same swap fold as
+-- itemVerdict (minus equipped, plus hovered - baseline law) applied over the player's own
+-- top outputs (Sim.topOutputs across the known spellbook), so a Strength item ranks melee
+-- strikes and a +spell-damage item ranks casts - every item type, the spells you really use.
+-- Honest-degrades to {} when Sim or the spellbook is unavailable. opts: candidateN (pool
+-- size, default 6), topN (rows returned, 3), minPct (noise floor, 0.1). Second return =
+-- presumed flag (any input rode a classic-presumed formula).
+function Impact.itemSpellImpacts(loadout, mapped, comparedStats, opts)
+    opts = opts or {}
+    if not (loadout and HM.Sim and HM.Sim.abilityHit and HM.Sim.topOutputs) then
+        return {}, false
+    end
+    -- Candidate pool: an explicit opts.spellIds, else the player's live spellbook.
+    local known = opts.spellIds
+    if not known then
+        if not (HM.Spellbook and HM.Spellbook.known) then return {}, false end
+        local okk, k = pcall(HM.Spellbook.known)
+        if not okk or type(k) ~= "table" then return {}, false end
+        known = k
+    end
+    if #known == 0 then return {}, false end
+    local top = HM.Sim.topOutputs(loadout, known, opts.candidateN or 6)
+    local cands = {}
+    for _, e in ipairs(top.damage or {}) do cands[#cands + 1] = e.spellId end
+    for _, e in ipairs(top.heal or {}) do cands[#cands + 1] = e.spellId end
+    if #cands == 0 then return {}, false end
+
+    -- Net-of-swap modeled loadout (baseline law: minus equipped, plus hovered).
+    local modeled = loadout
+    local function fold(bundle, sign)
+        for stat, v in pairs(bundle or {}) do
+            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps"
+                    and not stat:find("^resist%.") then
+                modeled = modeled:withStatDelta(stat, sign * v, "itemspell:" .. stat)
+            end
+        end
+    end
+    fold(comparedStats, -1)
+    fold(mapped, 1)
+
+    local selected = loadout.snapshot and loadout.snapshot.talents
+    local rows, presumed, seen = {}, false, {}
+    for _, sid in ipairs(cands) do
+        local sp = HM.gen and HM.gen.spells and HM.gen.spells[sid]
+        if sp and sp.name and not seen[sp.name] then
+            seen[sp.name] = true
+            local before = HM.Sim.abilityHit(loadout, sid, { selected = selected })
+            local after = HM.Sim.abilityHit(modeled, sid, { selected = selected })
+            if before and after and before.avg and before.avg > 0 then
+                local pct = (after.avg - before.avg) / math.abs(before.avg) * 100
+                if math.abs(pct) >= (opts.minPct or 0.1) then
+                    rows[#rows + 1] = {
+                        spellId = sid, name = sp.name, pct = pct,
+                        delta = after.avg - before.avg, kind = before.kind,
+                    }
+                    if before.presumed or after.presumed then presumed = true end
+                end
+            end
+        end
+    end
+    table.sort(rows, function(a, b) return math.abs(a.pct) > math.abs(b.pct) end)
+    while #rows > (opts.topN or 3) do table.remove(rows) end
+    return rows, presumed
+end
+
 -- What a raw stat change does, step by step (the /foresight stat answer).
 function Impact.statImpactDetail(loadout, stat, amount)
     local modeled = loadout:withStatDelta(stat, amount, ("+%s %s"):format(amount, stat))

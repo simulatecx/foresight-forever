@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.49.0 - 2026-10-15
+
+GEAR -> YOUR SPELLS. An item tooltip now answers "what does this do to the spells I actually
+cast?" Right under the upgrade/downgrade verdict, Foresight lists the few of YOUR top
+abilities the item changes the most, ranked - e.g. "Best for your spells: Frostbolt +3.2%,
+Frost Nova +1.1%". It works for every item type: a Strength or Attack Power piece ranks your
+melee strikes, a +spell-damage piece ranks your casts, a healing piece ranks your heals. It
+uses the exact same honest swap math as the headline verdict (what you'd gain over the item
+you're replacing, never a double-count on gear you already wear), so the per-spell lines can
+never disagree with the verdict above them. Off on your own equipped gear (that's your
+baseline), and you can hide it entirely with `/foresight set spellImpact off`. This replaces
+the older caster-only version that only ever named one spell.
+
+Also: the local deploy now verifies every file the addon lists actually landed, so a
+half-copied install can't reach the game and silently break the talent hover.
+
+*Features:* DATA-items (ITEM-spellimpact)
+
 ## 0.48.0 - 2026-10-14
 
 THE CROWD PIPELINE WAVE (S34). Your scans now become everyone's in-game-ready data, there's

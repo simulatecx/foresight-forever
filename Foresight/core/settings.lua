@@ -25,6 +25,11 @@ Settings.KEYS = {
         label = "Enable stat coaching",
         desc = "Show the one derived line that explains a mechanism-dead stat (e.g. Agility gives a Shaman no Attack Power).",
     },
+    spellImpact = {
+        group = "General", type = "toggle", kind = "show", default = true,
+        label = "Show which spells an item lifts",
+        desc = "On an item tooltip, list the few of YOUR top abilities this item changes the most, ranked (e.g. 'Frostbolt +3.2%'). Works for gear and weapons alike. Off = just the dimension verdict.",
+    },
     panelAlpha = {
         group = "General", type = "slider", default = 0.92, min = 0.2, max = 1.0,
         label = "Panel opacity",

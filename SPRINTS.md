@@ -48,6 +48,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S34 Crowd pipeline hardening: single-source allow-list, verified-rules bake, show-off tier, coverage, auto-verify | - | ◐ |
 | S35 Talent planner: interactive click-to-allocate tree (usable pre-10), save/load/import/export, preview glow | 3 | ◐ |
 | S36 HeroLog-style progression: activity feed + team view + gear-level/raid-readiness (SCOPING only) | - | ☐ |
+| S37 Gear -> your spells: per-ability item-impact under the verdict (ITEM-spellimpact) | 3 | ☑ |
 
 ## Active / next
 
@@ -145,6 +146,26 @@ only (no loadstring; validate tab/talent ids exist, rank <= maxRank, budget/tier
   `synergy_highlight`). ☐ NO auto-apply; a "apply these yourself" hint. ☐ selftest: rules
   engine (budget/tier/prereq legal/illegal) + string encode->decode round-trip. ☐ gate green;
   ☐ mobile 1280x720 @ 0.65 readable.
+
+### S37 - Gear -> your spells (per-ability item impact) ☑  (ref: competitor listing "see what gear does to each of your spells")
+*Fit & Overlap - Category DATA-items. Verdict: ENHANCE the item tooltip (`Tooltips.itemLines`)
++ `model/impact.lua`; do NOT fork the item math. Complements: the item verdict (S23/S28) - this
+is its per-ability drill-down, using the SAME swap-fold so numbers can't disagree. Touches:
+`model/impact.lua` (new `itemSpellImpacts`), `ui/tooltips.lua` (render + retire the
+caster-only `_casterRelevanceLines`), `core/settings.lua` (`spellImpact` toggle),
+`selftest.lua`. Avoid duplicating: `Sim.topOutputs`/`abilityHit` (reused, not reimplemented).
+Mobile: tooltip text, readable at the baseline (no new layout). Languages: spell names from the
+client, labels are full phrases. Trust: owner-toggleable (`/foresight set spellImpact off`),
+off on equipped gear (baseline law), honest-degrades to nothing with no Sim/spellbook. Data: no
+new stored data. Abuse: read-only display, not externally reachable.*
+
+As a player eyeing a drop, I want the tooltip to tell me which of the spells I actually cast
+it improves, so the upgrade call is concrete instead of an abstract "+x% caster dps".
+☑ `Impact.itemSpellImpacts` ranks the player's top outputs by % change under the item's
+net-swap. ☑ rendered under the verdict for both added and vs-equipped, suppressed on equipped
+gear + when nothing moves. ☑ every item type (melee/caster/heal) via `Sim.topOutputs`. ☑
+`spellImpact` toggle. ☑ retired the caster-only prior art (no parallel line). ☑ selftest
+(ranks Fireball under +spell-power; empty-candidate degrade) - gate 297/297. ☑ shipped v0.49.0.
 
 ### S36 - HeroLog-style progression (SCOPING ONLY, not built) ☐  (ref: CurseForge herolog-collector)
 *Fit & Overlap - Category CROWD -> QA. Verdict: ENHANCE the crowd/companion spine, do NOT fork

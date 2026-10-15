@@ -659,6 +659,21 @@ function HM.runSelftest(out)
             and type(v.note) == "string"
             and v.note:find("isn't judgeable", 1, true) ~= nil
     end)())
+    check("itemSpellImpacts ranks YOUR spells a +spell-damage item lifts", (function()
+        -- ITEM-spellimpact: a +spell-power item must lift Fireball (133) for the MAGE
+        -- fixture, positive, via the shared swap-fold + abilityHit path. spellIds override
+        -- stands in for the (empty-in-harness) live spellbook.
+        local rows, presumed = HM.Impact.itemSpellImpacts(base, { spellPower = 10 }, nil,
+            { spellIds = { 133 } })
+        return type(rows) == "table" and #rows == 1
+            and rows[1].name == "Fireball" and rows[1].pct > 0
+            and type(presumed) == "boolean"
+    end)())
+    check("itemSpellImpacts honest-degrades to empty with no candidates", (function()
+        local rows = HM.Impact.itemSpellImpacts(base, { spellPower = 10 }, nil,
+            { spellIds = {} })
+        return type(rows) == "table" and #rows == 0
+    end)())
     check("pathways rank by abilityHitDelta under an ability goal (unit-honest)", (function()
         -- Self-contained node lookup (this block runs before the S19 dmgNodeId local).
         local nodeId
