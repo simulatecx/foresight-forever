@@ -288,111 +288,187 @@ async function renderDailyTrial() {
   }
 }
 
-// The ladders: every challenge record, filterable by class.
-function ladderCardsFor(aggs, klass) {
-  const rows = [];
-  for (const a of aggs) {
-    if (klass !== "ALL" && a.class !== klass) continue;
-    const metrics = a.metrics || {};
-    for (const [k, s] of Object.entries(metrics)) {
-      if (typeof s.max !== "number") continue;
-      rows.push({ label: metricLabel(k), record: Math.round(s.max), n: s.n,
-        cls: a.class, lvl: a.levelBucket, color: classColor(a.class) });
-    }
-  }
-  rows.sort((x, y) => y.record - x.record);
-  return rows.slice(0, 40);
+// Named champions per metric (leaderboards/<metricKey>) - only opt-in named submissions.
+let LB_CACHE = null;
+async function loadLeaderboards() {
+  if (LB_CACHE) return LB_CACHE;
+  try {
+    const qs = await getDocs(collection(db, "leaderboards"));
+    LB_CACHE = new Map(qs.docs.map((d) => {
+      const data = d.data() || {};
+      return [data.metric || d.id, Array.isArray(data.entries) ? data.entries : []];
+    }));
+  } catch (e) { LB_CACHE = new Map(); }
+  return LB_CACHE;
 }
-// Brackets still filling toward a record (count < 5): shown count-only so a contributor
-// sees their submission landed, without exposing any suppressed value.
-function fillingCardsFor(aggs, klass) {
-  const rows = [];
-  for (const a of aggs) {
-    if (klass !== "ALL" && a.class !== klass) continue;
-    const c = typeof a.count === "number" ? a.count : 0;
-    const min = a.minBucket || 5;
-    if (c > 0 && c < min) {
-      rows.push({ cls: a.class, lvl: a.levelBucket, n: c, need: min - c, color: classColor(a.class) });
-    }
-  }
-  rows.sort((x, y) => y.n - x.n);
-  return rows.slice(0, 40);
+
+// Bucket lookup so a character's (class, level, value) resolves to a percentile in its
+// bracket. Forever spec is "any" (talent-tree, no retail spec). Returns "top N%" or null
+// when the bracket is too small / suppressed - we never fake a ranking.
+function bucketIndex(aggs) {
+  const m = new Map();
+  for (const a of aggs) if (a.bucket) m.set(a.bucket, a);
+  return m;
 }
-function renderLadder(klass) {
+function topPctFor(idx, klass, level, metric, value) {
+  const agg = idx.get(`${klass}-any-${levelBucket(level)}`);
+  const q = agg && agg.count >= (agg.minBucket || 5) && agg.metrics && agg.metrics[metric];
+  if (!q) return null;
+  const pct = pctFromQuantiles(q, value);
+  return pct == null ? null : Math.max(1, Math.round(100 - pct));
+}
+
+// Stat-type taxonomy for the ladder filter.
+function statCategory(k) {
+  if (k === "stat.armor" || k === "stat.maxHealth") return "survival";
+  if (k.startsWith("stat.")) return "power";
+  if (k.startsWith("school.")) return "school";
+  if (k.startsWith("ability:")) return "ability";
+  return "other";
+}
+const STAT_TYPES = [["all", "All stats"], ["survival", "Survival"], ["power", "Spell power"],
+  ["school", "Spell schools"], ["ability", "Abilities"]];
+
+// A character's display label: chosen handle if named, else race + class (race is shown the
+// moment the addon sends it; until then it falls back to class cleanly - never a real name).
+function charLabel(e) {
+  if (e && typeof e.name === "string" && e.name) return esc(e.name);
+  const cls = titleCase(e && e.class) || "Adventurer";
+  return e && e.race ? esc(titleCase(e.race) + " " + cls) : esc(cls);
+}
+function armoryWrap(e, inner, color) {
+  const safe = (e && typeof e.armory === "string" && /^https:\/\//.test(e.armory)) ? e.armory : null;
+  return safe
+    ? `<a href="${esc(safe)}" target="_blank" rel="noopener noreferrer nofollow" style="color:${color}">${inner}</a>`
+    : `<span style="color:${color}">${inner}</span>`;
+}
+function buffLine(e, cls) {
+  const buffs = (e.buffs && typeof e.buffs === "object") ? Object.values(e.buffs) : [];
+  return buffs.length ? `<span class="${cls}">with ${buffs.slice(0, 6).map((b) => esc(b)).join(", ")}</span>` : "";
+}
+
+// ---- THE LADDERS: one card per stat, character rows, filter by stat type + class ------
+function renderLadders() {
   const board = $("ladderBoard");
   const aggs = AGG_CACHE || [];
+  const lb = LB_CACHE || new Map();
+  const idx = bucketIndex(aggs);
+  const statType = $("statTypeFilter") ? $("statTypeFilter").value : "all";
+  const klass = $("classFilter") ? $("classFilter").value : "ALL";
+
   const { champions, brackets } = tallyFor(aggs, klass);
   const forKlass = klass === "ALL" ? "" : " for " + esc(titleCase(klass));
-  const tally = `<p class="ladder-tally">${champions} champion${champions === 1 ? "" : "s"} answered across ${brackets} bracket${brackets === 1 ? "" : "s"}${forKlass}. Records unlock once a bracket reaches 5.</p>`;
-  const rows = ladderCardsFor(aggs, klass);
-  const cards = rows.map((r) =>
-    `<div class="ladder-card" style="--class:${r.color}">
-       <h4>${esc(r.label)}</h4>
-       <span class="record">Record ${esc(r.record)}</span>
-       <span class="sub"> · ${esc(titleCase(r.cls))} · level ${esc(r.lvl)}+ · ${esc(r.n)} champions</span>
-     </div>`).join("");
-  const filling = fillingCardsFor(aggs, klass);
-  const fillingBlock = filling.length
-    ? `<h4 class="ladder-subhead">Brackets filling</h4>` + filling.map((r) =>
-        `<div class="ladder-card filling" style="--class:${r.color}">
-           <h4>${esc(titleCase(r.cls))} · level ${esc(r.lvl)}+</h4>
-           <span class="sub">${esc(r.n)} champion${r.n === 1 ? "" : "s"} · ${esc(r.need)} more to unlock the record</span>
-         </div>`).join("")
-    : "";
-  if (!rows.length && !filling.length) {
-    board.innerHTML = tally + `<p class="muted">No champions yet${forKlass} - be the first to answer the call.</p>`;
+  $("ladderTally").textContent =
+    `${champions} character${champions === 1 ? "" : "s"} entered across ${brackets} bracket${brackets === 1 ? "" : "s"}${forKlass}. Records unlock once a bracket reaches 5.`;
+
+  const metrics = new Set();
+  for (const a of aggs) for (const k of Object.keys(a.metrics || {})) metrics.add(k);
+  for (const k of lb.keys()) metrics.add(k);
+
+  const cards = [];
+  for (const metric of metrics) {
+    if (statType !== "all" && statCategory(metric) !== statType) continue;
+    let record = null;
+    for (const a of aggs) {
+      if (klass !== "ALL" && a.class !== klass) continue;
+      const s = a.metrics && a.metrics[metric];
+      if (s && typeof s.max === "number" && (!record || s.max > record.value))
+        record = { value: s.max, cls: a.class, lvl: a.levelBucket };
+    }
+    const champs = (lb.get(metric) || [])
+      .filter((e) => klass === "ALL" || e.class === klass)
+      .slice().sort((a, b) => b.value - a.value).slice(0, 5);
+    if (!record && !champs.length) continue;
+
+    const color = record ? classColor(record.cls) : classColor(champs[0] && champs[0].class);
+    const rows = champs.map((e, i) => {
+      const top = topPctFor(idx, e.class, e.level, metric, e.value);
+      const pct = top != null ? `<span class="pct">top ${top}%</span>` : "";
+      return `<div class="lad-row" style="--class:${classColor(e.class)}">
+        <span class="lad-rank">${i + 1}</span>
+        <span class="lad-name">${armoryWrap(e, charLabel(e), classColor(e.class))}
+          <span class="lad-meta">${esc(titleCase(e.class))} · lvl ${esc(e.level)}</span>
+          ${buffLine(e, "row-buffs")}</span>
+        <span class="lad-val">${esc(Math.round(e.value))}${pct}</span></div>`;
+    }).join("");
+    const anonRow = (!champs.length && record)
+      ? `<div class="lad-row anon" style="--class:${color}">
+           <span class="lad-rank">★</span>
+           <span class="lad-name">Anonymous
+             <span class="lad-meta">${esc(titleCase(record.cls))} · lvl ${esc(record.lvl)}+</span></span>
+           <span class="lad-val">${esc(Math.round(record.value))}</span></div>`
+      : "";
+    const recLine = record
+      ? `Record ${esc(Math.round(record.value))} · ${esc(titleCase(record.cls))} ${esc(record.lvl)}+`
+      : `${champs.length} champion${champs.length === 1 ? "" : "s"}`;
+    cards.push({
+      sort: record ? record.value : (champs[0] ? champs[0].value : 0),
+      html: `<div class="lad-card" style="--class:${color}">
+        <div class="lad-card-head"><h4>${esc(metricLabel(metric))}</h4>
+          <span class="lad-record">${recLine}</span></div>
+        ${rows || anonRow}</div>`,
+    });
+  }
+  if (!cards.length) {
+    board.innerHTML = `<p class="muted">No ladders here yet${forKlass} - be the first to answer the call.</p>`;
     return;
   }
-  board.innerHTML = tally
-    + (cards || `<p class="muted">No records unlocked yet${forKlass} - the first bracket to reach 5 sets one.</p>`)
-    + fillingBlock;
+  board.innerHTML = cards.sort((a, b) => b.sort - a.sort).map((c) => c.html).join("");
 }
-// CHAMPIONS (S34c show-off tier): the named top-N for today's featured metric, from the
-// backend `leaderboards/<metricKey>` doc (only opt-in named submissions appear here).
-function championCard(e, rank) {
-  const color = classColor(e.class);
-  const name = esc(e.name || "Champion");
-  const safeArmory = (typeof e.armory === "string" && /^https:\/\//.test(e.armory)) ? e.armory : null;
-  const who = safeArmory
-    ? `<a href="${esc(safeArmory)}" target="_blank" rel="noopener noreferrer nofollow" style="color:${color}">${name}</a>`
-    : `<span style="color:${color}">${name}</span>`;
-  const buffs = (e.buffs && typeof e.buffs === "object") ? Object.values(e.buffs) : [];
-  const buffRow = buffs.length
-    ? `<span class="champion-buffs">with ${buffs.slice(0, 8).map((b) => esc(b)).join(", ")}</span>` : "";
-  return `<div class="ladder-card champion" style="--class:${color}">
-    <h4><span class="champion-rank">#${rank}</span> ${who}</h4>
-    <span class="record">${esc(Math.round(e.value))}</span>
-    <span class="sub"> · ${esc(titleCase(e.class))} · level ${esc(e.level)}</span>
-    ${buffRow}
-  </div>`;
-}
-async function renderChampions() {
+
+// ---- CHAMPIONS: each named character shown by the single stat they command best -------
+function renderChampions() {
   const board = $("championBoard");
   if (!board) return;
-  const now = new Date();
-  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-  const f = FEATURED[doy % FEATURED.length];
-  try {
-    const snap = await getDoc(doc(db, "leaderboards", f.key));
-    const entries = (snap.exists() && Array.isArray(snap.data().entries)) ? snap.data().entries : [];
-    if (!entries.length) {
-      board.innerHTML = `<p class="muted">No champion has stepped forward for <b>${esc(f.label)}</b> yet - opt in in-game and be the first to claim it.</p>`;
-      return;
+  const aggs = AGG_CACHE || [];
+  const lb = LB_CACHE || new Map();
+  const idx = bucketIndex(aggs);
+  const byChar = new Map();
+  for (const [metric, entries] of lb) {
+    for (const e of entries) {
+      if (!e || typeof e.name !== "string" || !e.name) continue;
+      const key = `${e.name}|${e.class}|${e.level}`;
+      const top = topPctFor(idx, e.class, e.level, metric, e.value);
+      const score = top != null ? (100 - top) : 0;
+      const cur = byChar.get(key);
+      if (!cur || score > cur.score || (score === cur.score && e.value > cur.e.value)) {
+        byChar.set(key, { e, metric, top, score });
+      }
     }
-    board.innerHTML = `<h4 class="ladder-subhead">${esc(f.label)}</h4>` +
-      entries.map((e, i) => championCard(e, i + 1)).join("");
-  } catch (e) {
-    board.innerHTML = `<p class="muted">Couldn't summon the champions (${esc(e.code || e.message)}).</p>`;
   }
+  const champs = [...byChar.values()]
+    .sort((a, b) => b.score - a.score || b.e.value - a.e.value).slice(0, 24);
+  if (!champs.length) {
+    board.innerHTML = `<p class="muted">No champion has stepped into the light yet - opt in in-game with <code>/foresight set named on</code> and a handle to be the first.</p>`;
+    return;
+  }
+  board.innerHTML = champs.map(({ e, metric, top }) => {
+    const color = classColor(e.class);
+    const pct = top != null ? `<span class="pct">top ${top}%</span>` : "";
+    return `<div class="champ-card" style="--class:${color}">
+      <div class="champ-name">${armoryWrap(e, charLabel(e), color)}</div>
+      <div class="champ-class">${esc(titleCase(e.class))} · level ${esc(e.level)}</div>
+      <div class="champ-stat">${esc(metricLabel(metric))}</div>
+      <div class="champ-val">${esc(Math.round(e.value))}${pct}</div>
+      ${buffLine(e, "champ-buffs")}</div>`;
+  }).join("");
 }
 
 async function initLadders() {
-  const aggs = await loadAggregates();
-  const sel = $("classFilter");
-  const classes = ["ALL", ...Array.from(new Set(aggs.map((a) => a.class))).sort()];
-  sel.innerHTML = classes.map((c) => `<option value="${esc(c)}">${c === "ALL" ? "All classes" : esc(titleCase(c))}</option>`).join("");
-  sel.addEventListener("change", () => renderLadder(sel.value));
-  renderLadder("ALL");
+  const [aggs] = await Promise.all([loadAggregates(), loadLeaderboards()]);
+  const st = $("statTypeFilter");
+  if (st) {
+    st.innerHTML = STAT_TYPES.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join("");
+    st.addEventListener("change", renderLadders);
+  }
+  const cf = $("classFilter");
+  if (cf) {
+    const classes = ["ALL", ...Array.from(new Set(aggs.map((a) => a.class).filter(Boolean))).sort()];
+    cf.innerHTML = classes.map((c) => `<option value="${esc(c)}">${c === "ALL" ? "All classes" : esc(titleCase(c))}</option>`).join("");
+    cf.addEventListener("change", renderLadders);
+  }
+  renderLadders();
+  renderChampions();
 }
 
 // Prefill from a share link (#d=<url-encoded JSON>).
@@ -461,8 +537,22 @@ if ($("fbSubmit")) $("fbSubmit").addEventListener("click", async () => {
   }
 });
 
+// Mobile nav: a collapsible menu (the ☰ toggle shows only at narrow widths via CSS).
+const navToggle = $("navToggle"), navEl = document.querySelector(".nav");
+if (navToggle && navEl) {
+  navToggle.addEventListener("click", () => {
+    const open = navEl.classList.toggle("open");
+    navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  navEl.addEventListener("click", (e) => {
+    if (e.target.closest(".nav-links a")) {
+      navEl.classList.remove("open");
+      navToggle.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+
 // Boot.
 renderDailyTrial();
-renderChampions();
-initLadders();
+initLadders();   // loads aggregates + leaderboards, then renders ladders + champions
 fromShareLink();

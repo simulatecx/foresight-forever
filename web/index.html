@@ -4,55 +4,64 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Foresight - the Armory of Forever</title>
-  <meta name="description" content="How your build stacks up against your spec on WoW: Forever - daily trials, ladders, and honest numbers." />
+  <meta name="description" content="How your build stacks up against your spec on WoW: Forever - daily challenges, character ladders for every stat, and honest percentiles." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23c8a24c'/%3E%3Ccircle cx='8' cy='8' r='3' fill='%231a1510'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=10" />
+  <link rel="stylesheet" href="./style.css?v=13" />
 </head>
 <body>
   <div class="vignette" aria-hidden="true"></div>
 
-  <header class="masthead reveal">
+  <!-- STICKY NAV -->
+  <nav class="nav">
+    <a class="nav-brand" href="#top">
+      <span class="nav-sigil" aria-hidden="true"></span>
+      <span class="nav-word">Foresight</span>
+      <span class="nav-sub">Armory of Forever</span>
+    </a>
+    <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">☰</button>
+    <div class="nav-links" id="navLinks">
+      <a href="#challenge">Today's Challenge</a>
+      <a href="#ladders">The Ladders</a>
+      <a href="#champions">Champions</a>
+      <a href="#feedback">Send Word</a>
+      <a href="#challenge" class="nav-cta">Upload character</a>
+    </div>
+  </nav>
+
+  <header class="masthead reveal" id="top">
     <div class="sigil" aria-hidden="true"><span></span></div>
     <h1>Foresight</h1>
     <p class="kicker">The Armory of <em>Forever</em></p>
+    <p class="masthead-tag">See where your character stands - every stat, every spec, honest numbers.</p>
   </header>
 
-  <!-- DAILY TRIAL -->
-  <section class="trial reveal" id="dailyTrial" aria-live="polite">
-    <div class="trial-band">
-      <span class="trial-eyebrow">Today's Trial</span>
-      <h2 class="trial-title" id="trialTitle">&nbsp;</h2>
-      <p class="trial-sub" id="trialSub">Loading today's challenge…</p>
-      <div class="trial-record" id="trialRecord"></div>
-      <a class="btn btn-gold" href="#consult">Submit your champion</a>
-    </div>
-  </section>
-
   <main class="scroll">
-    <!-- CONSULT -->
-    <section class="panel reveal" id="consult">
-      <div class="panel-head"><h3>Consult the Oracle</h3></div>
-      <div class="panel-body">
-        <p class="lead">
-          In-game, type <code>/foresight share</code> and copy the link it gives you -
-          paste it here (or into your address bar) to see where your build ranks.
-          Only non-identifying game data travels; never your character name, realm, or notes.
-          <a href="./privacy.html">What we collect &amp; why</a>.
-        </p>
-        <label for="payload" class="field-label">Your <code>/foresight share</code> text</label>
-        <textarea id="payload" rows="4" spellcheck="false"
-          placeholder='Paste your /foresight share text or link here…'></textarea>
 
+    <!-- ============ 1. TODAY'S CHALLENGE + UPLOAD ============ -->
+    <section class="trial reveal" id="challenge" aria-live="polite">
+      <div class="trial-band">
+        <span class="trial-eyebrow">Today's Challenge</span>
+        <h2 class="trial-title" id="trialTitle">&nbsp;</h2>
+        <p class="trial-sub" id="trialSub">Loading today's challenge…</p>
+        <div class="trial-record" id="trialRecord"></div>
+      </div>
+      <div class="trial-upload">
+        <label for="payload" class="field-label">Upload your character</label>
+        <p class="lead upload-lead">In-game, type <code>/foresight share</code> and copy the link -
+          paste it below to enter today's challenge and see where your build ranks.
+          Only non-identifying game data travels; never your character name, realm, or notes.
+          <a href="./privacy.html">What we collect &amp; why</a>.</p>
+        <textarea id="payload" rows="3" spellcheck="false"
+          placeholder="Paste your /foresight share link or text here…"></textarea>
         <label class="consent">
           <input type="checkbox" id="consent" />
           <span>I agree to contribute this non-identifying game data to the Foresight
           ladders, used only in aggregate.</span>
         </label>
         <p id="namedNotice" class="named-notice hidden" role="status"></p>
-
         <div class="actions">
           <button id="contribute" class="btn btn-gold" disabled>Contribute &amp; see your standings</button>
         </div>
@@ -60,33 +69,41 @@
       </div>
     </section>
 
-    <!-- RESULT -->
+    <!-- YOUR STANDINGS (appears after upload) -->
     <section class="panel result hidden reveal" id="result" aria-live="polite"></section>
 
-    <!-- CHAMPIONS (opt-in show-off tier) -->
-    <section class="panel reveal" id="champions">
-      <div class="panel-head"><h3>Today's Champions</h3></div>
-      <div class="panel-body">
-        <p class="lead">The players topping today's trial who chose to step into the light.
-        Opt in in-game with <code>/foresight set named on</code> and a handle to join them -
-        everyone else stays anonymous, always.</p>
-        <div id="championBoard" class="ladder-board"><p class="muted">Summoning the champions…</p></div>
-      </div>
-    </section>
-
-    <!-- LADDERS -->
+    <!-- ============ 2 + 3. CHARACTER LADDERS (filter by stat type) ============ -->
     <section class="panel reveal" id="ladders">
       <div class="panel-head">
         <h3>The Ladders</h3>
-        <div class="ladder-filter">
-          <label for="classFilter">Class</label>
-          <select id="classFilter"></select>
-        </div>
       </div>
       <div class="panel-body">
-        <p class="lead">Every challenge, every spec - the standing records across all who've
-        submitted. Small brackets stay hidden until enough champions answer the call.</p>
-        <div id="ladderBoard" class="ladder-board"><p class="muted">Summoning the ladders…</p></div>
+        <p class="lead">Every stat, every bracket - who stands tallest across all who've
+        answered the call. Characters appear by their chosen handle, or by class and bracket
+        if they entered anonymously.</p>
+        <div class="filters">
+          <div class="filter">
+            <label for="statTypeFilter">Stat type</label>
+            <select id="statTypeFilter"></select>
+          </div>
+          <div class="filter">
+            <label for="classFilter">Class</label>
+            <select id="classFilter"></select>
+          </div>
+        </div>
+        <p id="ladderTally" class="ladder-tally"></p>
+        <div id="ladderBoard" class="ladder-grid"><p class="muted">Summoning the ladders…</p></div>
+      </div>
+    </section>
+
+    <!-- CHAMPIONS SPOTLIGHT - each named character's signature stat -->
+    <section class="panel reveal" id="champions">
+      <div class="panel-head"><h3>Champions</h3></div>
+      <div class="panel-body">
+        <p class="lead">The players who stepped into the light - each shown by the stat they
+        command best. Opt in in-game with <code>/foresight set named on</code> and a handle to
+        claim your place; everyone else stays anonymous, always.</p>
+        <div id="championBoard" class="champion-grid"><p class="muted">Summoning the champions…</p></div>
       </div>
     </section>
 
@@ -127,6 +144,6 @@
     <p><a href="./privacy.html">Privacy</a> · <a href="https://github.com/simulatecx/foresight-forever">Source</a> · WoW: Forever</p>
   </footer>
 
-  <script type="module" src="./app.js?v=15"></script>
+  <script type="module" src="./app.js?v=17"></script>
 </body>
 </html>

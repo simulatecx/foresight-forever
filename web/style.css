@@ -25,7 +25,7 @@
 * { box-sizing: border-box; }
 
 /* Stone floor under everything so a fixed background never reveals white. */
-html { scroll-behavior: smooth; background: #0d0b07; }
+html { scroll-behavior: smooth; background: #0d0b07; scroll-padding-top: 72px; }
 
 body {
   margin: 0;
@@ -229,8 +229,7 @@ select {
 .ladder-card h4 { margin: 0 0 2px; font-family: "Cinzel", serif; font-size: 14px; letter-spacing: 0.06em; color: var(--ink); }
 .ladder-card .record { color: var(--gold-br); font-weight: 600; }
 .ladder-card .sub { color: var(--muted); font-size: 12px; }
-.ladder-tally { margin: 0 0 14px; font-family: "Cinzel", serif; font-size: 13px;
-  letter-spacing: 0.04em; color: var(--gold-br); }
+.ladder-tally { margin: 2px 0 14px; color: var(--ink-dim); font-size: 13px; font-style: italic; }
 .ladder-subhead { margin: 18px 0 8px; font-family: "Cinzel", serif; font-size: 12px;
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .ladder-card.filling { background: rgba(0,0,0,0.12); border-style: dashed; opacity: 0.85; }
@@ -256,9 +255,10 @@ select {
 .hidden { display: none; }
 .reveal { opacity: 0; transform: translateY(14px); animation: rise .7s ease forwards; }
 .masthead.reveal { animation-delay: .05s; }
-.trial.reveal { animation-delay: .18s; }
-#consult.reveal { animation-delay: .30s; }
-#ladders.reveal { animation-delay: .42s; }
+#challenge.reveal { animation-delay: .18s; }
+#ladders.reveal { animation-delay: .30s; }
+#champions.reveal { animation-delay: .42s; }
+#feedback.reveal { animation-delay: .5s; }
 @keyframes rise { to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .reveal { animation: none; opacity: 1; transform: none; }
@@ -269,4 +269,133 @@ select {
   .masthead { padding-top: 38px; }
   .panel-head { flex-direction: column; align-items: flex-start; }
   .trial-band { padding: 24px 18px; }
+}
+
+/* ============ STICKY NAV - the "it's a real site" header ============ */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 10px 20px;
+  background: linear-gradient(180deg, rgba(14,11,7,0.96), rgba(14,11,7,0.82));
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.nav-brand { display: flex; align-items: baseline; gap: 10px; border-bottom: none; }
+.nav-sigil {
+  width: 14px; height: 14px; border-radius: 50%; align-self: center;
+  background: radial-gradient(circle, var(--gold-br), var(--gold-dp));
+  box-shadow: 0 0 10px rgba(239,212,136,0.6), 0 0 0 3px rgba(0,0,0,0.5);
+}
+.nav-word { font-family: "Cinzel Decorative", serif; font-weight: 900; font-size: 20px;
+  letter-spacing: 0.04em; color: var(--gold-br); }
+.nav-sub { font-family: "Cinzel", serif; font-size: 10px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--muted); }
+.nav-links { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.nav-links a {
+  font-family: "Cinzel", serif; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-dim); padding: 7px 12px; border-radius: 3px; border-bottom: none;
+  transition: color .2s, background .2s;
+}
+.nav-links a:hover { color: var(--gold-br); background: rgba(200,162,76,0.08); }
+.nav-cta {
+  color: #241a08 !important;
+  background: linear-gradient(180deg, var(--gold-br), var(--gold) 60%, var(--gold-dp));
+  border: 1px solid var(--gold-br) !important;
+}
+.nav-cta:hover { color: #120d04 !important; box-shadow: 0 0 16px rgba(239,212,136,0.4); }
+.masthead-tag { margin: 10px auto 0; max-width: 48ch; color: var(--ink-dim); font-size: 15px; }
+
+/* Upload block inside the Today's Challenge hero. */
+.trial-upload { padding: 0 28px 26px; border-top: 1px solid var(--line-soft); margin-top: 2px; }
+.trial-upload .field-label { margin-top: 20px; }
+.upload-lead { font-size: 14px; margin-bottom: 10px; }
+
+/* Ladder filters. */
+.filters { display: flex; flex-wrap: wrap; gap: 18px; margin: 4px 0 18px; }
+.filter { display: flex; flex-direction: column; gap: 5px; }
+.filter label { font-family: "Cinzel", serif; font-size: 11px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-dim); }
+.filter select { min-width: 170px; }
+
+/* Section anchors clear the sticky nav; empty-state prose spans the whole grid. */
+#challenge, #ladders, #champions, #feedback { scroll-margin-top: 76px; }
+.ladder-grid > p, .champion-grid > p { grid-column: 1 / -1; }
+
+/* ============ THE LADDERS - one card per stat, character rows ============ */
+.ladder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.lad-card {
+  border: 1px solid var(--line-soft); border-top: 2px solid var(--class);
+  border-radius: 4px; background: rgba(0,0,0,0.26); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.lad-card-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  padding: 12px 14px 10px; border-bottom: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(200,162,76,0.07), transparent);
+}
+.lad-card-head h4 { margin: 0; font-family: "Cinzel", serif; font-size: 14px;
+  letter-spacing: 0.04em; color: var(--ink); }
+.lad-record { font-family: "Cinzel", serif; font-size: 11px; letter-spacing: 0.03em;
+  color: var(--gold-br); white-space: nowrap; }
+.lad-row {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 10px;
+  padding: 9px 14px; border-bottom: 1px solid rgba(200,162,76,0.07);
+}
+.lad-row:last-child { border-bottom: none; }
+.lad-rank { font-family: "Cinzel", serif; font-weight: 700; font-size: 13px; color: var(--gold);
+  width: 1.4em; text-align: center; }
+.lad-name { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; font-weight: 600; }
+.lad-name a { border-bottom: 1px dotted currentColor; }
+.lad-name a:hover { border-color: currentColor; }
+.lad-meta { color: var(--muted); font-size: 12px; font-weight: 400; }
+.lad-val { font-family: "Cinzel", serif; color: var(--ink); white-space: nowrap;
+  display: flex; align-items: center; gap: 7px; }
+.lad-row.anon .lad-name { color: var(--ink-dim); font-style: italic; }
+.lad-row.anon .lad-rank { color: var(--gold-br); }
+.row-buffs { flex-basis: 100%; color: var(--muted); font-size: 12px; font-style: italic; font-weight: 400; }
+.pct {
+  font-family: "Cinzel", serif; font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 8px; border-radius: 999px; color: #241a08;
+  background: linear-gradient(180deg, var(--gold-br), var(--gold-dp)); border: 1px solid var(--gold-br);
+}
+
+/* ============ CHAMPIONS - each named character by their best stat ============ */
+.champion-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.champ-card {
+  position: relative; border: 1px solid var(--line-soft); border-left: 3px solid var(--class);
+  border-radius: 4px; padding: 14px 16px; background:
+    linear-gradient(135deg, rgba(200,162,76,0.05), transparent 60%), rgba(0,0,0,0.26);
+  transition: transform .15s ease, box-shadow .2s ease, border-color .2s;
+}
+.champ-card:hover { transform: translateY(-2px); border-color: var(--line);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.5); }
+.champ-name { font-family: "Cinzel", serif; font-weight: 700; font-size: 17px; letter-spacing: 0.02em; }
+.champ-name a { border-bottom: 1px dotted currentColor; }
+.champ-class { color: var(--muted); font-size: 12px; margin-top: 1px; }
+.champ-stat { margin-top: 10px; font-family: "Cinzel", serif; font-size: 11px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-br); }
+.champ-val { font-family: "Cinzel", serif; font-size: 22px; color: var(--ink);
+  display: flex; align-items: baseline; gap: 9px; margin-top: 2px; }
+.champ-buffs { display: block; margin-top: 8px; color: var(--ink-dim); font-size: 12px; font-style: italic; }
+
+/* Hamburger toggle - hidden on desktop, shown when the links collapse. */
+.nav-toggle { display: none; background: rgba(0,0,0,0.3); border: 1px solid var(--line);
+  color: var(--gold-br); font-size: 17px; line-height: 1; padding: 7px 11px; border-radius: 3px;
+  cursor: pointer; }
+.nav-toggle:hover { border-color: var(--gold); color: #fff; }
+
+/* Below 720px the links collapse behind the ☰ toggle: nav is a tidy brand + toggle bar
+   (~46px), and tapping drops the links in a single stacked menu. */
+@media (max-width: 720px) {
+  .nav { flex-wrap: wrap; padding: 9px 14px; }
+  .nav-sub { display: none; }
+  .nav-toggle { display: block; }
+  .nav-links { display: none; flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 3px; margin-top: 8px; }
+  .nav.open .nav-links { display: flex; }
+  .nav-links a { padding: 11px 12px; font-size: 13px; text-align: center; background: rgba(0,0,0,0.2); }
+  .nav-cta { text-align: center; }
+}
+@media (max-width: 560px) {
+  .trial-upload { padding: 0 18px 20px; }
+  .ladder-grid, .champion-grid { grid-template-columns: 1fr; }
 }
