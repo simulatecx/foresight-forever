@@ -243,4 +243,29 @@ function TB.decode(str)
     return build, classToken
 end
 
+-- Map a classic-talent build (talentId->rank) to a C_Traits NODE plan (nodeId->rank), via
+-- the shared spellID bridge (gen.traits.bySpell). This is what drives the live overlay on
+-- the real tree. Only classic-overlap talents map (Forever-new nodes aren't in the classic
+-- grid - those are planned on the live tree directly, a future step). Pure + defensive.
+function TB.toNodePlan(build)
+    local g = gen()
+    local bySpell = g.traits and g.traits.bySpell
+    local out = {}
+    if type(bySpell) ~= "table" then return out end
+    for tid, rank in pairs(build or {}) do
+        rank = tonumber(rank) or 0
+        local t = g.talents and g.talents[tid]
+        if t and rank > 0 and type(t.spellRanks) == "table" then
+            for _, sid in ipairs(t.spellRanks) do
+                local nodeId = bySpell[sid]
+                if nodeId then
+                    if rank > (out[nodeId] or 0) then out[nodeId] = rank end
+                    break
+                end
+            end
+        end
+    end
+    return out
+end
+
 return TB

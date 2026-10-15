@@ -62,6 +62,11 @@ Settings.KEYS = {
         label = "Auto-verify on talent open",
         desc = "When you open your talents, Foresight scans the ones you've trained so their rank rules verify themselves - no hover, no command. Off = verify only on hover or /foresight verify.",
     },
+    plannerOverlay = {
+        group = "Synergy Matrix", type = "toggle", default = true,
+        label = "Show planned-build overlay",
+        desc = "When you have a planned build (from /foresight planner or an imported code), glow the planned path on your live talent tree - blue where points remain, gold once allocated. Off = plan in the planner only, no overlay.",
+    },
     -- Opt-in SHOW-OFF tier (S34c). OFF by default; your numbers feed the anonymous crowd
     -- averages either way. On = when you Contribute, your chosen handle (+ optional armory)
     -- rides along and can appear on the public "champions" ladders. Revocable: turn it off.

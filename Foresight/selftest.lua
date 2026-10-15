@@ -2617,11 +2617,12 @@ function HM.runSelftest(out)
             classNames = { [8] = "Mage" },
             talentTabs = { [41] = { name = "Fire", order = 0, classMask = 128 } },
             talents = {
-                [100] = { name = "Imp Fireball", tab = 41, tier = 0, column = 0, classId = 8, maxRank = 5, prereqs = {} },
-                [101] = { name = "Impact", tab = 41, tier = 0, column = 1, classId = 8, maxRank = 2, prereqs = {} },
-                [110] = { name = "Ignite", tab = 41, tier = 1, column = 0, classId = 8, maxRank = 3, prereqs = {} },
-                [120] = { name = "Combustion", tab = 41, tier = 1, column = 1, classId = 8, maxRank = 1, prereqs = { { talent = 110, rank = 2 } } },
+                [100] = { name = "Imp Fireball", tab = 41, tier = 0, column = 0, classId = 8, maxRank = 5, prereqs = {}, spellRanks = { 1101, 1102, 1103, 1104, 1105 } },
+                [101] = { name = "Impact", tab = 41, tier = 0, column = 1, classId = 8, maxRank = 2, prereqs = {}, spellRanks = { 1201 } },
+                [110] = { name = "Ignite", tab = 41, tier = 1, column = 0, classId = 8, maxRank = 3, prereqs = {}, spellRanks = { 1110, 1111, 1112 } },
+                [120] = { name = "Combustion", tab = 41, tier = 1, column = 1, classId = 8, maxRank = 1, prereqs = { { talent = 110, rank = 2 } }, spellRanks = { 1120 } },
             },
+            traits = { bySpell = { [1101] = 9100, [1110] = 9110 } },  -- rank-1 spell -> C_Traits node id
         }
         local function finish(v, why) HM.gen = savedGen; return v, why end
         -- tier lock: tier-1 talents need 5 points in tier 0 first
@@ -2648,6 +2649,9 @@ function HM.runSelftest(out)
         if TB.decode("FT1-MAGE-002") ~= nil then return finish(false, "accepted illegal build") end
         if TB.decode("FT1-MAGE-9") ~= nil then return finish(false, "accepted over-max rank") end
         if TB.decode("hello") ~= nil then return finish(false, "accepted junk") end
+        -- classic build -> C_Traits node plan (the bridge that drives the live overlay)
+        local np = TB.toNodePlan(b)   -- b = { [100]=5, [110]=2 }
+        if np[9100] ~= 5 or np[9110] ~= 2 then return finish(false, "node plan bridge") end
         return finish(true)
     end)())
 

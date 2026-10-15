@@ -286,6 +286,99 @@ function Highlight.clear()
     if container then container:Hide() end
 end
 
+-- S35 TALENT-PLAN OVERLAY: glow a PLANNED build over the LIVE talent tree - blue (pulsing)
+-- where points remain, gold (steady) where already allocated. Live delta via ranksPurchased.
+-- Its OWN anchored overlay pool (SetAllPoints the button, never parented into Blizzard's
+-- tree - the taint-isolation law) so it coexists with the synergy/focus glows. DISPLAY ONLY:
+-- it NEVER spends points (no LearnTalent/PurchaseRank/CommitConfig) - you apply them yourself.
+local PLANBLUE = { r = 0.25, g = 0.55, b = 1 }
+local planOverlays = {}
+local activePlan
+
+local function planOverlayFor(button)
+    local o = planOverlays[button]
+    if o then return o end
+    o = _G.CreateFrame("Frame", nil, overlayLayer())
+    o:SetAllPoints(button)
+    o.border = {}
+    for _, e in ipairs({ { "TOPLEFT", "TOPRIGHT", nil, 3 }, { "BOTTOMLEFT", "BOTTOMRIGHT", nil, 3 },
+                         { "TOPLEFT", "BOTTOMLEFT", 3, nil }, { "TOPRIGHT", "BOTTOMRIGHT", 3, nil } }) do
+        local t = o:CreateTexture(nil, "OVERLAY")
+        t:SetPoint(e[1]); t:SetPoint(e[2])
+        if e[3] then t:SetWidth(e[3]) else t:SetHeight(e[4]) end
+        t:SetBlendMode("ADD")
+        o.border[#o.border + 1] = t
+    end
+    o.rankText = o:CreateFontString(nil, "OVERLAY", "NumberFontNormal")
+    o.rankText:SetPoint("BOTTOM", o, "BOTTOM", 0, 2)
+    local ag = o:CreateAnimationGroup(); ag:SetLooping("BOUNCE")
+    local a = ag:CreateAnimation("Alpha"); a:SetFromAlpha(1); a:SetToAlpha(0.4); a:SetDuration(0.8)
+    o.pulse = ag
+    planOverlays[button] = o
+    return o
+end
+
+local function clearPlanOverlays()
+    for _, o in pairs(planOverlays) do if o.pulse then o.pulse:Stop() end; o:Hide() end
+end
+
+-- Re-anchor + recolor the plan glow to the live tree (reads ranksPurchased for the delta).
+function Highlight.applyPlanPreview()
+    clearPlanOverlays()
+    if type(activePlan) ~= "table" or not next(activePlan) then return 0 end
+    if _G.InCombatLockdown and _G.InCombatLockdown() then return 0 end
+    if HM.Settings and HM.Settings.get("plannerOverlay") == false then return 0 end
+    local tf = talentFrame()
+    if not (tf and type(tf.EnumerateAllTalentButtons) == "function") then return 0 end
+    overlayLayer():Show()
+    local lit = 0
+    pcall(function()
+        for button in tf:EnumerateAllTalentButtons() do
+            local okId, nid = pcall(function() return button:GetNodeID() end)
+            local target = okId and nid and activePlan[nid]
+            if target then
+                local cur = 0
+                local oki, info = pcall(function() return button:GetNodeInfo() end)
+                if oki and type(info) == "table" then cur = info.ranksPurchased or 0 end
+                local done = cur >= target
+                local c = done and GOLD or PLANBLUE
+                local o = planOverlayFor(button)
+                for _, t in ipairs(o.border) do t:SetColorTexture(c.r, c.g, c.b, 0.95) end
+                o.rankText:SetText(("%d/%d"):format(cur, target))
+                o.rankText:SetTextColor(done and 0.45 or 1, 1, done and 0.45 or 1)
+                if done then o.pulse:Stop(); o:SetAlpha(1) else o.pulse:Play() end
+                o:Show()
+                lit = lit + 1
+            end
+        end
+    end)
+    return lit
+end
+
+-- Set (and persist per-char) the active plan preview (nodeId -> planned rank). nil/{} clears.
+function Highlight.setPlanPreview(nodePlan)
+    activePlan = (type(nodePlan) == "table" and next(nodePlan)) and nodePlan or nil
+    local db = HM.charDb and HM.charDb()
+    if db then
+        db.settings = db.settings or {}
+        db.settings.planner = db.settings.planner or {}
+        db.settings.planner.activePlan = activePlan
+    end
+    Highlight.applyPlanPreview()
+end
+
+local function restorePlanPreview()
+    local db = HM.charDb and HM.charDb()
+    local saved = db and db.settings and db.settings.planner and db.settings.planner.activePlan
+    if type(saved) ~= "table" then return end
+    local clean = {}
+    for k, v in pairs(saved) do
+        local nid, rank = tonumber(k), tonumber(v)
+        if nid and rank and rank > 0 then clean[nid] = rank end
+    end
+    activePlan = next(clean) and clean or nil
+end
+
 local function applySets(ids, names, dimOthers, color, pulse)
     -- COMBAT GATE: never enumerate or decorate the talent UI in combat - protected
     -- talent operations must never find us anywhere near their execution window.
@@ -404,12 +497,14 @@ local function hookTalentUI()
     psf:HookScript("OnShow", function()
         if _G.C_Timer and _G.C_Timer.After then
             _G.C_Timer.After(0.3, Highlight.restoreSaved)
+            _G.C_Timer.After(0.35, Highlight.applyPlanPreview)  -- S35: auto-show the plan path
         end
         refreshHint()
     end)
     psf:HookScript("OnHide", function()
         if hint then hint:Hide() end
         pcall(Highlight.clear)
+        clearPlanOverlays()
     end)
 
     -- S32: hovering an action button fires GameTooltip:SetAction(slot). We read the
@@ -434,15 +529,23 @@ end
 local boot = _G.CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
 boot:RegisterEvent("ADDON_LOADED")
+-- S35: live-delta the plan overlay as points are actually spent (blue remaining -> gold done).
+pcall(boot.RegisterEvent, boot, "TRAIT_NODE_CHANGED")
+pcall(boot.RegisterEvent, boot, "TRAIT_CONFIG_UPDATED")
+pcall(boot.RegisterEvent, boot, "PLAYER_TALENT_UPDATE")
 boot:SetScript("OnEvent", function(_, event, addon)
     if event == "PLAYER_LOGIN" then
         hookTalentUI()
+        restorePlanPreview()  -- a followed plan survives a reload/relog
         -- Wipe any legacy persisted focus/theme at login so a focus set in an old
         -- build never resurrects (the stuck-Lightning report). Nothing lights until
         -- the user asks this session.
         if migrateLegacy then migrateLegacy() end
-    elseif addon == "Blizzard_PlayerSpells" then
+    elseif event == "ADDON_LOADED" and addon == "Blizzard_PlayerSpells" then
         hookTalentUI()
+    elseif event == "TRAIT_NODE_CHANGED" or event == "TRAIT_CONFIG_UPDATED"
+            or event == "PLAYER_TALENT_UPDATE" then
+        pcall(Highlight.applyPlanPreview)
     end
 end)
 

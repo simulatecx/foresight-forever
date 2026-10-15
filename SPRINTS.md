@@ -92,11 +92,20 @@ rules - budget/tier/prereq + build-string encode/decode, selftest-pinned) + `ui/
 tooltips w/ desc + live impact, per-tree + total counters, Reset, Export/Import strings
 data-only-validated, Save/Load/Delete named builds as chips, draggable+saved pos, NO auto-apply) +
 `/foresight planner [class]`. Compliance green (our frames, no automation, no Blizzard writes).
-PENDING: in-game verify (renders at L1, click/lock/tooltip/save-load/import-export all work on a
-controller w/ zero taint) -> flip ☑; then the TWO deferred fragile pieces (both in-game-only,
-lower value since our own tree already works pre-10): copy-from-inspected-same-class-player, and
-the glow-planned-over-the-Blizzard-tree preview (`refreshGlow` already no-ops safely until
-`SynergyHighlight.previewTalents` exists). Ships to players on the next addon version bump.
+LIVE OVERLAY BUILT 2026-10-15 (the centerpiece, per owner): after reviewing ForeverTalents'
+source (C_Traits node-based; no embeddable rank data; FT2 code format open) - the plan now
+glows the planned path on the REAL talent tree. `TB.toNodePlan` bridges the classic plan ->
+C_Traits node ids via `gen.traits.bySpell`; `SynergyHighlight.setPlanPreview` glows each planned
+node (blue = points remain, gold = done) with a per-node cur/planned badge, LIVE-DELTAs as you
+spend (TRAIT_NODE_CHANGED/TRAIT_CONFIG_UPDATED/PLAYER_TALENT_UPDATE), AUTO-TRIGGERS on talent-frame
+open, persists across reload, and is TAINT-SAFE (own anchored overlay pool, never parented into
+Blizzard buttons - unlike ForeverTalents) and DISPLAY-ONLY (no auto-apply; they use
+C_Traits.PurchaseRank, we never do). `plannerOverlay` toggle (default ON). Share: export an FT1
+code -> recipient imports -> their overlay shows the same path. Gate 294. PENDING: in-game verify
+(classic grid renders at L1; overlay glows + live-deltas on the real tree 5/10+; zero taint on a
+controller) -> flip ☑; then (deferred) copy-from-inspected-player + Forever-NEW-node planning
+(the classic grid covers classic-overlap talents; node-native planning + optional FT2 interop are
+the next step). Ships to players on the next addon version bump.
 *Fit & Overlap - Category UI -> MODEL. Verdict: NET-NEW tree-grid UI + talent-point rules
 engine, ENHANCE the planner spine (reuse `HM.gen.talents`/`talentTabs`, `loadout:withTalent`
 impact folding, the `model/plan.lua` persistence pattern). Complements: WHATIF-planner,

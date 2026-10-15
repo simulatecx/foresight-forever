@@ -261,10 +261,12 @@ local function refreshChips()
     end
 end
 
--- ---- glow preview over the Blizzard tree (reuse the synergy highlight infra) ------------
+-- ---- live overlay on the real tree: map the classic plan -> C_Traits node plan and hand
+-- it to SynergyHighlight, which glows the planned path on the live tree (blue remaining /
+-- gold done) and live-deltas it as you spend. Display-only; the frame may be closed (no-op).
 function TT.refreshGlow()
-    if not (HM.SynergyHighlight and HM.SynergyHighlight.previewTalents) then return end
-    pcall(HM.SynergyHighlight.previewTalents, state.build)
+    if not (HM.SynergyHighlight and HM.SynergyHighlight.setPlanPreview and HM.TalentBuild) then return end
+    pcall(HM.SynergyHighlight.setPlanPreview, HM.TalentBuild.toNodePlan(state.build))
 end
 
 -- ---- frame -----------------------------------------------------------------------------
