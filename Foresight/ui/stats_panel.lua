@@ -499,11 +499,44 @@ local function createPanel()
     end)
     optBtn:SetScript("OnLeave", function() if _G.GameTooltip then _G.GameTooltip:Hide() end end)
 
+    -- Click-to-open buttons so nothing needs a TYPED slash command (user directive: "no
+    -- slash commands required, all within the UI"). This is also the GAMEPAD account-safety
+    -- fix: typing /foresight on a controller taints Blizzard's chat parser
+    -- (ImportAllListsToHash reads addon SLASH_* globals in a secure path) and blocks the
+    -- gamepad interact op. A button calls HM.onSlash DIRECTLY - no chat parse, no taint.
+    local function furnitureTip(btn, text)
+        btn:SetScript("OnEnter", function(self)
+            if _G.GameTooltip then
+                _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                _G.GameTooltip:SetText(text, 0.2, 1, 0.6)
+                _G.GameTooltip:Show()
+            end
+        end)
+        btn:SetScript("OnLeave", function() if _G.GameTooltip then _G.GameTooltip:Hide() end end)
+    end
+    local shareBtn = _G.CreateFrame("Button", "ForesightShareButton", _G.UIParent, "UIPanelButtonTemplate")
+    shareBtn:SetFrameStrata("HIGH")
+    shareBtn:SetSize(44, 18)
+    shareBtn:SetText("Share")
+    shareBtn:SetPoint("RIGHT", optBtn, "LEFT", -2, 0)
+    shareBtn:SetScript("OnClick", function() if HM.onSlash then HM.onSlash("share") end end)
+    furnitureTip(shareBtn, "Copy your crowd-compare link (no typing needed)")
+
+    local matrixBtn = _G.CreateFrame("Button", "ForesightMatrixButton", _G.UIParent, "UIPanelButtonTemplate")
+    matrixBtn:SetFrameStrata("HIGH")
+    matrixBtn:SetSize(48, 18)
+    matrixBtn:SetText("Matrix")
+    matrixBtn:SetPoint("RIGHT", shareBtn, "LEFT", -2, 0)
+    matrixBtn:SetScript("OnClick", function() if HM.onSlash then HM.onSlash("matrix") end end)
+    furnitureTip(matrixBtn, "Open the Foresight Matrix")
+
     -- Track the character frame's visibility (we're anchored, not parented): the
     -- buttons appear only while the char sheet is open; closing it also hides the panel.
     local function setFurnitureShown(show)
         toggleButton:SetShown(show)
         optBtn:SetShown(show)
+        shareBtn:SetShown(show)
+        matrixBtn:SetShown(show)
         if not show then panel:Hide() end
     end
     charFrame:HookScript("OnShow", function() setFurnitureShown(true) end)

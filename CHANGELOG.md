@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.46.13 - 2026-10-14
+
+NO-SLASH UI BUTTONS (user directive "all within the UI" + the controller account-safety
+fix). The character-sheet Foresight panel now carries **Matrix** and **Share** buttons next
+to the FS toggle and the options cog - open the Matrix and grab your crowd-compare link with
+a click, no typed command needed. This also sidesteps the gamepad taint pinned from the
+taint log: typing `/foresight` on a controller makes Blizzard's chat parser
+(`ImportAllListsToHash`) read addon `SLASH_*` globals in a secure path and block the gamepad
+interact op - a button calls `HM.onSlash` directly, with no chat parse, so no taint. The
+buttons are UIParent-anchored to the character frame (taint-isolation law) and shown/hidden
+with it. Gate 279.
+
+*Features:* UI-stats-panel, CROWD-share
+
 ## 0.46.12 - 2026-10-14
 
 ACCOUNT-SAFETY FIX (taint - the actual controller vector). The login taint-block on gamepads

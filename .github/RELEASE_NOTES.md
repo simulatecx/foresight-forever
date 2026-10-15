@@ -1,5 +1,6 @@
-## 0.46.10
+## 0.46.13
 
-Weapon-imbue tooltips (Rockbiter, Flametongue, and the like) now show the real attack-power
-value your game client reports, instead of our estimate - so our line matches the number
-you see on the skill itself.
+New buttons on your character sheet: **Matrix** and **Share**, right next to the FS toggle -
+open the Matrix and grab your compare link with a click, no typing needed. Controller
+players: this also avoids the "action blocked" message you'd get typing `/foresight` on a
+gamepad.
