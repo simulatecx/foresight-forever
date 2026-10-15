@@ -358,6 +358,19 @@ reads the SLASH_* globals and never taints the gamepad path. Controller players 
 the Matrix + grab the share link with zero typing. Gate 279; /reload loads it (edits only).
 Follow-ups: a minimap launcher for always-available access (taint-parenting care needed);
 more actions as buttons (focus/report already have button homes).
+BUTTON RESTRUCTURE v0.46.14 (user): the char-sheet furniture is now FS + Share + Options
+(Matrix button folded in). FS is the ONE master toggle - expands/collapses the stats panel
+AND the Matrix in lockstep (MatrixPanel.setShown added); the Matrix stays independent once
+open (draggable/resizable = pinnable). Controller-confirmed no taint. KNOWN LIMIT (user):
+the gamepad can't directionally-navigate to these frame buttons (needs the gamepad cursor);
+true gamepad frame-nav is a bigger future item.
+WEB UX v0.46.14 (user, after a working submission): dropped the "Read the Omens" compare
+button - valid data in the box now AUTO-shows standings (one "Contribute & see your
+standings" button remains). The compare result is reframed into DAILY ACHIEVEMENT (today's
+featured challenge + your standing, same day-of-year pick as the hero) then OVERALL
+SUBMISSIONS (all your lenses + challenge metrics). "Submissions stack" = the aggregator
+already accumulates distinct clientIds + updates your entry on re-submit (no dup inflation);
+working as intended. app.js?v=13.
 APP CHECK WRITES UNBLOCKED (temporary): proven the reCAPTCHA Enterprise token validates
 client-side but the backend won't set request.app on writes (permission-denied even with a
 valid token + valid shape, browser-reproduced repeatedly). RELAXED `appChecked()` on the

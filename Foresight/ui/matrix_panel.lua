@@ -679,13 +679,23 @@ function MatrixPanel.refresh()
     end
 end
 
+-- Explicitly show or hide (not toggle) - the FS master button drives the Matrix in
+-- lockstep with the character panel via this.
+function MatrixPanel.setShown(show)
+    if not panel then
+        if show then HM.print("matrix panel is in-game only") end
+        return
+    end
+    panel:SetShown(show and true or false)
+    if show then MatrixPanel.refresh() end
+end
+
 function MatrixPanel.toggle()
     if not panel then
         HM.print("matrix panel is in-game only")
         return
     end
-    panel:SetShown(not panel:IsShown())
-    MatrixPanel.refresh()
+    MatrixPanel.setShown(not panel:IsShown())
 end
 
 function MatrixPanel.setOpacity(v)

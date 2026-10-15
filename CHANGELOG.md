@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.46.14 - 2026-10-14
+
+ONE MASTER BUTTON (user restructure of the 0.46.13 buttons). The character-sheet Foresight
+furniture is now **FS + Share + Options** - the standalone Matrix button is folded in. **FS**
+is the single master toggle: one click expands BOTH your character stats panel AND the Matrix
+(and collapses both). The Matrix stays independent once open - draggable and resizable, so it
+pins wherever you put it. **Share** (button 2) copies your compare link; **Options** (button
+3) opens settings. Every button calls Foresight directly (never a typed slash), so controller
+players don't hit the chat-parse taint block. Gate 279.
+
+*Features:* UI-stats-panel
+
 ## 0.46.13 - 2026-10-14
 
 NO-SLASH UI BUTTONS (user directive "all within the UI" + the controller account-safety

@@ -120,12 +120,20 @@ function parsePayload() {
   if (m) { try { raw = decodeURIComponent(m[1]); } catch { return null; } }
   try { return sanitize(JSON.parse(raw)); } catch { return null; }
 }
+let lastCompared = "";
 function refreshButtons() {
-  const ok = parsePayload() !== null;
-  $("compare").disabled = !ok;
+  const p = parsePayload();
+  const ok = p !== null;
   $("contribute").disabled = !(ok && $("consent").checked);
-  if (!ok && $("payload").value.trim()) setStatus("That doesn't look like valid /foresight share data.", "warn");
-  else if (document.activeElement === $("payload")) setStatus("");
+  const raw = $("payload").value.trim();
+  if (!ok) {
+    lastCompared = "";
+    if (raw) setStatus("That doesn't look like valid /foresight share data.", "warn");
+    else if (document.activeElement === $("payload")) setStatus("");
+    return;
+  }
+  // Valid data: just show the standings - no separate "compare" button to click.
+  if (raw !== lastCompared) { lastCompared = raw; setStatus(""); showCompare(p); }
 }
 $("payload").addEventListener("input", refreshButtons);
 $("consent").addEventListener("change", refreshButtons);
@@ -160,24 +168,40 @@ async function showCompare(p) {
         <p class="muted">Only ${agg.count} champion(s) here so far - not enough to rank (small brackets stay hidden). Check back soon.</p>`;
       return;
     }
-    let lensRows = "";
+    // DAILY ACHIEVEMENT - today's featured challenge (same day-of-year pick as the hero)
+    // and your standing on it, surfaced first.
+    const now = new Date();
+    const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+    const feat = FEATURED[doy % FEATURED.length];
+    const fVal = p.metrics && p.metrics[feat.key];
+    const fAgg = agg.metrics && agg.metrics[feat.key];
+    let dailyHtml;
+    if (typeof fVal === "number" && fAgg) {
+      dailyHtml = row(feat.label, Math.round(fVal), pctFromQuantiles(fAgg, fVal), `record ${Math.round(fAgg.max)} · n=${fAgg.n}`);
+    } else if (fAgg) {
+      dailyHtml = `<p class="meta">Today's trial is <b>${esc(feat.label)}</b> - standing record ${Math.round(fAgg.max)}. Your submission didn't include it.</p>`;
+    } else {
+      dailyHtml = `<p class="meta">Today's trial is <b>${esc(feat.label)}</b> - no mark in your bracket yet. Be the first.</p>`;
+    }
+
+    // OVERALL SUBMISSIONS - everything you've submitted: all lenses + challenge metrics
+    // (today's featured one is shown above, so it's skipped here).
+    let overall = "";
     for (const [id, val] of Object.entries(p.lenses || {})) {
       const s = agg.lenses && agg.lenses[id];
       if (!s) continue;
-      const pct = pctFromQuantiles(s, val);
-      lensRows += row(id, Math.round(val), pct, `n=${s.n}, median ${Math.round(s.p50)}`);
+      overall += row(id, Math.round(val), pctFromQuantiles(s, val), `n=${s.n}, median ${Math.round(s.p50)}`);
     }
-    let chalRows = "";
     for (const [k, val] of Object.entries(p.metrics || {})) {
+      if (k === feat.key) continue;
       const s = agg.metrics && agg.metrics[k];
       if (!s) continue;
-      const pct = pctFromQuantiles(s, val);
-      chalRows += row(metricLabel(k), Math.round(val), pct, `record ${Math.round(s.max)} · n=${s.n}`);
+      overall += row(metricLabel(k), Math.round(val), pctFromQuantiles(s, val), `record ${Math.round(s.max)} · n=${s.n}`);
     }
     resEl.innerHTML =
       `<h2>${esc(titleCase(p.class))} · level ${levelBucket(p.level)}+ <span class="muted">(${agg.count} champions)</span></h2>` +
-      (lensRows ? `<div class="section-title">Your lenses</div>${lensRows}` : "") +
-      (chalRows ? `<div class="section-title">Challenges</div>${chalRows}` : "") +
+      `<div class="section-title">Daily Achievement</div>${dailyHtml}` +
+      (overall ? `<div class="section-title">Overall Submissions</div>${overall}` : "") +
       `<p class="meta" style="margin-top:14px">Percentiles are approximate from the bracket's distribution (p).</p>`;
     resEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (e) {
@@ -274,7 +298,6 @@ function fromShareLink() {
   } catch (e) { setStatus("That share link looked malformed - paste your data manually.", "warn"); }
 }
 
-$("compare").addEventListener("click", async () => { const p = parsePayload(); if (p) await showCompare(p); });
 $("contribute").addEventListener("click", async () => {
   const p = parsePayload(); if (!p) return;
   setStatus("Signing the ledger…");

@@ -475,35 +475,7 @@ local function createPanel()
     -- frame's bottom-right (they must sit on the character sheet, but not live inside
     -- its frame tree). They're shown/hidden with the character frame via the hooks
     -- below, since anchoring alone won't track its visibility.
-    toggleButton = _G.CreateFrame("Button", "ForesightToggleButton", _G.UIParent, "UIPanelButtonTemplate")
-    toggleButton:SetFrameStrata("HIGH")
-    toggleButton:SetSize(36, 18)
-    toggleButton:SetText("FS")
-    toggleButton:SetPoint("BOTTOMRIGHT", charFrame, "BOTTOMRIGHT", -40, 4)
-    toggleButton:SetScript("OnClick", StatsPanel.toggle)
-
-    local optBtn = _G.CreateFrame("Button", "ForesightOptionsButton", _G.UIParent, "UIPanelButtonTemplate")
-    optBtn:SetFrameStrata("HIGH")
-    optBtn:SetSize(20, 18)
-    optBtn:SetText("|TInterface\\Buttons\\UI-OptionsButton:12:12|t")
-    optBtn:SetPoint("RIGHT", toggleButton, "LEFT", -2, 0)
-    optBtn:SetScript("OnClick", function()
-        if HM.OptionsPanel and HM.OptionsPanel.toggle then HM.OptionsPanel.toggle() end
-    end)
-    optBtn:SetScript("OnEnter", function(self)
-        if _G.GameTooltip then
-            _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            _G.GameTooltip:SetText("Foresight options", 0.2, 1, 0.6)
-            _G.GameTooltip:Show()
-        end
-    end)
-    optBtn:SetScript("OnLeave", function() if _G.GameTooltip then _G.GameTooltip:Hide() end end)
-
-    -- Click-to-open buttons so nothing needs a TYPED slash command (user directive: "no
-    -- slash commands required, all within the UI"). This is also the GAMEPAD account-safety
-    -- fix: typing /foresight on a controller taints Blizzard's chat parser
-    -- (ImportAllListsToHash reads addon SLASH_* globals in a secure path) and blocks the
-    -- gamepad interact op. A button calls HM.onSlash DIRECTLY - no chat parse, no taint.
+    -- Tooltip helper for the furniture buttons.
     local function furnitureTip(btn, text)
         btn:SetScript("OnEnter", function(self)
             if _G.GameTooltip then
@@ -514,30 +486,50 @@ local function createPanel()
         end)
         btn:SetScript("OnLeave", function() if _G.GameTooltip then _G.GameTooltip:Hide() end end)
     end
+
+    -- FS is the ONE master button (user restructure 2026-10-14): it expands/collapses the
+    -- whole Foresight view - the character stats panel AND the Matrix - in lockstep. Share
+    -- is button 2, Options button 3. Each calls into our functions DIRECTLY (never a typed
+    -- slash) so there's no chat-parse taint on a controller. All are UIParent children
+    -- ANCHORED to the char frame's bottom-right (taint-isolation law), shown/hidden with it.
+    toggleButton = _G.CreateFrame("Button", "ForesightToggleButton", _G.UIParent, "UIPanelButtonTemplate")
+    toggleButton:SetFrameStrata("HIGH")
+    toggleButton:SetSize(36, 18)
+    toggleButton:SetText("FS")
+    toggleButton:SetPoint("BOTTOMRIGHT", charFrame, "BOTTOMRIGHT", -40, 4)
+    toggleButton:SetScript("OnClick", function()
+        local show = not panel:IsShown()
+        panel:SetShown(show)
+        StatsPanel.refresh()
+        if HM.MatrixPanel and HM.MatrixPanel.setShown then HM.MatrixPanel.setShown(show) end
+    end)
+    furnitureTip(toggleButton, "Foresight: show/hide your character stats + the Matrix")
+
     local shareBtn = _G.CreateFrame("Button", "ForesightShareButton", _G.UIParent, "UIPanelButtonTemplate")
     shareBtn:SetFrameStrata("HIGH")
     shareBtn:SetSize(44, 18)
     shareBtn:SetText("Share")
-    shareBtn:SetPoint("RIGHT", optBtn, "LEFT", -2, 0)
+    shareBtn:SetPoint("RIGHT", toggleButton, "LEFT", -2, 0)
     shareBtn:SetScript("OnClick", function() if HM.onSlash then HM.onSlash("share") end end)
     furnitureTip(shareBtn, "Copy your crowd-compare link (no typing needed)")
 
-    local matrixBtn = _G.CreateFrame("Button", "ForesightMatrixButton", _G.UIParent, "UIPanelButtonTemplate")
-    matrixBtn:SetFrameStrata("HIGH")
-    matrixBtn:SetSize(48, 18)
-    matrixBtn:SetText("Matrix")
-    matrixBtn:SetPoint("RIGHT", shareBtn, "LEFT", -2, 0)
-    matrixBtn:SetScript("OnClick", function() if HM.onSlash then HM.onSlash("matrix") end end)
-    furnitureTip(matrixBtn, "Open the Foresight Matrix")
+    local optBtn = _G.CreateFrame("Button", "ForesightOptionsButton", _G.UIParent, "UIPanelButtonTemplate")
+    optBtn:SetFrameStrata("HIGH")
+    optBtn:SetSize(20, 18)
+    optBtn:SetText("|TInterface\\Buttons\\UI-OptionsButton:12:12|t")
+    optBtn:SetPoint("RIGHT", shareBtn, "LEFT", -2, 0)
+    optBtn:SetScript("OnClick", function()
+        if HM.OptionsPanel and HM.OptionsPanel.toggle then HM.OptionsPanel.toggle() end
+    end)
+    furnitureTip(optBtn, "Foresight options")
 
     -- Track the character frame's visibility (we're anchored, not parented): the
     -- buttons appear only while the char sheet is open; closing it also hides the panel.
     local function setFurnitureShown(show)
         toggleButton:SetShown(show)
-        optBtn:SetShown(show)
         shareBtn:SetShown(show)
-        matrixBtn:SetShown(show)
-        if not show then panel:Hide() end
+        optBtn:SetShown(show)
+        if not show then panel:Hide() end  -- Matrix is independent/pinnable: it stays until FS-toggled
     end
     charFrame:HookScript("OnShow", function() setFurnitureShown(true) end)
     charFrame:HookScript("OnHide", function() setFurnitureShown(false) end)

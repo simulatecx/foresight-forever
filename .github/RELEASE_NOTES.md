@@ -1,6 +1,5 @@
-## 0.46.13
+## 0.46.14
 
-New buttons on your character sheet: **Matrix** and **Share**, right next to the FS toggle -
-open the Matrix and grab your compare link with a click, no typing needed. Controller
-players: this also avoids the "action blocked" message you'd get typing `/foresight` on a
-gamepad.
+Simpler character-sheet buttons: **FS** now opens your stats and the Matrix together in one
+click, with **Share** and **Options** beside it. The Matrix is draggable and stays put once
+open. Fully controller-friendly - no typing needed.
