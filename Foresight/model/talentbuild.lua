@@ -268,4 +268,50 @@ function TB.toNodePlan(build)
     return out
 end
 
+-- The set of C_Traits node ids any classic talent maps to (the classic-overlap nodes). The
+-- grid "owns" these; everything else in a node plan (Forever-new nodes from inspect/FT2/the
+-- edit overlay) is owned outside the grid and must survive a grid edit. Cached-free + pure.
+function TB.classicNodeSet()
+    local g = gen()
+    local bySpell = g.traits and g.traits.bySpell
+    local set = {}
+    if type(bySpell) ~= "table" or type(g.talents) ~= "table" then return set end
+    for _, t in pairs(g.talents) do
+        if type(t) == "table" and type(t.spellRanks) == "table" then
+            for _, sid in ipairs(t.spellRanks) do
+                local nid = bySpell[sid]
+                if nid then set[nid] = true; break end
+            end
+        end
+    end
+    return set
+end
+
+-- Map a C_Traits node plan (nodeId->rank) back to a classic-talent build for the grid view.
+-- Only classic-overlap nodes map (via the node's spellID -> the talent that owns it); Forever-
+-- new nodes have no classic talent and are left to the live overlay. Pure.
+function TB.fromNodePlan(nodePlan)
+    local g = gen()
+    local nodes = g.traits and g.traits.nodes
+    local out = {}
+    if type(nodePlan) ~= "table" or type(nodes) ~= "table" or type(g.talents) ~= "table" then return out end
+    local byRankSpell = {}
+    for tid, t in pairs(g.talents) do
+        if type(t.spellRanks) == "table" then
+            for _, s in ipairs(t.spellRanks) do if byRankSpell[s] == nil then byRankSpell[s] = tid end end
+        end
+    end
+    for nid, rank in pairs(nodePlan) do
+        local node = nodes[nid]
+        local sid = node and node.spellID
+        local tid = sid and byRankSpell[sid]
+        if tid and g.talents[tid] then
+            local mr = g.talents[tid].maxRank or 1
+            local r = math.min(mr, tonumber(rank) or 0)
+            if r > (out[tid] or 0) then out[tid] = r end
+        end
+    end
+    return out
+end
+
 return TB

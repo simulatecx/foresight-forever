@@ -288,18 +288,34 @@ end
 
 -- S35 TALENT-PLAN OVERLAY: glow a PLANNED build over the LIVE talent tree - blue (pulsing)
 -- where points remain, gold (steady) where already allocated. Live delta via ranksPurchased.
--- Its OWN anchored overlay pool (SetAllPoints the button, never parented into Blizzard's
--- tree - the taint-isolation law) so it coexists with the synergy/focus glows. DISPLAY ONLY:
--- it NEVER spends points (no LearnTalent/PurchaseRank/CommitConfig) - you apply them yourself.
+-- Its OWN anchored overlay pool: each overlay is a Button that SetAllPoints the real node
+-- button but lives on OUR UIParent layer (never parented into Blizzard's tree - the taint-
+-- isolation law). In EDIT MODE the overlays are clickable (left +, right -) to plan ANY node
+-- incl. Forever-new ones; out of edit mode they are mouse-transparent so your real clicks
+-- reach the game. DISPLAY/ADVICE ONLY: it NEVER spends points - you apply them yourself.
 local PLANBLUE = { r = 0.25, g = 0.55, b = 1 }
+local EDITGREY = { r = 0.6, g = 0.6, b = 0.65 }
 local planOverlays = {}
+local planEditMode = false
 local activePlan
+
+-- Edit one node in the plan (delta +/-1), clamped to its maxRanks (read live). Re-applies.
+local function editNode(nodeID, maxRanks, delta)
+    if not nodeID then return end
+    activePlan = activePlan or {}
+    local v = (tonumber(activePlan[nodeID]) or 0) + delta
+    if v < 0 then v = 0 end
+    if maxRanks and v > maxRanks then v = maxRanks end
+    activePlan[nodeID] = v > 0 and v or nil
+    Highlight.setPlanPreview(activePlan)
+end
 
 local function planOverlayFor(button)
     local o = planOverlays[button]
     if o then return o end
-    o = _G.CreateFrame("Frame", nil, overlayLayer())
+    o = _G.CreateFrame("Button", nil, overlayLayer())
     o:SetAllPoints(button)
+    o:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     o.border = {}
     for _, e in ipairs({ { "TOPLEFT", "TOPRIGHT", nil, 3 }, { "BOTTOMLEFT", "BOTTOMRIGHT", nil, 3 },
                          { "TOPLEFT", "BOTTOMLEFT", 3, nil }, { "TOPRIGHT", "BOTTOMRIGHT", 3, nil } }) do
@@ -314,20 +330,39 @@ local function planOverlayFor(button)
     local ag = o:CreateAnimationGroup(); ag:SetLooping("BOUNCE")
     local a = ag:CreateAnimation("Alpha"); a:SetFromAlpha(1); a:SetToAlpha(0.4); a:SetDuration(0.8)
     o.pulse = ag
+    o:SetScript("OnClick", function(self, mouse)
+        if not planEditMode then return end  -- display mode never intercepts a real click
+        editNode(self.nodeID, self.maxRanks, mouse == "RightButton" and -1 or 1)
+    end)
+    o:SetScript("OnEnter", function(self)
+        if not planEditMode then return end
+        _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        _G.GameTooltip:AddLine(self.nodeName or "Talent", 1, 0.82, 0.25)
+        _G.GameTooltip:AddLine(("Planned %d/%d"):format(tonumber(activePlan and activePlan[self.nodeID]) or 0, self.maxRanks or 1), 0.7, 0.7, 0.7)
+        _G.GameTooltip:AddLine("Left-click +  ·  Right-click -  (plan only)", 0.5, 0.5, 0.55)
+        _G.GameTooltip:Show()
+    end)
+    o:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
     planOverlays[button] = o
     return o
 end
 
 local function clearPlanOverlays()
-    for _, o in pairs(planOverlays) do if o.pulse then o.pulse:Stop() end; o:Hide() end
+    for _, o in pairs(planOverlays) do
+        if o.pulse then o.pulse:Stop() end
+        o:EnableMouse(false)
+        o:Hide()
+    end
 end
 
--- Re-anchor + recolor the plan glow to the live tree (reads ranksPurchased for the delta).
+-- Re-anchor + recolor the plan overlays to the live tree. In edit mode, decorate EVERY node
+-- (clickable); otherwise only the planned ones (mouse-transparent), reading ranksPurchased
+-- for the blue->gold delta.
 function Highlight.applyPlanPreview()
     clearPlanOverlays()
-    if type(activePlan) ~= "table" or not next(activePlan) then return 0 end
     if _G.InCombatLockdown and _G.InCombatLockdown() then return 0 end
-    if HM.Settings and HM.Settings.get("plannerOverlay") == false then return 0 end
+    if not planEditMode and (type(activePlan) ~= "table" or not next(activePlan)) then return 0 end
+    if HM.Settings and HM.Settings.get("plannerOverlay") == false and not planEditMode then return 0 end
     local tf = talentFrame()
     if not (tf and type(tf.EnumerateAllTalentButtons) == "function") then return 0 end
     overlayLayer():Show()
@@ -335,20 +370,29 @@ function Highlight.applyPlanPreview()
     pcall(function()
         for button in tf:EnumerateAllTalentButtons() do
             local okId, nid = pcall(function() return button:GetNodeID() end)
-            local target = okId and nid and activePlan[nid]
-            if target then
-                local cur = 0
+            local target = okId and nid and (activePlan and activePlan[nid])
+            if okId and nid and (target or planEditMode) then
+                local cur, maxR, name = 0, 1, nil
                 local oki, info = pcall(function() return button:GetNodeInfo() end)
-                if oki and type(info) == "table" then cur = info.ranksPurchased or 0 end
-                local done = cur >= target
-                local c = done and GOLD or PLANBLUE
+                if oki and type(info) == "table" then
+                    cur = info.ranksPurchased or 0
+                    maxR = info.maxRanks or 1
+                end
+                local g = HM.gen and HM.gen.traits and HM.gen.traits.nodes and HM.gen.traits.nodes[nid]
+                name = g and g.name
+                target = target or 0
                 local o = planOverlayFor(button)
-                for _, t in ipairs(o.border) do t:SetColorTexture(c.r, c.g, c.b, 0.95) end
-                o.rankText:SetText(("%d/%d"):format(cur, target))
+                o.nodeID, o.maxRanks, o.nodeName = nid, maxR, name
+                o:EnableMouse(planEditMode)
+                local done = target > 0 and cur >= target
+                local c = (target == 0 and planEditMode) and EDITGREY or (done and GOLD or PLANBLUE)
+                local alpha = (target == 0 and planEditMode) and 0.4 or 0.95
+                for _, t in ipairs(o.border) do t:SetColorTexture(c.r, c.g, c.b, alpha) end
+                o.rankText:SetText(target > 0 and ("%d/%d"):format(cur, target) or "")
                 o.rankText:SetTextColor(done and 0.45 or 1, 1, done and 0.45 or 1)
-                if done then o.pulse:Stop(); o:SetAlpha(1) else o.pulse:Play() end
+                if target > 0 and not done then o.pulse:Play() else o.pulse:Stop(); o:SetAlpha(1) end
                 o:Show()
-                lit = lit + 1
+                if target > 0 then lit = lit + 1 end
             end
         end
     end)
@@ -365,6 +409,70 @@ function Highlight.setPlanPreview(nodePlan)
         db.settings.planner.activePlan = activePlan
     end
     Highlight.applyPlanPreview()
+end
+
+function Highlight.activePlan() return activePlan end
+
+-- The classic grid edits only the classic-overlap node set; merge its plan in while PRESERVING
+-- any Forever-new nodes (from copy-inspect / FT2 import / the edit overlay) so they survive.
+function Highlight.mergeGridPlan(gridNodePlan)
+    activePlan = activePlan or {}
+    local classicSet = HM.TalentBuild and HM.TalentBuild.classicNodeSet() or {}
+    for nid in pairs(classicSet) do activePlan[nid] = nil end
+    for nid, rank in pairs(gridNodePlan or {}) do
+        if (tonumber(rank) or 0) > 0 then activePlan[nid] = rank end
+    end
+    if not next(activePlan) then activePlan = nil end
+    local db = HM.charDb and HM.charDb()
+    if db then
+        db.settings = db.settings or {}
+        db.settings.planner = db.settings.planner or {}
+        db.settings.planner.activePlan = activePlan
+    end
+    Highlight.applyPlanPreview()
+end
+
+-- Edit mode: clickable overlays on EVERY node (plan Forever-new ones too). Toggled via the
+-- planner / a slash command; auto-off in combat. Returns the new state.
+function Highlight.setPlanEditMode(on)
+    planEditMode = on and true or false
+    Highlight.applyPlanPreview()
+    return planEditMode
+end
+function Highlight.togglePlanEditMode() return Highlight.setPlanEditMode(not planEditMode) end
+
+-- Copy an inspected SAME-CLASS player's build -> a node plan -> set it as the preview.
+-- Reads the inspect config live from the talent frame (the ForeverTalents path), read-only.
+function Highlight.copyInspectedPlan()
+    local tf = talentFrame()
+    if not tf then return nil, "open your talents while inspecting a player" end
+    if not (tf.IsInspecting and tf:IsInspecting()) then
+        return nil, "inspect a player first (their talents must be showing)"
+    end
+    local unit = tf.GetInspectUnit and tf:GetInspectUnit()
+    local okc, theirClass = pcall(function() return select(2, _G.UnitClass(unit)) end)
+    local _, myClass = _G.UnitClass("player")
+    if okc and theirClass and myClass and theirClass ~= myClass then
+        return nil, "only a same-class build can be copied"
+    end
+    local configID = tf.GetConfigID and tf:GetConfigID()
+    local treeID = tf.GetTalentTreeID and tf:GetTalentTreeID()
+    if not (configID and treeID and _G.C_Traits and _G.C_Traits.GetTreeNodes) then
+        return nil, "couldn't read the inspected tree"
+    end
+    local plan = {}
+    local okn, nodes = pcall(_G.C_Traits.GetTreeNodes, treeID)
+    if okn and type(nodes) == "table" then
+        for _, nodeID in ipairs(nodes) do
+            local oki, info = pcall(_G.C_Traits.GetNodeInfo, configID, nodeID)
+            if oki and type(info) == "table" and (info.ranksPurchased or 0) > 0 then
+                plan[nodeID] = info.ranksPurchased
+            end
+        end
+    end
+    if not next(plan) then return nil, "that build has no points" end
+    Highlight.setPlanPreview(plan)
+    return plan
 end
 
 local function restorePlanPreview()

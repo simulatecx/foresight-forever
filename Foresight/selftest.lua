@@ -2654,6 +2654,41 @@ function HM.runSelftest(out)
         if np[9100] ~= 5 or np[9110] ~= 2 then return finish(false, "node plan bridge") end
         return finish(true)
     end)())
+    -- S35 FT2 interop: ForeverTalents' share-code codec (base64 + varint + zigzag + Adler-32),
+    -- arithmetic-only (no bit ops). Round-trip a plan; reject a corrupted code; map to a node plan.
+    check("FT2 interop: encode -> decode round-trip + checksum reject", (function()
+        local FT2 = HM.FT2
+        if not FT2 then return false, "no FT2" end
+        local plan = {
+            kind = 0, classID = 8, specID = 63, treeID = 790, totalPoints = 7,
+            interfaceVersion = 16001, name = "Fire PvE",
+            nodes = {
+                { id = 82000, ranks = 5, entryID = 1, posX = 300, posY = -600 },
+                { id = 82010, ranks = 2, entryID = 7, posX = -1200, posY = 3000 },
+            },
+            order = {},
+        }
+        local code = FT2.encode(plan)
+        if type(code) ~= "string" or code:sub(1, 3) ~= "FT2" then return false, "encode" end
+        local back = FT2.decode(code)
+        if not back then return false, "decode nil" end
+        if not (back.classID == 8 and back.specID == 63 and back.treeID == 790
+            and back.totalPoints == 7 and back.name == "Fire PvE" and #back.nodes == 2) then
+            return false, "fields"
+        end
+        -- node values incl. negative posX (zigzag) survive the round-trip
+        local byId = {}
+        for _, nd in ipairs(back.nodes) do byId[nd.id] = nd end
+        if not (byId[82000] and byId[82000].ranks == 5 and byId[82010].posX == -1200
+            and byId[82010].entryID == 7) then return false, "node round-trip" end
+        -- a one-character corruption fails the Adler-32 check (not silently accepted)
+        local bad = code:sub(1, #code - 1) .. (code:sub(-1) == "A" and "B" or "A")
+        if FT2.decode(bad) ~= nil then return false, "accepted corrupted code" end
+        if FT2.decode("hello") ~= nil or FT2.decode("FT2$$$") ~= nil then return false, "accepted junk" end
+        -- convenience map to our overlay's node plan
+        local ranks = FT2.nodeRanks(back)
+        return ranks[82000] == 5 and ranks[82010] == 2
+    end)())
 
     -- S13 crowd-share contract: the allow-list build leaks NOTHING but shaped game data.
     check("crowd payload: allow-list build keeps only non-identifying game data", (function()

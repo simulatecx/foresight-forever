@@ -919,13 +919,27 @@ local function onSlash(input)
             HM.MatrixPanel.toggle()
         end
     elseif cmd == "planner" or cmd == "talents" then
-        -- S35: the interactive talent-tree planner (works at ANY level, our own render).
-        -- Plan/advice only - it never spends points; apply them yourself in-game.
-        -- Optional arg: a class token to plan for another class (default = yours).
+        -- S35: the interactive talent-tree planner (works at ANY level, our own render) + the
+        -- live overlay on the real tree. Plan/advice ONLY - it never spends points.
+        -- Subcommands: copy (from an inspected same-class player), edit (click the live tree
+        -- to plan ANY node incl. Forever-new), clear (remove the overlay); else toggle / open
+        -- for a class token (default = yours).
+        local SH = HM.SynergyHighlight
+        local arg = rest:match("^(%S*)")
         if not HM.TalentTree then
             printMsg("talent planner is in-game only")
+        elseif arg == "copy" then
+            local p, err = SH and SH.copyInspectedPlan and SH.copyInspectedPlan()
+            printMsg(p and "copied the inspected build - open your talents to follow the overlay path"
+                or ("copy failed: " .. tostring(err or "inspect a same-class player first")))
+        elseif arg == "edit" then
+            local on = SH and SH.togglePlanEditMode and SH.togglePlanEditMode()
+            printMsg(on and "plan edit mode ON - open your talents and click nodes (left + / right -)"
+                or "plan edit mode off")
+        elseif arg == "clear" then
+            if SH and SH.setPlanPreview then SH.setPlanPreview(nil) end
+            printMsg("plan overlay cleared")
         else
-            local arg = rest:match("^(%S*)")
             HM.TalentTree.toggle(arg ~= "" and arg:upper() or nil)
         end
     elseif cmd == "verify" then

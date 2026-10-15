@@ -101,11 +101,18 @@ spend (TRAIT_NODE_CHANGED/TRAIT_CONFIG_UPDATED/PLAYER_TALENT_UPDATE), AUTO-TRIGG
 open, persists across reload, and is TAINT-SAFE (own anchored overlay pool, never parented into
 Blizzard buttons - unlike ForeverTalents) and DISPLAY-ONLY (no auto-apply; they use
 C_Traits.PurchaseRank, we never do). `plannerOverlay` toggle (default ON). Share: export an FT1
-code -> recipient imports -> their overlay shows the same path. Gate 294. PENDING: in-game verify
-(classic grid renders at L1; overlay glows + live-deltas on the real tree 5/10+; zero taint on a
-controller) -> flip ☑; then (deferred) copy-from-inspected-player + Forever-NEW-node planning
-(the classic grid covers classic-overlap talents; node-native planning + optional FT2 interop are
-the next step). Ships to players on the next addon version bump.
+code -> recipient imports -> their overlay shows the same path. COPY-INSPECT + NEW-NODE PLANNING + FT2 INTEROP BUILT 2026-10-15: (1) `/foresight planner copy`
+reads an inspected same-class player's live C_Traits allocation -> node plan -> overlay
+(`SynergyHighlight.copyInspectedPlan`, read-only). (2) `/foresight planner edit` toggles an EDIT
+MODE: the plan overlays become clickable (left + / right -) on EVERY node incl. Forever-new ones,
+so you can plan the whole live tree (anchored Buttons on our layer, never spends). (3) FT2 interop
+(`model/ft2.lua`, selftest-pinned round-trip): paste a ForeverTalents FT2 code into the planner's
+Import -> full node plan on the overlay + classic subset in the grid; our arithmetic-only base64/
+varint/zigzag/Adler-32 keeps the bit-op ban green. Node<->classic kept in sync via
+`TB.classicNodeSet`/`TB.fromNodePlan` + `SynergyHighlight.mergeGridPlan` (grid edits preserve the
+non-classic nodes). Gate 295. REMAINING: FT2 EXPORT (needs live node structs - entryID/posX/posY -
+so it's an in-game-only write, next); in-game verify (copy from an inspect, edit-mode clicks, FT2
+import, zero taint) -> flip ☑. Ships to players on the next addon version bump.
 *Fit & Overlap - Category UI -> MODEL. Verdict: NET-NEW tree-grid UI + talent-point rules
 engine, ENHANCE the planner spine (reuse `HM.gen.talents`/`talentTabs`, `loadout:withTalent`
 impact folding, the `model/plan.lua` persistence pattern). Complements: WHATIF-planner,

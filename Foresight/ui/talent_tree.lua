@@ -220,11 +220,21 @@ end
 
 -- ---- saved-build chips -----------------------------------------------------------------
 local function loadBuild(str, classToken)
+    -- FT1 = our classic build code
     local b, cls = TB().decode(str)
-    if not b then return false end
-    state.build = b
-    if cls then state.class = cls end
-    return true
+    if b then state.build = b; if cls then state.class = cls end; return true end
+    -- FT2 = ForeverTalents' node code (interop): set the FULL node plan on the live overlay
+    -- (incl. Forever-new nodes), and reflect the classic-overlap subset in the grid.
+    if HM.FT2 and HM.FT2.decode and HM.SynergyHighlight and HM.SynergyHighlight.setPlanPreview then
+        local dec = HM.FT2.decode(str)
+        if dec then
+            local nodePlan = HM.FT2.nodeRanks(dec)
+            HM.SynergyHighlight.setPlanPreview(nodePlan)
+            state.build = TB().fromNodePlan(nodePlan)
+            return true
+        end
+    end
+    return false
 end
 
 local function refreshChips()
@@ -265,8 +275,9 @@ end
 -- it to SynergyHighlight, which glows the planned path on the live tree (blue remaining /
 -- gold done) and live-deltas it as you spend. Display-only; the frame may be closed (no-op).
 function TT.refreshGlow()
-    if not (HM.SynergyHighlight and HM.SynergyHighlight.setPlanPreview and HM.TalentBuild) then return end
-    pcall(HM.SynergyHighlight.setPlanPreview, HM.TalentBuild.toNodePlan(state.build))
+    if not (HM.SynergyHighlight and HM.SynergyHighlight.mergeGridPlan and HM.TalentBuild) then return end
+    -- merge (not replace) so Forever-new nodes from copy-inspect / FT2 import survive a grid edit
+    pcall(HM.SynergyHighlight.mergeGridPlan, HM.TalentBuild.toNodePlan(state.build))
 end
 
 -- ---- frame -----------------------------------------------------------------------------

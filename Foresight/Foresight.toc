@@ -38,6 +38,7 @@ model\loadout.lua
 model\impact.lua
 model\plan.lua
 model\talentbuild.lua
+model\ft2.lua
 model\imbues.lua
 model\levers.lua
 model\catalog.lua
