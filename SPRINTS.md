@@ -421,6 +421,16 @@ Addon's "never networks" promise UNCHANGED (companion is a separate, disclosed p
 Decisions FINAL in the doc: Python+PyInstaller (reuse the harvest sandbox), REST not Admin
 SDK, App Check-on-desktop deferred to anon-auth + rate-limit. Build order in the doc;
 step 1 (single-source the allow-list) gates the rest.
+NEXT-WAVE HANDOFF (2026-10-14, for a fresh build session): full paste-ready spec at
+`docs/HANDOFF-next-build-wave.md`. Stories, in order: A single-source the payload allow-list
+(PREREQUISITE), B verified-table + owner push tool + bake-back (the "my scans -> everyone's
+in-game-ready data" fast lane), C identifying show-off tier (opt-in handle+armory named
+leaderboards + buff provenance = web asks #2/#3), D `/foresight coverage` + inspect-scan
+readout, E zero-click self-verify (auto-probe on talent-frame open), F backend item/observed
+aggregation, G restore App Check writes. Each story carries its Fit & Overlap, quoted
+anchors, final decisions, AC, and out-of-scope. OWNER DECISION PENDING in Story C: named
+leaderboard uses a chosen HANDLE+armory by default (recommended) vs real character name/realm
+(owner to confirm; same opt-in gate either way).
 RETAIL INSTALL DELETED this session: `_retail_` Foresight (stale v0.37.0 addon + both SV
 files) removed to stop version confusion; only `_classic_beta_` (Forever, v0.46.10) has
 Foresight now.
