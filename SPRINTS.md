@@ -383,6 +383,16 @@ secret - NOT the Overwolf/Core API key (console.curseforge.com, approval-gated, 
 *reading* mod data; unused here). MIT + open-distribution on the page (docs/CURSEFORGE.md).
 Remaining: CurseForge moderation approval -> upload logo + listing copy; Wago slug +
 `WAGO_API_TOKEN` (optional). Threat-model publish bindings (DATAFLOW 4b/4c).
+LOCAL-INSTALL DISCIPLINE (2026-10-15, after a double install-clobber this session): the
+ONLY supported way to install to the local WoW client is `python pipeline/deploy.py` - it
+gates, wipes the target, copies `Foresight/`, then verifies every TOC-referenced file
+landed. TWICE this session an external folder-copy of the repo ROOT (a parallel orca
+worktree/session, not deploy.py) overwrote the install, nesting the addon under `Foresight/`
+and leaving `data/` with only the pipeline source -> client "Error loading"s every `data/`
+file -> `HM.formulas` nil -> talent-hover crash (`loadout.lua`). deploy.py now also exposes
+`--verify` (byte-compares the live install vs the addon, no writes) for a pre-launch health
+check; CLAUDE.md Commands documents deploy.py as canonical + bans hand-copying. The release
+train itself is unaffected (CI builds from the tag, not the local install).
 
 ### S13 - Crowd scale-up ◐  (phase A shipped v0.15.0)
 PHASE A DONE: item-sightings journal (equipped+bags at login/logout, IDs only, capped) +
