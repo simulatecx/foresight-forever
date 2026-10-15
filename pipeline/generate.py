@@ -459,7 +459,7 @@ def main() -> int:
 
     talents_out, impacts_out = {}, {}
     needs_curation = 0
-    values_decoded, values_skipped = 0, 0
+    values_decoded, values_skipped, values_partial = 0, 0, 0
     for r in read_csv(cache, "Talent"):
         tid = to_int(r["ID"])
         ranks = [to_int(r[f"SpellRank_{i}"]) for i in range(9)]
@@ -484,36 +484,40 @@ def main() -> int:
             "prereqs": prereqs,
         }
 
-        # Impact ops from the rank-1 spell. MOST multi-rank talents (300/347 this build)
-        # store effect values ONLY on rank 1 as the max-rank total - rank scaling stays
-        # presumed (rank N = value * N / maxRank) until the crowd verifies it. But 44
-        # talents DO carry SpellEffect rows on every rank spell: for those, decode the
-        # TRUE per-rank values (S21) so no rule is needed at all. Ops are matched across
-        # ranks by signature; any mismatch skips the values array for the whole talent
-        # (honest degrade - maxValue + rule path remain, never a guess).
+        # Impact ops from the rank-1 spell. MOST multi-rank talents (291/347 this build)
+        # store an effect value ONLY on rank 1 - rank scaling stays presumed (rank N =
+        # value * N / maxRank) until a SCAN verifies it. The per-rank magnitudes for those
+        # genuinely aren't in the client's static data: the higher-rank spells carry neither
+        # SpellEffect rows nor magnitude tokens (verified 2026-10-15), which is exactly why
+        # the scan/crowd layer exists. But 44 talents DO carry SpellEffect rows on every
+        # rank: decode the TRUE per-rank values (S21), PER OP - an op that signature-matches
+        # across all ranks gets its exact `values` array even when a SIBLING op on the same
+        # talent doesn't align (the old all-or-nothing dropped the whole talent on any
+        # mismatch; per-op recovers ~13). An op without aligned rows keeps maxValue + the
+        # presumed/scan rule path (honest degrade, never a guess).
         ops = build_ops(first, effects_by_spell, class_options, family_members, player_spells,
                         equipped_items)
 
         if ops and len(ranks) > 1 and all(effects_by_spell.get(s) for s in ranks):
             rank_ops = [build_ops(s, effects_by_spell, class_options, family_members,
                                   player_spells, equipped_items) for s in ranks]
-            decorated, aligned = [], True
+            decoded_ops = 0
             for op in ops:
                 s0 = op_signature(op)
-                vals = []
+                vals, ok = [], True
                 for ro in rank_ops:
                     matches = [o for o in ro if op_signature(o) == s0]
                     if len(matches) != 1:
-                        aligned = False
+                        ok = False
                         break
                     vals.append(matches[0].get("maxValue", 0.0))
-                if not aligned:
-                    break
-                decorated.append(vals)
-            if aligned and decorated:
-                for op, vals in zip(ops, decorated):
-                    op["values"] = vals
-                values_decoded += 1
+                if ok:
+                    op["values"] = vals  # exact per-rank for THIS op (per-op, not whole-talent)
+                    decoded_ops += 1
+            if decoded_ops == len(ops):
+                values_decoded += 1          # fully datamined - drops the (p)
+            elif decoded_ops > 0:
+                values_partial += 1          # some ops exact, siblings presumed (honest hybrid)
             else:
                 values_skipped += 1
 
@@ -650,8 +654,8 @@ def main() -> int:
     n_heal = sum(1 for s in spells_out.values() if "heal" in s)
     n_wpn = sum(1 for s in spells_out.values() if "wpn" in s)
     print(f"ability decode: damage={n_dmg} weapon={n_wpn} heal={n_heal}")
-    print(f"per-rank values: {values_decoded} talents decoded, "
-          f"{values_skipped} skipped (op misalignment)")
+    print(f"per-rank values: {values_decoded} fully decoded, {values_partial} partial "
+          f"(some ops exact), {values_skipped} skipped (no op aligned)")
     print(f"totem buff links: {totem_links}")
     if multi_damage:
         print(f"multi-damage-row spells: {len(multi_damage)}")
@@ -1043,6 +1047,7 @@ def main() -> int:
             "counts": {
                 "talents": len(talents_out),
                 "talentsWithRankValues": values_decoded,
+                "talentsWithPartialRankValues": values_partial,
                 "tabs": len(tabs_out),
                 "spells": len(spells_out),
                 "spellsWithDamage": n_dmg,

@@ -1932,7 +1932,12 @@ function HM.runSelftest(out)
         if hasValues then valTalents = valTalents + 1 end
     end
     check("per-rank values decoded at scale (counts gate)", (function()
-        return valTalents >= 25 and gen.counts.talentsWithRankValues == valTalents
+        -- valTalents counts talents with ANY per-rank op (fully decoded + partial, where
+        -- some ops are exact and siblings stay presumed - S34 per-op decode). The honest
+        -- invariant: full + partial == the talents carrying any values.
+        local full = gen.counts.talentsWithRankValues
+        local partial = gen.counts.talentsWithPartialRankValues or 0
+        return valTalents >= 25 and (full + partial) == valTalents
     end)(), valTalents)
     check("values array length matches the talent's maxRank", (function()
         if not valTalentId then return false end
