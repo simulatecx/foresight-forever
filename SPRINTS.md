@@ -395,6 +395,32 @@ compare ignores them, only the backend reads them; `firestore.rules` shape-lock 
 size-capped maps (<=500/<=150). Exhaustive uncapped export stays the future companion app.
 NEXT: backend item/observed aggregation; restore App Check writes. Gate 284. Deploy as the
 CurseForge catch-up release (publishes 0.46.11-0.47.0 at once; CF was stuck at 0.46.10).
+FIX v0.47.1 SHIPPED (user caught a panel break after 0.47.0): the self-verify ran unguarded
+on the hot value path (every impact eval + talent tooltip) over user-editable captures +
+talentForSpell, so one bad capture/throw cascaded into a full panel break. Now fail-safe -
+buildSelfVerified is pcall-wrapped (error -> no self-verified rules, presumed stands) +
+per-capture spell-bridge guard; regression test added. Also: the Matrix now opens RIGHT
+BESIDE the stats panel on FS (via the stats panel's screen rect; a user drag still wins).
+Gate 285. User-confirmed "looks better"; tagged v0.47.1 -> CurseForge (fixes the CF users
+on the broken 0.47.0).
+COMPANION APP SPEC'd (user 2026-10-14: "build what you would actually build - spec the
+companion app"; the always-on "play = contribute"). ☐ CROWD-companion, full design in
+`docs/COMPANION-APP.md`. Fit & Overlap - Category CROWD. Verdict: Net-new surface
+(`companion/`, not yet created) COMPLEMENTING CROWD-share (same contract, same Firestore).
+The addon CANNOT network (sandbox + ToS + doctrine), so a tiny Python/PyInstaller tray app
+reads the addon SavedVariables (read-only; never game/memory/input/file-writes) and uploads
+the same sanitized payload - Warcraft Logs/WowUp pattern. Anonymous client auth (public
+apiKey, NO shipped creds), neutered-sandbox safe-parse (untrusted-input law), consent
+asked+recorded+revocable (anonymous tier default / names+armory strict opt-in). Touches:
+new `companion/`, a rate-limit guard in `functions/`, a privacy-page update, and - the
+PREREQUISITE - single-sourcing the payload allow-list (today mirrored in crowd.lua +
+app.js + firestore.rules; a 4th hand-synced copy is a PII-leak risk). Mobile: n/a (desktop
+tray). Data: re-uses the existing non-identifying contract (no NEW fields). Abuse:
+always-on uploader is easier to spam -> per-clientId write-rate guard in the Cloud Fn.
+Addon's "never networks" promise UNCHANGED (companion is a separate, disclosed process).
+Decisions FINAL in the doc: Python+PyInstaller (reuse the harvest sandbox), REST not Admin
+SDK, App Check-on-desktop deferred to anon-auth + rate-limit. Build order in the doc;
+step 1 (single-source the allow-list) gates the rest.
 RETAIL INSTALL DELETED this session: `_retail_` Foresight (stale v0.37.0 addon + both SV
 files) removed to stop version confusion; only `_classic_beta_` (Forever, v0.46.10) has
 Foresight now.
