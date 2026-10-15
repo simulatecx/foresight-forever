@@ -1,13 +1,21 @@
 """Deploy Foresight to the local WoW Forever install - gate first, then copy.
 
-Usage: python deploy.py [--target <AddOns\\Foresight path>] [--skip-gate]
-The gate (compliance scan + 28-check selftest) must be green before any copy;
-a red gate blocks the deploy outright (release-train discipline).
+Usage: python deploy.py [--target <AddOns\\Foresight path>] [--skip-gate] [--verify]
+The gate (compliance scan + selftest) must be green before any copy; a red gate blocks
+the deploy outright (release-train discipline).
+
+THIS IS THE ONLY SUPPORTED WAY TO INSTALL LOCALLY. Never hand-copy the repo (or Foresight/)
+into Interface\\AddOns\\Foresight: copying the repo ROOT nests the addon under Foresight/
+and leaves data/ holding only the pipeline source, so the TOC points at missing files and
+the client "Error loading"s every data/ file (HM.formulas nil -> talent-hover crash). Run
+`--verify` any time to confirm the live install still byte-matches the addon.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import os
 import shutil
 import subprocess
 import sys
@@ -42,12 +50,62 @@ def verify_layout(target: Path) -> list[str]:
     return missing
 
 
+def _tree(base: Path) -> dict:
+    out = {}
+    for root, _, files in os.walk(base):
+        for f in files:
+            p = Path(root) / f
+            out[p.relative_to(base).as_posix()] = p
+    return out
+
+
+def _sha(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def verify_install(target: Path) -> bool:
+    """Confirm the live install byte-matches the addon source (ADDON_SRC).
+
+    Catches the recurring failure where an EXTERNAL copy (a folder drag, a sync tool, a
+    sibling worktree that copied the repo root) overwrites a clean deploy with the wrong
+    layout. Reports missing / extra (pollution) / content-diff, and prints OK only when
+    the install is exactly the addon. No writes.
+    """
+    if not target.exists():
+        print(f"NOT INSTALLED: {target}")
+        return False
+    src, dst = _tree(ADDON_SRC), _tree(target)
+    missing = sorted(set(src) - set(dst))
+    extra = sorted(set(dst) - set(src))
+    differ = sorted(r for r in (set(src) & set(dst))
+                    if src[r].stat().st_size != dst[r].stat().st_size or _sha(src[r]) != _sha(dst[r]))
+    ok = not (missing or extra or differ)
+    print(f"verify {target}")
+    print(f"  addon files {len(src)} | installed {len(dst)} | identical {len(set(src) & set(dst)) - len(differ)}")
+    for tag, items in (("MISSING", missing), ("EXTRA (pollution)", extra), ("DIFFERS", differ)):
+        if items:
+            print(f"  {tag} ({len(items)}):")
+            for i in items[:25]:
+                print(f"    {i}")
+    print("  RESULT:", "CLEAN - install matches the addon" if ok else "DIRTY - redeploy with `python pipeline/deploy.py`")
+    return ok
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", type=Path, default=None)
     parser.add_argument("--skip-gate", action="store_true",
                         help="emergency only; the gate is the point")
+    parser.add_argument("--verify", action="store_true",
+                        help="only check the live install byte-matches the addon; no copy")
     args = parser.parse_args()
+
+    if args.verify:
+        targets = [args.target] if args.target else [t for t in DEFAULT_TARGETS if t.exists()]
+        if not targets:
+            print("no install found to verify - pass --target <...\\Interface\\AddOns\\Foresight>")
+            return 1
+        return 0 if all(verify_install(t) for t in targets) else 1
 
     if not args.skip_gate:
         gate = subprocess.run(

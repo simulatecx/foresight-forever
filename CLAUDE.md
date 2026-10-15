@@ -12,6 +12,14 @@ Map (current priority), Panic Advisor, what-to-press HUD. Design docs: `DATAFLOW
 - `python pipeline/generate.py [--build X]` - regenerate `Foresight/data/generated/*.lua`
 - `python pipeline/run_tests.py` - headless selftest (lupa Lua VM); THE ship gate for
   addon-logic changes; also runs in-game via `/foresight selftest`
+- `python pipeline/deploy.py` - THE ONLY way to install to the local WoW client. It gates,
+  wipes the target, and copies `Foresight/` (the addon) - then verifies every TOC-referenced
+  file landed. NEVER hand-copy the repo (or `Foresight/`) into `Interface\AddOns\Foresight`
+  with Copy-Item/robocopy/explorer: copying the repo ROOT puts the addon under a nested
+  `Foresight/` and leaves `data/` holding only the pipeline source, so the TOC points at
+  missing files -> the client "Error loading"s every `data/` file -> `HM.formulas` is nil ->
+  the talent hover crashes (`loadout.lua`). One deployer owns the install; parallel
+  worktrees/sessions must also use `deploy.py`, never a folder copy.
 
 ## Architecture (one line each)
 
