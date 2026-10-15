@@ -215,9 +215,24 @@ async function loadAggregates() {
   if (AGG_CACHE) return AGG_CACHE;
   try {
     const qs = await getDocs(collection(db, "aggregates"));
-    AGG_CACHE = qs.docs.map((d) => d.data()).filter((d) => d && d.count >= (d.minBucket || 5));
+    // Keep ALL buckets, including small ones. Small-bucket suppression is about VALUES
+    // (percentiles/records), which the backend already strips - the COUNT is non-identifying
+    // and safe to show, so a lone submission still appears in the tally instead of vanishing.
+    AGG_CACHE = qs.docs.map((d) => d.data()).filter(Boolean);
   } catch (e) { AGG_CACHE = []; }
   return AGG_CACHE;
+}
+
+// Non-identifying tally across buckets (counts only). `minBucket`-suppressed buckets still
+// count here; only their records/percentiles stay hidden until the bracket fills.
+function tallyFor(aggs, klass) {
+  let champions = 0, brackets = 0;
+  for (const a of aggs) {
+    if (klass !== "ALL" && a.class !== klass) continue;
+    const c = typeof a.count === "number" ? a.count : 0;
+    if (c > 0) { champions += c; brackets += 1; }
+  }
+  return { champions, brackets };
 }
 
 // Daily rotating trial - deterministic by day-of-year so everyone sees the same one.
@@ -242,9 +257,14 @@ async function renderDailyTrial() {
     const s = a.metrics && a.metrics[f.key];
     if (s && typeof s.max === "number" && (!best || s.max > best.max)) best = { max: s.max, cls: a.class };
   }
-  $("trialRecord").textContent = best
-    ? `Standing record: ${Math.round(best.max)} (${titleCase(best.cls)})`
-    : "No champion has answered yet - be the first.";
+  if (best) {
+    $("trialRecord").textContent = `Standing record: ${Math.round(best.max)} (${titleCase(best.cls)})`;
+  } else {
+    const t = tallyFor(aggs, "ALL");
+    $("trialRecord").textContent = t.champions > 0
+      ? `${t.champions} champion${t.champions === 1 ? "" : "s"} entered so far - the record unlocks when a bracket reaches 5.`
+      : "No champion has answered yet - be the first.";
+  }
 }
 
 // The ladders: every challenge record, filterable by class.
@@ -262,20 +282,49 @@ function ladderCardsFor(aggs, klass) {
   rows.sort((x, y) => y.record - x.record);
   return rows.slice(0, 40);
 }
+// Brackets still filling toward a record (count < 5): shown count-only so a contributor
+// sees their submission landed, without exposing any suppressed value.
+function fillingCardsFor(aggs, klass) {
+  const rows = [];
+  for (const a of aggs) {
+    if (klass !== "ALL" && a.class !== klass) continue;
+    const c = typeof a.count === "number" ? a.count : 0;
+    const min = a.minBucket || 5;
+    if (c > 0 && c < min) {
+      rows.push({ cls: a.class, lvl: a.levelBucket, n: c, need: min - c, color: classColor(a.class) });
+    }
+  }
+  rows.sort((x, y) => y.n - x.n);
+  return rows.slice(0, 40);
+}
 function renderLadder(klass) {
   const board = $("ladderBoard");
   const aggs = AGG_CACHE || [];
+  const { champions, brackets } = tallyFor(aggs, klass);
+  const forKlass = klass === "ALL" ? "" : " for " + esc(titleCase(klass));
+  const tally = `<p class="ladder-tally">${champions} champion${champions === 1 ? "" : "s"} answered across ${brackets} bracket${brackets === 1 ? "" : "s"}${forKlass}. Records unlock once a bracket reaches 5.</p>`;
   const rows = ladderCardsFor(aggs, klass);
-  if (!rows.length) {
-    board.innerHTML = `<p class="muted">No ladders yet${klass === "ALL" ? "" : " for " + esc(titleCase(klass))} - the records are empty until champions submit. Be the first.</p>`;
-    return;
-  }
-  board.innerHTML = rows.map((r) =>
+  const cards = rows.map((r) =>
     `<div class="ladder-card" style="--class:${r.color}">
        <h4>${esc(r.label)}</h4>
        <span class="record">Record ${esc(r.record)}</span>
        <span class="sub"> · ${esc(titleCase(r.cls))} · level ${esc(r.lvl)}+ · ${esc(r.n)} champions</span>
      </div>`).join("");
+  const filling = fillingCardsFor(aggs, klass);
+  const fillingBlock = filling.length
+    ? `<h4 class="ladder-subhead">Brackets filling</h4>` + filling.map((r) =>
+        `<div class="ladder-card filling" style="--class:${r.color}">
+           <h4>${esc(titleCase(r.cls))} · level ${esc(r.lvl)}+</h4>
+           <span class="sub">${esc(r.n)} champion${r.n === 1 ? "" : "s"} · ${esc(r.need)} more to unlock the record</span>
+         </div>`).join("")
+    : "";
+  if (!rows.length && !filling.length) {
+    board.innerHTML = tally + `<p class="muted">No champions yet${forKlass} - be the first to answer the call.</p>`;
+    return;
+  }
+  board.innerHTML = tally
+    + (cards || `<p class="muted">No records unlocked yet${forKlass} - the first bracket to reach 5 sets one.</p>`)
+    + fillingBlock;
 }
 async function initLadders() {
   const aggs = await loadAggregates();

@@ -229,6 +229,12 @@ select {
 .ladder-card h4 { margin: 0 0 2px; font-family: "Cinzel", serif; font-size: 14px; letter-spacing: 0.06em; color: var(--ink); }
 .ladder-card .record { color: var(--gold-br); font-weight: 600; }
 .ladder-card .sub { color: var(--muted); font-size: 12px; }
+.ladder-tally { margin: 0 0 14px; font-family: "Cinzel", serif; font-size: 13px;
+  letter-spacing: 0.04em; color: var(--gold-br); }
+.ladder-subhead { margin: 18px 0 8px; font-family: "Cinzel", serif; font-size: 12px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.ladder-card.filling { background: rgba(0,0,0,0.12); border-style: dashed; opacity: 0.85; }
+.ladder-card.filling .sub { color: var(--gold); }
 
 /* Footer and reveal animation. */
 .footer { position: relative; z-index: 1; text-align: center; color: var(--muted);
