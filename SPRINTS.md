@@ -46,6 +46,8 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S32 Action-bar synergy trigger (hold ALT, trace the button) | 3 | ☑ |
 | S33 UI dynamics: motion spine, eco diagram, radar chart, gauges | 3 | ◐ |
 | S34 Crowd pipeline hardening: single-source allow-list, verified-rules bake, show-off tier, coverage, auto-verify | - | ◐ |
+| S35 Talent planner: interactive click-to-allocate tree (usable pre-10), save/load/import/export, preview glow | 3 | ◐ |
+| S36 HeroLog-style progression: activity feed + team view + gear-level/raid-readiness (SCOPING only) | - | ☐ |
 
 ## Active / next
 
@@ -82,6 +84,91 @@ S2 (talent tooltips) and S5 (stats panel) are code-complete and gated; both flip
 once their in-game render is confirmed in the S3 session.
 
 ## Roadmap to endstate (ordered)
+
+### S35 - Talent planner (interactive tree, usable pre-10) ◐  (ref: CurseForge forever-talents)
+CORE BUILT + GATED 2026-10-15 (gate 294, +1 rules selftest): `model/talentbuild.lua` (pure
+rules - budget/tier/prereq + build-string encode/decode, selftest-pinned) + `ui/talent_tree.lua`
+(interactive 3-tree render from `gen.talents`, left-click add / right-click remove, locks,
+tooltips w/ desc + live impact, per-tree + total counters, Reset, Export/Import strings
+data-only-validated, Save/Load/Delete named builds as chips, draggable+saved pos, NO auto-apply) +
+`/foresight planner [class]`. Compliance green (our frames, no automation, no Blizzard writes).
+PENDING: in-game verify (renders at L1, click/lock/tooltip/save-load/import-export all work on a
+controller w/ zero taint) -> flip ☑; then the TWO deferred fragile pieces (both in-game-only,
+lower value since our own tree already works pre-10): copy-from-inspected-same-class-player, and
+the glow-planned-over-the-Blizzard-tree preview (`refreshGlow` already no-ops safely until
+`SynergyHighlight.previewTalents` exists). Ships to players on the next addon version bump.
+*Fit & Overlap - Category UI -> MODEL. Verdict: NET-NEW tree-grid UI + talent-point rules
+engine, ENHANCE the planner spine (reuse `HM.gen.talents`/`talentTabs`, `loadout:withTalent`
+impact folding, the `model/plan.lua` persistence pattern). Complements: WHATIF-planner,
+SYNERGY-highlight (reuse its glow for the over-Blizzard-tree preview), UI-matrix. Touches:
+a NEW `ui/talent_tree.lua` (render + click), a NEW `model/talentbuild.lua` (pure rules:
+budget/tier/prereq + string encode-decode), `core/init.lua` (a `/foresight planner` command +
+button), `core/settings.lua`. Avoid duplicating: the `HM.gen` data spine, `Plan` persistence,
+`loadout` folding. Mobile: the 3-tree grid must read at 1280x720 @ 0.65 (scroll/compact).
+Languages: all labels in display grammar strings. Trust: builds are the user's, saved/named by
+them; export string is theirs. Data: no new SHARED data (reuses gen.talents; the build string
+is local). Abuse: import strings + inspected-player copies are UNTRUSTED INPUT -> parse as DATA
+only (no loadstring; validate tab/talent ids exist, rank <= maxRank, budget/tier/prereq legal).*
+
+- As a Forever player, I want to open an interactive talent tree at ANY level (including
+  before 10, when the Blizzard C_Traits frame is gated), click to allocate points into a
+  PLANNED build, and see each talent's real impact - so I can plan and share builds without
+  committing points. HARD COMPLIANCE BOUNDARY (differs from the reference): the planner is
+  display/advice ONLY - it PLANS, VISUALIZES, GLOWS (shows what to click) and EXPORTS; it must
+  NEVER auto-apply/spend points (LearnTalent / C_Traits.PurchaseRank / CommitConfig = automating
+  a protected action; would red `check_compliance.py` + violate the account-safety doctrine).
+  The player applies the plan manually.
+- AC: ☐ renders all 3 class trees from `gen.talents` by tier×column at level 1 (own render,
+  not the Blizzard frame). ☐ left-click adds / right-click removes a point; per-tree + total
+  counters; respects `maxRank`. ☐ tier-unlock (5 points per prior tier) + prereq arrows
+  (`talents[id].prereqs` {talent,rank}) enforced with an honest locked state. ☐ hover shows
+  name + rank N/M + `descByRank[rank]` + live what-if impact via `loadout:withTalent`. ☐ save /
+  load / delete NAMED builds (persisted per-char, Plan/SavedVariables pattern). ☐ export a
+  compact build string + import one (data-only parse, shape-validated) + copy from an inspected
+  same-class player. ☐ preview glow over the Blizzard tree when it IS open (reuse
+  `synergy_highlight`). ☐ NO auto-apply; a "apply these yourself" hint. ☐ selftest: rules
+  engine (budget/tier/prereq legal/illegal) + string encode->decode round-trip. ☐ gate green;
+  ☐ mobile 1280x720 @ 0.65 readable.
+
+### S36 - HeroLog-style progression (SCOPING ONLY, not built) ☐  (ref: CurseForge herolog-collector)
+*Fit & Overlap - Category CROWD -> QA. Verdict: ENHANCE the crowd/companion spine, do NOT fork
+it. HeroLog = own-character progression logger -> companion upload -> team activity-feed website
+(herolog.io) - architecturally the SAME pattern as our COMPANION-APP.md + web ladders. It is
+IDENTITY-ful (a team sees your characters) -> maps to our OPT-IN IDENTIFYING tier, never the
+anon tier. Touches (when built): `core/collect.lua` (timestamped progression journal),
+`data/crowd-schema.json` (new identifying fields behind `named`), `functions/` (per-character
+activity aggregation), `web/` (an activity feed + a team side-by-side view), `privacy.html`.*
+
+Scope to decide before building (each a future story):
+- **S36a Progression timeline + activity feed ☐** (FLESHED 2026-10-15, owner-prioritised; buildable).
+  *Fit & Overlap - Category CROWD -> QA. Verdict: ENHANCE `core/collect.lua` (new timestamped
+  progression journal) + the crowd contribute + `functions/` + `web/`. Complements the named
+  show-off tier (S34c) + the companion app. Avoid duplicating: the `Collect` journal spine, the
+  single-source crowd schema (new fields go through `data/crowd-schema.json`, never hand-added).
+  Data (privacy-by-design): progression EVENTS (level-up, gear-level change, spec/talent change,
+  profession skill-up) are non-identifying game data (anon tier) AS NUMBERS; the per-character
+  FEED that ties them to a handle is IDENTIFYING (opt-in `named`, like the ladders). Mobile: the
+  feed is a vertical timeline, reads at a narrow viewport. Abuse: feed writes are shape-locked +
+  rate-limited like contributions; the handle is display-only.*
+  - As a player, I want a timeline of my character's milestones (dinged N, ilvl crossed X, swapped
+    to a new spec, hit a profession rank) shown as an activity feed, and - if I opt in - on my
+    public page, so I can see and share my progression. As a group, a shared feed of the team.
+  - AC: ☐ `Collect` journals progression events with a monotonic in-game timestamp + the metric
+    delta (dedup so a reload doesn't double-log); capped ring buffer. ☐ the events ride the
+    existing contribute payload (new anon `progress` list field via the single-source schema +
+    regenerated mirrors + selftest). ☐ `functions/` aggregates a per-handle activity feed doc
+    (named submissions only) with small-bucket/rate safety. ☐ `web/` renders a per-character
+    timeline (reuse the armory card styles) + links from the Champions/ladder entries. ☐
+    `privacy.html` updated (policy-practice sync) - the feed is opt-in identifying. ☐ gate green;
+    ☐ mobile verify. DEPENDS ON the companion app for a continuous feed (the manual share flow
+    only updates on demand) - until then the feed updates when the player contributes.
+- **S36b Team / guild side-by-side** - level, gear level, raid-readiness for a roster shown
+  together (opt-in, by handle or guild). New web view; new identifying fields.
+- **S36c Gear-level + raid-readiness metrics** - avg ilvl + key-slot-filled as new crowd metrics
+  (could ride the anon tier as numbers; the NAMES/roster are identifying).
+- Privacy gate: all of S36 is identifying/opt-in; T&Cs + `privacy.html` update in the same
+  change (policy-practice sync). Depends on the companion app (an activity feed needs continuous
+  data, which the manual share flow can't sustain).
 
 ### S34 - Crowd pipeline hardening wave ◐  (full spec: `docs/HANDOFF-next-build-wave.md`)
 Make "the owner plays -> everyone gets it in-game-ready" real, add an opt-in show-off tier,

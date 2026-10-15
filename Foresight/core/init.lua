@@ -918,6 +918,16 @@ local function onSlash(input)
         else
             HM.MatrixPanel.toggle()
         end
+    elseif cmd == "planner" or cmd == "talents" then
+        -- S35: the interactive talent-tree planner (works at ANY level, our own render).
+        -- Plan/advice only - it never spends points; apply them yourself in-game.
+        -- Optional arg: a class token to plan for another class (default = yours).
+        if not HM.TalentTree then
+            printMsg("talent planner is in-game only")
+        else
+            local arg = rest:match("^(%S*)")
+            HM.TalentTree.toggle(arg ~= "" and arg:upper() or nil)
+        end
     elseif cmd == "verify" then
         HM.Collect.verify(printMsg)
         HM.Collect.probeTalentApiShape(printMsg)

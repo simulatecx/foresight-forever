@@ -37,6 +37,7 @@ model\racials.lua
 model\loadout.lua
 model\impact.lua
 model\plan.lua
+model\talentbuild.lua
 model\imbues.lua
 model\levers.lua
 model\catalog.lua
@@ -49,6 +50,7 @@ ui\motion.lua
 ui\panel_model.lua
 ui\stats_panel.lua
 ui\matrix_panel.lua
+ui\talent_tree.lua
 ui\options_panel.lua
 ui\export.lua
 ui\tooltips.lua

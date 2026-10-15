@@ -2605,6 +2605,52 @@ function HM.runSelftest(out)
         return ok
     end)())
 
+    -- S35 talent-build engine: the PURE rules (budget/tier/prereq) + build-string codec,
+    -- over a fixture tree (swap HM.gen, restore after). The UI (ui/talent_tree.lua) is
+    -- in-game-verified; this pins the math an import/export + click handler depend on.
+    check("talent build: tier unlock + prereq + maxRank + string round-trip", (function()
+        local TB = HM.TalentBuild
+        if not TB then return false, "no TalentBuild" end
+        local savedGen = HM.gen
+        HM.gen = {
+            classes = { [8] = { name = "Mage", token = "MAGE" } },
+            classNames = { [8] = "Mage" },
+            talentTabs = { [41] = { name = "Fire", order = 0, classMask = 128 } },
+            talents = {
+                [100] = { name = "Imp Fireball", tab = 41, tier = 0, column = 0, classId = 8, maxRank = 5, prereqs = {} },
+                [101] = { name = "Impact", tab = 41, tier = 0, column = 1, classId = 8, maxRank = 2, prereqs = {} },
+                [110] = { name = "Ignite", tab = 41, tier = 1, column = 0, classId = 8, maxRank = 3, prereqs = {} },
+                [120] = { name = "Combustion", tab = 41, tier = 1, column = 1, classId = 8, maxRank = 1, prereqs = { { talent = 110, rank = 2 } } },
+            },
+        }
+        local function finish(v, why) HM.gen = savedGen; return v, why end
+        -- tier lock: tier-1 talents need 5 points in tier 0 first
+        if TB.canAdd({}, 110) then return finish(false, "tier 1 allocatable with 0 below") end
+        local b = {}
+        for _ = 1, 5 do b = (TB.add(b, 100)) end            -- Imp Fireball 5/5
+        if TB.pointsInTab(b, 41) ~= 5 then return finish(false, "pointsInTab") end
+        if not TB.canAdd(b, 110) then return finish(false, "tier 1 still locked after 5") end
+        -- maxRank: can't go past 5/5
+        if TB.canAdd(b, 100) then return finish(false, "over maxRank") end
+        -- prereq: Combustion needs Ignite 2/3
+        if TB.canAdd(b, 120) then return finish(false, "prereq not enforced") end
+        b = (TB.add(b, 110)); b = (TB.add(b, 110))           -- Ignite 2/3
+        if not TB.canAdd(b, 120) then return finish(false, "prereq met but still locked") end
+        -- canRemove integrity: removing an Imp Fireball point would drop tier 1 below unlock
+        if TB.canRemove(b, 100) then return finish(false, "removed a depended-on point") end
+        -- string round-trip: encode -> decode == same build
+        local str = TB.encode("MAGE", b)
+        local decoded = TB.decode(str)
+        if not decoded or decoded[100] ~= 5 or decoded[110] ~= 2 or decoded[120] ~= nil then
+            return finish(false, "round-trip " .. tostring(str))
+        end
+        -- decode rejects an illegal/tampered string (tier-1 points with no tier-0 base)
+        if TB.decode("FT1-MAGE-002") ~= nil then return finish(false, "accepted illegal build") end
+        if TB.decode("FT1-MAGE-9") ~= nil then return finish(false, "accepted over-max rank") end
+        if TB.decode("hello") ~= nil then return finish(false, "accepted junk") end
+        return finish(true)
+    end)())
+
     -- S13 crowd-share contract: the allow-list build leaks NOTHING but shaped game data.
     check("crowd payload: allow-list build keeps only non-identifying game data", (function()
         -- Feed the builder a payload STUFFED with identity + free text + timestamps, as
