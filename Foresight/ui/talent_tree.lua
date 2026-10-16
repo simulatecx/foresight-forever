@@ -170,22 +170,29 @@ local function fmtVal(v, isPct)
     return isPct and (s .. "%") or s
 end
 
--- Exact per-rank progression from the primary op (e.g. "5 / 10 / 15 / 20 / 25%"), shown ONLY
--- when the per-rank values are DATAMINED (aligned effect rows). The scaling rule (per-rank vs
--- max-total) is ambiguous in the client data for most talents - Restorative Totems' 5 is
--- per-rank, Mental Dexterity's 100 is the max total - so a presumed computation would print
--- wrong numbers. For those we defer to the live game description (which renders them correctly).
+-- OUR per-rank progression from the primary op (e.g. Mental Dexterity "33 / 66 / 100%"), via
+-- the shared rank-rule resolver (datamined values > overrides/verified rule > presumed linear).
+-- This is the FALLBACK shown when the client-authoritative description isn't available; the live
+-- game description (which knows each talent's exact scaling) stands on top of it when the tree is
+-- open. 2nd return = true when the scaling is presumed (so the caller tags it as our estimate).
 local function perRankLine(t)
     local ops = type(t.ops) == "table" and t.ops or nil
     if not ops then return nil end
+    local op
     for _, o in ipairs(ops) do
-        if type(o) == "table" and type(o.values) == "table" and #o.values > 1 then
-            local parts = {}
-            for _, v in ipairs(o.values) do parts[#parts + 1] = fmtVal(v, o.isPct) end
-            return "Per rank: " .. table.concat(parts, " / ")
-        end
+        if type(o) == "table" and type(o.maxValue) == "number" and o.maxValue ~= 0 then op = o; break end
     end
-    return nil
+    local maxR = t.maxRank or 1
+    if not op or maxR <= 1 then return nil end
+    local F = HM.formulas
+    local parts = {}
+    for r = 1, maxR do
+        local v = (F and F.talentRankValueFor)
+            and F.talentRankValueFor(nil, op.maxValue, r, maxR, op.values)
+            or (op.maxValue * r / maxR)
+        parts[#parts + 1] = fmtVal(v, op.isPct)
+    end
+    return "Per rank: " .. table.concat(parts, " / "), type(op.values) ~= "table"
 end
 
 local function showTip(button, talentId)
@@ -200,8 +207,12 @@ local function showTip(button, talentId)
     -- Full description (live, matches the Forever talent site), then the per-rank numbers.
     local desc = talentDescription(t.spellRanks and t.spellRanks[1])
     if desc then gt:AddLine(desc, 1, 1, 1, true) end
-    local rankLine = perRankLine(t)  -- exact, only when datamined; else the description carries it
-    if rankLine then gt:AddLine(rankLine, 0.55, 0.8, 1, true) end
+    -- Our per-rank math from the baseline (shown always; the client description above is the
+    -- authoritative actual when present, our line is the assumed progression - tagged (p)).
+    local rankLine, presumed = perRankLine(t)
+    if rankLine then
+        gt:AddLine(rankLine .. (presumed and "  |cff9d9d9d(p)|r" or ""), 0.55, 0.8, 1, true)
+    end
     local locked = TB() and TB().lockReason(state.build, talentId)
     if locked then gt:AddLine(locked, 1, 0.3, 0.3) end
     local imp = impactLine(talentId, math.min(maxR, cur + 1))
