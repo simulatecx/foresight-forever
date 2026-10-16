@@ -7,9 +7,18 @@ enable-nolib-creation: no
 move-folders:
     Foresight/Foresight: Foresight
 
+# NO INLINE COMMENTS in this list - the packager's YAML subset does not strip them, so an
+# inline-commented entry silently never matches (the v0.49.0 zip shipped web/ because of one).
+# The repo-root `data/` (pipeline schema source) MUST be ignored: it collides with the addon's
+# own data/ during move-folders and strands every data/*.lua in a nested Foresight/Foresight/
+# (the v0.49.0 package was non-functional out of the zip because of this).
 ignore:
     - pipeline
-    - web          # S13 companion web app (Firebase) - never ships inside the addon
+    - web
+    - data
+    - functions
+    - firebase.json
+    - CHANGELOG.md
     - docs
     - mockups
     - .claude

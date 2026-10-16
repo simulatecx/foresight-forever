@@ -230,9 +230,14 @@ function TB.isLegal(classToken, build)
     return true
 end
 
--- Compact, versioned, URL-safe build string: "FT1-<CLASS>-<t1>-<t2>-<t3>", each tN the ranks
--- (single digit 0..maxRank<=5) of that tab's talents in canonical order, trailing zeros
+-- Compact, versioned, URL-safe build string: "<PREFIX>-<CLASS>-<t1>-<t2>-<t3>", each tN the
+-- ranks (single digit 0..maxRank<=5) of that tab's talents in canonical order, trailing zeros
 -- trimmed. DATA ONLY; decode re-validates with isLegal and never executes anything.
+-- VERSION FENCE (audit 2026-10-16): slot order depends on the talent dataset. Classic-era
+-- codes are "FT1-"; Forever-dataset codes are "FT1F-". Without the fence, an old FT1 code
+-- decoded against the Forever slot order into a legal-but-WRONG build, silently.
+local function codePrefix() return usingForever() and "FT1F" or "FT1" end
+
 function TB.encode(classToken, build)
     local classId = TB.classIdFor(classToken)
     if not classId then return nil end
@@ -244,13 +249,18 @@ function TB.encode(classToken, build)
         end
         parts[#parts + 1] = (table.concat(digits)):gsub("0+$", "")
     end
-    return ("FT1-%s-%s"):format(tostring(classToken):upper(), table.concat(parts, "-"))
+    return ("%s-%s-%s"):format(codePrefix(), tostring(classToken):upper(), table.concat(parts, "-"))
 end
 
 function TB.decode(str)
     if type(str) ~= "string" then return nil, "not a string" end
-    local classToken, rest = str:match("^FT1%-(%u+)%-(.*)$")
-    if not classToken then return nil, "not a Foresight build string (FT1-...)" end
+    local classToken, rest = str:match("^" .. codePrefix() .. "%-(%u+)%-(.*)$")
+    if not classToken then
+        if usingForever() and str:match("^FT1%-") then
+            return nil, "that code is from an older Foresight (pre-Forever talents) - re-create the plan"
+        end
+        return nil, "not a Foresight build string (FT1...)"
+    end
     local classId = TB.classIdFor(classToken)
     if not classId then return nil, "unknown class" end
     local tabStrings = {}

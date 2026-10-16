@@ -2652,6 +2652,61 @@ function HM.runSelftest(out)
         end
         return n == 9, ("only %d/9 classes resolved to talents"):format(n)
     end)())
+    check("shipped prereq graph: acyclic + arrows point down the tree (deadlock guard)", (function()
+        -- Audit 2026-10-16: TraitEdge Type-0 back-edges created prereq CYCLES that made both
+        -- talents permanently unclickable (Druid Nature's Majesty <-> Splendor, Hunter Bestial
+        -- Wrath <-> Intimidation). Walk the SHIPPED graph: every prereq must sit at the same or
+        -- a shallower tier, and no cycle may exist.
+        local tals = HM.TalentBuild and HM.TalentBuild.talents and HM.TalentBuild.talents()
+        if type(tals) ~= "table" or not next(tals) then return false, "no talents" end
+        local state = {}
+        local function visit(tid)
+            if state[tid] == 1 then return true end
+            if state[tid] == 2 then return false end
+            state[tid] = 1
+            for _, pr in ipairs((tals[tid] and tals[tid].prereqs) or {}) do
+                local pt = tals[pr.talent]
+                if pt and tals[tid] and (pt.tier or 0) > (tals[tid].tier or 0) then
+                    return true -- an arrow pointing UP the tree is the reciprocal half of a pair
+                end
+                if visit(pr.talent) then return true end
+            end
+            state[tid] = 2
+            return false
+        end
+        for tid in pairs(tals) do
+            if visit(tid) then return false, ("cycle/up-arrow at talent %s"):format(tostring(tid)) end
+        end
+        return true
+    end)())
+    check("FT1 version fence: forever codes are FT1F; old FT1 codes refuse with a message", (function()
+        -- Audit 2026-10-16: slot-order codes from the classic dataset decoded into WRONG
+        -- talents against the Forever dataset. The fence must (a) emit FT1F under forever
+        -- data, (b) round-trip, (c) reject a bare FT1 code with a spoken reason.
+        local TB = HM.TalentBuild
+        if not (TB and HM.gen and HM.gen.foreverTalents) then return false, "no forever data" end
+        local cid = TB.classIdFor("MAGE")
+        local tabs = cid and TB.tabsForClass(cid) or {}
+        if #tabs < 1 then return false, "no mage tabs" end
+        -- build one legal point: the first tier-0 talent of tab 1
+        local build = {}
+        for _, tid in ipairs(TB.talentsInTab(tabs[1])) do
+            if (TB.talents()[tid].tier or 0) == 0 then build[tid] = 1 break end
+        end
+        if not next(build) then return false, "no tier-0 talent" end
+        local code = TB.encode("MAGE", build)
+        if type(code) ~= "string" or code:sub(1, 5) ~= "FT1F-" then
+            return false, "encode prefix: " .. tostring(code)
+        end
+        local back = TB.decode(code)
+        local tid = next(build)
+        if not (back and back[tid] == 1) then return false, "FT1F round-trip" end
+        local nilRes, err = TB.decode("FT1-MAGE-1")
+        if nilRes ~= nil or not (type(err) == "string" and err:find("older", 1, true)) then
+            return false, "legacy FT1 not fenced: " .. tostring(err)
+        end
+        return true
+    end)())
     -- S35 talent-build engine: the PURE rules (budget/tier/prereq) + build-string codec,
     -- over a fixture tree (swap HM.gen, restore after). The UI (ui/talent_tree.lua) is
     -- in-game-verified; this pins the math an import/export + click handler depend on.

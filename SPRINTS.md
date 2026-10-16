@@ -235,19 +235,45 @@ item needs in-game eyes (frame code the headless gate can't exercise; WoW was do
   text ((est) when unconfirmed), then reuses `nodeImpactLines` (Affects/At-max/Synergy) in the
   planner for all 9 classes. Chained synergies = engine's later layer. NEEDS in-game verify.
 
+### S39 - FABLE PRE-RELEASE AUDIT (2026-10-16) ☑ -> 0.49.1 prod re-ship
+Four parallel diff-auditors (pipeline / planner / UI-taint / release-readiness) over
+v0.49.0..HEAD. ALL FIXED + gated (302/302):
+☑ BLOCKER pkg: the v0.49.0 CurseForge zip was BROKEN - repo-root `data/` collided with the
+  addon's data/ in move-folders (every data/*.lua stranded under Foresight/Foresight/), and the
+  `- web` ignore had an inline comment the packager YAML doesn't strip (web/+functions/+
+  firebase.json leaked into the zip). THIS was the 16:44 "install pollution" (the CF app
+  installing the broken zip - NOT another session). .pkgmeta: ignores fixed, no-inline-comment
+  law written in. MUST verify the v0.49.1 artifact layout post-tag.
+☑ BLOCKER data: TraitEdge Type-0 back-edges -> prereq CYCLES deadlocking 4 talents (Druid
+  Majesty<->Splendor, Hunter BW<->Intimidation). generate.py: type filter + down-tree-only +
+  hard cycle guard; selftest walks the SHIPPED graph (acyclic + arrows-down).
+☑ BLOCKER codes: old FT1 strings silently decoded into WRONG talents against the Forever slot
+  order. Version fence: forever codes = FT1F-, bare FT1- refuses with a message; loadBuild
+  returns ok,err and chips/import SPEAK failures; selftest pins the fence + round-trip.
+☑ MAJORS: options saved-size normalized (restore+save, NaN-proof); snapshot chips validated
+  (integer ranks, cross-class dropped); tf fetch all-9-or-refuse + cache fallback + "|" escape;
+  charDb heals settings; confidence tags kept in planner tooltips; importBox/planControls swap.
+☐ FOLLOW-UPS (minor, next sweep): options widget pooling; tf name-drift report (6/466 each way:
+  Call of Thunder, Improved Fire Nova, Wake of Fire, Improved Fade, Shadow Affinity,
+  Malediction); X-Wago-ID in TOC (Wago upload likely silently skipped); regeneration-determinism
+  gate; prereq-rank presumption tag.
+
 ### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
-Agreed sequence after the planner/tooltip work lands + is in-game-verified:
-☐ Re-audit the whole build with Fable (fresh adversarial pass), then TAG + publish 0.49.1 to
-  CurseForge (+GitHub/Wago via release.yml).
-☐ LOGIN/LOGOUT data: capture per-user session (login/logout) telemetry and SHARE it (crowd/
-  companion pipeline) - ties into COMPANION-APP + the S34 crowd contract (privacy-by-design:
-  classify, opt-in, no PII; reuse crowd-schema single-source).
-☐ EXPAND THE WEBSITE around the shared data (armory + the session/talent data).
-☐ EXPAND TOOLTIP DATA: more of what we give players from talents (deeper per-talent info, the
-  chained synergies, richer modeling); also map the remaining unmapped node ops (curation gap)
-  + ingest talentsforever racials/Legacy perks/spellbooks/blizz-notes ("take everything from the
-  site").
-☐ Then expand the RUN addon (S35 ARR danger/rare advisor) - separate track, Forever launch.
+☑ Re-audit with Fable -> fixed -> TAG + publish 0.49.1 (the prod re-ship; v0.49.0 was broken).
+☐ WEBSITE: "WHERE IT COMES FROM" section (data provenance: Blizzard client data via wago.tools,
+  talentsforever.com credit, in-game crowdsourcing + verification loop, release notes as truth
+  ladder) + LEADERBOARD EXPANSION (owner 2026-10-16). Deploy hosting so web prod is current.
+☐ REDDIT VERIFICATION LOOP (owner 2026-10-16): automated Reddit search/scrape for Forever
+  talent content (patch notes, datamined posts, screenshots - "all of them are posted there")
+  feeding a VERIFICATION queue - never auto-applied: candidate values land in a review file
+  (harvest-draft pattern), k-of-n + human review promote to overrides/verifiedRules. Source
+  ladder stays: Blizzard/client data as source of truth > in-game scans > release notes >
+  community (reddit/talentsforever). Needs: pipeline/fetch_reddit.py (public JSON API, UA
+  etiquette, subreddit + query config), a diff/verify report, SPRINTS story w/ privacy triage.
+☐ LOGIN/LOGOUT session data shared (crowd/companion, privacy-by-design, opt-in, crowd-schema).
+☐ EXPAND TOOLTIP DATA: chained synergies, map remaining unmapped node ops, ingest talentsforever
+  racials/Legacy perks/spellbooks ("take everything from the site").
+☐ Then expand the RUN addon (ARR danger/rare advisor) - separate track, Forever launch.
 ☐ IN-GAME: button placement on the talent/inspect frame, resizable-options layout at extremes,
   the removal-overlay visual (planned < live rank) is a noted refinement, mobile 1280x720 @ 0.65.
 ☐ DEFERRED: pool the options widgets (layout() currently re-creates per call - pre-existing);

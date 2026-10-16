@@ -783,7 +783,15 @@ def main() -> int:
     for cid in class_tabs:
         class_tabs[cid].sort(key=lambda t: (tabs_out[t].get("order", 0), t))
     prereq_of = defaultdict(list)   # right(dependent) node -> [left(required) nodes]
-    for r in read_opt("TraitEdge"):
+    trait_edges = read_opt("TraitEdge")
+    if not trait_edges:
+        print("WARNING: TraitEdge missing/empty - forever talents will ship with NO prereqs")
+    for r in trait_edges:
+        # Type 0 edges are the VISUAL back-reference of a real edge (reciprocal pairs) -
+        # never a requirement. Ingesting them created prereq cycles that deadlocked talents
+        # (Druid Nature's Majesty <-> Splendor, audit 2026-10-16). Types 2/3 are requirements.
+        if to_int(r.get("Type")) == 0:
+            continue
         L, R = to_int(r.get("LeftTraitNodeID")), to_int(r.get("RightTraitNodeID"))
         if L and R:
             prereq_of[R].append(L)
@@ -827,10 +835,43 @@ def main() -> int:
             forever_talents[nid] = e
     for R, lefts in prereq_of.items():
         if R in forever_talents:
-            prs = [{"talent": L, "rank": forever_talents[L]["maxRank"]}
-                   for L in lefts if L in forever_talents]
+            prs = []
+            for L in lefts:
+                lt = forever_talents.get(L)
+                # An arrow must point DOWN the tree. A "requirement" at a DEEPER tier than
+                # its dependent is the reciprocal half of a mutual pair (Hunter Bestial
+                # Wrath <-> Intimidation are mutual Type-2 edges); keep the lower->higher
+                # leg only, or both talents deadlock (audit 2026-10-16).
+                if lt and lt["tier"] <= forever_talents[R]["tier"]:
+                    prs.append({"talent": L, "rank": lt["maxRank"]})
             if prs:
                 forever_talents[R]["prereqs"] = prs
+
+    # Cycle guard (incident-to-gate, 2026-10-16): a prereq cycle makes BOTH talents
+    # permanently unclickable in the planner. Fail generation loudly, never ship one.
+    def _prereq_cycles():
+        state = {}  # 1 = visiting, 2 = done
+
+        def visit(n):
+            if state.get(n) == 1:
+                return True
+            if state.get(n) == 2:
+                return False
+            state[n] = 1
+            for pr in forever_talents.get(n, {}).get("prereqs", []):
+                if visit(pr["talent"]):
+                    return True
+            state[n] = 2
+            return False
+
+        return [n for n in sorted(forever_talents) if state.get(n) != 2 and visit(n)]
+
+    cyc = _prereq_cycles()
+    if cyc:
+        raise SystemExit(f"forever_talents prereq CYCLE at nodes {cyc[:8]} - edge filter broken")
+    bad_tiers = sorted({(e["classId"], e["tier"]) for e in forever_talents.values() if e["tier"] > 6})
+    if bad_tiers:
+        print(f"WARNING: forever talents beyond tier 6 (planner frame clips >7 tiers): {bad_tiers}")
 
     # ---- Racials (permanent race effects; NOT in the trait trees) --------------
     # Chain: racial SkillLine -> SkillLineAbility (RaceMasks -> races, ClassMask ->
@@ -1147,6 +1188,7 @@ def main() -> int:
                 "traitNodes": len(trait_nodes),
                 "traitNodesNeedingCuration": trait_curation,
                 "foreverTalents": len(forever_talents),
+                "foreverPrereqs": sum(1 for e in forever_talents.values() if e.get("prereqs")),
                 "racialRaces": len(racials_out),
                 "racialSpells": len(racials_by_spell),
                 "racialSpellsNeedingCuration": len(racial_curation),

@@ -225,7 +225,8 @@ local function showTip(button, talentId)
         gt:AddLine(("Rank %d: %s"):format(cr, tostring(tf.desc[cr]))
             .. (tfConfirmed(tf, cr) and "" or "  |cff9d9d9d(est)|r"), 1, 1, 1, true)
         if cur < maxR and tf.desc[cur + 1] then
-            gt:AddLine("Next: " .. tostring(tf.desc[cur + 1]), 0.55, 0.8, 1, true)
+            gt:AddLine("Next: " .. tostring(tf.desc[cur + 1])
+                .. (tfConfirmed(tf, cur + 1) and "" or "  |cff9d9d9d(est)|r"), 0.55, 0.8, 1, true)
         end
     else
         local desc = talentDescription(t.spellRanks and t.spellRanks[1])
@@ -240,15 +241,23 @@ local function showTip(button, talentId)
     -- that push the same lever) - now in the planner too, for every class (forever talents are
     -- keyed by trait nodeID, which nodeImpactLines consumes directly).
     local richShown = false
-    if forever() and HM.Tooltips and HM.Tooltips.nodeImpactLines then
+    if forever() and HM.Tooltips and HM.Tooltips.nodeImpactLines and HM.Snapshot and HM.Loadout then
         local ok, snap = pcall(HM.Snapshot.capture)
-        local lo = (ok and type(snap) == "table" and HM.Loadout)
-            and HM.Loadout.fromSnapshot(snap) or nil
+        local lo
+        if ok and type(snap) == "table" then
+            local okLo, built = pcall(HM.Loadout.fromSnapshot, snap)
+            if okLo then lo = built end
+        end
         local okl, lines = pcall(HM.Tooltips.nodeImpactLines, talentId, lo)
         if okl and type(lines) == "table" and #lines > 1 then
-            for i = 2, #lines do  -- skip line 1 (the "Foresight" header; the name is above)
+            for i = 2, #lines do  -- line 1 is the "Foresight" header; its honesty tag re-adds below
                 local l = lines[i]
                 if l and l.text then gt:AddLine(l.text, l.r or 0.8, l.g or 0.8, l.b or 0.8, l.wrap) end
+            end
+            -- The skipped header carries the confidence tag ("(p) rank rule presumed" /
+            -- "verified from your scan") - every number keeps its tag (honesty invariant).
+            if lines[1] and lines[1].right then
+                gt:AddLine(lines[1].right, 0.62, 0.62, 0.62)
             end
             richShown = true
         end
@@ -281,7 +290,6 @@ local function refreshHeader()
 end
 
 local function paintButton(btn, talentId)
-    local g = HM.gen or {}
     local t = talentDefs()[talentId]
     if not t then return end
     local cur = tonumber(state.build[talentId]) or 0
@@ -386,28 +394,40 @@ local function buildTrees(classToken)
 end
 
 -- ---- saved-build chips -----------------------------------------------------------------
+-- Returns ok, err. Callers surface err to the player (a failed load must never be silent -
+-- audit 2026-10-16: old-dataset FT1 codes now refuse with a message instead of no-op).
 local function loadBuild(str, classToken)
     -- A stored COPIED SNAPSHOT is a raw node plan (nodeID -> ranks) table, not a code string.
-    -- SavedVariables are user-editable, so re-validate to integers (untrusted-input law).
+    -- SavedVariables are user-editable, so re-validate: integer ranks only, and drop any
+    -- node that isn't THIS class's talent (cross-class tamper; untrusted-input law).
     if type(str) == "table" then
+        local TBe = TB()
+        local cls = classToken or state.class or playerClass()
+        local cid = TBe and TBe.classIdFor and TBe.classIdFor(cls)
+        local tals = TBe and TBe.talents and TBe.talents() or {}
         local clean = {}
         for k, v in pairs(str) do
-            local nid, rank = tonumber(k), tonumber(v)
-            if nid and rank and rank > 0 then clean[nid] = rank end
+            local nid, rank = tonumber(k), math.floor(tonumber(v) or 0)
+            if nid and rank > 0 then
+                local t = tals[nid]
+                -- keep non-grid nodes (Forever-new, overlay-only) and this class's talents;
+                -- drop another class's grid talents (they'd pollute the count invisibly)
+                if not t or not cid or TBe.talentClassId(t) == cid then clean[nid] = rank end
+            end
         end
-        if not next(clean) then return false end
+        if not next(clean) then return false, "snapshot is empty or invalid" end
         if HM.SynergyHighlight and HM.SynergyHighlight.setPlanPreview then
             HM.SynergyHighlight.setPlanPreview(clean)
         end
-        state.build = TB().fromNodePlan(clean)
+        state.build = TBe.fromNodePlan(clean)
         -- A node-plan snapshot carries no class token; copied builds are same-class, so a grid
         -- load after a reload falls back to the player's class (never buildTrees(nil)).
         if not state.class then state.class = playerClass() end
         return true
     end
-    -- FT1 = our classic build code
-    local b, cls = TB().decode(str)
-    if b then state.build = b; if cls then state.class = cls end; return true end
+    -- FT1/FT1F = our build code (version-fenced by dataset)
+    local b, clsOrErr = TB().decode(str)
+    if b then state.build = b; if clsOrErr then state.class = clsOrErr end; return true end
     -- FT2 = ForeverTalents' node code (interop): set the FULL node plan on the live overlay
     -- (incl. Forever-new nodes), and reflect the classic-overlap subset in the grid.
     if HM.FT2 and HM.FT2.decode and HM.SynergyHighlight and HM.SynergyHighlight.setPlanPreview then
@@ -419,7 +439,7 @@ local function loadBuild(str, classToken)
             return true
         end
     end
-    return false
+    return false, clsOrErr or "unrecognized build code"
 end
 
 local function refreshChips()
@@ -427,7 +447,10 @@ local function refreshChips()
     chips = {}
     local p = planDb()
     local names = {}
-    for name in pairs(p.builds) do names[#names + 1] = name end
+    -- string keys only: a hand-edited SavedVariables numeric key would error table.sort
+    for name in pairs(p.builds) do
+        if type(name) == "string" then names[#names + 1] = name end
+    end
     table.sort(names)
     local x = 0
     for _, name in ipairs(names) do
@@ -442,7 +465,12 @@ local function refreshChips()
             if mouse == "RightButton" then
                 p.builds[name] = nil; refreshChips()
             else
-                if loadBuild(p.builds[name]) then state.name = name; buildTrees(state.class); updateButtons() end
+                local ok, err = loadBuild(p.builds[name])
+                if ok then
+                    state.name = name; buildTrees(state.class); updateButtons()
+                elseif HM.print then
+                    HM.print(("couldn't load '%s': %s"):format(name, tostring(err)))
+                end
             end
         end)
         chip:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -531,10 +559,18 @@ local function makeImportBox()
     box:Hide()
     box:SetScript("OnEnterPressed", function(self)
         local str = self:GetText()
-        if loadBuild(str) then buildTrees(state.class); updateButtons() end
+        local ok, err = loadBuild(str)
+        if ok then
+            buildTrees(state.class); updateButtons()
+        elseif HM.print then
+            HM.print("import failed: " .. tostring(err))
+        end
         self:SetText(""); self:Hide()
     end)
     box:SetScript("OnEscapePressed", function(self) self:SetText(""); self:Hide() end)
+    -- The box overlaps the plan-level controls while typing; swap them for the duration.
+    box:SetScript("OnShow", function() if frame.planControls then frame.planControls:Hide() end end)
+    box:SetScript("OnHide", function() if frame.planControls then frame.planControls:Show() end end)
     frame.importBox = box
 end
 
@@ -623,9 +659,13 @@ local function ensureFrame()
     frame.chipRow:SetSize(10, 22)
 
     -- Credit: per-rank talent text comes from talentsforever.com (see tf_talents.lua).
-    local credit = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    credit:SetPoint("BOTTOMRIGHT", -PAD, 12)
-    credit:SetText("talent data: " .. (HM.gen and HM.gen.tfCredit or "talentsforever.com"))
+    -- Conditional on the data being loaded - if we ever stop shipping their JSON, the
+    -- credit line retires with it (owner decision 2026-10-16; Curse listing credits too).
+    if HM.gen and HM.gen.tfTalents and HM.gen.tfCredit then
+        local credit = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+        credit:SetPoint("BOTTOMRIGHT", -PAD, 12)
+        credit:SetText("talent data: " .. HM.gen.tfCredit)
+    end
 
     treeHost = _G.CreateFrame("Frame", nil, frame)
     treeHost:SetPoint("TOPLEFT", PAD, -102)

@@ -267,10 +267,22 @@ end
 local OptionsPanel = {}
 HM.OptionsPanel = OptionsPanel
 
+-- Validate a saved window size (SavedVariables is user-editable: strings/NaN/1e9 must all
+-- heal to the default - the untrusted-input law; an invalid SetSize here would brick the
+-- options window for the character since it errors inside the PLAYER_LOGIN boot).
+local function normalizeSize(sz)
+    local w = tonumber(type(sz) == "table" and sz.w or nil)
+    local h = tonumber(type(sz) == "table" and sz.h or nil)
+    if not w or w ~= w then w = WIDTH end   -- nil or NaN (NaN ~= NaN) -> default
+    if not h or h ~= h then h = HEIGHT end
+    w = math.max(WMIN, math.min(WMAX, math.floor(w + 0.5)))
+    h = math.max(HMIN, math.min(HMAX, math.floor(h + 0.5)))
+    return w, h
+end
+
 local function createPanel()
     panel = _G.CreateFrame("Frame", "ForesightOptionsPanel", _G.UIParent)
-    local sz = optState().size
-    panel:SetSize((sz and sz.w) or WIDTH, (sz and sz.h) or HEIGHT)
+    panel:SetSize(normalizeSize(optState().size))
     panel:SetPoint("CENTER")
     panel:SetMovable(true)
     panel:SetResizable(true)
@@ -325,8 +337,10 @@ local function createPanel()
     grip:SetScript("OnMouseDown", function() panel:StartSizing("BOTTOMRIGHT") end)
     grip:SetScript("OnMouseUp", function()
         panel:StopMovingOrSizing()
-        optState().size = { w = math.floor(panel:GetWidth() + 0.5),
-                            h = math.floor(panel:GetHeight() + 0.5) }
+        -- Clamp on save too (resize bounds are pcall'd fallbacks that can silently no-op).
+        local w, h = normalizeSize({ w = panel:GetWidth(), h = panel:GetHeight() })
+        panel:SetSize(w, h)
+        optState().size = { w = w, h = h }
         layout() -- reflow once at release (the bg/border track the size live via SetAllPoints);
                  -- we avoid a per-frame relayout during the drag since layout() isn't pooled yet
     end)

@@ -1,9 +1,26 @@
 # Changelog
 
-## 0.49.1 (beta) - 2026-10-15
+## 0.49.1 - 2026-10-16
 
-The beta build: UI flexibility, a one-click planner from the talent frame, and a
-verification-pass hardening set.
+The prod re-ship: fixed packaging, Forever talents with credited per-rank data, UI
+flexibility, a one-click planner from the talent frame, and two audit hardening passes.
+
+**FIXED: the CurseForge package was broken.** The 0.49.0 zip's folder layout stranded the
+addon's entire `data/` tree in a nested folder (a `.pkgmeta` collision with the repo-root
+`data/` + an inline-comment bug that also leaked `web/` and `functions/` into the zip), so a
+CurseForge install couldn't load its data - the same "Error loading data/*.lua" crash we
+chased locally (the 16:44 "install pollution" WAS the CF app installing this broken zip).
+0.49.1 ships a clean, addon-only package.
+
+**Fable audit fixes (2026-10-16):** TraitEdge Type-0 back-edges created prereq CYCLES that
+permanently deadlocked 4 talents (Druid Nature's Majesty<->Splendor, Hunter Bestial
+Wrath<->Intimidation) - edges are now type-filtered + down-tree only, with a hard cycle guard
+in the generator AND a shipped-graph selftest. FT1 build codes are version-fenced (forever
+codes are `FT1F-`; an old `FT1-` code refuses with a message instead of silently decoding
+into WRONG talents). Saved options window sizes and snapshot chips are validated (tampered
+SavedVariables heal instead of erroring); failed chip/import loads speak instead of no-op;
+planner tooltips keep their confidence tags; the talentsforever fetch refuses partial writes
+and escapes WoW "|" sequences.
 
 **Move and size everything.**
 - The **Foresight Matrix** can now be dragged by its title bar (it used to swallow the

@@ -73,7 +73,10 @@ end
 function HM.charDb()
     local key = charKey()
     HM.db.chars[key] = HM.db.chars[key] or { escapeRegistry = nil, settings = {} }
-    return HM.db.chars[key]
+    local db = HM.db.chars[key]
+    -- Heal a tampered store once here, for every call site (settings is indexed all over).
+    if type(db.settings) ~= "table" then db.settings = {} end
+    return db
 end
 
 -- The dimension the player is gearing FOR (the gear-verdict lens). "auto" = the build's
