@@ -266,13 +266,18 @@ v0.49.0..HEAD. ALL FIXED + gated (302/302):
   EXPANSION BUILT (ladder depth selector Top 5/10/25 - backend already stores top 25;
   app.js?v=19). DEPLOY BLOCKED: firebase credentials expired - owner runs
   `firebase login --reauth`, then `firebase deploy --only hosting`.
-☐ REDDIT VERIFICATION LOOP (owner 2026-10-16): automated Reddit search/scrape for Forever
-  talent content (patch notes, datamined posts, screenshots - "all of them are posted there")
-  feeding a VERIFICATION queue - never auto-applied: candidate values land in a review file
-  (harvest-draft pattern), k-of-n + human review promote to overrides/verifiedRules. Source
-  ladder stays: Blizzard/client data as source of truth > in-game scans > release notes >
-  community (reddit/talentsforever). Needs: pipeline/fetch_reddit.py (public JSON API, UA
-  etiquette, subreddit + query config), a diff/verify report, SPRINTS story w/ privacy triage.
+◐ REDDIT VERIFICATION LOOP BUILT (2026-10-16): `pipeline/fetch_reddit.py` searches Reddit for
+  Forever talent content (r/wowforever + r/classicwow + site-wide), extracts talent-name
+  mentions + nearby numeric claims (percents/progressions), diffs vs our tf per-rank text, and
+  writes a HUMAN-REVIEW draft to `pipeline/collected/reddit_review.md`+`.json` (gitignored -
+  drafts never publish). NEVER auto-applied: promotion stays overrides/push_verified after
+  k-of-n + review; source ladder fixed (Blizzard/client > in-game scans > release notes >
+  community). AUTH REALITY (verified): Reddit 403-blocks ALL anonymous JSON (www/api; old.reddit
+  serves a browser-check HTML page) -> the tool uses app-only OAuth (client_credentials,
+  read-only). OWNER SETUP (2 min, blocks live runs): create an app at reddit.com/prefs/apps
+  (type "script"), save `pipeline/reddit_auth.json` {"client_id","client_secret"} (gitignored)
+  or env REDDIT_CLIENT_ID/SECRET. Degrades to cache-only with printed setup instructions.
+  Etiquette: descriptive UA + contact, 2s between requests, bounded limits, cached responses.
 ☐ LOGIN/LOGOUT session data shared (crowd/companion, privacy-by-design, opt-in, crowd-schema).
 ☐ EXPAND TOOLTIP DATA: chained synergies, map remaining unmapped node ops, ingest talentsforever
   racials/Legacy perks/spellbooks ("take everything from the site").

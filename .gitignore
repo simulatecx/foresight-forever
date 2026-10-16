@@ -23,3 +23,4 @@ web/node_modules/
 # Local packaged addon zips (build artifacts)
 dist/
 firebase-debug.log
+pipeline/reddit_auth.json
