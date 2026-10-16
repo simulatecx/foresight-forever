@@ -270,6 +270,16 @@ local function layout(model)
     local motion = HM.Motion and HM.Motion.level() or "off"
     if panel.radarChart and motion == "off" then panel.radarChart:Hide() end
     local state = uiState()
+    if panel.collapseChevron then
+        panel.collapseChevron:SetText(state.panelCollapsed and "+" or "-")
+    end
+    if state.panelCollapsed then
+        -- Collapsed: everything released above; keep only the title bar visible.
+        if panel.radarChart then panel.radarChart:Hide() end
+        if panel.radarHint then panel.radarHint:Hide() end
+        panel:SetHeight(26)
+        return
+    end
     local r, g, b = classColor()
     local y = -PAD - 22 -- below title bar
     for _, section in ipairs(model.sections) do
@@ -432,6 +442,7 @@ local function createPanel()
     -- which can overlap other panels); position is saved per character and restored.
     panel:SetMovable(true)
     panel:EnableMouse(true)
+    panel:SetClampedToScreen(true) -- never let a drag strand the panel off-screen
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", function(self) self:StartMoving() end)
     panel:SetScript("OnDragStop", function(self)
@@ -470,8 +481,30 @@ local function createPanel()
     local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     title:SetPoint("TOPLEFT", PAD, -7)
     title:SetText(("|cff%02x%02x%02xForesight|r"):format(r * 255, g * 255, b * 255))
+
+    -- Independent collapse/expand: shrink the stats table to just this title bar without
+    -- touching the Matrix (the FS master button toggles both; this is the stats-only lever).
+    local collapseBtn = _G.CreateFrame("Button", nil, panel)
+    collapseBtn:SetSize(18, 18)
+    collapseBtn:SetPoint("TOPRIGHT", -4, -4)
+    collapseBtn:SetFrameLevel(panel:GetFrameLevel() + 5)
+    local chev = collapseBtn:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    chev:SetAllPoints()
+    collapseBtn:SetScript("OnClick", function()
+        local st = uiState()
+        st.panelCollapsed = not st.panelCollapsed
+        StatsPanel.refresh()
+    end)
+    collapseBtn:SetScript("OnEnter", function(self)
+        _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        _G.GameTooltip:SetText("Collapse / expand the stats table", 0.2, 1, 0.6)
+        _G.GameTooltip:Show()
+    end)
+    collapseBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+    panel.collapseChevron = chev
+
     local subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    subtitle:SetPoint("TOPRIGHT", -PAD, -9)
+    subtitle:SetPoint("TOPRIGHT", -26, -9)
     subtitle:SetText("what more would do")
     panel.subtitle = subtitle -- updated each refresh with the playstyle label
 

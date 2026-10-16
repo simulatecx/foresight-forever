@@ -731,6 +731,14 @@ function MatrixPanel.resetPosition()
     restorePosition()
 end
 
+-- Reset a drag-resized Matrix back to the default width (the Layout options action).
+function MatrixPanel.resetWidth()
+    if not panel then return end
+    uiState().width = nil
+    restoreWidth()
+    MatrixPanel.refresh()
+end
+
 -- Cycle the active loop (the mockup's goal dropdown, taint-free).
 function MatrixPanel.cycleLoop()
     if not panel or not panel.model then return end
@@ -761,6 +769,7 @@ local function createPanel()
         pcall(panel.SetMaxResize, panel, wmax, 2000)
     end
     panel:EnableMouse(true)
+    panel:SetClampedToScreen(true) -- never let a drag strand the panel off-screen
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", function(self) self:StartMoving() end)
     panel:SetScript("OnDragStop", function(self)
@@ -805,12 +814,22 @@ local function createPanel()
     titleLine:SetHeight(1)
     titleLine:SetColorTexture(1, 1, 1, 0.08)
     titleBtn:SetScript("OnClick", function() MatrixPanel.cycleLoop() end)
+    -- The title bar is ALSO the drag handle (it covers the top, so a bare panel-drag can't
+    -- be grabbed there). Drag moves the panel; a click (no drag) still cycles the loop - the
+    -- RegisterForDrag threshold separates the two.
+    titleBtn:RegisterForDrag("LeftButton")
+    titleBtn:SetScript("OnDragStart", function() panel:StartMoving() end)
+    titleBtn:SetScript("OnDragStop", function()
+        panel:StopMovingOrSizing()
+        local point, _, relPoint, x, y = panel:GetPoint()
+        uiState().pos = { point = point, relPoint = relPoint,
+                          x = math.floor(x + 0.5), y = math.floor(y + 0.5) }
+    end)
     titleBtn:SetScript("OnEnter", function(self)
-        if panel.badgeTip then
-            _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            _G.GameTooltip:SetText(panel.badgeTip, nil, nil, nil, nil, true)
-            _G.GameTooltip:Show()
-        end
+        _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        _G.GameTooltip:SetText(panel.badgeTip or "Foresight Matrix", nil, nil, nil, nil, true)
+        _G.GameTooltip:AddLine("drag to move - click to change the view", 0.6, 0.6, 0.6)
+        _G.GameTooltip:Show()
     end)
     titleBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
     local close = _G.CreateFrame("Button", nil, panel, "UIPanelCloseButton")

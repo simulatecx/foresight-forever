@@ -13,7 +13,8 @@ if not _G.CreateFrame then return end
 
 -- Enlarged v0.45.8 (user: the window was too small): wider content, taller body,
 -- roomier rows so the settings are comfortable to read and adjust.
-local WIDTH, HEIGHT, PAD = 560, 460, 16
+local WIDTH, HEIGHT, PAD = 560, 460, 16    -- default size (restored from saved if present)
+local WMIN, HMIN, WMAX, HMAX = 440, 320, 980, 860  -- resize bounds (UI-overhaul flexibility)
 local TABW = 140
 local ROW_H, ROW_STEP = 40, 48
 local BRAND = { r = 0.20, g = 1.00, b = 0.60 }
@@ -28,6 +29,14 @@ local function classColor()
     local c = token and _G.RAID_CLASS_COLORS and _G.RAID_CLASS_COLORS[token]
     if c then return c.r, c.g, c.b end
     return GOLD.r, GOLD.g, GOLD.b
+end
+
+-- Per-character options-window state (saved size, so a user's expanded window persists).
+local function optState()
+    local db = HM.charDb and HM.charDb()
+    if not db then return {} end
+    db.settings.options = db.settings.options or {}
+    return db.settings.options
 end
 
 -- Groups that actually own >= 1 shipped key (the no-empty-tab law).
@@ -152,12 +161,56 @@ local function renderKey(key, y, innerX, innerW)
     return y - ROW_STEP
 end
 
+-- Character tab: a read-only identity readout at the very top (who you are / share as).
+local function renderReadout(y, innerX, innerW)
+    local name = (_G.UnitName and _G.UnitName("player")) or "?"
+    local className = (_G.UnitClass and (_G.UnitClass("player"))) or ""
+    local race = (_G.UnitRace and (_G.UnitRace("player"))) or ""
+    local level = (_G.UnitLevel and _G.UnitLevel("player")) or 0
+    local r, g, b = classColor()
+    local head = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    head:SetPoint("TOPLEFT", panel, "TOPLEFT", innerX, y)
+    head:SetText(("|cff%02x%02x%02x%s|r"):format(r * 255, g * 255, b * 255, name))
+    widgets[#widgets + 1] = head
+    local sub = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    sub:SetPoint("TOPLEFT", panel, "TOPLEFT", innerX, y - 16)
+    sub:SetWidth(innerW)
+    sub:SetJustifyH("LEFT")
+    sub:SetText(("Level %d %s %s - set how you appear on the ladders below."):format(
+        level, race, className))
+    widgets[#widgets + 1] = sub
+    return y - 44
+end
+
+-- One action row (label + desc + a button). Used by the Layout tab for resets.
+local function renderAction(label, desc, btnText, y, innerX, innerW, onClick)
+    local row = _G.CreateFrame("Frame", nil, panel)
+    row:SetPoint("TOPLEFT", panel, "TOPLEFT", innerX, y)
+    row:SetSize(innerW, ROW_H)
+    widgets[#widgets + 1] = row
+    local lab = row:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    lab:SetPoint("TOPLEFT", row, "TOPLEFT", 0, 0)
+    lab:SetText(label)
+    local d = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    d:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -14)
+    d:SetWidth(innerW - 130)
+    d:SetJustifyH("LEFT")
+    d:SetText(desc)
+    local btn = _G.CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+    btn:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, 0)
+    btn:SetSize(120, 22)
+    btn:SetText(btnText)
+    btn:SetScript("OnClick", function() pcall(onClick) end)
+    widgets[#widgets + 1] = btn
+    return y - ROW_STEP
+end
+
 local function layout()
     releaseWidgets()
     local r, g, b = classColor()
     local groups = liveGroups()
     local contentX = PAD + TABW + PAD
-    local innerW = WIDTH - contentX - PAD
+    local innerW = math.max(180, (panel:GetWidth() or WIDTH) - contentX - PAD) -- reflow to live width
 
     -- Tab column.
     local ty = -40
@@ -180,8 +233,24 @@ local function layout()
 
     -- Content for the active group.
     local y = -40
+    if activeGroup == "Character" then
+        y = renderReadout(y, contentX, innerW)
+    end
     for _, key in ipairs(keysInGroup(activeGroup)) do
         y = renderKey(key, y, contentX, innerW)
+    end
+    if activeGroup == "Layout" then
+        y = renderAction("Reset window positions",
+            "Move the stats panel and the Matrix back to their default spots beside the character sheet.",
+            "Reset positions", y, contentX, innerW, function()
+                if HM.StatsPanel and HM.StatsPanel.resetPosition then HM.StatsPanel.resetPosition() end
+                if HM.MatrixPanel and HM.MatrixPanel.resetPosition then HM.MatrixPanel.resetPosition() end
+            end)
+        y = renderAction("Reset Matrix width",
+            "Return the Foresight Matrix to its default width (undo a drag-resize).",
+            "Reset width", y, contentX, innerW, function()
+                if HM.MatrixPanel and HM.MatrixPanel.resetWidth then HM.MatrixPanel.resetWidth() end
+            end)
     end
 
     -- "Report an issue" button (the backlogged report button, S30).
@@ -200,10 +269,19 @@ HM.OptionsPanel = OptionsPanel
 
 local function createPanel()
     panel = _G.CreateFrame("Frame", "ForesightOptionsPanel", _G.UIParent)
-    panel:SetSize(WIDTH, HEIGHT)
+    local sz = optState().size
+    panel:SetSize((sz and sz.w) or WIDTH, (sz and sz.h) or HEIGHT)
     panel:SetPoint("CENTER")
     panel:SetMovable(true)
+    panel:SetResizable(true)
     panel:EnableMouse(true)
+    panel:SetClampedToScreen(true) -- always reachable, whatever UI overhaul is loaded
+    if panel.SetResizeBounds then
+        pcall(panel.SetResizeBounds, panel, WMIN, HMIN, WMAX, HMAX)
+    else
+        pcall(panel.SetMinResize, panel, WMIN, HMIN)
+        pcall(panel.SetMaxResize, panel, WMAX, HMAX)
+    end
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", function(self) self:StartMoving() end)
     panel:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
@@ -233,6 +311,31 @@ local function createPanel()
     local close = _G.CreateFrame("Button", nil, panel, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 2, 2)
     close:SetScript("OnClick", function() panel:Hide() end)
+
+    -- Resize grip (bottom-right): drag to expand the window; content reflows to the new
+    -- width and the size is saved per character. Flexibility for heavy UI-overhaul setups.
+    local grip = _G.CreateFrame("Button", nil, panel)
+    grip:SetSize(16, 16)
+    grip:SetPoint("BOTTOMRIGHT", -2, 2)
+    grip:SetFrameLevel(panel:GetFrameLevel() + 10) -- clickable above the report button
+    grip:EnableMouse(true)
+    local gt = grip:CreateTexture(nil, "OVERLAY")
+    gt:SetAllPoints()
+    gt:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetScript("OnMouseDown", function() panel:StartSizing("BOTTOMRIGHT") end)
+    grip:SetScript("OnMouseUp", function()
+        panel:StopMovingOrSizing()
+        optState().size = { w = math.floor(panel:GetWidth() + 0.5),
+                            h = math.floor(panel:GetHeight() + 0.5) }
+        layout()
+    end)
+    local sizePending
+    panel:SetScript("OnSizeChanged", function()
+        if sizePending or not panel:IsShown() then return end
+        sizePending = true
+        local function run() sizePending = nil; layout() end
+        if _G.C_Timer and _G.C_Timer.After then _G.C_Timer.After(0.05, run) else run() end
+    end)
 
     panel:Hide()
 end

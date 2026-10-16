@@ -26,12 +26,12 @@ Settings.KEYS = {
         desc = "Show the one derived line that explains a mechanism-dead stat (e.g. Agility gives a Shaman no Attack Power).",
     },
     spellImpact = {
-        group = "General", type = "toggle", kind = "show", default = true,
+        group = "Tooltips", type = "toggle", kind = "show", default = true,
         label = "Show which spells an item lifts",
         desc = "On an item tooltip, list the few of YOUR top abilities this item changes the most, ranked (e.g. 'Frostbolt +3.2%'). Works for gear and weapons alike. Off = just the dimension verdict.",
     },
     panelAlpha = {
-        group = "General", type = "slider", default = 0.92, min = 0.2, max = 1.0,
+        group = "Layout", type = "slider", default = 0.92, min = 0.2, max = 1.0,
         label = "Panel opacity",
         desc = "Background opacity for the Foresight panels.",
     },
@@ -42,7 +42,7 @@ Settings.KEYS = {
         desc = "Hold this while hovering an action button (talent frame open) to light the talents that feed it. off disables it.",
     },
     uiMotion = {
-        group = "General", type = "enum", default = "subtle",
+        group = "Layout", type = "enum", default = "subtle",
         values = { "off", "subtle", "full" },
         label = "UI motion",
         desc = "Dynamic visuals on the panels: bars sweep, the ecosystem renders as a connected diagram, the radar draws its shape. off = the static text render; full adds traveling pulses.",
@@ -53,7 +53,7 @@ Settings.KEYS = {
         desc = "Show the caster/ranged/heal lenses as '+X% vs base' - how far your bonuses lift you above a no-gear floor. Off (default) shows the plain current index; the real decision numbers are always diffs from your current character.",
     },
     panelScale = {
-        group = "General", type = "slider", default = 1.0, min = 0.7, max = 1.3,
+        group = "Layout", type = "slider", default = 1.0, min = 0.7, max = 1.3,
         label = "Panel scale",
         desc = "Scale the Foresight panels up or down so they fit alongside your other UI addons.",
     },
@@ -76,17 +76,17 @@ Settings.KEYS = {
     -- averages either way. On = when you Contribute, your chosen handle (+ optional armory)
     -- rides along and can appear on the public "champions" ladders. Revocable: turn it off.
     named = {
-        group = "General", type = "toggle", default = false,
+        group = "Character", type = "toggle", default = false,
         label = "Show me on public leaderboards",
         desc = "Opt in to appear by your chosen handle on the public champion ladders (Biggest Armor, etc.) when you Contribute. Off = you stay anonymous (your numbers still feed the crowd averages). Set your handle below.",
     },
     handle = {
-        group = "General", type = "text", default = "", max = 32,
+        group = "Character", type = "text", default = "", max = 32,
         label = "Leaderboard handle",
         desc = "The display name shown on the public ladders when the opt-in above is on. A nickname you choose - not your real name. Up to 32 characters.",
     },
     armory = {
-        group = "General", type = "text", default = "", max = 200,
+        group = "Character", type = "text", default = "", max = 200,
         pattern = "^https://[%w%._~:/%?#@!%$&%*%+,;=%%%(%)%-]+$",
         label = "Armory link (optional)",
         desc = "Optional https:// link to your armory/character page, shown beside your handle on the ladders. Leave blank for none.",
@@ -94,7 +94,8 @@ Settings.KEYS = {
 }
 
 -- The ordered group list for the GUI (a group renders only if it owns >= 1 key).
-Settings.GROUPS = { "General", "Tooltips", "Synergy Matrix" }
+-- Character (identity/armory) leads; Layout (size/opacity/motion + reset actions) trails.
+Settings.GROUPS = { "Character", "General", "Tooltips", "Synergy Matrix", "Layout" }
 
 -- Validate a NATIVE stored value for a key -> clean value or the declared default.
 function Settings.validate(key, raw)
