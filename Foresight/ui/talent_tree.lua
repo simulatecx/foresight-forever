@@ -149,21 +149,62 @@ local function buildSummaryText()
 end
 
 -- ---- tooltip ---------------------------------------------------------------------------
+-- The LIVE game-rendered talent description (same client data the Armory / the Forever talent
+-- site show) for a node's spell. Read-only, pcall-guarded, degrades to nil if not yet cached.
+local function talentDescription(spellId)
+    if not spellId then return nil end
+    if _G.C_Spell and _G.C_Spell.GetSpellDescription then
+        local ok, d = pcall(_G.C_Spell.GetSpellDescription, spellId)
+        if ok and type(d) == "string" and d ~= "" then return d end
+    end
+    if _G.GetSpellDescription then
+        local ok, d = pcall(_G.GetSpellDescription, spellId)
+        if ok and type(d) == "string" and d ~= "" then return d end
+    end
+    return nil
+end
+
+local function fmtVal(v, isPct)
+    local r = math.floor(v + 0.5)
+    local s = (math.abs(v - r) < 0.05) and tostring(r) or ("%.1f"):format(v)
+    return isPct and (s .. "%") or s
+end
+
+-- Exact per-rank progression from the primary op (e.g. "5 / 10 / 15 / 20 / 25%"), shown ONLY
+-- when the per-rank values are DATAMINED (aligned effect rows). The scaling rule (per-rank vs
+-- max-total) is ambiguous in the client data for most talents - Restorative Totems' 5 is
+-- per-rank, Mental Dexterity's 100 is the max total - so a presumed computation would print
+-- wrong numbers. For those we defer to the live game description (which renders them correctly).
+local function perRankLine(t)
+    local ops = type(t.ops) == "table" and t.ops or nil
+    if not ops then return nil end
+    for _, o in ipairs(ops) do
+        if type(o) == "table" and type(o.values) == "table" and #o.values > 1 then
+            local parts = {}
+            for _, v in ipairs(o.values) do parts[#parts + 1] = fmtVal(v, o.isPct) end
+            return "Per rank: " .. table.concat(parts, " / ")
+        end
+    end
+    return nil
+end
+
 local function showTip(button, talentId)
-    local g = HM.gen or {}
     local t = talentDefs()[talentId]
     if not t then return end
     local cur = tonumber(state.build[talentId]) or 0
+    local maxR = t.maxRank or 1
     local gt = _G.GameTooltip
     gt:SetOwner(button, "ANCHOR_RIGHT")
     gt:AddLine(t.name or ("Talent " .. talentId), 1, 0.82, 0.25)
-    gt:AddLine(("Rank %d/%d"):format(cur, t.maxRank or 1), 0.7, 0.7, 0.7)
-    local descRank = cur > 0 and cur or 1
-    local desc = t.descByRank and (t.descByRank[descRank] or t.descByRank[1])
-    if desc and desc ~= "" then gt:AddLine(desc, 1, 1, 1, true) end
+    gt:AddLine(("Rank %d/%d"):format(cur, maxR), 0.7, 0.7, 0.7)
+    -- Full description (live, matches the Forever talent site), then the per-rank numbers.
+    local desc = talentDescription(t.spellRanks and t.spellRanks[1])
+    if desc then gt:AddLine(desc, 1, 1, 1, true) end
+    local rankLine = perRankLine(t)  -- exact, only when datamined; else the description carries it
+    if rankLine then gt:AddLine(rankLine, 0.55, 0.8, 1, true) end
     local locked = TB() and TB().lockReason(state.build, talentId)
     if locked then gt:AddLine(locked, 1, 0.3, 0.3) end
-    local imp = impactLine(talentId, math.min((t.maxRank or 1), cur + 1))
+    local imp = impactLine(talentId, math.min(maxR, cur + 1))
     if imp then gt:AddLine("Next point: " .. imp, 0.3, 1, 0.6) end
     gt:AddLine(" ")
     gt:AddLine("Left-click +  ·  Right-click -  (plan only; apply in-game yourself)", 0.5, 0.5, 0.55)

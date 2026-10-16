@@ -36,6 +36,10 @@ verification-pass hardening set.
   build rules, share codes, the live tree overlay, and the impact readout all work on these.
   (Per-rank values still use base + a tagged scaling presumption until live tooltips verify
   them at launch - same gap every tool has, since the client ships only rank-1 effect data.)
+- **Talent tooltips now show the stats behind each talent.** Hovering a talent in the planner
+  shows its full description (the same text the game and the Forever talent site render), the
+  exact per-rank numbers where they're datamined, and the modeled impact on your output for the
+  next point - so you can see what each point actually does.
 
 **Hardening (from the full code verification):**
 - Foreign/corrupt talent share-codes always fail safely now (a crafted FT2 code could

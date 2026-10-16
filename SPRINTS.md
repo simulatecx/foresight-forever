@@ -223,6 +223,10 @@ item needs in-game eyes (frame code the headless gate can't exercise; WoW was do
   Authoritative (our DB2, auto-updates at launch); cross-checked vs wowforevertalent.com. Added
   TraitEdge/TraitNodeGroup to fetch.py. Gate 300/300. Per-rank values stay base+presumption
   (client ships only rank-1 effect data; live tooltips verify at launch). NEEDS in-game verify.
+☑ TOOLTIP STATS (2026-10-16, owner "stats behind the trees + DPS impact, match the site"): planner
+  hover shows the live game description (GetSpellDescription, matches the site) + exact per-rank
+  values WHEN datamined (per-rank-vs-max-total rule ambiguous in data -> no presumed numbers; the
+  description carries them) + modeled next-point impact (withTraitNode). NEEDS in-game verify.
 ☐ IN-GAME: button placement on the talent/inspect frame, resizable-options layout at extremes,
   the removal-overlay visual (planned < live rank) is a noted refinement, mobile 1280x720 @ 0.65.
 ☐ DEFERRED: pool the options widgets (layout() currently re-creates per call - pre-existing);
