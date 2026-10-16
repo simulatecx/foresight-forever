@@ -2620,6 +2620,15 @@ function HM.runSelftest(out)
         return ok
     end)())
 
+    check("talent budget: future-level + legacy (20 @ lv30, 25 with legacy; 50/55 @ 60)", (function()
+        local TB = HM.TalentBuild
+        if not TB then return false, "no TalentBuild" end
+        -- Forever model (owner-stated): points = level-10, or level-5 with the legacy talent.
+        return TB.budget(30, false) == 20 and TB.budget(30, true) == 25
+            and TB.budget(60, false) == 50 and TB.budget(60, true) == 55
+            and TB.budget(9, false) == 0 and TB.budget(5, true) == 0
+            and TB.budget(10, false) == 0 and TB.budget(11, false) == 1
+    end)())
     -- S35 talent-build engine: the PURE rules (budget/tier/prereq) + build-string codec,
     -- over a fixture tree (swap HM.gen, restore after). The UI (ui/talent_tree.lua) is
     -- in-game-verified; this pins the math an import/export + click handler depend on.

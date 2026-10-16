@@ -22,7 +22,7 @@ local TREE_W = 4 * BTN + 3 * COL_GAP + 24   -- 4 columns + padding
 local PAD = 14
 
 local frame, treeHost
-local state = { class = nil, build = {}, name = nil }
+local state = { class = nil, build = {}, name = nil, planLevel = nil, legacy = false }
 local trees = {}        -- [i] = { box, header, buttons = { [talentId] = button }, lines = {} }
 local chips = {}        -- saved-build chip buttons
 
@@ -60,6 +60,18 @@ end
 local function playerClass()
     local _, token = _G.UnitClass("player")
     return token
+end
+
+-- The level you're PLANNING toward: you get the points you'd have at this level, to pretend-
+-- allocate a future build (display-only). Defaults to 30 for the beta - or your own level if
+-- higher - so even a low-level beta character has points to play with. Clamped to the cap.
+local function planLevel()
+    if not state.planLevel then
+        local lv = (_G.UnitLevel and _G.UnitLevel("player")) or 0
+        local maxL = (TB() and TB().MAX_LEVEL) or 60
+        state.planLevel = math.min(maxL, math.max(lv, 30))
+    end
+    return state.planLevel
 end
 
 -- Best-effort live impact for a talent at a rank (nil-degrades; never errors into the UI).
@@ -149,11 +161,15 @@ local function refreshHeader()
     if not frame then return end
     local TBe = TB()
     local total = TBe and TBe.totalPoints(state.build) or 0
-    local budget = TBe and TBe.budget(_G.UnitLevel and _G.UnitLevel("player") or 0) or 0
+    local lvl = planLevel()
+    local budget = TBe and TBe.budget(lvl, state.legacy) or 0
     frame.title:SetText(("Talent Planner  -  %s"):format(state.class or "?"))
-    frame.points:SetText(("%d points planned  (%d available at level %d)")
-        :format(total, budget, _G.UnitLevel and _G.UnitLevel("player") or 0))
+    frame.points:SetText(("%d / %d points  ·  planning level %d%s"):format(
+        total, budget, lvl, state.legacy and "  ·  legacy talent" or ""))
+    local over = total > budget
+    frame.points:SetTextColor(over and 1 or 0.8, over and 0.4 or 0.75, over and 0.4 or 0.6)
     if frame.summary then frame.summary:SetText(buildSummaryText() or "") end
+    if frame.planControls then frame.planControls.refresh() end
 end
 
 local function paintButton(btn, talentId)
@@ -189,7 +205,16 @@ local function onClick(btn, mouse)
     if mouse == "RightButton" then
         state.build = (TBe.remove(state.build, btn.talentId))
     else
-        state.build = (TBe.add(state.build, btn.talentId))
+        -- Plan budget: only the points you'd have at the planning level (+legacy) are spendable.
+        if TBe.totalPoints(state.build) >= TBe.budget(planLevel(), state.legacy) then
+            if HM.print then
+                HM.print(("no points left at level %d%s - raise the planning level%s"):format(
+                    planLevel(), state.legacy and " (legacy)" or "",
+                    state.legacy and "" or " or toggle the legacy talent"))
+            end
+        else
+            state.build = (TBe.add(state.build, btn.talentId))
+        end
     end
     updateButtons()
     if _G.GameTooltip:IsOwned(btn) then showTip(btn, btn.talentId) end
@@ -448,6 +473,43 @@ local function ensureFrame()
     local hint = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     hint:SetPoint("TOPRIGHT", -30, -16)
     hint:SetText("Plan only - apply the points yourself in-game")
+
+    -- Plan-for-a-future-level controls: pick the level you're planning toward (you get the
+    -- points you'd have then) and toggle the legacy talent (+5 points). Display-only.
+    local pc = _G.CreateFrame("Frame", nil, frame)
+    pc:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PAD, -34)
+    pc:SetSize(250, 22)
+    local function pcBtn(label, x, w, onclick)
+        local b = _G.CreateFrame("Button", nil, pc, "UIPanelButtonTemplate")
+        b:SetSize(w, 20); b:SetPoint("LEFT", x, 0); b:SetText(label)
+        b:SetScript("OnClick", onclick)
+        return b
+    end
+    pcBtn("Lv -", 0, 34, function()
+        state.planLevel = math.max(1, planLevel() - 1); updateButtons()
+    end)
+    pc.lvl = pc:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    pc.lvl:SetPoint("LEFT", 38, 0); pc.lvl:SetWidth(44); pc.lvl:SetJustifyH("CENTER")
+    pcBtn("Lv +", 86, 34, function()
+        local maxL = (TB() and TB().MAX_LEVEL) or 60
+        state.planLevel = math.min(maxL, planLevel() + 1); updateButtons()
+    end)
+    pc.legacy = pcBtn("Legacy: off", 126, 118, function()
+        state.legacy = not state.legacy; updateButtons()
+    end)
+    pc.legacy:SetScript("OnEnter", function(self)
+        _G.GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        _G.GameTooltip:SetText("Legacy talent", 0.2, 1, 0.6)
+        _G.GameTooltip:AddLine("Forever's legacy-talent slot grants +5 points (tree unlocks at 5 instead of 10).",
+            0.8, 0.8, 0.8, true)
+        _G.GameTooltip:Show()
+    end)
+    pc.legacy:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+    pc.refresh = function()
+        pc.lvl:SetText(("Lv %d"):format(planLevel()))
+        pc.legacy:SetText(state.legacy and "Legacy: ON" or "Legacy: off")
+    end
+    frame.planControls = pc
 
     frame.chipRow = _G.CreateFrame("Frame", nil, frame)
     frame.chipRow:SetPoint("BOTTOMLEFT", PAD, 10)

@@ -22,6 +22,9 @@ Make the UI yours, and plan talents straight from the talent frame.
 - **Load my current build** (the Current button, or `/foresight planner current`) drops your
   real allocation into the planner so you can **plan by removing and moving points around** -
   entirely on paper. Foresight never spends or unlearns a point; you apply changes yourself.
+- **Plan for a future level.** Use **Lv - / Lv +** to set the level you're planning toward
+  (defaults to 30 for the beta) and you get the points you'd have then - 20 at level 30, or
+  **25 with the legacy talent** toggled. Build a future spec before you're even there.
 
 **Also** (from a full code-verification pass): corrupt/foreign talent codes always fail safely,
 `/foresight oom` shows clean whole seconds, and a few advisory numbers show their exact value

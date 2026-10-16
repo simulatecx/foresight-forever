@@ -210,6 +210,9 @@ item needs in-game eyes (frame code the headless gate can't exercise; WoW was do
 ☑ Copy-from-inspect saves a NAMED, DELETABLE snapshot chip (node-plan table, re-validated).
 ☑ Plan-from-current (#6): `copyMyPlan` seeds the planner from your live allocation so you can
   remove/reallocate display-only (never unlearns); Reset clears copied/edited highlights.
+☑ Plan-for-a-future-level: a planning-level control (Lv -/+, default 30) + legacy-talent toggle
+  -> `TB.budget(level, legacy) = max(0, level-(legacy and 5 or 10))` (owner model: 20 @ lv30, 25
+  legacy; selftest-pinned 299/299); add-click gated to the plan budget, header flags over-budget.
 ☐ IN-GAME: button placement on the talent/inspect frame, resizable-options layout at extremes,
   the removal-overlay visual (planned < live rank) is a noted refinement, mobile 1280x720 @ 0.65.
 ☐ DEFERRED: pool the options widgets (layout() currently re-creates per call - pre-existing);

@@ -24,6 +24,10 @@ verification-pass hardening set.
 - **"Load my current build"** (`/foresight planner current`, or the Current button) seeds
   the planner from what you have now, so you can **plan by removing and reallocating points
   display-only** - nothing is ever unlearned in-game.
+- **Plan for a future level.** Set the **planning level** (Lv - / Lv + in the planner,
+  default 30 for the beta) and you get the points you'd have at that level to pretend-allocate
+  a future build - **20 points at level 30, or 25 with the legacy talent** toggled (+5).
+  Nothing is applied in-game.
 - **Reset** in the planner now also clears copied/edited highlights.
 
 **Hardening (from the full code verification):**

@@ -10,7 +10,7 @@ if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 local TB = {}
 HM.TalentBuild = TB
 
-TB.MAX_LEVEL = 60          -- classic cap; talent points = level - 9 (1 per level from 10)
+TB.MAX_LEVEL = 60          -- level cap; points = level-10 (level-5 with the legacy talent)
 TB.POINTS_PER_TIER = 5     -- points in LOWER tiers needed to unlock a tier (0-based tiers)
 
 local function gen() return HM.gen or {} end
@@ -98,8 +98,13 @@ function TB.totalPoints(build)
     return n
 end
 
--- Points available at a character level (for display; planning itself is unbounded up to max).
-function TB.budget(level) return math.max(0, (tonumber(level) or 0) - 9) end
+-- Talent points available at a level. Forever's tree unlocks at level 10 (first point at 11),
+-- or at level 5 with a LEGACY TALENT slotted (first point at 6, +5 points) - so a level-30
+-- plan has 20 points, 25 with legacy (owner-stated, forever-presumed; the beta probe confirms).
+-- 2nd arg = legacy (bool). Lets you plan a FUTURE build with the points you'd have then.
+function TB.budget(level, legacy)
+    return math.max(0, (tonumber(level) or 0) - (legacy and 5 or 10))
+end
 
 -- Why a talent is locked, purely from the build (nil = allocatable). Does NOT check maxRank.
 function TB.lockReason(build, talentId)
@@ -180,7 +185,8 @@ end
 -- reachable by bottom-up allocation, so a decoded/imported build that passes is trustworthy.
 function TB.isLegal(classToken, build)
     local g = gen()
-    if TB.totalPoints(build) > TB.budget(TB.MAX_LEVEL) then return false, "too many points" end
+    -- Absolute cap = the most anyone could have (level 60 WITH the legacy talent = 55).
+    if TB.totalPoints(build) > TB.budget(TB.MAX_LEVEL, true) then return false, "too many points" end
     local classId = TB.classIdFor(classToken)
     for tid, rank in pairs(build or {}) do
         rank = tonumber(rank) or 0
