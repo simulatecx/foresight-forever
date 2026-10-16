@@ -255,6 +255,24 @@ end
 
 -- ---- saved-build chips -----------------------------------------------------------------
 local function loadBuild(str, classToken)
+    -- A stored COPIED SNAPSHOT is a raw node plan (nodeID -> ranks) table, not a code string.
+    -- SavedVariables are user-editable, so re-validate to integers (untrusted-input law).
+    if type(str) == "table" then
+        local clean = {}
+        for k, v in pairs(str) do
+            local nid, rank = tonumber(k), tonumber(v)
+            if nid and rank and rank > 0 then clean[nid] = rank end
+        end
+        if not next(clean) then return false end
+        if HM.SynergyHighlight and HM.SynergyHighlight.setPlanPreview then
+            HM.SynergyHighlight.setPlanPreview(clean)
+        end
+        state.build = TB().fromNodePlan(clean)
+        -- A node-plan snapshot carries no class token; copied builds are same-class, so a grid
+        -- load after a reload falls back to the player's class (never buildTrees(nil)).
+        if not state.class then state.class = playerClass() end
+        return true
+    end
     -- FT1 = our classic build code
     local b, cls = TB().decode(str)
     if b then state.build = b; if cls then state.class = cls end; return true end
@@ -326,7 +344,14 @@ local function makeButtonBar()
         b:SetScript("OnClick", onClick)
         return b
     end
-    tbtn("Reset", 0, function() state.build = {}; state.name = nil; updateButtons() end)
+    tbtn("Reset", 0, function()
+        state.build = {}; state.name = nil
+        -- Also drop any copied/edited overlay highlights (the inspect ghost, an imported code).
+        if HM.SynergyHighlight and HM.SynergyHighlight.setPlanPreview then
+            HM.SynergyHighlight.setPlanPreview(nil)
+        end
+        updateButtons()
+    end)
     tbtn("Export", 76, function()
         local s = TB().encode(state.class, state.build)
         if s and HM.showExport then HM.showExport(s) end
@@ -344,6 +369,24 @@ local function makeButtonBar()
         if name == "" then name = (state.class or "Unnamed") .. " build" end
         local s = TB().encode(state.class, state.build)
         if s then planDb().builds[name] = s; state.name = name; box:SetText(""); refreshChips() end
+    end)
+    -- Copy an inspected same-class player's tree -> a saved, deletable snapshot you can follow.
+    tbtn("Copy", 440, function()
+        local SH = HM.SynergyHighlight
+        local plan, err, who = SH and SH.copyInspectedPlan and SH.copyInspectedPlan()
+        if plan then
+            TT.importPlan(plan, "Copy: " .. (who or "inspected"))
+        elseif HM.print then
+            HM.print("copy failed: " .. tostring(err or "inspect a same-class player with talents open"))
+        end
+    end)
+    -- Load YOUR current allocation so you can plan by removing / reallocating (display-only).
+    tbtn("Current", 518, function()
+        local ok, err = TT.loadCurrent()
+        if HM.print then
+            HM.print(ok and "loaded your current build - remove or move points to plan (nothing is unlearned)"
+                or tostring(err or "couldn't read your current build - open your talents"))
+        end
     end)
 end
 
@@ -427,6 +470,40 @@ local function ensureFrame()
 end
 
 -- ---- public ----------------------------------------------------------------------------
+-- Import a NODE plan (copy-from-inspect, or a public code we hand out) as a SAVED, deletable
+-- snapshot: store it, set the live overlay, reflect the classic subset in the grid, and open
+-- the planner. The snapshot shows as a chip (left-click load, right-click delete).
+function TT.importPlan(plan, label)
+    if type(plan) ~= "table" or not next(plan) then return false end
+    ensureFrame()
+    if not state.class then state.class = playerClass() end
+    local name = tostring(label or "Copied build"):sub(1, 32)
+    planDb().builds[name] = plan        -- stored as a table; loadBuild re-validates it
+    loadBuild(plan)
+    state.name = name
+    buildTrees(state.class)
+    refreshChips()
+    updateButtons()
+    frame:Show()
+    return true
+end
+
+-- Seed the planner from the player's CURRENT allocation so they can plan by removing /
+-- reallocating from where they are (display-only - never unlearns). Returns ok, err.
+function TT.loadCurrent()
+    local SH = HM.SynergyHighlight
+    local plan, err = SH and SH.copyMyPlan and SH.copyMyPlan()
+    if not plan then return false, err end
+    ensureFrame()
+    if not state.class then state.class = playerClass() end
+    loadBuild(plan)
+    state.name = "My current build"
+    buildTrees(state.class)
+    updateButtons()
+    frame:Show()
+    return true
+end
+
 function TT.show(classToken)
     ensureFrame()
     local cls = classToken or state.class or playerClass()

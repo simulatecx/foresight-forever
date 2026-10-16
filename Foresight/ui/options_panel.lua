@@ -327,14 +327,8 @@ local function createPanel()
         panel:StopMovingOrSizing()
         optState().size = { w = math.floor(panel:GetWidth() + 0.5),
                             h = math.floor(panel:GetHeight() + 0.5) }
-        layout()
-    end)
-    local sizePending
-    panel:SetScript("OnSizeChanged", function()
-        if sizePending or not panel:IsShown() then return end
-        sizePending = true
-        local function run() sizePending = nil; layout() end
-        if _G.C_Timer and _G.C_Timer.After then _G.C_Timer.After(0.05, run) else run() end
+        layout() -- reflow once at release (the bg/border track the size live via SetAllPoints);
+                 -- we avoid a per-frame relayout during the drag since layout() isn't pooled yet
     end)
 
     panel:Hide()

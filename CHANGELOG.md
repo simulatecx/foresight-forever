@@ -1,22 +1,39 @@
 # Changelog
 
-## 0.49.1 - 2026-10-15
+## 0.49.1 (beta) - 2026-10-15
 
-Hardening pass from a full product-wide code verification - no new features, all safety/
-correctness fixes.
+The beta build: UI flexibility, a one-click planner from the talent frame, and a
+verification-pass hardening set.
 
-- **Foreign/corrupt talent share-codes always fail safely now.** A hand-crafted FT2 code
-  whose checksum happened to validate could previously trigger a Lua error while decoding;
-  it now cleanly reports an invalid code (the untrusted-input rule: never execute or trip on
-  someone else's data).
-- **`/foresight oom` shows whole seconds again** - it was formatting a fractional time
-  oddly on the live client.
-- **Honest numbers where data could be fractional.** A few advisory lines (weapon-imbue proc
-  chance, Windfury bonus Attack Power, the threat-standing %) now print the exact value
-  instead of silently rounding down if future data ever carries a fraction.
-- Internal: the talent-planner Save no longer risks tripping on a missing class.
+**Move and size everything.**
+- The **Foresight Matrix** can now be dragged by its title bar (it used to swallow the
+  grab); click still switches the view. All panels stay clamped on-screen.
+- The **stats table** has its own collapse/expand chevron - shrink it to the title bar
+  without hiding the Matrix.
+- **Options are reorganized**: a **Character** tab (your identity/armory settings) leads,
+  then General, Tooltips, Synergy Matrix, and a **Layout** tab (scale, opacity, motion,
+  plus Reset-positions / Reset-Matrix-width). The options window is now **resizable** and
+  remembers its size - room for heavy UI-overhaul setups.
 
-*Features:* UI-talent-planner, SIM-engine (hardening only)
+**Plan straight from the talent frame.**
+- A **Foresight button on the talent UI**: your own tree opens the planner; inspecting a
+  player turns it into **Copy to Foresight**, saving their build as a snapshot. Right-click
+  toggles **plan mode** (the ghost-highlight editor on the live tree).
+- **Copy an inspected player** now saves a **named, deletable snapshot** (a chip you can
+  reload or remove) instead of a one-off overlay.
+- **"Load my current build"** (`/foresight planner current`, or the Current button) seeds
+  the planner from what you have now, so you can **plan by removing and reallocating points
+  display-only** - nothing is ever unlearned in-game.
+- **Reset** in the planner now also clears copied/edited highlights.
+
+**Hardening (from the full code verification):**
+- Foreign/corrupt talent share-codes always fail safely now (a crafted FT2 code could
+  previously error on decode; it reports an invalid code instead).
+- `/foresight oom` shows whole seconds again.
+- Honest numbers where data could be fractional (imbue proc chance, Windfury bonus Attack
+  Power, threat-standing %) - exact value instead of a silent round-down.
+
+*Features:* UI-talent-planner, UI-matrix-panel, UI-stats-panel, SIM-engine (hardening)
 
 ## 0.49.0 - 2026-10-15
 

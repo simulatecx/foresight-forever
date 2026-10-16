@@ -49,6 +49,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S35 Talent planner: interactive click-to-allocate tree (usable pre-10), save/load/import/export, preview glow | 3 | ◐ |
 | S36 HeroLog-style progression: activity feed + team view + gear-level/raid-readiness (SCOPING only) | - | ☐ |
 | S37 Gear -> your spells: per-ability item-impact under the verdict (ITEM-spellimpact) | 3 | ☑ |
+| S38 UI flexibility + planner access: Matrix drag, stats collapse, resizable grouped options, talent-frame button, copy-as-snapshot, plan-from-current | 3 | ◐ |
 
 ## Active / next
 
@@ -186,6 +187,33 @@ TRACKED REFINEMENTS (deferred - want in-game eyes, not an un-eyeballed numbers-s
   instead of delegating to `ui/display.lua`; colors match by hand today (hence 3 near-identical
   golds/greys), so it's drift-risk not a bug. A Display-adoption sweep would make the grammar
   single-source.
+
+### S38 - UI flexibility + planner access ◐  (owner asks, 2026-10-15; lands in the 0.49.1 beta)
+*Fit & Overlap - Category UI. Verdict: ENHANCE the existing panels + planner; no new systems.
+Touches: `ui/matrix_panel.lua`, `ui/stats_panel.lua`, `ui/options_panel.lua`, `core/settings.lua`,
+`ui/synergy_highlight.lua`, `ui/talent_tree.lua`, `core/init.lua`. Avoid duplicating: the plan
+overlay (`setPlanPreview`/`mergeGridPlan`), the save/delete chips, `copyInspectedPlan`. Mobile:
+all panels clamp on-screen + resizable/scalable (helps the 1280x720 @ 0.65 binding); in-game
+verify pending. Trust: owner-toggleable, no auto-apply, read-only C_Traits reads. Data: copied
+snapshots stored as re-validated node-plan tables in SavedVariables (untrusted-input law). Abuse:
+display-only, not externally reachable.*
+
+Built + lint-green (compliance/5.1-dialect/taint-law, 298/298), deployed to the beta - EVERY
+item needs in-game eyes (frame code the headless gate can't exercise; WoW was down):
+☑ Matrix: title-bar drag handle (click still cycles the view); on-screen clamp.
+☑ Stats table: independent collapse/expand chevron (separate from the FS master); clamp.
+☑ Options: Character-first grouping (+ General/Tooltips/Synergy Matrix/Layout), Character identity
+  readout, Layout reset-positions / reset-Matrix-width actions, resizable + size-persistent +
+  clamped window reflowing to live width.
+☑ Talent-frame button (#5): own tree -> open planner; inspecting -> Copy to Foresight (saved
+  snapshot); right-click -> plan mode. Anchored UIParent child, never parented (taint law).
+☑ Copy-from-inspect saves a NAMED, DELETABLE snapshot chip (node-plan table, re-validated).
+☑ Plan-from-current (#6): `copyMyPlan` seeds the planner from your live allocation so you can
+  remove/reallocate display-only (never unlearns); Reset clears copied/edited highlights.
+☐ IN-GAME: button placement on the talent/inspect frame, resizable-options layout at extremes,
+  the removal-overlay visual (planned < live rank) is a noted refinement, mobile 1280x720 @ 0.65.
+☐ DEFERRED: pool the options widgets (layout() currently re-creates per call - pre-existing);
+  FT2 EXPORT of a copied snapshot (needs live node structs).
 
 ### S36 - HeroLog-style progression (SCOPING ONLY, not built) ☐  (ref: CurseForge herolog-collector)
 *Fit & Overlap - Category CROWD -> QA. Verdict: ENHANCE the crowd/companion spine, do NOT fork

@@ -929,9 +929,17 @@ local function onSlash(input)
         if not HM.TalentTree then
             printMsg("talent planner is in-game only")
         elseif arg == "copy" then
-            local p, err = SH and SH.copyInspectedPlan and SH.copyInspectedPlan()
-            printMsg(p and "copied the inspected build - open your talents to follow the overlay path"
-                or ("copy failed: " .. tostring(err or "inspect a same-class player first")))
+            local p, err, who = SH and SH.copyInspectedPlan and SH.copyInspectedPlan()
+            if p and HM.TalentTree.importPlan then
+                HM.TalentTree.importPlan(p, "Copy: " .. (who or "inspected"))
+                printMsg("copied the inspected build - saved as a snapshot; open your talents to follow it")
+            else
+                printMsg("copy failed: " .. tostring(err or "inspect a same-class player first"))
+            end
+        elseif arg == "current" then
+            local ok, err = HM.TalentTree.loadCurrent and HM.TalentTree.loadCurrent()
+            printMsg(ok and "loaded your current build into the planner - remove/reallocate to plan (nothing is unlearned)"
+                or tostring(err or "couldn't read your current build - open your talents"))
         elseif arg == "edit" then
             local on = SH and SH.togglePlanEditMode and SH.togglePlanEditMode()
             printMsg(on and "plan edit mode ON - open your talents and click nodes (left + / right -)"

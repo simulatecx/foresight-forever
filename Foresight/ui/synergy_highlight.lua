@@ -472,6 +472,44 @@ function Highlight.copyInspectedPlan()
     end
     if not next(plan) then return nil, "that build has no points" end
     Highlight.setPlanPreview(plan)
+    local who = unit and _G.UnitName and _G.UnitName(unit) or nil
+    return plan, nil, who
+end
+
+-- Copy the PLAYER'S OWN current allocation -> a node plan, so you can plan by REMOVING and
+-- reallocating from where you are now (display-only; we never unlearn a point). Reads the
+-- active config live, read-only, and degrades with a message if the live API shape is absent.
+function Highlight.copyMyPlan()
+    local configID, treeID
+    local tf = talentFrame()
+    if tf and tf.GetConfigID and not (tf.IsInspecting and tf:IsInspecting()) then
+        configID = tf:GetConfigID()
+        treeID = tf.GetTalentTreeID and tf:GetTalentTreeID()
+    end
+    if not configID and _G.C_ClassTalents and _G.C_ClassTalents.GetActiveConfigID then
+        local okc, id = pcall(_G.C_ClassTalents.GetActiveConfigID); if okc then configID = id end
+    end
+    if configID and not treeID and _G.C_Traits and _G.C_Traits.GetConfigInfo then
+        local oki, info = pcall(_G.C_Traits.GetConfigInfo, configID)
+        if oki and type(info) == "table" and type(info.treeIDs) == "table" then
+            treeID = info.treeIDs[1]
+        end
+    end
+    if not (configID and treeID and _G.C_Traits and _G.C_Traits.GetTreeNodes) then
+        return nil, "open your talents so Foresight can read your current build"
+    end
+    local plan = {}
+    local okn, nodes = pcall(_G.C_Traits.GetTreeNodes, treeID)
+    if okn and type(nodes) == "table" then
+        for _, nodeID in ipairs(nodes) do
+            local oki, info = pcall(_G.C_Traits.GetNodeInfo, configID, nodeID)
+            if oki and type(info) == "table" and (info.ranksPurchased or 0) > 0 then
+                plan[nodeID] = info.ranksPurchased
+            end
+        end
+    end
+    if not next(plan) then return nil, "no points spent yet - nothing to load" end
+    Highlight.setPlanPreview(plan)
     return plan
 end
 
@@ -602,15 +640,60 @@ local function hookTalentUI()
             :format(mode:upper()))
         hint:Show()
     end
+    -- #5: a Foresight button ON the talent UI (and the inspect view). It's a UIParent child
+    -- that only ANCHORS to the talent frame (never parented/written - the taint law). Own tree
+    -- -> opens the planner (plan / paste a code / plan-mode). Inspecting a player -> copies their
+    -- tree into the planner as a saved, deletable snapshot. Right-click -> toggle plan mode.
+    local planBtn = _G.CreateFrame("Button", nil, _G.UIParent, "UIPanelButtonTemplate")
+    planBtn:SetFrameStrata("HIGH")
+    planBtn:SetSize(130, 22)
+    planBtn:SetPoint("TOPRIGHT", psf, "TOPRIGHT", -56, -4)
+    planBtn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    planBtn:Hide()
+    local function refreshPlanBtn()
+        local inspecting = psf.IsInspecting and psf:IsInspecting()
+        planBtn:SetText(inspecting and "Copy to Foresight" or "Foresight Planner")
+        planBtn:Show()
+    end
+    planBtn:SetScript("OnClick", function(_, mouse)
+        if mouse == "RightButton" then
+            local on = Highlight.togglePlanEditMode()
+            if HM.print then HM.print(on and "plan mode ON - click nodes to plan (left + / right -)"
+                or "plan mode off") end
+            return
+        end
+        if psf.IsInspecting and psf:IsInspecting() then
+            local plan, err, who = Highlight.copyInspectedPlan()
+            if plan and HM.TalentTree and HM.TalentTree.importPlan then
+                HM.TalentTree.importPlan(plan, "Copy: " .. (who or "inspected"))
+            elseif HM.print then
+                HM.print("copy failed: " .. tostring(err or "inspect a same-class player first"))
+            end
+        elseif HM.TalentTree and HM.TalentTree.toggle then
+            HM.TalentTree.toggle()
+        end
+    end)
+    planBtn:SetScript("OnEnter", function(self)
+        _G.GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+        _G.GameTooltip:SetText("Foresight", 0.2, 1, 0.6)
+        _G.GameTooltip:AddLine("Plan a build, paste a code, or copy an inspected player.",
+            0.8, 0.8, 0.8, true)
+        _G.GameTooltip:AddLine("Right-click: toggle plan mode (ghost highlights).", 0.6, 0.6, 0.6)
+        _G.GameTooltip:Show()
+    end)
+    planBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+
     psf:HookScript("OnShow", function()
         if _G.C_Timer and _G.C_Timer.After then
             _G.C_Timer.After(0.3, Highlight.restoreSaved)
             _G.C_Timer.After(0.35, Highlight.applyPlanPreview)  -- S35: auto-show the plan path
         end
         refreshHint()
+        refreshPlanBtn()
     end)
     psf:HookScript("OnHide", function()
         if hint then hint:Hide() end
+        planBtn:Hide()
         pcall(Highlight.clear)
         clearPlanOverlays()
     end)
