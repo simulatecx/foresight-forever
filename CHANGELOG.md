@@ -29,6 +29,9 @@ verification-pass hardening set.
   a future build - **20 points at level 30, or 25 with the legacy talent** toggled (+5).
   Nothing is applied in-game.
 - **Reset** in the planner now also clears copied/edited highlights.
+- **Fixed: the planner showed no talents.** It was keying off a talent field the data leaves
+  empty; it now reads the class from the talent tab, so the three trees populate for your
+  class. (Also fixes build import/share, which hit the same check.)
 
 **Hardening (from the full code verification):**
 - Foreign/corrupt talent share-codes always fail safely now (a crafted FT2 code could

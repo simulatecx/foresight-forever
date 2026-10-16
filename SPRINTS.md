@@ -212,7 +212,10 @@ item needs in-game eyes (frame code the headless gate can't exercise; WoW was do
   remove/reallocate display-only (never unlearns); Reset clears copied/edited highlights.
 ☑ Plan-for-a-future-level: a planning-level control (Lv -/+, default 30) + legacy-talent toggle
   -> `TB.budget(level, legacy) = max(0, level-(legacy and 5 or 10))` (owner model: 20 @ lv30, 25
-  legacy; selftest-pinned 299/299); add-click gated to the plan budget, header flags over-budget.
+  legacy; selftest-pinned); add-click gated to the plan budget, header flags over-budget.
+☑ FIX (2026-10-16, owner "planner isnt showing talents"): talents carry generated classId=0;
+  class now derived from the tab's classMask via `TB.talentClassId` (tabsForClass + isLegal) so
+  the trees populate + imports validate. Real-data selftest added (fixture had hidden it); 300/300.
 ☐ IN-GAME: button placement on the talent/inspect frame, resizable-options layout at extremes,
   the removal-overlay visual (planned < live rank) is a noted refinement, mobile 1280x720 @ 0.65.
 ☐ DEFERRED: pool the options widgets (layout() currently re-creates per call - pre-existing);
