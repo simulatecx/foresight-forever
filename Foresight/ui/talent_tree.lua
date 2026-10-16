@@ -29,6 +29,20 @@ local chips = {}        -- saved-build chip buttons
 -- ---- data + persistence ----------------------------------------------------------------
 local function TB() return HM.TalentBuild end
 
+-- The planner's talent definitions: Forever trait nodes (keyed by nodeID) when present, else
+-- the classic table. `forever()` = those keys are trait nodeIDs (so impact folds via the node).
+local function talentDefs()
+    local tb = TB()
+    return (tb and tb.talents and tb.talents()) or (HM.gen and HM.gen.talents) or {}
+end
+local function forever() return HM.gen and HM.gen.foreverTalents ~= nil end
+-- Fold one planned talent's impact onto a loadout: Forever talents ARE trait nodes (ops fold
+-- via withTraitNode(nodeID)); classic talents fold via withTalent(talentId). nil-safe caller.
+local function foldTalent(lo, id, rank)
+    if forever() and lo.withTraitNode then return lo:withTraitNode(id, rank) end
+    return lo:withTalent(id, rank)
+end
+
 local function planDb()
     local db = HM.charDb and HM.charDb()
     if not db then return { builds = {} } end
@@ -82,7 +96,7 @@ local function impactLine(talentId, rank)
     local base = HM.Loadout.fromSnapshot(snap)
     if not base or not base.withTalent then return nil end
     local okd, before = pcall(HM.Impact.evaluate, base)
-    local after = base:withTalent(talentId, rank)
+    local after = foldTalent(base, talentId, rank)
     local oka, aft = pcall(HM.Impact.evaluate, after)
     if not (okd and oka and type(before) == "table" and type(aft) == "table") then return nil end
     -- surface the single biggest moved lens
@@ -112,7 +126,7 @@ local function buildSummaryText()
     local base = HM.Loadout.fromSnapshot(snap)
     if not (base and base.withTalent) then return nil end
     local planned = base
-    for tid, rank in pairs(state.build) do planned = planned:withTalent(tid, rank) end
+    for tid, rank in pairs(state.build) do planned = foldTalent(planned, tid, rank) end
     local okb, before = pcall(HM.Impact.evaluate, base)
     local okp, after = pcall(HM.Impact.evaluate, planned)
     if not (okb and okp and type(before) == "table" and type(after) == "table") then return nil end
@@ -137,7 +151,7 @@ end
 -- ---- tooltip ---------------------------------------------------------------------------
 local function showTip(button, talentId)
     local g = HM.gen or {}
-    local t = g.talents and g.talents[talentId]
+    local t = talentDefs()[talentId]
     if not t then return end
     local cur = tonumber(state.build[talentId]) or 0
     local gt = _G.GameTooltip
@@ -174,7 +188,7 @@ end
 
 local function paintButton(btn, talentId)
     local g = HM.gen or {}
-    local t = g.talents and g.talents[talentId]
+    local t = talentDefs()[talentId]
     if not t then return end
     local cur = tonumber(state.build[talentId]) or 0
     local maxed = cur >= (t.maxRank or 1)
@@ -221,8 +235,7 @@ local function onClick(btn, mouse)
 end
 
 local function makeButton(parent, talentId)
-    local g = HM.gen or {}
-    local t = g.talents[talentId]
+    local t = talentDefs()[talentId]
     local btn = _G.CreateFrame("Button", nil, parent)
     btn.talentId = talentId
     btn:SetSize(BTN, BTN)
@@ -265,7 +278,7 @@ local function buildTrees(classToken)
         local tree = { tabId = tabId, box = box, header = header, name = tab and tab.name or "?", buttons = {} }
         local maxTier = 0
         for _, tid in ipairs(TBe.talentsInTab(tabId)) do
-            local t = g.talents[tid]
+            local t = talentDefs()[tid]
             local btn = makeButton(box, tid)
             btn:SetPoint("TOPLEFT", box, "TOPLEFT",
                 12 + (t.column or 0) * (BTN + COL_GAP),

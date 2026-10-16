@@ -42,11 +42,14 @@ TABLES = [
     "SpellEquippedItems", # weapon/armor requirement (discriminates conditional auras, e.g. 290)
     "SpellItemEnchantment", # weapon imbues/temp enchants (Rockbiter/Flametongue chain)
     # Retail trait system = the LIVE talent system on Forever (classic globals are gone).
-    "TraitNode",               # node id, tree id, position, type
+    "TraitNode",               # node id, tree id, position (PosX/PosY = the classic grid), type
     "TraitNodeEntry",          # entry -> definition + max ranks
     "TraitNodeXTraitNodeEntry",# node <-> entry link (+ index)
     "TraitDefinition",         # definition -> SpellID + override name (the spell bridge)
     "SkillLineXTraitTree",     # tree -> class skill line
+    "TraitEdge",               # prerequisite arrows: Left(req) -> Right(dependent) node
+    "TraitNodeGroup",          # node groupings (gate conditions live on the group)
+    "TraitNodeGroupXTraitNode",# group <-> node membership
 ]
 
 BASE_URL = "https://wago.tools/db2/{table}/csv?build={build}"

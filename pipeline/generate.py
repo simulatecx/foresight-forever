@@ -696,8 +696,11 @@ def main() -> int:
     for t_id, t in talents_out.items():
         for s in t["spellRanks"]:
             talent_by_rank_spell.setdefault(s, t_id)
+    node_pos = {}  # nodeID -> {tree, posX, posY}: the classic-grid layout (UI-talent-planner)
     for r in read_opt("TraitNode"):
         nid = to_int(r["ID"])
+        node_pos[nid] = {"tree": to_int(r["TraitTreeID"]),
+                         "posX": to_int(r["PosX"]), "posY": to_int(r["PosY"])}
         entries = []
         for _idx, eid in sorted(node_entry_links.get(nid, [])):
             entry = trait_entries.get(eid)
@@ -741,6 +744,93 @@ def main() -> int:
         "bySpell": trait_by_spell,
         "trees": {t: {"skillLine": s} for t, s in tree_skill.items()},
     }
+
+    # ---- Forever TALENT GRID (UI-talent-planner) -------------------------------
+    # The trait nodes ARE Forever's talents, and their TraitNode positions form the
+    # classic layout: PosY = 7 tier rows (600 steps), PosX = 3 spec clusters of 4 columns.
+    # We map each node into that grid (keyed by nodeID), reuse the classic tab names/order
+    # per class, and read prereq arrows from TraitEdge - so the planner renders Forever's
+    # REAL talents (not the dead classic Talent.csv). Class comes from the tree's skill line
+    # (SkillRaceClassInfo.ClassMask). Per-rank values keep the base+rank-rule path (ranks 2+
+    # carry no DB2 effect data - the live tooltip scan verifies at launch). classId here is
+    # the real ChrClasses id (the classic Talent.csv ships classId=0).
+    def classid_from_mask(cm):
+        for cid in range(1, 21):
+            if (1 << (cid - 1)) == cm:
+                return cid
+        return 0
+    skill_classmask = defaultdict(set)  # a skill line can have several rows; keep each mask
+    for r in read_opt("SkillRaceClassInfo"):
+        sl = to_int(r.get("SkillID"))
+        cm = to_int(r.get("ClassMask"))
+        if sl and cm:
+            skill_classmask[sl].add(cm)
+    tree_class = {}
+    for tree, sl in tree_skill.items():
+        cid = 0  # first mask that is a single known class (never OR them - that breaks Hunter)
+        for cm in skill_classmask.get(to_int(sl), ()):
+            c = classid_from_mask(cm)
+            if c:
+                cid = c
+                break
+        if cid:
+            tree_class[tree] = cid
+    class_tabs = defaultdict(list)  # classId -> [classic tabId...] sorted by display order
+    for tab_id, tab in tabs_out.items():
+        cid = classid_from_mask(tab.get("classMask", 0))
+        if cid:
+            class_tabs[cid].append(tab_id)
+    for cid in class_tabs:
+        class_tabs[cid].sort(key=lambda t: (tabs_out[t].get("order", 0), t))
+    prereq_of = defaultdict(list)   # right(dependent) node -> [left(required) nodes]
+    for r in read_opt("TraitEdge"):
+        L, R = to_int(r.get("LeftTraitNodeID")), to_int(r.get("RightTraitNodeID"))
+        if L and R:
+            prereq_of[R].append(L)
+    nodes_by_tree = defaultdict(list)
+    for nid in trait_nodes:
+        nodes_by_tree[node_pos[nid]["tree"]].append(nid)
+    forever_talents = {}
+    for tree, nids in nodes_by_tree.items():
+        cid = tree_class.get(tree)
+        if not cid or len(class_tabs.get(cid, [])) < 3:
+            continue
+        xs = sorted({node_pos[n]["posX"] for n in nids})
+        ys = sorted({node_pos[n]["posY"] for n in nids})
+        clusters = []  # PosX clustered into spec columns (gap > 1000 = new cluster)
+        for x in xs:
+            if not clusters or x - clusters[-1][-1] > 1000:
+                clusters.append([x])
+            else:
+                clusters[-1].append(x)
+        # Keep the 3 LARGEST clusters as the specs (a stray off-grid node can form a 4th,
+        # single-value cluster), restored to left->right order. Off-spec nodes then fall out
+        # via the tier/column bound below. (Fixes Hunter, which had such a stray node.)
+        clusters = sorted(sorted(clusters, key=len, reverse=True)[:3], key=lambda c: c[0])
+        if len(clusters) != 3:
+            continue
+        y0, tabs = ys[0], class_tabs[cid]
+        for nid in nids:
+            node = trait_nodes.get(nid)
+            x, y = node_pos[nid]["posX"], node_pos[nid]["posY"]
+            spec = next((i for i, c in enumerate(clusters) if c[0] <= x <= c[-1]), None)
+            if spec is None:
+                continue
+            tier, column = (y - y0) // 600, (x - clusters[spec][0]) // 600
+            if not (0 <= tier <= 9 and 0 <= column <= 3):
+                continue  # off-grid node (e.g. a hidden/legacy node far outside the grid)
+            e = {"name": node["name"], "tab": tabs[spec], "tier": tier, "column": column,
+                 "classId": cid, "maxRank": node["maxRank"], "spellRanks": [node["spellID"]],
+                 "ops": node["ops"]}
+            if node.get("entries"):
+                e["entries"] = node["entries"]
+            forever_talents[nid] = e
+    for R, lefts in prereq_of.items():
+        if R in forever_talents:
+            prs = [{"talent": L, "rank": forever_talents[L]["maxRank"]}
+                   for L in lefts if L in forever_talents]
+            if prs:
+                forever_talents[R]["prereqs"] = prs
 
     # ---- Racials (permanent race effects; NOT in the trait trees) --------------
     # Chain: racial SkillLine -> SkillLineAbility (RaceMasks -> races, ClassMask ->
@@ -1056,6 +1146,7 @@ def main() -> int:
                 "impactsNeedingCuration": needs_curation,
                 "traitNodes": len(trait_nodes),
                 "traitNodesNeedingCuration": trait_curation,
+                "foreverTalents": len(forever_talents),
                 "racialRaces": len(racials_out),
                 "racialSpells": len(racials_by_spell),
                 "racialSpellsNeedingCuration": len(racial_curation),
@@ -1072,6 +1163,7 @@ def main() -> int:
         LuaWriter.file("talent_impacts", {"talentImpacts": impacts_out}, out_dir, args.build),
         LuaWriter.file("spells", {"spells": spells_out}, out_dir, args.build),
         LuaWriter.file("traits", {"traits": traits_out}, out_dir, args.build),
+        LuaWriter.file("forever_talents", {"foreverTalents": forever_talents}, out_dir, args.build),
         LuaWriter.file("race_racials", {"racials": racials_out,
                                         "racialsBySpell": racials_by_spell,
                                         "raceTokens": race_tokens}, out_dir, args.build),

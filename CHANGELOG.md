@@ -29,9 +29,13 @@ verification-pass hardening set.
   a future build - **20 points at level 30, or 25 with the legacy talent** toggled (+5).
   Nothing is applied in-game.
 - **Reset** in the planner now also clears copied/edited highlights.
-- **Fixed: the planner showed no talents.** It was keying off a talent field the data leaves
-  empty; it now reads the class from the talent tab, so the three trees populate for your
-  class. (Also fixes build import/share, which hit the same check.)
+- **The planner now shows Forever's REAL talents.** It had been drawing the dead classic
+  talent table (vanilla-style - the wrong talents for Forever). It now renders Forever's
+  actual talent trees: the live Trait data mapped into the familiar **7-tier × 4-column ×
+  3-spec** grid, with real prerequisite arrows, for **all nine classes** (466 talents). The
+  build rules, share codes, the live tree overlay, and the impact readout all work on these.
+  (Per-rank values still use base + a tagged scaling presumption until live tooltips verify
+  them at launch - same gap every tool has, since the client ships only rank-1 effect data.)
 
 **Hardening (from the full code verification):**
 - Foreign/corrupt talent share-codes always fail safely now (a crafted FT2 code could

@@ -2629,21 +2629,28 @@ function HM.runSelftest(out)
             and TB.budget(9, false) == 0 and TB.budget(5, true) == 0
             and TB.budget(10, false) == 0 and TB.budget(11, false) == 1
     end)())
-    check("planner renders from the REAL shipped data (class -> tabs -> talents, not a fixture)", (function()
+    check("planner renders FOREVER talents (trait nodes mapped to the grid, all 9 classes)", (function()
         local TB = HM.TalentBuild
         if not TB then return false, "no TalentBuild" end
-        -- The tier/prereq test below swaps in a fixture; THIS runs against the actual
-        -- generated gen.talents/classes/talentTabs - the path buildTrees() walks in-game.
-        -- A blank planner = this returning false (the field names/ids disagree with reality).
+        local g = HM.gen or {}
+        -- The planner must draw Forever's REAL talents (trait nodes mapped into the classic
+        -- grid), NOT the dead classic Talent.csv. This runs against the actual shipped data.
+        if type(g.foreverTalents) ~= "table" or not next(g.foreverTalents) then
+            return false, "no foreverTalents generated"
+        end
+        if TB.talents() ~= g.foreverTalents then return false, "planner not using foreverTalents" end
+        local nid = next(g.foreverTalents)  -- a planner talent key must be a real trait nodeID
+        if not (g.traits and g.traits.nodes and g.traits.nodes[nid]) then
+            return false, "forever talent key is not a trait node id"
+        end
+        local n = 0  -- every class must resolve class -> 3 tabs -> talents (the buildTrees path)
         for _, tok in ipairs({ "MAGE", "WARRIOR", "PRIEST", "SHAMAN", "HUNTER", "ROGUE",
                                "WARLOCK", "PALADIN", "DRUID" }) do
             local cid = TB.classIdFor(tok)
-            if cid then
-                local tabs = TB.tabsForClass(cid)
-                if #tabs >= 1 and #TB.talentsInTab(tabs[1]) > 0 then return true end
-            end
+            local tabs = cid and TB.tabsForClass(cid) or {}
+            if #tabs >= 3 and #TB.talentsInTab(tabs[1]) > 0 then n = n + 1 end
         end
-        return false, "no class resolved to a tab with talents"
+        return n == 9, ("only %d/9 classes resolved to talents"):format(n)
     end)())
     -- S35 talent-build engine: the PURE rules (budget/tier/prereq) + build-string codec,
     -- over a fixture tree (swap HM.gen, restore after). The UI (ui/talent_tree.lua) is

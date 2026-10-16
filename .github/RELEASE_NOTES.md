@@ -12,6 +12,11 @@ Make the UI yours, and plan talents straight from the talent frame.
   and one-click Reset-positions / Reset-Matrix-width). The options window is now **resizable**
   and remembers its size.
 
+**The planner shows Forever's real talents**
+It now draws Forever's actual talent trees (pulled from the game's own data) - the right
+talents, trees, and prerequisite arrows for all nine classes - instead of the old vanilla
+table. Values per rank are estimated until the game is live and the real tooltips confirm them.
+
 **Plan from the talent frame**
 - A **Foresight button right on the talent UI**. Your own tree: it opens the planner. While
   **inspecting** another player: it becomes **Copy to Foresight** and saves their build as a

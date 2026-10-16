@@ -15,6 +15,13 @@ TB.POINTS_PER_TIER = 5     -- points in LOWER tiers needed to unlock a tier (0-b
 
 local function gen() return HM.gen or {} end
 
+-- The planner's talent DEFINITIONS: Forever's REAL talents (trait nodes mapped into the classic
+-- 3-tab x 7-tier x 4-column grid, keyed by nodeID) when present, else the legacy classic
+-- Talent.csv. The grid, the tier/prereq rules, and the FT1 codec all read THIS. The impact
+-- engine + rank-rule tables keep the classic gen.talents separately (keyed by classic id).
+function TB.talents() local g = gen(); return g.foreverTalents or g.talents or {} end
+local function usingForever() return gen().foreverTalents ~= nil end
+
 -- classToken ("SHAMAN") -> classId (the ChrClasses id), from the generated class roster.
 function TB.classIdFor(token)
     token = tostring(token or ""):upper()
@@ -78,13 +85,13 @@ end
 -- Talents in a tab, canonical order by (tier, column) - used for layout AND the build-string
 -- slot order, so encode/decode agree on both ends (deterministic from generated data).
 function TB.talentsInTab(tabId)
-    local g = gen()
+    local tals = TB.talents()
     local list = {}
-    for tid, t in pairs(g.talents or {}) do
+    for tid, t in pairs(tals) do
         if type(t) == "table" and t.tab == tabId then list[#list + 1] = tid end
     end
     table.sort(list, function(a, b)
-        local ta, tb = g.talents[a], g.talents[b]
+        local ta, tb = tals[a], tals[b]
         if (ta.tier or 0) ~= (tb.tier or 0) then return (ta.tier or 0) < (tb.tier or 0) end
         if (ta.column or 0) ~= (tb.column or 0) then return (ta.column or 0) < (tb.column or 0) end
         return a < b
@@ -93,9 +100,9 @@ function TB.talentsInTab(tabId)
 end
 
 function TB.pointsInTab(build, tabId)
-    local g, n = gen(), 0
+    local tals, n = TB.talents(), 0
     for tid, rank in pairs(build or {}) do
-        local t = g.talents and g.talents[tid]
+        local t = tals[tid]
         if t and t.tab == tabId then n = n + (tonumber(rank) or 0) end
     end
     return n
@@ -103,9 +110,9 @@ end
 
 -- Points in tiers STRICTLY BELOW `tier` within a tab (the classic tier-unlock basis).
 function TB.pointsBelowTier(build, tabId, tier)
-    local g, n = gen(), 0
+    local tals, n = TB.talents(), 0
     for tid, rank in pairs(build or {}) do
-        local t = g.talents and g.talents[tid]
+        local t = tals[tid]
         if t and t.tab == tabId and (t.tier or 0) < tier then n = n + (tonumber(rank) or 0) end
     end
     return n
@@ -127,7 +134,7 @@ end
 
 -- Why a talent is locked, purely from the build (nil = allocatable). Does NOT check maxRank.
 function TB.lockReason(build, talentId)
-    local t = gen().talents and gen().talents[talentId]
+    local t = TB.talents()[talentId]
     if not t then return "unknown talent" end
     local need = TB.POINTS_PER_TIER * (t.tier or 0)
     if TB.pointsBelowTier(build, t.tab, t.tier or 0) < need then
@@ -135,7 +142,7 @@ function TB.lockReason(build, talentId)
     end
     for _, pr in ipairs(t.prereqs or {}) do
         if (tonumber(build[pr.talent]) or 0) < (pr.rank or 1) then
-            local pt = gen().talents and gen().talents[pr.talent]
+            local pt = TB.talents()[pr.talent]
             return ("Requires %d/%d %s"):format(pr.rank or 1,
                 (pt and pt.maxRank) or (pr.rank or 1), (pt and pt.name) or "prerequisite")
         end
@@ -144,7 +151,7 @@ function TB.lockReason(build, talentId)
 end
 
 function TB.canAdd(build, talentId)
-    local t = gen().talents and gen().talents[talentId]
+    local t = TB.talents()[talentId]
     if not t then return false, "unknown talent" end
     if (tonumber(build[talentId]) or 0) >= (t.maxRank or 1) then return false, "At max rank" end
     local locked = TB.lockReason(build, talentId)
@@ -154,7 +161,7 @@ end
 
 -- Can we remove a point without making any OTHER allocated talent illegal (tier or prereq)?
 function TB.canRemove(build, talentId)
-    local g = gen()
+    local tals = TB.talents()
     local cur = tonumber(build and build[talentId]) or 0
     if cur <= 0 then return false, "No point to remove" end
     local sim = {}
@@ -162,7 +169,7 @@ function TB.canRemove(build, talentId)
     sim[talentId] = cur - 1
     for otid, orank in pairs(sim) do
         if (tonumber(orank) or 0) > 0 then
-            local ot = g.talents and g.talents[otid]
+            local ot = tals[otid]
             if ot then
                 if TB.pointsBelowTier(sim, ot.tab, ot.tier or 0) < TB.POINTS_PER_TIER * (ot.tier or 0) then
                     return false, "Other talents depend on these points"
@@ -203,13 +210,13 @@ end
 -- the total within the classic maximum. These constraints together guarantee the build is
 -- reachable by bottom-up allocation, so a decoded/imported build that passes is trustworthy.
 function TB.isLegal(classToken, build)
-    local g = gen()
+    local tals = TB.talents()
     -- Absolute cap = the most anyone could have (level 60 WITH the legacy talent = 55).
     if TB.totalPoints(build) > TB.budget(TB.MAX_LEVEL, true) then return false, "too many points" end
     local classId = TB.classIdFor(classToken)
     for tid, rank in pairs(build or {}) do
         rank = tonumber(rank) or 0
-        local t = g.talents and g.talents[tid]
+        local t = tals[tid]
         if not t then return false, "unknown talent" end
         if classId and TB.talentClassId(t) ~= classId then return false, "wrong class" end
         if rank < 1 or rank > (t.maxRank or 1) then return false, "bad rank" end
@@ -257,7 +264,7 @@ function TB.decode(str)
         for j = 1, #talents do
             local r = tonumber(digits:sub(j, j)) or 0
             if r > 0 then
-                local t = gen().talents[talents[j]]
+                local t = TB.talents()[talents[j]]
                 if not t or r > (t.maxRank or 1) then return nil, "rank over max" end
                 build[talents[j]] = r
             end
@@ -273,6 +280,14 @@ end
 -- the real tree. Only classic-overlap talents map (Forever-new nodes aren't in the classic
 -- grid - those are planned on the live tree directly, a future step). Pure + defensive.
 function TB.toNodePlan(build)
+    if usingForever() then
+        -- The build is ALREADY a node plan (foreverTalents are keyed by trait nodeID). Copy it.
+        local out = {}
+        for nid, rank in pairs(build or {}) do
+            if (tonumber(rank) or 0) > 0 then out[nid] = tonumber(rank) end
+        end
+        return out
+    end
     local g = gen()
     local bySpell = g.traits and g.traits.bySpell
     local out = {}
@@ -297,6 +312,12 @@ end
 -- grid "owns" these; everything else in a node plan (Forever-new nodes from inspect/FT2/the
 -- edit overlay) is owned outside the grid and must survive a grid edit. Cached-free + pure.
 function TB.classicNodeSet()
+    if usingForever() then
+        -- Every planner talent IS a node, so the grid "owns" all of them.
+        local set = {}
+        for nid in pairs(TB.talents()) do set[nid] = true end
+        return set
+    end
     local g = gen()
     local bySpell = g.traits and g.traits.bySpell
     local set = {}
@@ -316,6 +337,19 @@ end
 -- Only classic-overlap nodes map (via the node's spellID -> the talent that owns it); Forever-
 -- new nodes have no classic talent and are left to the live overlay. Pure.
 function TB.fromNodePlan(nodePlan)
+    if usingForever() then
+        -- Node plan -> grid build is identity (both keyed by nodeID); clamp to maxRank.
+        local tals, out = TB.talents(), {}
+        if type(nodePlan) ~= "table" then return out end
+        for nid, rank in pairs(nodePlan) do
+            local t = tals[nid]
+            if t then
+                local r = math.min(t.maxRank or 1, tonumber(rank) or 0)
+                if r > 0 then out[nid] = r end
+            end
+        end
+        return out
+    end
     local g = gen()
     local nodes = g.traits and g.traits.nodes
     local out = {}
