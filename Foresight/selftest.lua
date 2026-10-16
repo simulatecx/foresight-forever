@@ -2629,6 +2629,22 @@ function HM.runSelftest(out)
             and TB.budget(9, false) == 0 and TB.budget(5, true) == 0
             and TB.budget(10, false) == 0 and TB.budget(11, false) == 1
     end)())
+    check("planner renders from the REAL shipped data (class -> tabs -> talents, not a fixture)", (function()
+        local TB = HM.TalentBuild
+        if not TB then return false, "no TalentBuild" end
+        -- The tier/prereq test below swaps in a fixture; THIS runs against the actual
+        -- generated gen.talents/classes/talentTabs - the path buildTrees() walks in-game.
+        -- A blank planner = this returning false (the field names/ids disagree with reality).
+        for _, tok in ipairs({ "MAGE", "WARRIOR", "PRIEST", "SHAMAN", "HUNTER", "ROGUE",
+                               "WARLOCK", "PALADIN", "DRUID" }) do
+            local cid = TB.classIdFor(tok)
+            if cid then
+                local tabs = TB.tabsForClass(cid)
+                if #tabs >= 1 and #TB.talentsInTab(tabs[1]) > 0 then return true end
+            end
+        end
+        return false, "no class resolved to a tab with talents"
+    end)())
     -- S35 talent-build engine: the PURE rules (budget/tier/prereq) + build-string codec,
     -- over a fixture tree (swap HM.gen, restore after). The UI (ui/talent_tree.lua) is
     -- in-game-verified; this pins the math an import/export + click handler depend on.

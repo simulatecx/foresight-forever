@@ -37,19 +37,38 @@ function TB.classToken(classId)
     return n and n:upper() or nil
 end
 
--- The 3 tab ids for a class, in display order (talentTabs.order).
+-- classMask (talentTabs) <-> classId (ChrClasses): mask = 2^(classId-1). The generated talents
+-- carry classId=0, so a talent's class is derived from its TAB's classMask - NOT t.classId.
+-- (A blank planner on 2026-10-16 exposed this: the fixture hand-set classId, real data is 0.)
+local function maskForClass(classId)
+    return classId and (2 ^ (classId - 1)) or nil
+end
+local function classIdForMask(mask)
+    if not mask then return nil end
+    for id = 1, 20 do if (2 ^ (id - 1)) == mask then return id end end
+    return nil
+end
+
+-- The class a talent belongs to (via its tab's classMask).
+function TB.talentClassId(t)
+    local g = gen()
+    local tab = t and t.tab and g.talentTabs and g.talentTabs[t.tab]
+    return tab and classIdForMask(tab.classMask) or nil
+end
+
+-- The 3 tab ids for a class, in display order (talentTabs.order) - matched by classMask.
 function TB.tabsForClass(classId)
     local g = gen()
-    local seen, tabs = {}, {}
-    for _, t in pairs(g.talents or {}) do
-        if type(t) == "table" and t.classId == classId and t.tab and not seen[t.tab] then
-            seen[t.tab] = true
-            tabs[#tabs + 1] = t.tab
+    local mask = maskForClass(classId)
+    local tabs = {}
+    for tabId, tab in pairs(g.talentTabs or {}) do
+        if type(tab) == "table" and mask and tab.classMask == mask then
+            tabs[#tabs + 1] = tabId
         end
     end
     table.sort(tabs, function(a, b)
-        local oa = (g.talentTabs and g.talentTabs[a] and g.talentTabs[a].order) or 0
-        local ob = (g.talentTabs and g.talentTabs[b] and g.talentTabs[b].order) or 0
+        local oa = (g.talentTabs[a] and g.talentTabs[a].order) or 0
+        local ob = (g.talentTabs[b] and g.talentTabs[b].order) or 0
         if oa ~= ob then return oa < ob end
         return a < b
     end)
@@ -192,7 +211,7 @@ function TB.isLegal(classToken, build)
         rank = tonumber(rank) or 0
         local t = g.talents and g.talents[tid]
         if not t then return false, "unknown talent" end
-        if classId and t.classId ~= classId then return false, "wrong class" end
+        if classId and TB.talentClassId(t) ~= classId then return false, "wrong class" end
         if rank < 1 or rank > (t.maxRank or 1) then return false, "bad rank" end
         if TB.pointsBelowTier(build, t.tab, t.tier or 0) < TB.POINTS_PER_TIER * (t.tier or 0) then
             return false, "tier not unlocked"
