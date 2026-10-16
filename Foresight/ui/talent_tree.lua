@@ -235,10 +235,30 @@ local function showTip(button, talentId)
             gt:AddLine(rankLine .. (presumed and "  |cff9d9d9d(p)|r" or ""), 0.55, 0.8, 1, true)
         end
     end
+    -- Rich modeling + SYNERGIES: reuse the exact breakdown the in-game talent hover shows - the
+    -- affected spells, At-max value, next-point ability deltas, and the "Synergy:" line (talents
+    -- that push the same lever) - now in the planner too, for every class (forever talents are
+    -- keyed by trait nodeID, which nodeImpactLines consumes directly).
+    local richShown = false
+    if forever() and HM.Tooltips and HM.Tooltips.nodeImpactLines then
+        local ok, snap = pcall(HM.Snapshot.capture)
+        local lo = (ok and type(snap) == "table" and HM.Loadout)
+            and HM.Loadout.fromSnapshot(snap) or nil
+        local okl, lines = pcall(HM.Tooltips.nodeImpactLines, talentId, lo)
+        if okl and type(lines) == "table" and #lines > 1 then
+            for i = 2, #lines do  -- skip line 1 (the "Foresight" header; the name is above)
+                local l = lines[i]
+                if l and l.text then gt:AddLine(l.text, l.r or 0.8, l.g or 0.8, l.b or 0.8, l.wrap) end
+            end
+            richShown = true
+        end
+    end
     local locked = TB() and TB().lockReason(state.build, talentId)
     if locked then gt:AddLine(locked, 1, 0.3, 0.3) end
-    local imp = impactLine(talentId, math.min(maxR, cur + 1))
-    if imp then gt:AddLine("Next point: " .. imp, 0.3, 1, 0.6) end
+    if not richShown then
+        local imp = impactLine(talentId, math.min(maxR, cur + 1))
+        if imp then gt:AddLine("Next point: " .. imp, 0.3, 1, 0.6) end
+    end
     gt:AddLine(" ")
     gt:AddLine("Left-click +  ·  Right-click -  (plan only; apply in-game yourself)", 0.5, 0.5, 0.55)
     gt:Show()
