@@ -260,12 +260,17 @@ v0.49.0..HEAD. ALL FIXED + gated (302/302):
 
 ### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
 ☑ Re-audit with Fable -> fixed -> TAG + publish 0.49.1 (the prod re-ship; v0.49.0 was broken).
-◐ WEBSITE: "WHERE IT COMES FROM" section BUILT (index.html #sources: truth ladder - Blizzard
-  client data via wago.tools > in-game tooltip verification ((p)->verified) > crowd k-of-n +
-  human review > credited talentsforever.com; nav + footer credit links) + LEADERBOARD
-  EXPANSION BUILT (ladder depth selector Top 5/10/25 - backend already stores top 25;
-  app.js?v=19). DEPLOY BLOCKED: firebase credentials expired - owner runs
-  `firebase login --reauth`, then `firebase deploy --only hosting`.
+☑ WEBSITE SHIPPED (2026-10-16, deployed to wow-foresight.web.app, ui-tested): "WHERE IT COMES
+  FROM" section (#sources: truth ladder - Blizzard client data via wago.tools > in-game tooltip
+  verification ((p)->verified) > crowd k-of-n + human review > credited talentsforever.com; nav
+  + footer links) + LEADERBOARD EXPANSION (depth selector Top 5/10/25; app.js?v=19) + ARMORY
+  UI OVERHAUL (style.css?v=16): forged corner brackets on every panel, carved header plates w/
+  centered flank-ruled titles, masthead gem-flourish divider, bevelled buttons, wider spacing;
+  NEW "Get Foresight" addon section (4 feature cards + CurseForge/GitHub buttons + the
+  display-only pledge). UI-TESTED twice (desktop/tablet/mobile): 0 console errors, no
+  horizontal scroll; fixed from round 1 - addon grid 2x2 (orphan card), nav-toggle 44x44 tap
+  target, mobile #sources title one-line, hamburger breakpoint 720->920 + 921-1280 link
+  compression (killed the 131px double-row tablet nav). All four re-verified PASS.
 ◐ REDDIT VERIFICATION LOOP BUILT (2026-10-16): `pipeline/fetch_reddit.py` searches Reddit for
   Forever talent content (r/wowforever + r/classicwow + site-wide), extracts talent-name
   mentions + nearby numeric claims (percents/progressions), diffs vs our tf per-rank text, and

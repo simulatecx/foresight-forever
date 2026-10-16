@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./style.css?v=14" />
+  <link rel="stylesheet" href="./style.css?v=16" />
 </head>
 <body>
   <div class="vignette" aria-hidden="true"></div>
@@ -26,6 +26,7 @@
       <a href="#challenge">Today's Challenge</a>
       <a href="#ladders">The Ladders</a>
       <a href="#champions">Champions</a>
+      <a href="#addon">Get the Addon</a>
       <a href="#sources">Data &amp; Sources</a>
       <a href="#feedback">Send Word</a>
       <a href="#challenge" class="nav-cta">Upload character</a>
@@ -37,6 +38,7 @@
     <h1>Foresight</h1>
     <p class="kicker">The Armory of <em>Forever</em></p>
     <p class="masthead-tag">See where your character stands - every stat, every spec, honest numbers.</p>
+    <div class="flourish" aria-hidden="true"><span></span></div>
   </header>
 
   <main class="scroll">
@@ -122,6 +124,45 @@
         command best. Opt in in-game with <code>/foresight set named on</code> and a handle to
         claim your place; everyone else stays anonymous, always.</p>
         <div id="championBoard" class="champion-grid"><p class="muted">Summoning the champions…</p></div>
+      </div>
+    </section>
+
+    <!-- GET FORESIGHT - the addon behind the Armory -->
+    <section class="panel reveal" id="addon">
+      <div class="panel-head"><h3>Get Foresight</h3></div>
+      <div class="panel-body">
+        <p class="lead">The addon behind this Armory - the hardcore player's safety net for
+        WoW: Forever. Know in plain terms what every talent point, stat, item, and buff
+        actually does for <em>your</em> character, before you commit to it.</p>
+        <div class="addon-grid">
+          <div class="addon-card">
+            <h4>Honest Tooltips</h4>
+            <p>Hover any item for an upgrade verdict judged for your goal - and which of
+            <em>your</em> spells it lifts most. Every unverified number says so.</p>
+          </div>
+          <div class="addon-card">
+            <h4>The Talent Planner</h4>
+            <p>Forever's real talent trees, plannable at any level - even before 10. Plan a
+            future build, follow the glowing path on your live tree, share it with a code.</p>
+          </div>
+          <div class="addon-card">
+            <h4>The Foresight Matrix</h4>
+            <p>Your build's engine at a glance - honest dimension bars, your biggest hits,
+            and the best next talent points for the goal you're gearing toward.</p>
+          </div>
+          <div class="addon-card">
+            <h4>The Ladders</h4>
+            <p>Share your character here and see where you stand among your spec - daily
+            challenges, records, and percentiles built from the crowd.</p>
+          </div>
+        </div>
+        <div class="actions">
+          <a class="btn btn-gold" href="https://www.curseforge.com/projects/1744126" rel="noopener">Download on CurseForge</a>
+          <a class="btn" href="https://github.com/simulatecx/foresight-forever/releases" rel="noopener">GitHub Releases</a>
+        </div>
+        <p class="addon-note">Display and advice only - Foresight never automates an action,
+        never reads memory, never touches anything outside the official addon API. The source
+        is public so anyone can verify exactly that.</p>
       </div>
     </section>
 
