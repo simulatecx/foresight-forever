@@ -41,6 +41,12 @@ verification-pass hardening set.
   per-rank progression computed from the baseline (e.g. "33 / 66 / 100%", marked (p) when the
   scaling is still presumed - the game's own description is the authoritative value on top), and
   the modeled impact on your output for the next point - so you see what each point does.
+- **Authoritative per-rank text, credited to talentsforever.com.** Across all nine classes the
+  planner now shows the real per-rank tooltip text for each talent (from talentsforever.com's
+  Forever-client export, credited in the planner), with our math as the fallback and ranks
+  marked (est) where that source flags them estimated. The tooltip also now carries the full
+  **Affects / At-max / Synergy** breakdown (which talents push the same lever) - the same one
+  the in-game talent hover shows.
 
 **Hardening (from the full code verification):**
 - Foreign/corrupt talent share-codes always fail safely now (a crafted FT2 code could

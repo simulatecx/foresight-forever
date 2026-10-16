@@ -228,6 +228,26 @@ item needs in-game eyes (frame code the headless gate can't exercise; WoW was do
   progression from the baseline (talentRankValueFor; tagged (p) when presumed, description =
   authoritative actual on top - owner "baseline is perfect to assume") + modeled next-point
   impact. In-game Blizzard-frame hover already has the richer nodeImpactLines. NEEDS in-game verify.
+☑ TF TALENT TEXT + SYNERGIES (2026-10-16, owner "use talentsforever.com as the authoritative source,
+  credited; expand synergies"): `pipeline/fetch_talentsforever.py` ingests the 9 class JSON exports
+  from talentsforever.com -> `tf_talents.lua` (HM.gen.tfTalents, 466 talents, per-rank desc[] +
+  confirmed[], credited HM.gen.tfCredit + planner footer). Tooltip prefers the credited per-rank
+  text ((est) when unconfirmed), then reuses `nodeImpactLines` (Affects/At-max/Synergy) in the
+  planner for all 9 classes. Chained synergies = engine's later layer. NEEDS in-game verify.
+
+### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
+Agreed sequence after the planner/tooltip work lands + is in-game-verified:
+☐ Re-audit the whole build with Fable (fresh adversarial pass), then TAG + publish 0.49.1 to
+  CurseForge (+GitHub/Wago via release.yml).
+☐ LOGIN/LOGOUT data: capture per-user session (login/logout) telemetry and SHARE it (crowd/
+  companion pipeline) - ties into COMPANION-APP + the S34 crowd contract (privacy-by-design:
+  classify, opt-in, no PII; reuse crowd-schema single-source).
+☐ EXPAND THE WEBSITE around the shared data (armory + the session/talent data).
+☐ EXPAND TOOLTIP DATA: more of what we give players from talents (deeper per-talent info, the
+  chained synergies, richer modeling); also map the remaining unmapped node ops (curation gap)
+  + ingest talentsforever racials/Legacy perks/spellbooks/blizz-notes ("take everything from the
+  site").
+☐ Then expand the RUN addon (S35 ARR danger/rare advisor) - separate track, Forever launch.
 ☐ IN-GAME: button placement on the talent/inspect frame, resizable-options layout at extremes,
   the removal-overlay visual (planned < live rank) is a noted refinement, mobile 1280x720 @ 0.65.
 ☐ DEFERRED: pool the options widgets (layout() currently re-creates per call - pre-existing);
