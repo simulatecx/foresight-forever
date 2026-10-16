@@ -195,6 +195,19 @@ local function perRankLine(t)
     return "Per rank: " .. table.concat(parts, " / "), type(op.values) ~= "table"
 end
 
+-- Credited per-rank tooltip text from talentsforever.com (HM.gen.tfTalents), keyed by class
+-- token + talent name. Returns {max, desc[], confirmed[]} or nil.
+local function tfEntry(classToken, name)
+    local tf = HM.gen and HM.gen.tfTalents
+    local byClass = tf and classToken and tf[classToken]
+    return (byClass and name) and byClass[name] or nil
+end
+local function tfConfirmed(entry, rank)
+    if type(entry.confirmed) ~= "table" then return false end
+    for _, r in ipairs(entry.confirmed) do if r == rank then return true end end
+    return false
+end
+
 local function showTip(button, talentId)
     local t = talentDefs()[talentId]
     if not t then return end
@@ -204,14 +217,23 @@ local function showTip(button, talentId)
     gt:SetOwner(button, "ANCHOR_RIGHT")
     gt:AddLine(t.name or ("Talent " .. talentId), 1, 0.82, 0.25)
     gt:AddLine(("Rank %d/%d"):format(cur, maxR), 0.7, 0.7, 0.7)
-    -- Full description (live, matches the Forever talent site), then the per-rank numbers.
-    local desc = talentDescription(t.spellRanks and t.spellRanks[1])
-    if desc then gt:AddLine(desc, 1, 1, 1, true) end
-    -- Our per-rank math from the baseline (shown always; the client description above is the
-    -- authoritative actual when present, our line is the assumed progression - tagged (p)).
-    local rankLine, presumed = perRankLine(t)
-    if rankLine then
-        gt:AddLine(rankLine .. (presumed and "  |cff9d9d9d(p)|r" or ""), 0.55, 0.8, 1, true)
+    -- Per-rank description: PREFER the credited talentsforever.com per-rank text (authoritative,
+    -- marked (est) where a rank is unconfirmed); else the live game description; else our math.
+    local tf = tfEntry(state.class, t.name)
+    if tf and type(tf.desc) == "table" and #tf.desc > 0 then
+        local cr = math.max(1, math.min(#tf.desc, cur > 0 and cur or 1))
+        gt:AddLine(("Rank %d: %s"):format(cr, tostring(tf.desc[cr]))
+            .. (tfConfirmed(tf, cr) and "" or "  |cff9d9d9d(est)|r"), 1, 1, 1, true)
+        if cur < maxR and tf.desc[cur + 1] then
+            gt:AddLine("Next: " .. tostring(tf.desc[cur + 1]), 0.55, 0.8, 1, true)
+        end
+    else
+        local desc = talentDescription(t.spellRanks and t.spellRanks[1])
+        if desc then gt:AddLine(desc, 1, 1, 1, true) end
+        local rankLine, presumed = perRankLine(t)
+        if rankLine then
+            gt:AddLine(rankLine .. (presumed and "  |cff9d9d9d(p)|r" or ""), 0.55, 0.8, 1, true)
+        end
     end
     local locked = TB() and TB().lockReason(state.build, talentId)
     if locked then gt:AddLine(locked, 1, 0.3, 0.3) end
@@ -579,6 +601,11 @@ local function ensureFrame()
     frame.chipRow = _G.CreateFrame("Frame", nil, frame)
     frame.chipRow:SetPoint("BOTTOMLEFT", PAD, 10)
     frame.chipRow:SetSize(10, 22)
+
+    -- Credit: per-rank talent text comes from talentsforever.com (see tf_talents.lua).
+    local credit = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+    credit:SetPoint("BOTTOMRIGHT", -PAD, 12)
+    credit:SetText("talent data: " .. (HM.gen and HM.gen.tfCredit or "talentsforever.com"))
 
     treeHost = _G.CreateFrame("Frame", nil, frame)
     treeHost:SetPoint("TOPLEFT", PAD, -102)

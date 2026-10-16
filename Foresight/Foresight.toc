@@ -24,6 +24,7 @@ data\generated\talent_impacts.lua
 data\generated\spells.lua
 data\generated\traits.lua
 data\generated\forever_talents.lua
+data\generated\tf_talents.lua
 data\generated\race_racials.lua
 data\generated\consumables.lua
 data\generated\weapon_imbues.lua
