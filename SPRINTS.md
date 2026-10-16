@@ -260,9 +260,12 @@ v0.49.0..HEAD. ALL FIXED + gated (302/302):
 
 ### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
 ☑ Re-audit with Fable -> fixed -> TAG + publish 0.49.1 (the prod re-ship; v0.49.0 was broken).
-☐ WEBSITE: "WHERE IT COMES FROM" section (data provenance: Blizzard client data via wago.tools,
-  talentsforever.com credit, in-game crowdsourcing + verification loop, release notes as truth
-  ladder) + LEADERBOARD EXPANSION (owner 2026-10-16). Deploy hosting so web prod is current.
+◐ WEBSITE: "WHERE IT COMES FROM" section BUILT (index.html #sources: truth ladder - Blizzard
+  client data via wago.tools > in-game tooltip verification ((p)->verified) > crowd k-of-n +
+  human review > credited talentsforever.com; nav + footer credit links) + LEADERBOARD
+  EXPANSION BUILT (ladder depth selector Top 5/10/25 - backend already stores top 25;
+  app.js?v=19). DEPLOY BLOCKED: firebase credentials expired - owner runs
+  `firebase login --reauth`, then `firebase deploy --only hosting`.
 ☐ REDDIT VERIFICATION LOOP (owner 2026-10-16): automated Reddit search/scrape for Forever
   talent content (patch notes, datamined posts, screenshots - "all of them are posted there")
   feeding a VERIFICATION queue - never auto-applied: candidate values land in a review file

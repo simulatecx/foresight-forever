@@ -26,6 +26,7 @@
       <a href="#challenge">Today's Challenge</a>
       <a href="#ladders">The Ladders</a>
       <a href="#champions">Champions</a>
+      <a href="#sources">Data &amp; Sources</a>
       <a href="#feedback">Send Word</a>
       <a href="#challenge" class="nav-cta">Upload character</a>
     </div>
@@ -99,6 +100,14 @@
             <label for="classFilter">Class</label>
             <select id="classFilter"></select>
           </div>
+          <div class="filter">
+            <label for="depthFilter">Show</label>
+            <select id="depthFilter">
+              <option value="5" selected>Top 5</option>
+              <option value="10">Top 10</option>
+              <option value="25">Top 25</option>
+            </select>
+          </div>
         </div>
         <p id="ladderTally" class="ladder-tally"></p>
         <div id="ladderBoard" class="ladder-grid"><p class="muted">Summoning the ladders…</p></div>
@@ -113,6 +122,31 @@
         command best. Opt in in-game with <code>/foresight set named on</code> and a handle to
         claim your place; everyone else stays anonymous, always.</p>
         <div id="championBoard" class="champion-grid"><p class="muted">Summoning the champions…</p></div>
+      </div>
+    </section>
+
+    <!-- WHERE THE DATA COMES FROM - provenance + the verification loop -->
+    <section class="panel reveal" id="sources">
+      <div class="panel-head"><h3>Where the Data Comes From</h3></div>
+      <div class="panel-body">
+        <p class="lead">Every number Foresight shows carries its provenance - nothing is
+        invented, and nothing is called verified until it has been seen in the game itself.</p>
+        <p><strong>Blizzard's own game data is the source of truth.</strong> The talent trees,
+        spells, items, and racials are decoded from the WoW: Forever client's data files
+        (via <a href="https://wago.tools" rel="noopener">wago.tools</a> exports) - the same
+        files the game reads. When a new build ships, the data regenerates from it.</p>
+        <p><strong>Playing verifies.</strong> In-game, Foresight reads the real tooltips as you
+        (and everyone running the addon) hover talents - those scans confirm or correct every
+        presumed value. Until a number is confirmed it is honestly marked
+        <code>(p)</code> presumed; once your client shows it, it flips to verified.</p>
+        <p><strong>The crowd confirms, people review.</strong> Community-sourced corrections
+        (contributed scans, patch notes, posts) only reach the shipped data through a
+        verification queue - multiple independent confirmations plus human review. Nothing
+        from outside your game is ever auto-applied.</p>
+        <p><strong>Credited sources.</strong> Per-rank talent text is sourced from
+        <a href="https://talentsforever.com" rel="noopener">talentsforever.com</a>, a fan-made
+        Forever talent calculator read from the beta client's data files - credited in the
+        addon and here. Release notes and hotfixes are tracked against each build.</p>
       </div>
     </section>
 
@@ -150,9 +184,9 @@
   <footer class="footer">
     <p>The Foresight addon never sends data on its own - this page only uploads what you
     paste, after you opt in.</p>
-    <p><a href="./privacy.html">Privacy</a> · <a href="https://github.com/simulatecx/foresight-forever">Source</a> · WoW: Forever</p>
+    <p><a href="./privacy.html">Privacy</a> · <a href="https://github.com/simulatecx/foresight-forever">Source</a> · <a href="#sources">Data &amp; Sources</a> · talent text credit: <a href="https://talentsforever.com" rel="noopener">talentsforever.com</a> · WoW: Forever</p>
   </footer>
 
-  <script type="module" src="./app.js?v=18"></script>
+  <script type="module" src="./app.js?v=19"></script>
 </body>
 </html>

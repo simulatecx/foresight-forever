@@ -403,6 +403,8 @@ function renderLadders() {
   const idx = bucketIndex(aggs);
   const statType = $("statTypeFilter") ? $("statTypeFilter").value : "all";
   const klass = $("classFilter") ? $("classFilter").value : "ALL";
+  // Ladder depth (owner expansion 2026-10-16): the backend keeps the top 25 per metric.
+  const depth = Math.min(25, parseInt(($("depthFilter") || {}).value, 10) || 5);
 
   const { champions, brackets } = tallyFor(aggs, klass);
   const forKlass = klass === "ALL" ? "" : " for " + esc(titleCase(klass));
@@ -425,7 +427,7 @@ function renderLadders() {
     }
     const champs = (lb.get(metric) || [])
       .filter((e) => klass === "ALL" || e.class === klass)
-      .slice().sort((a, b) => b.value - a.value).slice(0, 5);
+      .slice().sort((a, b) => b.value - a.value).slice(0, depth);
     if (!record && !champs.length) continue;
 
     const color = record ? classColor(record.cls) : classColor(champs[0] && champs[0].class);
@@ -515,6 +517,8 @@ async function initLadders() {
     cf.innerHTML = classes.map((c) => `<option value="${esc(c)}">${c === "ALL" ? "All classes" : esc(titleCase(c))}</option>`).join("");
     cf.addEventListener("change", renderLadders);
   }
+  const df = $("depthFilter");
+  if (df) df.addEventListener("change", renderLadders);
   renderLadders();
   renderChampions();
   renderDailyChallenges();
