@@ -228,6 +228,23 @@ local function showTip(button, talentId)
             gt:AddLine("Next: " .. tostring(tf.desc[cur + 1])
                 .. (tfConfirmed(tf, cur + 1) and "" or "  |cff9d9d9d(est)|r"), 0.55, 0.8, 1, true)
         end
+        -- Cross-impact (the talent/skill interaction map, from the authoritative text):
+        -- shown when OUR decode has no affected-spell links yet, so every talent names what
+        -- it touches even before the model can fold it (nodeImpactLines "Affects:" otherwise
+        -- covers this with modeled data).
+        if type(tf.links) == "table" and #tf.links > 0 then
+            local modeled = false
+            for _, o in ipairs(t.ops or {}) do
+                if type(o) == "table" and type(o.affected) == "table" and #o.affected > 0 then
+                    modeled = true
+                    break
+                end
+            end
+            if not modeled then
+                gt:AddLine("|cff9d9d9dInteracts with:|r " .. table.concat(tf.links, ", "),
+                    0.85, 0.8, 0.65, true)
+            end
+        end
     else
         local desc = talentDescription(t.spellRanks and t.spellRanks[1])
         if desc then gt:AddLine(desc, 1, 1, 1, true) end
@@ -281,10 +298,18 @@ local function refreshHeader()
     local lvl = planLevel()
     local budget = TBe and TBe.budget(lvl, state.legacy) or 0
     frame.title:SetText(("Talent Planner  -  %s"):format(state.class or "?"))
-    frame.points:SetText(("%d / %d points  ·  planning level %d%s"):format(
-        total, budget, lvl, state.legacy and "  ·  legacy talent" or ""))
-    local over = total > budget
-    frame.points:SetTextColor(over and 1 or 0.8, over and 0.4 or 0.75, over and 0.4 or 0.6)
+    -- "N points left of B" - the sites' at-a-glance budget read; red + explicit when over.
+    local left = budget - total
+    if left >= 0 then
+        frame.points:SetText(("%d point%s left of %d  ·  planning level %d%s"):format(
+            left, left == 1 and "" or "s", budget, lvl,
+            state.legacy and "  ·  legacy talent" or ""))
+        frame.points:SetTextColor(0.94, 0.83, 0.53)
+    else
+        frame.points:SetText(("%d OVER budget (%d / %d)  ·  planning level %d%s"):format(
+            -left, total, budget, lvl, state.legacy and "  ·  legacy talent" or ""))
+        frame.points:SetTextColor(1, 0.42, 0.42)
+    end
     if frame.summary then frame.summary:SetText(buildSummaryText() or "") end
     if frame.planControls then frame.planControls.refresh() end
 end
@@ -309,7 +334,19 @@ local function updateButtons()
     for _, tree in ipairs(trees) do
         for tid, btn in pairs(tree.buttons) do paintButton(btn, tid) end
         local pts = TB() and TB().pointsInTab(state.build, tree.tabId) or 0
-        tree.header:SetText(("%s  (%d)"):format(tree.name or "", pts))
+        tree.header:SetText(("|cffefd488%s|r  |cffd8cfa8%d|r"):format(tree.name or "", pts))
+        if tree.footer then
+            tree.footer:SetText(pts > 0 and ("%d point%s invested"):format(pts, pts == 1 and "" or "s")
+                or "no points yet")
+        end
+        -- prereq arrows: gold when the requirement is met in the plan, grey until then
+        for _, ar in ipairs(tree.arrows or {}) do
+            local met = (tonumber(state.build[ar.prereq]) or 0) >= (ar.rank or 1)
+            for _, tx in ipairs(ar.tex) do
+                if met then tx:SetColorTexture(1, 0.82, 0.25, 0.95)
+                else tx:SetColorTexture(0.5, 0.47, 0.4, 0.4) end
+            end
+        end
     end
     refreshHeader()
     TT.refreshGlow()
@@ -341,6 +378,10 @@ local function makeButton(parent, talentId)
     local btn = _G.CreateFrame("Button", nil, parent)
     btn.talentId = talentId
     btn:SetSize(BTN, BTN)
+    -- 1px engraved slot rim (the icon covers the center, leaving only the rim visible)
+    local rim = btn:CreateTexture(nil, "BACKGROUND")
+    rim:SetPoint("TOPLEFT", -1, 1); rim:SetPoint("BOTTOMRIGHT", 1, -1)
+    rim:SetColorTexture(0.55, 0.45, 0.22, 0.55)
     btn.icon = btn:CreateTexture(nil, "ARTWORK")
     btn.icon:SetAllPoints()
     btn.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
@@ -370,14 +411,37 @@ local function buildTrees(classToken)
     if not classId then return end
     local tabs = TBe.tabsForClass(classId)
     local g = HM.gen
+    local cr, cg, cb = classColor(classToken)
     for i, tabId in ipairs(tabs) do
         local box = _G.CreateFrame("Frame", nil, treeHost)
         box:SetSize(TREE_W, 10)
         box:SetPoint("TOPLEFT", treeHost, "TOPLEFT", (i - 1) * (TREE_W + 10), 0)
+        -- WoW-esque tree plate (owner ask 2026-10-19, ref wowforevertalent/forever-talents):
+        -- dark card, class-tinted header band, gold hairline borders, points footer. All OUR
+        -- textures on OUR frame - no Blizzard art dependencies, no taint surface.
+        local bg = box:CreateTexture(nil, "BACKGROUND", nil, -8)
+        bg:SetAllPoints()
+        bg:SetColorTexture(0.028, 0.024, 0.016, 0.6)
+        local band = box:CreateTexture(nil, "BACKGROUND", nil, -7)
+        band:SetPoint("TOPLEFT"); band:SetPoint("TOPRIGHT"); band:SetHeight(21)
+        band:SetColorTexture(cr, cg, cb, 0.16)
+        for _, e in ipairs({ { "TOPLEFT", "TOPRIGHT", 1, nil }, { "BOTTOMLEFT", "BOTTOMRIGHT", 1, nil },
+                             { "TOPLEFT", "BOTTOMLEFT", nil, 1 }, { "TOPRIGHT", "BOTTOMRIGHT", nil, 1 } }) do
+            local ln = box:CreateTexture(nil, "BORDER")
+            ln:SetPoint(e[1]); ln:SetPoint(e[2])
+            if e[3] then ln:SetHeight(e[3]) else ln:SetWidth(e[4]) end
+            ln:SetColorTexture(0.78, 0.64, 0.30, 0.35)
+        end
+        local sep = box:CreateTexture(nil, "BORDER")
+        sep:SetPoint("TOPLEFT", 0, -21); sep:SetPoint("TOPRIGHT", 0, -21)
+        sep:SetHeight(1); sep:SetColorTexture(0.78, 0.64, 0.30, 0.25)
         local header = box:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-        header:SetPoint("TOP", box, "TOP", 0, -2)
+        header:SetPoint("TOP", box, "TOP", 0, -4)
+        local footer = box:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+        footer:SetPoint("BOTTOM", box, "BOTTOM", 0, 5)
         local tab = g.talentTabs and g.talentTabs[tabId]
-        local tree = { tabId = tabId, box = box, header = header, name = tab and tab.name or "?", buttons = {} }
+        local tree = { tabId = tabId, box = box, header = header, footer = footer,
+                       name = tab and tab.name or "?", buttons = {}, arrows = {} }
         local maxTier = 0
         for _, tid in ipairs(TBe.talentsInTab(tabId)) do
             local t = talentDefs()[tid]
@@ -388,7 +452,50 @@ local function buildTrees(classToken)
             tree.buttons[tid] = btn
             if (t.tier or 0) > maxTier then maxTier = t.tier or 0 end
         end
-        box:SetHeight(24 + (maxTier + 1) * (BTN + ROW_GAP) + 8)
+        -- PREREQUISITE ARROWS (the classic-tree signature, from our TraitEdge data): a line
+        -- from each required talent down/over to its dependent - gold once the requirement is
+        -- met in the plan, grey until then (recolored in updateButtons). Geometry is computed
+        -- from the same tier/column constants the buttons use, so lines always meet buttons.
+        local STEPX, STEPY = BTN + COL_GAP, BTN + ROW_GAP
+        local function seg(x, y, w, h)
+            local tx = box:CreateTexture(nil, "ARTWORK", nil, -1)
+            tx:SetPoint("TOPLEFT", box, "TOPLEFT", x, y)
+            tx:SetSize(w, h)
+            return tx
+        end
+        for _, tid in ipairs(TBe.talentsInTab(tabId)) do
+            local t = talentDefs()[tid]
+            for _, pr in ipairs((t and t.prereqs) or {}) do
+                local from = talentDefs()[pr.talent]
+                if from and tree.buttons[pr.talent] and tree.buttons[tid]
+                        and (from.tier or 0) <= (t.tier or 0) then
+                    local c1, t1 = from.column or 0, from.tier or 0
+                    local c2, t2 = t.column or 0, t.tier or 0
+                    local x1, x2 = 12 + c1 * STEPX + BTN / 2, 12 + c2 * STEPX + BTN / 2
+                    local fromBottom = -24 - t1 * STEPY - BTN
+                    local fromMidY = -24 - t1 * STEPY - BTN / 2
+                    local toTop = -24 - t2 * STEPY
+                    local parts = {}
+                    if c1 == c2 then            -- straight down
+                        parts[1] = seg(x1 - 1.5, fromBottom - 1, 3, math.max(4, (fromBottom - 1) - (toTop + 1)))
+                    elseif t1 == t2 then        -- straight across (same row)
+                        local lx = math.min(x1, x2) + BTN / 2 + 1
+                        parts[1] = seg(lx, fromMidY + 1.5, math.max(4, math.abs(x2 - x1) - BTN - 2), 3)
+                    else                        -- elbow: across at the prereq's row, then down
+                        local lx = (c2 > c1) and (x1 + BTN / 2 + 1) or (x2 - 1.5)
+                        local w = (c2 > c1) and (x2 + 1.5 - lx) or (x1 - BTN / 2 - 1 - lx)
+                        parts[1] = seg(lx, fromMidY + 1.5, math.max(4, w), 3)
+                        parts[2] = seg(x2 - 1.5, fromMidY + 1.5, 3, math.max(4, (fromMidY + 1.5) - (toTop + 1)))
+                    end
+                    -- arrow cap at the dependent's top edge
+                    parts[#parts + 1] = seg(x2 - 3.5, toTop + 2, 7, 3)
+                    tree.arrows[#tree.arrows + 1] = {
+                        prereq = pr.talent, rank = pr.rank or (from.maxRank or 1), tex = parts,
+                    }
+                end
+            end
+        end
+        box:SetHeight(24 + (maxTier + 1) * (BTN + ROW_GAP) + 22)
         trees[i] = tree
     end
 end
@@ -600,9 +707,9 @@ local function ensureFrame()
 
     frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     frame.title:SetPoint("TOPLEFT", PAD, -PAD)
-    frame.points = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    frame.points = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     frame.points:SetPoint("TOPLEFT", PAD, -36)
-    frame.points:SetTextColor(0.8, 0.75, 0.6)
+    frame.points:SetTextColor(0.94, 0.83, 0.53)
 
     -- Whole-build impact readout ("This build: Spellcasting +4.2 ...") - the talent-impact payoff.
     frame.summary = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")

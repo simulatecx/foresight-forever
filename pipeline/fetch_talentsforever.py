@@ -47,6 +47,80 @@ def fetch(slug: str, force: bool) -> dict:
         raise
 
 
+# Spellbook/proficiency names too generic to count as a cross-reference ("Attack" matches
+# "Attack Power" in half the descriptions).
+STOP_NAMES = {
+    "attack", "shoot", "throw", "block", "dodge", "parry", "languages", "language",
+    "shoot bow", "shoot gun", "shoot crossbow", "armor proficiency", "dual wield",
+}
+
+
+def _known_names(d: dict) -> set[str]:
+    """Every spell + talent name this class export knows (mention-match vocabulary)."""
+    names: set[str] = set()
+
+    def add(n):
+        if isinstance(n, str) and len(n) >= 5 and n.lower() not in STOP_NAMES:
+            names.add(n)
+
+    def walk(o):
+        if isinstance(o, dict):
+            add(o.get("name"))
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            # spellbook spells are ["Name", "Rank N"] PAIRS, not dicts
+            if 1 <= len(o) <= 2 and isinstance(o[0], str) \
+                    and (len(o) == 1 or isinstance(o[1], str)):
+                add(o[0])
+            else:
+                for v in o:
+                    walk(v)
+
+    walk(d.get("spellbook") or {})
+    for tree in (d.get("talents") or {}).get("trees", []) or []:
+        for t in tree.get("talents", []) or []:
+            n = t.get("name")
+            if isinstance(n, str) and len(n) >= 5:
+                names.add(n)
+    return names
+
+
+def extract_links(d: dict) -> dict[str, list[str]]:
+    """talentName -> other spell/talent names its rank-1 description mentions.
+
+    The cross-impact map (owner ask 2026-10-19): which abilities/talents a talent touches,
+    straight from the authoritative per-rank text. Longest-match wins (so "Lesser Healing
+    Wave" isn't also counted as "Healing Wave"); a talent never links to itself.
+    """
+    import re as _re
+    known = sorted(_known_names(d), key=len, reverse=True)
+    pats = [(n, _re.compile(r"(?<![A-Za-z])" + _re.escape(n) + r"(?![A-Za-z])", _re.I))
+            for n in known]
+    out: dict[str, list[str]] = {}
+    for tree in (d.get("talents") or {}).get("trees", []) or []:
+        for t in tree.get("talents", []) or []:
+            name, desc = t.get("name"), t.get("desc") or []
+            if not (name and desc):
+                continue
+            text = desc[0]
+            taken: list[tuple[int, int]] = []  # claimed spans, longest names first
+            links: list[str] = []
+            for n, pat in pats:
+                if n.lower() == str(name).lower():
+                    continue
+                m = pat.search(text)
+                if not m:
+                    continue
+                if any(m.start() >= s and m.end() <= e for s, e in taken):
+                    continue  # inside an already-claimed longer name
+                taken.append((m.start(), m.end()))
+                links.append(n)
+            if links:
+                out[name] = sorted(links)
+    return out
+
+
 def lua(v) -> str:
     if isinstance(v, bool):
         return "true" if v else "false"
@@ -75,6 +149,7 @@ def main() -> int:
             print(f"SKIP {slug}: {e}")
             continue
         tals = {}
+        links = extract_links(d)
         for tree in (d.get("talents") or {}).get("trees", []) or []:
             for t in tree.get("talents", []) or []:
                 name, desc = t.get("name"), t.get("desc") or []
@@ -84,6 +159,8 @@ def main() -> int:
                         "desc": desc,
                         "confirmed": t.get("confirmed", []),
                     }
+                    if links.get(name):
+                        tals[name]["links"] = links[name]
         out[token] = tals
         total += len(tals)
         print(f"{token:8s} {len(tals)} talents")

@@ -258,6 +258,26 @@ v0.49.0..HEAD. ALL FIXED + gated (302/302):
   Malediction); X-Wago-ID in TOC (Wago upload likely silently skipped); regeneration-determinism
   gate; prereq-rank presumption tag.
 
+### S40 - Planner WoW-esque skin + the cross-impact map ◐ (owner 2026-10-19) -> 0.50.0
+*Fit & Overlap - Category UI + DATA. Verdict: ENHANCE ui/talent_tree.lua + the tf pipeline.
+Touches: talent_tree.lua (plates/arrows/links line), fetch_talentsforever.py (extract_links ->
+tf.links baked), NEW audit_crosstalents.py. Avoid duplicating: nodeImpactLines Affects (links
+line only renders when the model has NO affected-list). Trust: display-only, credited source.
+Data: links ride the already-shipped tf_talents.lua (no new collection). Mobile: in-game frame,
+1280x720 @ 0.65 verify pending.*
+☑ Tree plates (class-tint band, gold hairlines, points footer), slot rims, "N points left of B"
+  header (red + overage when over).
+☑ PREREQUISITE ARROWS from TraitEdge (straight/same-row/elbow + cap; grey -> gold as the
+  requirement is met in the plan; geometry shares the button tier/column constants).
+☑ CROSS-IMPACT: extract_links mines the authoritative desc text (spellbook [name,rank] pairs +
+  talent names vocabulary, longest-match, STOP_NAMES) -> tf.links -> "Interacts with:" tooltip
+  line when unmodeled. AUDIT audit_crosstalents.py: 462 mentions across 248 talents, 55%
+  model-covered (121/19/108 full/partial/uncovered) - the gap list = the curation queue with
+  exact spell names (gaps correlate with unmapped ops). Gate 302/302, deployed.
+☐ IN-GAME verify: arrows meet buttons, plates render, links line reads well; mobile binding.
+☐ NEXT: curate top audit gaps into op mappings so the engine FOLDS them (Illumination,
+  Gore Drinker, Improved <ability> family...); chained synergies layer rides those mappings.
+
 ### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
 ☑ Re-audit with Fable -> fixed -> TAG + publish 0.49.1 (the prod re-ship; v0.49.0 was broken).
 ☑ WEBSITE SHIPPED (2026-10-16, deployed to wow-foresight.web.app, ui-tested): "WHERE IT COMES

@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.50.0 - 2026-10-19
+
+THE PLANNER LOOKS LIKE A TALENT TREE NOW, and every talent names what it touches.
+
+**WoW-esque planner skin.** The planner trees are now proper talent-tree plates: dark cards
+with class-tinted header bands, gold hairline frames, per-tree "N points invested" footers,
+engraved slot rims on every talent button - and, the signature piece, **prerequisite arrows**
+drawn between talents (from the game's own TraitEdge data): grey until the requirement is
+met in your plan, gold once it is. The header now reads "N points left of B" at a glance,
+and flips red with the exact overage when a loaded build exceeds the planning level.
+
+**Cross-impact: how talents and skills affect one another.** Each talent's authoritative
+description is now mined for the spells and talents it references (466 talents, all nine
+classes - credited to talentsforever.com), and the planner tooltip shows **"Interacts with:
+Lightning Bolt, Earth Shock..."** whenever our impact model can't fold that talent yet - so
+every talent names what it touches, with modeled numbers where we have them and honest text
+links where we don't.
+
+Behind it: a new cross-impact audit comparing those text references against the impact
+model's links - 462 cross-references found, 55% already modeled; the remaining gap list
+(heavily the known unmapped-ops set) is now the curation queue with exact spell names.
+
+*Features:* UI-talent-planner, DATA-crossimpact
+
 ## 0.49.1 - 2026-10-16
 
 The prod re-ship: fixed packaging, Forever talents with credited per-rank data, UI
