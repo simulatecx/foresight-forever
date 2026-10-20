@@ -1232,9 +1232,25 @@ function HM.runSelftest(out)
         return table.concat(lines, "\n"):find("crit", 1, true) ~= nil
     end)())
     check("weapon-conditional crit stays label-only (aura 290 discriminator)", (function()
-        local sp = HM.Racials.bySpell(20574) -- Axe Specialization: "while axe equipped"
+        -- 70450 BALANCE CHANGE: the Orc racial 20574 was renamed "Savage" and its axe
+        -- condition REMOVED (SpellEquippedItems row deleted, desc no longer says "while
+        -- ... axe") - it now folds as unconditional critChance. The discriminator law is
+        -- pinned on Thundering Strikes (16255), which still carries the equipped-items
+        -- condition and must stay label-only.
+        local sp = HM.Racials.bySpell(20574)
         local op = sp and sp.ops and sp.ops[1]
-        return op and op.kind == "aura" and (op.label or ""):find("conditional", 1, true) ~= nil
+        if not (op and op.kind == "critChance") then
+            return false, "Savage (20574) should fold as unconditional critChance"
+        end
+        local nid = HM.gen.traits and HM.gen.traits.bySpell and HM.gen.traits.bySpell[16255]
+        local node = nid and HM.gen.traits.nodes[nid]
+        if not node then return false, "no Thundering Strikes node" end
+        for _, o in ipairs(node.ops or {}) do
+            if o.kind == "aura" and (o.label or ""):find("conditional", 1, true) then
+                return true
+            end
+        end
+        return false, "conditional 290 lost its label-only guard"
     end)())
     check("buff tooltip block: while-active + values + expiry honesty", (function()
         local text = linesText(HM.Tooltips.buffLines(13452, base))

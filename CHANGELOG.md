@@ -22,6 +22,21 @@ Behind it: a new cross-impact audit comparing those text references against the 
 model's links - 462 cross-references found, 55% already modeled; the remaining gap list
 (heavily the known unmapped-ops set) is now the curation queue with exact spell names.
 
+**Updated for today's Blizzard patch (client 1.60.1.70450).** The talent trees now match
+the new build: the Shaman Elemental tree's reshuffle (Lava Burst / Elemental Mastery /
+Earthbound re-positioned, prerequisite ranks changed), Mage gains **Arcane Wrath**, Priest
+loses Improved Mind Blast, and the Orc racial is now **Savage** (renamed from Axe
+Specialization, its weapon condition removed - it folds as unconditional crit now). Under
+the hood Blizzard split flat armor into a new aura type, which briefly dropped every
+armor consumable (Scrolls of Protection, Defense elixirs) from the model - the decode
+learned the new aura and all 390 consumables are back. This also resolves the earlier
+"Improved Fire Blast" naming drift against the community calculators.
+
+**The data now watches for patches by itself.** A daily check detects any new Forever
+client build on wago.tools, refreshes all the game data and the credited talent text,
+runs the full test gate, and opens a review PR - nothing ships without the gate and a
+human tag, but drift is caught within a day instead of whenever someone notices.
+
 *Features:* UI-talent-planner, DATA-crossimpact
 
 ## 0.49.1 - 2026-10-16

@@ -278,6 +278,31 @@ Data: links ride the already-shipped tf_talents.lua (no new collection). Mobile:
 ☐ NEXT: curate top audit gaps into op mappings so the engine FOLDS them (Illumination,
   Gore Drinker, Improved <ability> family...); chained synergies layer rides those mappings.
 
+### S41 - Patch-day data refresh (client 70450) + the freshness automation ☑ (2026-10-19)
+BLIZZ PATCH REVIEWED + SHIPPED (owner "with the blizz changes today... review all the jsons"):
+☑ New client build 1.60.1.70450 detected on wago.tools (tf site re-exported same-day with ZERO
+  content change - the real signal was the client). Fetched all 32 tables, regenerated.
+☑ REAL CHANGES: Shaman Elemental reshuffle (Lava Burst/Elemental Mastery/Earthbound re-pointed
+  nodes, prereq rank 3->1), +Mage Arcane Wrath, -Priest Improved Mind Blast, 19 classic-name
+  fixes (incl. Wake of Fire -> Improved Fire Blast - RESOLVES the earlier site-drift finding),
+  Orc racial RENAMED Savage + weapon condition REMOVED (equipped-items row deleted) -> now an
+  unconditional crit fold; spells +21, items +8.
+☑ TWO DECODE CATCHES the gate caught (red before ship, as designed): (a) Blizzard SPLIT flat
+  armor into NEW aura 674 (was the armor branch of MOD_RESISTANCE 22; all 283 rows school-mask
+  1) - every armor consumable dropped until generate.py learned 674; (b) the aura-290
+  discriminator selftest pinned the old conditional Orc racial - re-pinned on Savage
+  (unconditional, the new law) + Thundering Strikes 16255 (the surviving conditional carrier).
+☑ Audit re-run on 70450: coverage 55% -> 57% (264/462; the node re-pointing fixed name joins).
+☑ FRESHNESS AUTOMATION (closes the 2026-10-11 P1 "cron can't detect new builds"):
+  pipeline/check_updates.py scans EVERY wago.tools product for the 1.60.x prefix (robust to
+  product moves - 70450 appeared under a different product than 70245), compares vs
+  DEFAULT_BUILD, --apply bumps fetch/generate/audit defaults. data-freshness.yml REWRITTEN:
+  daily detect -> fetch+generate+tf --force (best-effort) -> git-diff decides "changed" ->
+  ship gate -> REVIEW PR via gh (red gate -> issue instead). NOTHING auto-ships: gate + human
+  review + owner tag remain the only release path. Reddit scan = complementary TEXT signal
+  (hotfix talk before data lands) feeding the review queue, not the data.
+☑ DEFAULT_BUILD now 1.60.1.70450 across the pipeline. Gate 302/302, deployed + verified.
+
 ### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
 ☑ Re-audit with Fable -> fixed -> TAG + publish 0.49.1 (the prod re-ship; v0.49.0 was broken).
 ☑ WEBSITE SHIPPED (2026-10-16, deployed to wow-foresight.web.app, ui-tested): "WHERE IT COMES

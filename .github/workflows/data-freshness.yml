@@ -1,9 +1,10 @@
-# Data-freshness watch (DATAFLOW.md 4b, zero-PII): a daily cron asks wago.tools whether
-# Forever has shipped a new client build. If so, it fetches + regenerates + runs the
-# ship gate, then either opens a green release PR (gate passed) or files an issue (gate
-# red) so the shipped data never silently drifts behind the live game.
+# Data-freshness watch (DATAFLOW.md 4b, zero-PII): a daily cron detects a NEW Forever
+# client build on wago.tools (check_updates.py scans every product for the 1.60.x prefix -
+# the old version refetched the hardcoded build and could never detect a new one), refreshes
+# the client data + the talentsforever exports, runs the ship gate, and opens a REVIEW PR.
+# Data never auto-ships: the gate + human review + the owner's tag remain the release path.
+# A red gate files an issue instead, so drift is always loud.
 #
-# ACTIVATION: needs the GitHub remote only. Tune the schedule as the patch cadence settles.
 # SECURITY: action refs pinned to full commit SHAs; Dependabot proposes pin bumps.
 name: Data freshness
 
@@ -26,13 +27,61 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install lupa
-      - name: Fetch latest client data + regenerate
+
+      - name: Detect a new Forever client build (and adopt its DEFAULT_BUILD)
+        id: detect
+        run: python pipeline/check_updates.py --apply
+
+      - name: Refresh client data + talentsforever exports
         run: |
           python pipeline/fetch.py
           python pipeline/generate.py
+          # tf export refresh is best-effort: if the site is unreachable the committed
+          # tf_talents.lua stands (the fetch refuses partial writes), and the run continues.
+          python pipeline/fetch_talentsforever.py --force || echo "tf refresh unavailable - keeping committed tf_talents"
+
+      - name: Did anything actually change?
+        id: diff
+        run: |
+          git add -A pipeline/*.py Foresight/data/generated
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No data drift - nothing to do."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --cached --stat
+          fi
+
       - name: Ship gate on the refreshed data
         id: gate
+        if: steps.diff.outputs.changed == 'true'
         run: python pipeline/run_tests.py
-      # A real build change leaves generated/*.lua diffs; package the follow-up as a PR.
-      # (PR/issue steps are left for activation time so the token + branch policy are the
-      # repo owner's choice - the checkout+fetch+generate+gate above is the engine.)
+
+      - name: Open the data-refresh review PR
+        if: steps.diff.outputs.changed == 'true' && success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LABEL="${{ steps.detect.outputs.new_build }}"
+          [ -z "$LABEL" ] && LABEL="tf-$(date -u +%Y%m%d)"
+          BRANCH="data-refresh/$LABEL"
+          git config user.name "foresight-data-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git commit -m "Data refresh: $LABEL (gate green)" \
+            -m "Automated by the data-freshness watch. New client build and/or talentsforever export drift; the ship gate passed on the refreshed data. Review the generated diffs, then merge + bump + tag as usual - nothing ships without the owner's tag."
+          git push origin "$BRANCH" --force
+          gh pr create --base main --head "$BRANCH" \
+            --title "Data refresh: $LABEL" \
+            --body "Automated data-freshness PR. Client build: \`${{ steps.detect.outputs.current }}\` -> \`${LABEL}\`. Ship gate: green on the refreshed data. Review the \`Foresight/data/generated\` diffs (talent moves/renames are expected on a real patch), then merge, bump the addon version, and tag to publish." \
+            || echo "PR already exists for $BRANCH"
+
+      - name: File a red-gate issue
+        if: steps.diff.outputs.changed == 'true' && failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "Data refresh gate RED (build ${{ steps.detect.outputs.new_build || 'tf drift' }})" \
+            --body "The data-freshness watch pulled new client data but the ship gate FAILED on it. The refreshed data was NOT shipped or PR'd. Run the pipeline locally against the new build and fix the decode/selftests." \
+            || true

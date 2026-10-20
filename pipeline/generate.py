@@ -17,7 +17,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-DEFAULT_BUILD = "1.60.1.70338"
+DEFAULT_BUILD = "1.60.1.70450"
 # Release channel of the client these tables came from. Forever is in beta until
 # 2026-10-21 (launches 2026-11-04); flip to "live" when generating from a launch build.
 # Stamps every generated fact as "Forever-verified - <channel> <build>".
@@ -252,9 +252,12 @@ def build_ops(first, effects_by_spell, class_options, family_members, player_spe
             # MOD_INCREASE_HEALTH: flat max health (Flask of the Titans +1200).
             op["kind"] = "maxHealth"
             op["isPct"] = False
-        elif aura == 22:
+        elif aura == 22 or aura == 674:
             # MOD_RESISTANCE: misc0 is a school mask; the physical bit means ARMOR
             # (Scroll of Protection) and folds; magic resistances stay label-only.
+            # Build 70450 SPLIT flat armor into its own aura 674 (every 674 row carries
+            # school mask 1; verified Scroll of Protection IV kept spell/value/item chain
+            # with only the aura id renumbered 22 -> 674) - same fold, both ids.
             if misc0 & 1:
                 op["kind"] = "armor"
             else:
