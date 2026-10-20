@@ -1,31 +1,28 @@
-## 0.49.1
+## 0.50.0
 
-**If you installed 0.49.0 from CurseForge, update now**: the 0.49.0 package had a broken
-folder layout that stopped the addon loading its data (talent hovers errored). 0.49.1 fixes
-the packaging - plus everything below.
+The planner looks like a real talent tree now - and it's updated for today's patch.
 
-**The planner shows Forever's real talents - with real numbers**
-- The talent planner now renders Forever's actual talent trees (all nine classes, with real
-  prerequisite arrows), not the old vanilla table.
-- Hover any talent for its **per-rank text** (credited to **talentsforever.com**, read from the
-  Forever beta client's data), the modeled impact of the next point, and the **Affects /
-  At-max / Synergy** breakdown - what it changes and which talents push the same lever.
-- **Plan for a future level**: Lv - / Lv + sets the level you're planning toward (20 points at
-  30, or 25 with the **legacy talent** toggle), so you can design a build before you're there.
+**A proper talent-tree look**
+- **Prerequisite arrows** between talents, straight from the game's own data - grey until
+  the requirement is met in your plan, gold once it is.
+- Tree plates with class-colored headers, per-tree "points invested" footers, engraved
+  slot rims, and a clear **"N points left of 20"** budget readout that turns red (with the
+  exact overage) if a loaded build exceeds your planning level.
 
-**Plan from the talent frame**
-- A **Foresight button on the talent UI**: your own tree opens the planner; while inspecting a
-  player it becomes **Copy to Foresight** and saves their build as a named, deletable snapshot.
-  Right-click toggles **plan mode** (ghost highlights on the live tree).
-- **Load my current build** (`/foresight planner current`) seeds the planner from your real
-  allocation so you can plan by removing and moving points - entirely on paper. Foresight
-  never spends or unlearns a point.
+**Every talent names what it touches**
+- Hover any talent for its cross-references: modeled numbers where Foresight can compute
+  them ("Affects: ... / At max: ... / Synergy: ..."), and an honest **"Interacts with:
+  Lightning Bolt, Earth Shock..."** line - mined from the authoritative talent text
+  (credited to talentsforever.com) - where the model can't fold it yet.
 
-**Make the UI yours**
-- Drag the **Matrix** by its title bar; collapse the stats table independently; panels clamp
-  on-screen. **Options** are reorganized (Character first, plus a Layout tab with scale,
-  opacity, and reset actions) and the options window is resizable and remembers its size.
+**Updated for the 2026-10-19 patch (client 1.60.1.70450)**
+- The Shaman Elemental tree's reshuffle, Mage's new **Arcane Wrath**, the Orc racial's
+  rename to **Savage** (its weapon condition is gone - it counts as unconditional crit
+  now), and more. A data change that split armor buffs into a new type briefly broke every
+  armor consumable in testing - caught by the test gate and fixed before shipping, so your
+  Scrolls of Protection still count.
+- Behind the scenes, Foresight's data now **watches for new patches daily** and prepares a
+  reviewed update automatically - so the addon keeps pace with Blizzard's changes.
 
-**Safety + honesty hardening** (from a full code audit): corrupt or out-of-date build codes
-always refuse with a clear message instead of loading the wrong talents; saved window sizes
-and snapshots are validated against tampering; every modeled number keeps its confidence tag.
+Talent data credit: talentsforever.com. Foresight is display and advice only - it never
+automates an action.
