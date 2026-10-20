@@ -4,7 +4,7 @@ if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 HM.gen = HM.gen or {}
 HM.gen.build = "1.60.1.70450"
 HM.gen.channel = "beta"
-HM.gen.generated = "2026-10-19"
+HM.gen.generated = "2026-10-20"
 HM.gen.counts = {consumables=390,critHasteProcs=2,foreverPrereqs=72,foreverTalents=466,imbues=378,impactsNeedingCuration=158,items=4629,racialRaces=10,racialSpells=45,racialSpellsNeedingCuration=30,spells=3541,spellsWithDamage=517,spellsWithHeal=145,spellsWithWeaponHit=158,tabs=27,talents=432,talentsWithPartialRankValues=2,talentsWithRankValues=31,traitNodes=555,traitNodesNeedingCuration=235}
 HM.gen.classNames = {[1]="Warrior",[11]="Druid",[2]="Paladin",[3]="Hunter",[4]="Rogue",[5]="Priest",[7]="Shaman",[8]="Mage",[9]="Warlock"}
 HM.gen.classes = {[1]={name="Warrior",token="WARRIOR"},[11]={name="Druid",token="DRUID"},[2]={name="Paladin",token="PALADIN"},[3]={name="Hunter",token="HUNTER"},[4]={name="Rogue",token="ROGUE"},[5]={name="Priest",token="PRIEST"},[7]={name="Shaman",token="SHAMAN"},[8]={name="Mage",token="MAGE"},[9]={name="Warlock",token="WARLOCK"}}
