@@ -466,3 +466,202 @@ renderDailyTrial();
 renderChampions();
 initLadders();
 fromShareLink();
+
+// ===========================================================================
+// THE DEADLIEST - RUN crowd boards (WP-C). Everything below is ADDITIVE; no
+// code above this line changed. RUN ("Immersive Enemy Builder" - enemies grow
+// with every player they fell) shares this Firebase project; these boards read
+// the aggregated `rareKillCounts` + `giantSlayers` collections written by
+// RUN's backend. Until those collections + read rules land, every fetch fails
+// into graceful-empty. Tier thresholds, tier colours, and the deterministic
+// title hash are ported VERBATIM from RUN/model/notoriety.lua +
+// RUN/data/titles.lua - the same creature carries the same earned title here,
+// in-game, and for everyone, forever.
+// ===========================================================================
+
+// Kills required to REACH each tier (1..10) - RUN/model/notoriety.lua THRESHOLDS.
+const RUN_THRESHOLDS = [1, 2, 5, 10, 15, 25, 40, 60, 80, 100];
+// Tier colours: ember -> blood as the legend grows (notoriety.lua TIER_COLORS,
+// converted 0-1 floats -> hex). Index 0 = unranked grey.
+const RUN_TIER_COLORS = [
+  "#b3b3b3", "#f2d98c", "#ffc76b", "#ffb359", "#ff9e4d", "#ff8c47",
+  "#ff7a42", "#ff6640", "#ff543d", "#ff453b", "#ff3333",
+];
+// The title pools, tier 1-10 - RUN/data/titles.lua, ported verbatim.
+const RUN_TITLES = {
+  1: ["the Blooded", "the Biter", "the Prowler", "the Snatcher",
+      "the Creeper", "the First Cut"],
+  2: ["the Scarred", "the Hungry", "the Stalker", "the Ambusher",
+      "the Rabid", "the Vicious"],
+  3: ["the Cruel", "the Savage", "the Mauler", "the Relentless",
+      "the Grim", "the Gouger"],
+  4: ["the Widowmaker", "Bonebreaker", "the Merciless", "Gravemaker",
+      "the Butcher", "Fleshrender"],
+  5: ["the Manslayer", "Skullkeeper", "Bloodreaper", "Corpsemaker",
+      "the Dread", "the Hollowing"],
+  6: ["Doomfang", "the Harrower", "Plaguebearer", "Soulrender",
+      "the Nightstalker", "the Undying Hunger"],
+  7: ["Herald of Ruin", "the Unkillable", "Dreadmaw", "Bane of the Living",
+      "the Reaper's Hand", "the Long Dark"],
+  8: ["Scourge of the Land", "the Deathless", "Harbinger of Sorrow",
+      "the Devourer", "the Final Mistake", "Graveherald"],
+  9: ["Death Incarnate", "the Worldbane", "the Inevitable",
+      "Nightmare Made Flesh", "the Apocalypse Crawling", "Slaughter's Legend"],
+  10: ["Death Itself", "the End of All Runs", "the Last Thing You See",
+       "Azeroth's Reckoning", "the Unforgiven", "the Legend"],
+};
+function runTierFor(total) {
+  total = Number(total) || 0;
+  let tier = 0;
+  for (let i = 0; i < RUN_THRESHOLDS.length; i++) {
+    if (total >= RUN_THRESHOLDS[i]) tier = i + 1; else break;
+  }
+  return tier;
+}
+// Deterministic title: same npcID -> same name, for everyone, every session.
+// Lua is 1-based: idx = ((id*97 + tier*131) % #pool) + 1, pool[idx]. In JS the
+// same element is pool[(id*97 + tier*131) % pool.length].
+function runTitleFor(npcID, tier) {
+  tier = Math.min(Math.max(Number(tier) || 0, 0), 10);
+  if (tier < 1) return null;
+  const pool = RUN_TITLES[tier];
+  if (!pool || !pool.length) return null;
+  const id = Number(npcID) || 0;
+  return pool[(id * 97 + tier * 131) % pool.length];
+}
+const runTierColor = (tier) =>
+  RUN_TIER_COLORS[Math.min(Math.max(Number(tier) || 0, 0), 10)];
+
+// One fetch per board, cached; any failure (collection absent, rules not live
+// yet, offline) degrades to an empty board - never an error on the page.
+let RUN_KILLS_CACHE = null, RUN_SLAYERS_CACHE = null;
+async function loadRunBoards() {
+  if (RUN_KILLS_CACHE && RUN_SLAYERS_CACHE) return;
+  const read = async (name) => {
+    try {
+      const qs = await getDocs(collection(db, name));
+      return qs.docs.map((d) => d.data()).filter(Boolean);
+    } catch (e) { return []; }
+  };
+  [RUN_KILLS_CACHE, RUN_SLAYERS_CACHE] =
+    await Promise.all([read("rareKillCounts"), read("giantSlayers")]);
+}
+
+const RUN_MODE_LABELS = { pve: "PvE", pvp: "PvP", hc: "Hardcore" };
+function runCreatureName(d) {
+  return (typeof d.name === "string" && d.name) ? d.name : "creature #" + (d.npc != null ? d.npc : "?");
+}
+// Giant-slayer odds arrive as ~pct to win. Tolerate both 22 and 0.22 encodings:
+// anything under 1 is clearly a fraction (a wager only exists under 50%).
+function runPct(p) {
+  let v = Number(p);
+  if (!Number.isFinite(v) || v < 0) return null;
+  if (v > 0 && v < 1) v = v * 100;
+  return Math.min(100, Math.max(0, Math.round(v)));
+}
+
+// DEADLIEST CREATURES rows: filtered by mode + season, ranked by kills.
+// Suppressed docs ({low:true} - the backend's small-bucket gate) are tallied
+// but never itemized, mirroring the armory's own suppression stance.
+function deadliestRows(mode, season) {
+  const rows = []; let suppressed = 0;
+  for (const d of RUN_KILLS_CACHE || []) {
+    if (typeof d !== "object" || d === null) continue;
+    if (d.low === true) { suppressed += 1; continue; }
+    if (season !== "ALL" && String(d.season) !== season) continue;
+    const counts = (d.counts && typeof d.counts === "object") ? d.counts : {};
+    const n = mode === "ALL"
+      ? (typeof d.total === "number" ? d.total
+         : (Number(counts.pve) || 0) + (Number(counts.pvp) || 0) + (Number(counts.hc) || 0))
+      : (Number(counts[mode]) || 0);
+    if (n <= 0) continue;
+    const tier = runTierFor(n);
+    rows.push({
+      name: runCreatureName(d), n, tier, title: runTitleFor(d.npc, tier),
+      wipes: Number(d.wipes) || 0, season: d.season, color: runTierColor(tier),
+    });
+  }
+  rows.sort((a, b) => b.n - a.n);
+  return { rows: rows.slice(0, 30), suppressed };
+}
+function renderDeadliestCreatures(mode, season) {
+  const board = $("deadliestBoard");
+  if (!board) return;
+  const { rows, suppressed } = deadliestRows(mode, season);
+  const suppNote = suppressed
+    ? `<p class="muted">${esc(suppressed)} more creature${suppressed === 1 ? " is" : "s are"} gathering infamy in the dark - records show once enough reports verify.</p>`
+    : "";
+  if (!rows.length) {
+    board.innerHTML = `<p class="muted">No legends born yet - the world has not begun keeping score${mode !== "ALL" ? " in " + esc(RUN_MODE_LABELS[mode] || mode) : ""}. Be careful out there.</p>` + suppNote;
+    return;
+  }
+  board.innerHTML = rows.map((r) => {
+    const title = r.title ? ` <span class="deadliest-title" style="color:${esc(r.color)}">&ldquo;${esc(r.title)}&rdquo;</span>` : "";
+    const wipes = r.wipes > 0 ? ` · wiped ${esc(r.wipes)} group${r.wipes === 1 ? "" : "s"}` : "";
+    const season2 = r.season != null ? ` · season ${esc(r.season)}` : "";
+    return `<div class="ladder-card" style="--class:${esc(r.color)}">
+       <h4>${esc(r.name)}${title}<span class="tier-tag" style="color:${esc(r.color)}">TIER ${esc(r.tier)}</span></h4>
+       <span class="record">has killed ~${esc(r.n)} player${r.n === 1 ? "" : "s"}</span>
+       <span class="sub">${wipes}${season2}</span>
+     </div>`;
+  }).join("") + suppNote;
+}
+// GIANT SLAYERS: the players who took the wager and won - lowest odds first.
+function renderGiantSlayers(season) {
+  const board = $("slayerBoard");
+  if (!board) return;
+  const rows = [];
+  for (const d of RUN_SLAYERS_CACHE || []) {
+    if (typeof d !== "object" || d === null) continue;
+    if (season !== "ALL" && String(d.season) !== season) continue;
+    if (typeof d.handle !== "string" || !d.handle) continue;
+    const pct = runPct(d.pct);
+    if (pct == null) continue;
+    rows.push({
+      handle: d.handle, creature: runCreatureName(d), pct,
+      underdog: d.tier === "underdog", season: d.season,
+    });
+  }
+  rows.sort((a, b) => a.pct - b.pct);
+  if (!rows.length) {
+    board.innerHTML = `<p class="muted">No one has beaten the odds yet - take the wager in-game with <code>RISK IT!</code> and your deed goes in the ledger.</p>`;
+    return;
+  }
+  board.innerHTML = rows.slice(0, 30).map((r) => {
+    const badge = r.underdog
+      ? `<span class="slayer-badge underdog">Underdog</span>`
+      : `<span class="slayer-badge">Giant Slayer</span>`;
+    const season2 = r.season != null ? ` · season ${esc(r.season)}` : "";
+    return `<div class="ladder-card" style="--class:${r.underdog ? "#ffb37a" : "#8dffc4"}">
+       <h4>${esc(r.handle)}${badge}</h4>
+       <span class="record">beat ${esc(r.creature)}</span>
+       <span class="sub"> at ~${esc(r.pct)}% odds${season2}</span>
+     </div>`;
+  }).join("");
+}
+function renderRunBoards() {
+  const mode = $("runModeFilter") ? $("runModeFilter").value : "ALL";
+  const season = $("runSeasonFilter") ? $("runSeasonFilter").value : "ALL";
+  renderDeadliestCreatures(mode, season);
+  renderGiantSlayers(season);
+}
+async function initDeadliest() {
+  // Element-guarded like the feedback wiring: a stale cached index.html without
+  // the section must never throw and halt the page.
+  if (!$("deadliestBoard") || !$("slayerBoard")) return;
+  await loadRunBoards();
+  const seasonSel = $("runSeasonFilter");
+  if (seasonSel) {
+    const seasons = new Set();
+    for (const d of [...(RUN_KILLS_CACHE || []), ...(RUN_SLAYERS_CACHE || [])]) {
+      if (d && d.season != null) seasons.add(String(d.season));
+    }
+    const sorted = Array.from(seasons).sort((a, b) => String(b).localeCompare(String(a), undefined, { numeric: true }));
+    seasonSel.innerHTML = `<option value="ALL">All seasons</option>` +
+      sorted.map((s) => `<option value="${esc(s)}">Season ${esc(s)}</option>`).join("");
+    seasonSel.addEventListener("change", renderRunBoards);
+  }
+  if ($("runModeFilter")) $("runModeFilter").addEventListener("change", renderRunBoards);
+  renderRunBoards();
+}
+initDeadliest();

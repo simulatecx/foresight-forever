@@ -213,3 +213,7 @@ exports.aggregateOnWrite = onDocumentCreated("contributions/{id}", async () => {
 exports.aggregateDaily = onSchedule("every 24 hours", async () => {
   await rebuild();
 });
+
+// RUN (sibling addon) crowd backend: rareKills -> rareKillCounts/giantSlayers rollups.
+// Canonical source: run-forever/functions-run/index.js (rareKills.js is its parity-checked copy).
+exports.rareKillsOnWrite = require("./rareKills").rareKillsOnWrite;

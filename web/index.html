@@ -10,6 +10,23 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./style.css?v=10" />
+  <style>
+    /* THE DEADLIEST (RUN crowd boards) - additive styles only; ember/blood
+       accents from the RUN brand on the armory's existing frame + ladder-card
+       patterns. Nothing in style.css changes. */
+    #deadliest .deadliest-title { font-style: italic; font-weight: 400; }
+    #deadliest .tier-tag { font-family: "Cinzel", serif; font-size: 11px;
+      letter-spacing: .1em; margin-left: 10px; white-space: nowrap; }
+    #deadliest .slayer-badge { display: inline-block; font-family: "Cinzel", serif;
+      font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      padding: 2px 9px; border-radius: 999px; margin-left: 8px; vertical-align: middle;
+      color: #04170e; background: linear-gradient(180deg, #8dffc4, #2e7d54);
+      border: 1px solid #8dffc4; }
+    #deadliest .slayer-badge.underdog { color: #241a08;
+      background: linear-gradient(180deg, #ffb37a, #8f4a1a); border-color: #ffb37a; }
+    #deadliest .ladder-filter { flex-wrap: wrap; }
+    #deadliest.reveal { animation-delay: .54s; }
+  </style>
 </head>
 <body>
   <div class="vignette" aria-hidden="true"></div>
@@ -90,6 +107,34 @@
       </div>
     </section>
 
+    <!-- THE DEADLIEST (RUN crowd boards) -->
+    <section class="panel reveal" id="deadliest">
+      <div class="panel-head">
+        <h3>The Deadliest</h3>
+        <div class="ladder-filter">
+          <label for="runModeFilter">Mode</label>
+          <select id="runModeFilter">
+            <option value="ALL">All modes</option>
+            <option value="pve">PvE</option>
+            <option value="pvp">PvP</option>
+            <option value="hc">Hardcore</option>
+          </select>
+          <label for="runSeasonFilter">Season</label>
+          <select id="runSeasonFilter"><option value="ALL">All seasons</option></select>
+        </div>
+      </div>
+      <div class="panel-body">
+        <p class="lead">From <a href="./run.html">RUN - the Immersive Enemy Builder</a>:
+        the creatures of Forever grow a legend with every player they fell. These are the
+        crowd's verified records - the world's Most Wanted wearing their earned titles,
+        and the players who took the wager and won.</p>
+        <h4 class="ladder-subhead">Deadliest Creatures</h4>
+        <div id="deadliestBoard" class="ladder-board"><p class="muted">Summoning the Most Wanted…</p></div>
+        <h4 class="ladder-subhead">Giant Slayers</h4>
+        <div id="slayerBoard" class="ladder-board"><p class="muted">Reading the ledger…</p></div>
+      </div>
+    </section>
+
     <!-- FEEDBACK -->
     <section class="panel reveal" id="feedback">
       <div class="panel-head"><h3>Send Word</h3></div>
@@ -127,6 +172,6 @@
     <p><a href="./privacy.html">Privacy</a> · <a href="https://github.com/simulatecx/foresight-forever">Source</a> · WoW: Forever</p>
   </footer>
 
-  <script type="module" src="./app.js?v=15"></script>
+  <script type="module" src="./app.js?v=16"></script>
 </body>
 </html>

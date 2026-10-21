@@ -58,6 +58,38 @@ service cloud.firestore {
           && (!('context' in d)  || (d.context is string && d.context.size() <= 300));
     }
 
+    // The RUN (sibling addon) crowd-share envelope. GENERATED from the run-forever
+    // repo's data/rare-kills-schema.json by its pipeline/gen_crowd_schema.py - the RUN
+    // payload builder, the run.html sanitize (web/run-crowd-schema.js) and this gate
+    // all derive from that ONE source; RUN's ship gate fails on drift. Envelope only:
+    // rules cannot iterate lists, so events[] internals are deep-validated by the
+    // rareKillsOnWrite function (functions/rareKills.js). Never hand-edit between the
+    // markers; regenerate in run-forever and re-apply.
+    // BEGIN generated validRareKill
+    function validRareKill(d) {
+      return d.keys().hasOnly(['v', 'kinds', 'events', 'season', 'clientId', 'sum', 'named', 'handle', 'armory'])
+          && d.v == 1
+          && d.kinds is list && d.kinds.size() >= 1 && d.kinds.size() <= 4 && d.kinds.hasOnly(['death', 'slay', 'sighting', 'wipe'])
+          && d.events is list && d.events.size() >= 1 && d.events.size() <= 100
+          && d.season is string && d.season.size() <= 8 && d.season.matches('[a-z0-9]+')
+          && (!('clientId' in d) || (d.clientId is string && d.clientId.size() <= 40))
+          && (!('sum' in d) || (d.sum is number))
+          && (!('named' in d) || (d.named is bool))
+          && (!('handle' in d) || (('named' in d) && d.named == true && d.handle is string && d.handle.size() <= 24 && d.handle.matches('[A-Za-z0-9_ -]+')))
+          && (!('armory' in d) || (('named' in d) && d.named == true && d.armory is string && d.armory.size() <= 200 && d.armory.matches('https://[A-Za-z0-9._~:/?#@!$&*+,;=%()-]+')));
+    }
+    // END generated validRareKill
+
+    // The RUN waitlist shape: an email (PII - explicit consent REQUIRED, purpose-bound
+    // to the RUN launch waitlist, named in web/privacy.html), consent must be literally
+    // true, and a short source tag. Write-only and capped; never client-readable.
+    function validRunWaitlist(d) {
+      return d.keys().hasOnly(['email','consent','source'])
+          && d.email is string && d.email.size() <= 120 && d.email.matches('[^@ ]+@[^@ ]+\\.[^@ ]+')
+          && d.consent is bool && d.consent == true
+          && d.source is string && d.source.size() <= 24;
+    }
+
     // ---- feedback: write-only, shape-validated, never readable ---------------
     match /feedback/{docId} {
       allow create: if signedIn() && validFeedback(request.resource.data);  // restore && appChecked() when fixed
@@ -109,6 +141,42 @@ service cloud.firestore {
     match /verifiedRules/{talentId} {
       allow read: if true;        // public, non-identifying rank-rule strings
       allow write: if false;      // owner gcloud/admin only; clients may never write
+    }
+
+    // ---- RUN rareKills: write-only, envelope shape-locked, never readable -----
+    // Raw crowd submissions from the RUN share link (run.html). The Cloud Function
+    // (rareKillsOnWrite) deep-validates events, recomputes slay tiers from snap,
+    // rate-limits per clientId and builds the public rollups; clients never read raw.
+    match /rareKills/{docId} {
+      allow create: if signedIn() && validRareKill(request.resource.data);  // restore && appChecked() when fixed
+      allow read, update, delete: if false;  // raw crowd rows are not client-readable
+    }
+
+    // ---- RUN rareKillCounts: read-only; written ONLY by Cloud Functions -------
+    // Per-creature rollups (counts by mode, total, wipes, k-of-n-published name).
+    // The function enforces MIN_BUCKET small-bucket suppression BEFORE writing:
+    // below it the doc carries { low: true } and no totals. Baked into the addon
+    // by run-forever pipeline/fetch_counts.py; also read by the run.html ladder.
+    match /rareKillCounts/{docId} {
+      allow read: if true;         // public, pre-suppressed crowd counts
+      allow write: if false;       // admin SDK bypasses rules; clients may never write
+    }
+
+    // ---- RUN giantSlayers: read-only; written ONLY by Cloud Functions ---------
+    // The opt-in named ladder: entries exist ONLY for named==true submissions with a
+    // CHOSEN handle (charset/length-clamped, never a real name) and a server-RECOMPUTED
+    // odds tier - the client's claimed odds are advisory and never published.
+    match /giantSlayers/{docId} {
+      allow read: if true;
+      allow write: if false;       // admin SDK bypasses rules; clients may never write
+    }
+
+    // ---- RUN waitlist: write-only, shape-locked, never readable ---------------
+    // Email capture for the RUN launch waitlist (marketing-site/run.html). PII:
+    // consent==true is required by shape; the team reads it in the console only.
+    match /runWaitlist/{docId} {
+      allow create: if signedIn() && validRunWaitlist(request.resource.data);  // restore && appChecked() when fixed
+      allow read, update, delete: if false;  // emails are never client-readable
     }
 
     // ---- everything else: denied -------------------------------------------

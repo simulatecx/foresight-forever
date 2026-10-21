@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RUN - Immersive Enemy Builder · the waitlist</title>
+  <meta name="description" content="RUN - the Immersive Enemy Builder for WoW: Forever. Enemies grow with every player they fell. Join the waitlist, or bring your ledger to the crowd." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23ff6a35'/%3E%3Ccircle cx='8' cy='8' r='3' fill='%230a0505'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cinzel+Decorative:wght@700;900&family=IBM+Plex+Mono:wght@400;500;600&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    /* RUN - the ember/blood brand (adapted from the RUN gallery cards), laid over
+       the armory's page skeleton: coal stone, ember filigree, Cinzel caps,
+       IBM Plex Mono for the ledger numbers. All texture is CSS/SVG. */
+    :root {
+      --coal-0: #080404;
+      --coal-1: #120a07;
+      --coal-2: #190f0a;
+      --bone: #e8ddcf;
+      --bone-dim: #b3a493;
+      --muted: #857868;
+      --blood: #ff3b30;
+      --blood-dp: #8f1812;
+      --ember: #ff6a35;
+      --ember-br: #ffb37a;
+      --ember-dp: #8a3410;
+      --ok: #8dffc4;
+      --warn: #e0a24a;
+      --line: rgba(255, 106, 53, 0.32);
+      --line-soft: rgba(255, 106, 53, 0.14);
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.65);
+      --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; background: #080404; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--bone);
+      font-family: "Spectral", Georgia, serif; font-size: 16px; line-height: 1.6;
+      background:
+        radial-gradient(1200px 700px at 50% -10%, rgba(255,106,53,0.13), transparent 60%),
+        radial-gradient(900px 900px at 90% 110%, rgba(255,59,48,0.09), transparent 60%),
+        linear-gradient(180deg, var(--coal-1), var(--coal-0) 60%);
+      background-attachment: fixed;
+    }
+    .vignette { position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background: radial-gradient(130% 100% at 50% 0%, transparent 55%, rgba(0,0,0,0.6) 100%);
+      mix-blend-mode: multiply; }
+    body::after {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.05;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    a { color: var(--ember-br); text-decoration: none; border-bottom: 1px solid var(--line); }
+    a:hover { color: #fff; border-color: var(--ember-br); }
+    code { font-family: var(--mono); font-size: .88em; color: var(--ember-br);
+      background: rgba(0,0,0,0.4); padding: 1px 6px; border-radius: 3px;
+      border: 1px solid var(--line-soft); }
+
+    /* Masthead: the claw sigil + RUN wordmark. */
+    .masthead { position: relative; z-index: 1; text-align: center; padding: 52px 20px 8px; }
+    .claw {
+      width: 58px; height: 58px; margin: 0 auto 12px; position: relative; border-radius: 50%;
+      background: radial-gradient(circle at 50% 40%, #2a120a, #0a0505);
+      border: 2px solid var(--ember);
+      box-shadow: 0 0 0 4px rgba(0,0,0,0.55), 0 0 20px rgba(255,106,53,0.5) inset;
+    }
+    .claw::before { content: "\2620"; position: absolute; inset: 0; display: grid;
+      place-items: center; font-size: 26px; color: var(--blood);
+      filter: drop-shadow(0 0 8px rgba(255,59,48,0.6)); animation: smolder 3.4s ease-in-out infinite; }
+    @keyframes smolder { 0%,100% { opacity: .75; } 50% { opacity: 1; } }
+    .masthead h1 {
+      margin: 0; font-family: "Cinzel Decorative", serif; font-weight: 900;
+      font-size: clamp(52px, 11vw, 96px); line-height: .95; letter-spacing: 0.05em;
+      color: transparent;
+      background: linear-gradient(180deg, #fff3e6 4%, var(--ember-br) 38%, var(--ember) 62%, var(--blood-dp));
+      -webkit-background-clip: text; background-clip: text;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.55));
+    }
+    .kicker { margin: 6px 0 0; font-family: "Cinzel", serif; letter-spacing: 0.34em;
+      text-transform: uppercase; font-size: 13px; color: var(--ember-br); padding-left: 0.34em; }
+    .slogan { margin: 12px auto 0; max-width: 52ch; color: var(--bone-dim);
+      font-size: clamp(15px, 2.2vw, 18px); }
+    .slogan em { color: var(--ember-br); font-style: normal; }
+    .trust { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 20px 0 6px; }
+    .trust span { font-family: var(--mono); font-size: 12.5px; color: var(--bone-dim);
+      letter-spacing: .02em; border: 1px solid var(--line); border-radius: 999px;
+      padding: 6px 14px; background: rgba(0,0,0,0.35); }
+    .hero-cta { margin: 22px 0 4px; }
+
+    /* The ember-framed panel (armory frame, RUN palette). */
+    .scroll { position: relative; z-index: 1; max-width: 860px; margin: 0 auto;
+      padding: 14px 18px 60px; display: grid; gap: 22px; }
+    .panel { position: relative;
+      background: linear-gradient(180deg, rgba(42,22,12,0.55), rgba(14,8,6,0.78)), var(--coal-2);
+      border: 1px solid var(--line); border-radius: 4px;
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,179,122,0.06); }
+    .panel::before { content: ""; position: absolute; inset: 6px;
+      border: 1px solid var(--line-soft); border-radius: 2px; pointer-events: none; }
+    .panel::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+      border-radius: 4px; opacity: .85;
+      background:
+        radial-gradient(5px 5px at 10px 10px, var(--ember) 40%, transparent 44%),
+        radial-gradient(5px 5px at calc(100% - 10px) 10px, var(--ember) 40%, transparent 44%),
+        radial-gradient(5px 5px at 10px calc(100% - 10px), var(--ember) 40%, transparent 44%),
+        radial-gradient(5px 5px at calc(100% - 10px) calc(100% - 10px), var(--ember) 40%, transparent 44%); }
+    .panel-head { padding: 16px 22px 12px; border-bottom: 1px solid var(--line-soft); }
+    .panel-head h3 { margin: 0; font-family: "Cinzel", serif; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase; font-size: 16px; color: var(--ember-br); }
+    .panel-body { padding: 16px 22px 22px; }
+    .lead { color: var(--bone-dim); margin-top: 0; }
+    .muted { color: var(--muted); }
+
+    /* The three-point strip. */
+    .points { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .point { padding: 14px 16px; border-radius: 4px; background: rgba(0,0,0,0.3);
+      border: 1px solid var(--line-soft); border-top: 2px solid var(--ember); }
+    .point h5 { margin: 0 0 5px; font-family: "Cinzel", serif; letter-spacing: .09em;
+      text-transform: uppercase; font-size: 12px; color: var(--ember-br); }
+    .point p { margin: 0; font-size: 13.5px; color: var(--bone-dim); line-height: 1.5; }
+
+    /* Forms + buttons. */
+    .field-label { display: block; font-family: "Cinzel", serif; font-size: 12px;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); margin: 6px 0; }
+    input[type="email"] {
+      width: 100%; background: rgba(0,0,0,0.42); color: var(--bone);
+      border: 1px solid var(--line); border-radius: 3px; padding: 11px 14px;
+      font-family: var(--mono); font-size: 14px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+    }
+    input[type="email"]:focus { outline: none; border-color: var(--ember);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,106,53,0.22); }
+    .consent { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0;
+      color: var(--bone-dim); font-size: 14px; }
+    .consent input { margin-top: 4px; accent-color: var(--ember); width: 16px; height: 16px; }
+    .consent b { color: var(--bone); font-weight: 600; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+    .btn {
+      font-family: "Cinzel", serif; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; font-size: 13px; cursor: pointer;
+      color: var(--bone); background: linear-gradient(180deg, #2e1a10, #160c08);
+      border: 1px solid var(--line); border-radius: 3px; padding: 11px 20px;
+      transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease, color .2s;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); border-color: var(--ember);
+      color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 16px rgba(255,106,53,0.25); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ember {
+      color: #230a02; border-color: var(--ember-br);
+      background: linear-gradient(180deg, var(--ember-br), var(--ember) 60%, var(--ember-dp));
+      text-shadow: 0 1px 0 rgba(255,255,255,0.25);
+    }
+    .btn-ember:hover:not(:disabled) { color: #120401;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.55), 0 0 22px rgba(255,179,122,0.45); }
+    a.btn { display: inline-block; border-bottom: none; }
+    .status { min-height: 1.2em; margin: 12px 0 0; color: var(--bone-dim); font-style: italic; }
+    .status.ok { color: var(--ok); } .status.warn { color: var(--warn); }
+
+    /* Share-receiver preview rows. */
+    .preview { display: grid; gap: 8px; margin: 14px 0; }
+    .preview .rowline { display: flex; justify-content: space-between; gap: 14px;
+      align-items: baseline; padding: 9px 12px; border: 1px solid var(--line-soft);
+      border-left: 3px solid var(--ember); border-radius: 3px; background: rgba(0,0,0,0.25); }
+    .preview .name { font-family: "Cinzel", serif; font-size: 13px; letter-spacing: .05em; }
+    .preview .val { font-family: var(--mono); color: var(--ember-br); white-space: nowrap; }
+
+    .footer { position: relative; z-index: 1; text-align: center; color: var(--muted);
+      font-size: 13px; padding: 30px 20px 50px; border-top: 1px solid var(--line-soft); margin-top: 20px; }
+    .footer a { color: var(--bone-dim); }
+
+    .hidden { display: none; }
+    .reveal { opacity: 0; transform: translateY(14px); animation: rise .7s ease forwards; }
+    .masthead.reveal { animation-delay: .05s; }
+    #receive.reveal { animation-delay: .16s; }
+    #about.reveal { animation-delay: .28s; }
+    #waitlist.reveal { animation-delay: .40s; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { animation: none; opacity: 1; transform: none; }
+      .claw::before { animation: none; }
+      html { scroll-behavior: auto; }
+    }
+    @media (max-width: 560px) {
+      .masthead { padding-top: 36px; }
+      .points { grid-template-columns: 1fr; }
+      .actions .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <header class="masthead reveal">
+    <div class="claw" aria-hidden="true"></div>
+    <h1>RUN</h1>
+    <p class="kicker">Immersive Enemy Builder</p>
+    <p class="slogan">Enhancing the Azeroth we know and love - enemies grow with
+    every player they fell: <em>ranks, earned titles, banners, and your honest odds</em>.</p>
+    <div class="trust">
+      <span>Fully automatic</span>
+      <span>Never acts for you</span>
+      <span>Anonymous by default</span>
+    </div>
+    <p class="hero-cta"><a class="btn btn-ember" href="#waitlist">Join the waitlist</a></p>
+  </header>
+
+  <main class="scroll">
+    <!-- SHARE RECEIVER - hidden unless the page is opened from a RUN share link (#d=). -->
+    <section class="panel reveal hidden" id="receive" aria-live="polite">
+      <div class="panel-head"><h3>Your Ledger Has Arrived</h3></div>
+      <div class="panel-body">
+        <p class="lead">This link carries a <code>/run share</code> payload from the RUN
+        addon - non-identifying creature records only (creature ids, modes, counts -
+        never your name, realm, or guild).
+        <a href="./privacy.html#run">What a RUN share contains</a>.</p>
+        <div id="rcvPreview" class="preview"></div>
+        <p id="rcvNote" class="muted"></p>
+        <div class="actions">
+          <button id="rcvContribute" class="btn btn-ember" disabled>Contribute to the crowd</button>
+        </div>
+        <p id="rcvStatus" class="status" role="status"></p>
+      </div>
+    </section>
+
+    <!-- WHAT IT IS -->
+    <section class="panel reveal" id="about">
+      <div class="panel-head"><h3>The World Keeps Score</h3></div>
+      <div class="panel-body">
+        <p class="lead">RUN is a standalone addon for WoW: Forever and Hardcore - a
+        Nemesis system the platform can actually keep. Every creature that fells a
+        player climbs a ten-tier notoriety ladder and earns a deterministic title:
+        the same enemy carries the same name for everyone, forever.</p>
+        <div class="points">
+          <div class="point"><h5>Enemies that grow</h5><p>Kill counts blend your deaths,
+            deaths heard nearby, and the verified crowd - banners, map pins, and
+            soft-elite treatment for the ones that earn it.</p></div>
+          <div class="point"><h5>Honest odds</h5><p>FIGHT / RISKY / FLEE with "~N% to
+            win" under every target. Under 50%, solo, the wager appears: win and it's
+            recorded forever.</p></div>
+          <div class="point"><h5>Advice only, always</h5><p>Official APIs, no automation,
+            nothing leaves your machine unless you bring it here yourself. Same
+            account-safety doctrine as Foresight.</p></div>
+        </div>
+        <p class="muted" style="margin:16px 0 0;">The crowd's records live on the armory:
+        <a href="./index.html#deadliest">the Deadliest Creatures &amp; Giant Slayers boards</a>.</p>
+      </div>
+    </section>
+
+    <!-- WAITLIST -->
+    <section class="panel reveal" id="waitlist">
+      <div class="panel-head"><h3>Join the Waitlist</h3></div>
+      <div class="panel-body">
+        <p class="lead">RUN is waitlist-first - it opens with WoW: Forever. Leave an
+        email and you'll get <b>one note when RUN opens; nothing else; delete on
+        request</b>. That's the whole deal.</p>
+        <label for="waitEmail" class="field-label">Your email</label>
+        <input id="waitEmail" type="email" autocomplete="email" maxlength="120"
+          placeholder="you@example.com" />
+        <label class="consent">
+          <input type="checkbox" id="waitConsent" />
+          <span>I agree to be emailed <b>only to tell me when RUN opens; nothing
+          else</b> - no marketing, no sharing, and my address is <b>deleted on
+          request</b> (<a href="./privacy.html#run">how</a>).</span>
+        </label>
+        <div class="actions">
+          <button id="waitSubmit" class="btn btn-ember" disabled>Seal the pact</button>
+        </div>
+        <p id="waitStatus" class="status" role="status"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>RUN never sends data on its own - this page only records what you bring,
+    when you click.</p>
+    <p><a href="./index.html">The Armory</a> · <a href="./privacy.html#run">Privacy</a> · WoW: Forever</p>
+  </footer>
+
+  <script type="module">
+    // RUN waitlist + share-link receiver. Same Firebase app/init pattern as the
+    // armory's app.js: the client config is public; security is the Firestore
+    // rules + App Check, never the key. Writes: `runWaitlist` (one doc per
+    // signup) and `rareKills` (batch, only after the generated allow-list in
+    // ./run-crowd-schema.js sanitizes the share payload).
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { initializeAppCheck, ReCaptchaEnterpriseProvider, getToken }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
+    import { getAuth, signInAnonymously }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDtlBj2Khodgq8d4aE2RKWwayPWrAeWwL8",
+      authDomain: "wow-foresight.firebaseapp.com",
+      projectId: "wow-foresight",
+      storageBucket: "wow-foresight.firebasestorage.app",
+      messagingSenderId: "443733238250",
+      appId: "1:443733238250:web:08ab3b0176a78ae8c7d293",
+      measurementId: "G-8VGTVWBLXR",
+    };
+    const app = initializeApp(firebaseConfig);
+    const RECAPTCHA_ENTERPRISE_SITE_KEY = "6LdlDe4tAAAAADDs-IpXu1osYeWMC2FcwKeiApQd";
+    let appCheck = null;
+    try {
+      appCheck = initializeAppCheck(app, {
+        provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_ENTERPRISE_SITE_KEY),
+        isTokenAutoRefreshEnabled: true,
+      });
+    } catch (e) {
+      console.error("[RUN] App Check init FAILED:", (e && (e.message || e.code)) || e);
+    }
+    async function ensureAppCheck() {
+      if (!appCheck) return "no-appcheck-instance";
+      try { const t = await getToken(appCheck, false); return (t && t.token) ? "ok" : "empty-token"; }
+      catch (e) { return "token-error: " + ((e && (e.code || e.message)) || e); }
+    }
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // THE LAW: every crowd-sourced string is escaped before DOM insertion.
+    const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g,
+      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const $ = (id) => document.getElementById(id);
+
+    // ---------------- waitlist ----------------
+    const waitStatus = $("waitStatus");
+    function setWait(msg, kind) { waitStatus.textContent = msg || ""; waitStatus.className = "status" + (kind ? " " + kind : ""); }
+    const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+    function waitRefresh() {
+      $("waitSubmit").disabled = !($("waitConsent").checked && emailOk($("waitEmail").value.trim()));
+    }
+    $("waitEmail").addEventListener("input", waitRefresh);
+    $("waitConsent").addEventListener("change", waitRefresh);
+    $("waitSubmit").addEventListener("click", async () => {
+      // 120 = the validRunWaitlist server cap; stay in lockstep with the rules.
+      const email = $("waitEmail").value.trim().slice(0, 120);
+      if (!emailOk(email) || !$("waitConsent").checked) return;
+      setWait("Sealing the pact…");
+      $("waitSubmit").disabled = true;
+      try {
+        await signInAnonymously(auth);
+        const ac = await ensureAppCheck();
+        if (ac !== "ok") console.warn("[RUN] App Check not ready at waitlist:", ac);
+        await addDoc(collection(db, "runWaitlist"), { email, consent: true, source: "run-web" });
+        setWait("You're on the list. One note when RUN opens - nothing else.", "ok");
+        $("waitEmail").value = ""; $("waitConsent").checked = false;
+      } catch (e) {
+        console.error("[RUN] waitlist failed:", e);
+        setWait(e && e.code === "permission-denied"
+          ? "The waitlist gate isn't open yet - we're still wiring it up. Please try again soon."
+          : "Couldn't sign you up: " + ((e && (e.code || e.message)) || e) + ". Please try again.", "warn");
+        waitRefresh();
+      }
+    });
+
+    // ---------------- share-link receiver ----------------
+    // Contract: links arrive as run.html#d=<encodeURIComponent(JSON)>. The payload
+    // is sanitized by the GENERATED allow-list in ./run-crowd-schema.js (owned by
+    // the schema pipeline - same single-source pattern as the armory's
+    // crowd-schema.js) before anything is written. If that module hasn't shipped
+    // yet, the gate stays closed: we preview nothing and never write.
+    const rcvStatus = $("rcvStatus");
+    function setRcv(msg, kind) { rcvStatus.textContent = msg || ""; rcvStatus.className = "status" + (kind ? " " + kind : ""); }
+
+    let runSchema = null;      // RUN_CROWD_SCHEMA (generated allow-list)
+    let runFletcher = null;    // fletcher16 - the payload integrity checksum
+    let runCanonical = null;   // canonical(payload) - the string the checksum covers
+    async function loadRunSchema() {
+      try {
+        const mod = await import("./run-crowd-schema.js");
+        runSchema = mod.RUN_CROWD_SCHEMA || null;
+        runFletcher = typeof mod.fletcher16 === "function" ? mod.fletcher16 : null;
+        runCanonical = typeof mod.canonical === "function" ? mod.canonical : null;
+        return !!(runSchema && Array.isArray(runSchema.allow) && runSchema.events);
+      } catch (e) {
+        // Module not deployed yet - tolerated; the contribute gate stays closed.
+        return false;
+      }
+    }
+
+    // One field against its generated spec (const/number/string/bool/map/list,
+    // with min/max/maxSize/matches/of/keys as the schema declares them).
+    function fieldOk(v, f) {
+      switch (f.kind) {
+        case "const": return v === f.value;
+        case "number": return typeof v === "number" && Number.isFinite(v)
+          && (f.min == null || v >= f.min) && (f.max == null || v <= f.max);
+        case "string": return typeof v === "string"
+          && (f.maxSize == null || v.length <= f.maxSize)
+          && (!f.matches || new RegExp("^(?:" + f.matches + ")$").test(v))
+          && (!f.of || f.of.includes(v));
+        case "bool": return typeof v === "boolean";
+        case "map": return typeof v === "object" && v !== null && !Array.isArray(v)
+          && (f.maxSize == null || Object.keys(v).length <= f.maxSize)
+          && (!f.keys || Object.keys(v).every((k) => f.keys.includes(k)));
+        case "list": return Array.isArray(v)
+          && (f.maxSize == null || v.length <= f.maxSize)
+          && (!f.of || v.every((x) => f.of.includes(x)));
+        default: return true;
+      }
+    }
+    function sanitizeEvent(e, spec) {
+      if (typeof e !== "object" || e === null || Array.isArray(e)) return null;
+      const out = {};
+      for (const k of spec.allow) if (k in e) out[k] = e[k];
+      for (const k of (spec.required || [])) if (!(k in out)) return null;
+      for (const f of spec.fields) {
+        if (out[f.key] === undefined) { if (f.required) return null; continue; }
+        if (!fieldOk(out[f.key], f)) return null;
+      }
+      return out;
+    }
+    // The generated allow-list IS the law (same single-source as the addon
+    // builder + the Firestore rules): reject banned keys, keep only allowed
+    // ones, validate every field and every event, strip identifying fields
+    // unless the explicit named opt-in rides along, then verify the integrity
+    // checksum. STRICT: one invalid event voids the link (dropping events
+    // would silently break the checksum the backend recomputes).
+    function sanitizeRun(raw) {
+      if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return { err: "shape" };
+      if (raw.v !== runSchema.version) return { err: "shape" };
+      for (const b of (runSchema.forbidden || [])) if (b in raw) return { err: "shape" };
+      const out = {};
+      for (const k of runSchema.allow) if (k in raw) out[k] = raw[k];
+      if (out.named !== true) {
+        for (const f of runSchema.fields) if (f.tier === "identifying") delete out[f.key];
+      }
+      for (const f of runSchema.fields) {
+        if (out[f.key] === undefined) { if (f.required) return { err: "shape" }; continue; }
+        if (f.key === "events") continue; // deep-validated below
+        if (!fieldOk(out[f.key], f)) return { err: "shape" };
+      }
+      if (!Array.isArray(out.events)) return { err: "shape" };
+      if (!out.events.length) return { err: "empty" };
+      if (out.events.length > (runSchema.maxEvents || 100)) return { err: "shape" };
+      const events = [];
+      for (const e of out.events) {
+        const spec = e && runSchema.events[e.k];
+        if (!spec) return { err: "shape" };
+        const clean = sanitizeEvent(e, spec);
+        if (!clean) return { err: "shape" };
+        events.push(clean);
+      }
+      out.events = events;
+      if (out.sum != null && runFletcher && runCanonical
+          && runFletcher(runCanonical(out)) !== out.sum) return { err: "sum" };
+      return { ok: out };
+    }
+
+    // Preview: counts by kind only - never a raw dump of the payload.
+    const KIND_LABELS = { death: "Deaths recorded", slay: "Giant-slayer wins",
+      sighting: "Rare sightings", wipe: "Group wipes" };
+    // Distinct creatures across the events, deduped by npc id; a sighting's nm
+    // (the creature's own name) wins over the "creature #npc" fallback.
+    function creatureLabels(events) {
+      const byNpc = new Map();
+      for (const e of events) {
+        if (e.npc == null && !e.nm) continue;
+        const key = e.npc != null ? "npc:" + e.npc : "nm:" + e.nm;
+        const named = (typeof e.nm === "string" && e.nm) ? e.nm : null;
+        if (named || !byNpc.has(key)) byNpc.set(key, named || "creature #" + e.npc);
+      }
+      return Array.from(byNpc.values());
+    }
+    function previewHtml(p) {
+      const byKind = {};
+      for (const e of p.events) byKind[e.k] = (byKind[e.k] || 0) + 1;
+      const rows = [];
+      for (const k of (runSchema.kinds || Object.keys(byKind))) {
+        if (byKind[k]) rows.push([KIND_LABELS[k] || k, byKind[k]]);
+      }
+      rows.push(["Creatures involved", creatureLabels(p.events).length]);
+      rows.push(["Season", p.season]);
+      return rows.map(([k, v]) =>
+        `<div class="rowline"><span class="name">${esc(k)}</span><span class="val">${esc(v)}</span></div>`).join("");
+    }
+
+    let pendingPayload = null;
+    async function receiveShare() {
+      const m = (location.hash || "").match(/[#&]d=([^&]+)/);
+      if (!m) return;
+      const panel = $("receive");
+      panel.classList.remove("hidden");
+      let raw;
+      try { raw = JSON.parse(decodeURIComponent(m[1])); }
+      catch (e) { setRcv("That share link looked malformed - ask the addon for a fresh one with /run share.", "warn"); return; }
+      const gateOpen = await loadRunSchema();
+      if (!gateOpen) {
+        $("rcvNote").textContent = "The contribution gate isn't open yet - the crowd data contract hasn't shipped. Your link is safe to keep; check back soon.";
+        setRcv("");
+        return;
+      }
+      const res = sanitizeRun(raw);
+      if (res.err === "sum") { setRcv("This link failed its integrity check - it may have been truncated in the copy. Ask the addon for a fresh /run share link.", "warn"); return; }
+      if (res.err === "empty") { setRcv("This ledger carries no recordable events - nothing to contribute.", "warn"); return; }
+      if (!res.ok) { setRcv("That doesn't look like valid RUN share data.", "warn"); return; }
+      pendingPayload = res.ok;
+      $("rcvPreview").innerHTML = previewHtml(pendingPayload);
+      // Policy-practice honesty: if the named opt-in rides along, say plainly
+      // that the chosen handle will appear publicly on the Giant Slayers board.
+      const note = $("rcvNote");
+      if (pendingPayload.named === true && pendingPayload.handle) {
+        note.innerHTML = `Only the counts above are sent - allow-listed and non-identifying. You opted in to the public Giant Slayers board as <b>&ldquo;${esc(pendingPayload.handle)}&rdquo;</b>; everyone else stays anonymous.`;
+      } else {
+        note.textContent = "Only the counts above are sent - allow-listed, non-identifying, and only when you click.";
+      }
+      $("rcvContribute").disabled = false;
+      panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    $("rcvContribute").addEventListener("click", async () => {
+      if (!pendingPayload) return;
+      $("rcvContribute").disabled = true;
+      setRcv("Carving it into the record…");
+      try {
+        await signInAnonymously(auth);
+        const ac = await ensureAppCheck();
+        if (ac !== "ok") console.warn("[RUN] App Check not ready at contribute:", ac);
+        // One share = one rareKills doc (the schema's `collection`); the
+        // backend verifies the checksum again and folds it into the boards.
+        await addDoc(collection(db, runSchema.collection || "rareKills"), pendingPayload);
+        const names = creatureLabels(pendingPayload.events);
+        const shown = names.slice(0, 6).map((n) => esc(n)).join(", ")
+          + (names.length > 6 ? ` and ${names.length - 6} more` : "");
+        rcvStatus.innerHTML = `Recorded - the legend${names.length === 1 ? "" : "s"} of <b>${shown}</b> just grew. See <a href="./index.html#deadliest">the Deadliest</a>.`;
+        rcvStatus.className = "status ok";
+        pendingPayload = null;
+      } catch (e) {
+        console.error("[RUN] contribute failed:", e);
+        setRcv(e && e.code === "permission-denied"
+          ? "The record gate isn't open yet - your ledger is safe in-game; try again soon."
+          : "Couldn't record it: " + ((e && (e.code || e.message)) || e) + ".", "warn");
+        $("rcvContribute").disabled = false;
+      }
+    });
+
+    // Boot. Also re-run the receiver if a share fragment arrives while the page
+    // is already open (pasting a link into the address bar of this tab only
+    // fires hashchange, not a reload).
+    waitRefresh();
+    receiveShare();
+    window.addEventListener("hashchange", receiveShare);
+  </script>
+</body>
+</html>

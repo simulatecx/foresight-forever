@@ -6,6 +6,28 @@
   <title>Foresight - privacy &amp; data</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%2333ff99'/%3E%3C/svg%3E" />
   <link rel="stylesheet" href="./style.css" />
+  <style>
+    /* Page-local layout: style.css ships the armory brand but not these doc
+       classes, so define them here (same carved-stone/gold frame language). */
+    .wrap { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 40px 18px 60px; }
+    .wrap h1 { font-family: "Cinzel Decorative", serif; font-weight: 900; letter-spacing: .04em;
+      font-size: clamp(30px, 6vw, 44px); margin: 0 0 6px; color: transparent;
+      background: linear-gradient(180deg, var(--gold-br) 10%, var(--gold) 55%, var(--gold-dp));
+      -webkit-background-clip: text; background-clip: text; }
+    .wrap h1 .brand { color: transparent; }
+    .card { position: relative; margin-top: 20px; padding: 10px 26px 22px;
+      background: linear-gradient(180deg, rgba(40,32,18,0.6), rgba(18,14,9,0.75)), var(--stone-2);
+      border: 1px solid var(--line); border-radius: 4px;
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,235,180,0.05); }
+    .card::before { content: ""; position: absolute; inset: 6px; border: 1px solid var(--line-soft);
+      border-radius: 2px; pointer-events: none; }
+    .card h2 { font-family: "Cinzel", serif; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; font-size: 15px; color: var(--gold-br); margin: 26px 0 8px; }
+    .card > h2:first-child { margin-top: 18px; }
+    .fine { color: var(--muted); font-size: 13px; font-style: italic; }
+    .run-card { border-left: 3px solid #ff6a35; }
+    .run-card h2 { color: #ffb37a; }
+  </style>
 </head>
 <body>
   <main class="wrap">
@@ -78,6 +100,54 @@
       <p class="fine">This notice updates in the same change as any data-practice
       change. Last updated with Foresight v0.48.0 (opt-in public-ladder tier, S34c).</p>
       <p><a href="./index.html">&larr; back</a></p>
+    </section>
+
+    <section class="card run-card" id="run">
+      <h2>RUN - the Immersive Enemy Builder</h2>
+      <p>RUN is our companion addon (enemies grow with every player they fell). It
+      follows the exact same doctrine as Foresight: <b>it never networks on its own</b>,
+      and nothing leaves your machine unless you bring it to this site yourself.
+      Its crowd records power the armory's "Deadliest" boards and the
+      <a href="./run.html">RUN page</a>.</p>
+
+      <h2>What a RUN share contains</h2>
+      <p>A RUN share link (opened on this site and contributed only when <b>you</b>
+      click) is allow-listed to:</p>
+      <ul>
+        <li>creature events - which species felled a player, a rare sighting (the
+            creature's name, an NPC - not you), a group wipe (encounter name and group
+            size), or a won wager (creature id and the odds)</li>
+        <li>the game mode (PvE / PvP / Hardcore) and the season</li>
+        <li>a coarse level bracket and a zone id - never coordinates, routes, or
+            timestamped movement</li>
+        <li>a random, pseudonymous client id so re-uploads aren't double-counted,
+            and a checksum so truncated links fail instead of writing junk</li>
+      </ul>
+      <p><b>Never</b> your character name, realm, guild, account, or any free text.
+      Sharing is always manual: the addon shows you a link, and nothing is sent until
+      you open it here and press Contribute. Suppression applies on the boards too -
+      creatures with too few verified reports show no record until enough arrive.</p>
+
+      <h2>The Giant Slayer board (opt-in, off by default)</h2>
+      <p>Winning a "RISK IT" wager can put you on the public Giant Slayers board -
+      but only under the same opt-in named tier as Foresight's champions: a
+      <b>display handle you choose</b> (a nickname - never your character name, realm,
+      or real name), shown with the creature you beat and the odds. Off unless you turn
+      it on in-game, and fully revocable the same way.</p>
+
+      <h2>The RUN waitlist</h2>
+      <p>If you join the waitlist, we store the email you give us, your consent flag,
+      and where you signed up - nothing else. It is <b>purpose-bound</b>: used only to
+      tell you when RUN opens; nothing else - no marketing, never shared or sold. It is
+      <b>deleted on request</b>: ask via the armory's
+      <a href="./index.html#feedback">Send Word form</a> (mention the waitlist and the
+      address you used) and we remove it. The list itself is write-only - no one can
+      read it from this site.</p>
+
+      <p class="fine">Added 2026-10-21 with the RUN waitlist, share receiver, and the
+      Deadliest boards (WP-C) - in the same change as the data practice, per the
+      privacy law.</p>
+      <p><a href="./run.html">&larr; the RUN page</a> · <a href="./index.html">the armory</a></p>
     </section>
   </main>
 </body>
