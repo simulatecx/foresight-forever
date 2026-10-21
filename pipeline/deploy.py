@@ -35,18 +35,21 @@ def verify_layout(target: Path) -> list[str]:
     data\\formulas.lua is absent and HM.formulas is never set). We'd rather fail the
     deploy here than let that reach the game. Returns the list of missing files.
     """
-    toc = target / "Foresight.toc"
-    if not toc.exists():
-        return ["Foresight.toc"]
     missing = []
-    for raw in toc.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.lower().endswith(".lua"):
-            rel = line.replace("\\", "/")
-            if not (target / rel).exists():
-                missing.append(rel)
+    for toc_name in ("Foresight.toc", "Foresight_Vanilla.toc"):
+        toc = target / toc_name
+        if not toc.exists():
+            if toc_name == "Foresight.toc":
+                return ["Foresight.toc"]
+            continue  # the classic flavor TOC is optional
+        for raw in toc.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.lower().endswith(".lua"):
+                rel = line.replace("\\", "/")
+                if not (target / rel).exists():
+                    missing.append(f"{rel} [{toc_name}]")
     return missing
 
 

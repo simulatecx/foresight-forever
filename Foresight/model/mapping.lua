@@ -105,7 +105,7 @@ function Mapping.classifiedForSpell(spellId, ctx)
     local spells = (HM.gen and HM.gen.spells) or {}
     local spell = spells[spellId]
     if not spell then return nil end
-    local nodes = (HM.gen and HM.gen.traits and HM.gen.traits.nodes) or {}
+    local nodes = HM.formulas.impactNodes() -- traits (forever) or talents (classic)
     local conv = (ctx and ctx.classToken and HM.formulas
         and (HM.formulas.statConversions.byClass or {})[ctx.classToken]) or {}
     local isWeapon = spell.wpn ~= nil

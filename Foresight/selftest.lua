@@ -36,6 +36,9 @@ function HM.runSelftest(out)
         for _, L in ipairs(lines or {}) do parts[#parts + 1] = L.text or L.left or "" end
         return table.concat(parts, "\n")
     end
+    -- S43 classic fork: ENGINE checks run on both flavors; Forever-only DATA PINS are
+    -- gated on the generated flavor stamp (classic gets its own duals where valuable).
+    local isClassic = (HM.gen and HM.gen.flavor) == "classic"
 
     -- Graph core ---------------------------------------------------------------
     local g = HM.Graph.new()
@@ -76,8 +79,10 @@ function HM.runSelftest(out)
         check("Improved Fireball present", impFireball and impFireball.name == "Improved Fireball")
         local imp = gen.talentImpacts and gen.talentImpacts[26]
         local castOp = imp and imp.ops and imp.ops[1]
+    if not isClassic then -- Forever data pin (S43 classic-gated)
         check("Improved Fireball maps cast-time op",
             castOp and castOp.property == "cast time" and castOp.maxValue == -500)
+    end
         check("Improved Fireball affects Fireball(133)", (function()
             if not castOp or not castOp.affected then return false end
             for _, sid in ipairs(castOp.affected) do if sid == 133 then return true end end
@@ -86,11 +91,13 @@ function HM.runSelftest(out)
         check("Fireball has tick data from client", gen.spells[133] and gen.spells[133].tickMs == 2000)
         -- Incident-to-gate 2026-10-10: modern-format stat auras encode the stat as a
         -- MiscValue_1 bitmask; index-decoding misc0 mislabeled six talents "Strength".
+    if not isClassic then -- Forever data pin (S43 classic-gated)
         check("Ancestral Knowledge maps Intellect% (stat bitmask decode)", (function()
             local op = gen.talentImpacts and gen.talentImpacts[614]
                 and gen.talentImpacts[614].ops and gen.talentImpacts[614].ops[1]
             return op and op.kind == "stat" and op.stat == "Intellect" and op.isPct == true
         end)())
+    end
     end
 
     -- Loadout modelling ------------------------------------------------------------
@@ -107,17 +114,21 @@ function HM.runSelftest(out)
     -- GRAPH-threat: threat as the 8th lens, fed by mapped SPELL_AURA_MOD_THREAT ops.
     check("threat lens baselines at 100% with no talents", approx(results.threat.score, 100),
         results.threat and results.threat.score)
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("Subtlety threat op mapped to Nature/Arcane schools", (function()
         local imp = gen.talentImpacts and gen.talentImpacts[841]
         local op = imp and imp.ops and imp.ops[1]
         return op and op.kind == "threat" and op.school == "Nature/Arcane" and op.isPct == true
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("modeling Suppression lowers the threat lens", (function()
         -- Suppression (1005): -20% all-school threat at max rank 5.
         local modeled = base:withTalent(1005, 5)
         local r = HM.Impact.evaluate(modeled)
         return r.threat and r.threat.score < 100 and approx(r.threat.score, 80)
     end)())
+    end
 
     -- The +2 Spirit question.
     local lines, changes = HM.Impact.explainStatDelta(base, "Spirit", 2)
@@ -172,6 +183,7 @@ function HM.runSelftest(out)
         local s = table.concat(HM.Impact.statImpactDetail(base, "Agility", 10), "\n")
         return s:find("melee crit", 1, true) ~= nil
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("trait node impact block shows effect + for-you chain", (function()
         local lines = HM.Tooltips.nodeImpactLines(104756, base) -- an Intellect% node
         if not lines then return false end
@@ -179,6 +191,7 @@ function HM.runSelftest(out)
         for _, L in ipairs(lines) do parts[#parts + 1] = L.text or L.left or "" end
         return table.concat(parts, "\n"):find("Intellect", 1, true) ~= nil
     end)())
+    end
 
     -- MODEL-stat-advisor: marginal stat ranking on explainStatDelta (no forked path).
     check("stat advisor ranks + produces a sentence", (function()
@@ -381,6 +394,7 @@ function HM.runSelftest(out)
         local expect = ((82 + 101) / 2 / 2.9) * 10 * (1 + slowGood.stats.meleeCritPct / 100)
         return approx(a, expect, 0.01)
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("totem buff chase: Strength of Earth grants +7 Str, rank-aligned by level", (function()
         local t1 = gen.spells[8075] -- rank 1 totem (L10)
         local t2 = gen.spells[8160] -- rank 2 totem (L24)
@@ -391,6 +405,8 @@ function HM.runSelftest(out)
             and t2 ~= nil and t2.grants ~= nil and t2.grants[1].maxValue == 14
             and t2.grantsFrom == 8162
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("totem tooltip: the 7 Str -> AP -> swing chain renders", (function()
         local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
         local lines = HM.Tooltips.spellLines(8075, lo)
@@ -399,6 +415,7 @@ function HM.runSelftest(out)
             and text:find("Attack Power", 1, true) ~= nil
             and lines ~= nil and (lines[1].right or ""):find("buff chain", 1, true) ~= nil
     end)())
+    end
     check("itemKey: identity survives volatile link fields (equipped +2.8 catch)", (function()
         -- Same physical item, different linkLevel/context tail -> SAME key.
         local a = "|cffffffff|Hitem:12345:0:0:0:0:0:0:777:12:0:0|h[Axe]|h|r"
@@ -674,6 +691,7 @@ function HM.runSelftest(out)
             { spellIds = {} })
         return type(rows) == "table" and #rows == 0
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("pathways rank by abilityHitDelta under an ability goal (unit-honest)", (function()
         -- Self-contained node lookup (this block runs before the S19 dmgNodeId local).
         local nodeId
@@ -696,6 +714,7 @@ function HM.runSelftest(out)
             and path.rows[1].unit == " per hit"
             and path.label:find("Fireball", 1, true) ~= nil
     end)())
+    end
     check("plan goals: validated, junk dropped, capped at 3", (function()
         local db = HM.charDb()
         local saved = db.settings.planGoals
@@ -929,8 +948,10 @@ function HM.runSelftest(out)
         impFB and HM.Tooltips.resolveTalent("MAGE", fireTabIndex, impFB.tier + 7, 1, "Improved Fireball") == 26
         and HM.Tooltips.resolveTalent("MAGE", 1, 1, 1, "No Such Talent") == nil)
     local tl = HM.Tooltips.talentLines(26, 2)
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("tooltip header carries presumed rank-rule tag",
         tl and tl[1].kind == "double" and (tl[1].right or ""):find("(p)", 1, true) ~= nil)
+    end
     check("tooltip affects + next-point marginal value", (function()
         local text = linesText(tl)
         return text:find("Affects:", 1, true) ~= nil and text:find("Fireball", 1, true) ~= nil
@@ -1068,11 +1089,14 @@ function HM.runSelftest(out)
         HM.Guards.select(2, function() return 1, 42, 7 end) == 42
         and HM.Guards.select(2, nil) == nil)
     -- DATA-traits: generated trait-node coverage (Retail trees = Forever's live talents).
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("trait data loaded with full node coverage", (function()
         local tr = HM.gen and HM.gen.traits
         return tr and tr.nodes and tr.bySpell and tr.trees
             and HM.gen.counts.traitNodes and HM.gen.counts.traitNodes > 400
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("trait bySpell bridges the live spellID to a named node", (function()
         local tr = HM.gen.traits
         local nid = tr.bySpell[16178] -- Shaman Purification (also classic talent 592)
@@ -1080,6 +1104,8 @@ function HM.runSelftest(out)
         return node and node.name == "Purification" and node.spellID == 16178
             and node.tree == 1082 and tr.trees[1082].skillLine == 373
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("trait nodes carry impact ops from the definition spell", (function()
         -- At least some nodes derive real ops (not all needsCuration) via build_ops.
         local withOps = 0
@@ -1088,6 +1114,8 @@ function HM.runSelftest(out)
         end
         return withOps > 50
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("trait node feeds the what-if model (DATA-traits phase 2)", (function()
         -- Node 104756 is an Intellect% trait; taking it raises a caster's spellcasting.
         local modeled = base:withTraitNode(104756, 1)
@@ -1098,13 +1126,18 @@ function HM.runSelftest(out)
         end
         return false
     end)())
+    end
     -- RACIAL-impact: generated per-race data + what-if modelling (race_racials.lua).
     check("racial data covers the 8 classic races + both Skyborne", (function()
         local r = HM.gen and HM.gen.racials
         if not r then return false end
-        for _, id in ipairs({ 1, 2, 3, 4, 5, 6, 7, 8, 95, 96 }) do
+        -- classic = vanilla's 8 races exactly; Forever adds both Skyborne (95/96)
+        local want = isClassic and { 1, 2, 3, 4, 5, 6, 7, 8 }
+            or { 1, 2, 3, 4, 5, 6, 7, 8, 95, 96 }
+        for _, id in ipairs(want) do
             if not r[id] then return false, "missing race " .. id end
         end
+        if isClassic and (r[95] or r[96]) then return false, "Skyborne on classic" end
         return true
     end)())
     check("Scourge token maps to raceId 5 (the Undead gotcha)",
@@ -1123,6 +1156,7 @@ function HM.runSelftest(out)
         end
         return false
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("Expansive Mind decodes max-mana% gated to mana classes", (function()
         local sp = HM.Racials.bySpell(20591)
         local op = sp and sp.ops and sp.ops[1]
@@ -1130,10 +1164,13 @@ function HM.runSelftest(out)
             and sp.classMask == 400 and HM.Racials.classMatches(sp.classMask, "MAGE")
             and not HM.Racials.classMatches(sp.classMask, "WARRIOR")
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("Forever-new racial ids carry forever-new-unverified", (function()
         local sp = HM.Racials.bySpell(1259802) -- Warrior-variant Expansive Mind (rage)
         return sp and sp.confidence == "forever-new-unverified"
     end)())
+    end
     check("withRacial(Endurance) raises tankability via max health", (function()
         local ok, changes = pcall(HM.Impact.diff, base, base:withRacial(20550))
         if not ok then return false end
@@ -1142,6 +1179,7 @@ function HM.runSelftest(out)
         end
         return false
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("withRace(Gnome) grows a Mage's max mana by exactly the one gated passive", (function()
         local b, m = base:build(), base:withRace(7):build()
         local baseMana = b.graph:value("stat.maxMana", b.ctx)
@@ -1150,6 +1188,7 @@ function HM.runSelftest(out)
         -- Warrior/Rogue rage/energy variants must be class-gated out.
         return gnomeMana > baseMana and approx(gnomeMana, baseMana * 1.05)
     end)())
+    end
     check("active racials are flagged and excluded from passive folds", (function()
         local sp = HM.Racials.bySpell(20572) -- Blood Fury: active, tooltip-only
         if not sp or sp.passive ~= false then return false end
@@ -1165,27 +1204,37 @@ function HM.runSelftest(out)
         if not (gen and gen.consumables and gen.buffsBySpell) then return false end
         local n = 0
         for _ in pairs(gen.consumables) do n = n + 1 end
-        return n > 300, n
+        return n > (isClassic and 250 or 300), n
     end)())
     check("Elixir of the Mongoose decodes +25 Agi +2% crit, 30m", (function()
         local e = HM.gen.consumables[13452]
-        if not (e and e.buffSpellId == 17538 and e.type == "elixir"
-                and e.durationMs == 1800000 and HM.gen.buffsBySpell[17538] == 13452) then
+        -- Vanilla truth differs from Forever: 1 HOUR duration (Forever shortened to 30m)
+        -- and the crit rides the vanilla melee-crit aura (label-only, honest no-fold).
+        local wantMs = isClassic and 3600000 or 1800000
+        -- vanilla item data predates the elixir subclass: 1.15 ships it as "consumable"
+        local wantType = isClassic and "consumable" or "elixir"
+        if not (e and e.buffSpellId == 17538 and e.type == wantType
+                and e.durationMs == wantMs and HM.gen.buffsBySpell[17538] == 13452) then
             return false
         end
         local agi, crit
         for _, op in ipairs(e.ops) do
             if op.kind == "stat" and op.stat == "Agility" and op.maxValue == 25 then agi = true end
             if op.kind == "critChance" and op.maxValue == 2 then crit = true end
+            if isClassic and op.kind == "aura" and op.maxValue == 2
+                and (op.label or ""):find("crit", 1, true) then crit = true end
         end
         return agi and crit
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("food chases EffectTriggerSpell one hop to the Well-Fed stats", (function()
         local e = HM.gen.consumables[21023] -- Dirge's Kickin' Chimaerok Chops
         local op = e and e.ops and e.ops[1]
         return e and e.type == "food" and e.buffSpellId == 25661
             and op and op.kind == "stat" and op.stat == "Stamina" and op.maxValue == 25
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("Forever food magnitude = trigger bp x Well-Fed unit (Mackerel +6 AP)", (function()
         -- Incident 2026-10-11: shared Well-Fed spells carry UNIT values; the real
         -- magnitude rides the aura-227 trigger effect (user saw +1 instead of +6).
@@ -1202,6 +1251,8 @@ function HM.runSelftest(out)
         end
         return ap == 6 and tap == 20
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("withBuff(Mongoose) folds crit exactly (flat 2 spell, 2+derived melee)", (function()
         local b, m = base:build(), base:withBuff(13452):build()
         local dSpell = m.graph:value("stat.spellCritPct", m.ctx)
@@ -1212,6 +1263,7 @@ function HM.runSelftest(out)
         -- (40 agi / 3% crit -> 13.33 agi per crit% -> +1.875%).
         return approx(dSpell, 2, 1e-6) and approx(dMelee, 2 + 25 / (40 / 3), 1e-6)
     end)())
+    end
     check("withBuff accepts the buff spellId too (live aura match path)", (function()
         local a, b2 = base:withBuff(13452):build(), base:withBuff(17538):build()
         return approx(a.graph:value("stat.meleeCritPct", a.ctx),
@@ -1231,6 +1283,7 @@ function HM.runSelftest(out)
         if not ok or #lines == 0 then return false end
         return table.concat(lines, "\n"):find("crit", 1, true) ~= nil
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("weapon-conditional crit stays label-only (aura 290 discriminator)", (function()
         -- 70450 BALANCE CHANGE: the Orc racial 20574 was renamed "Savage" and its axe
         -- condition REMOVED (SpellEquippedItems row deleted, desc no longer says "while
@@ -1252,6 +1305,8 @@ function HM.runSelftest(out)
         end
         return false, "conditional 290 lost its label-only guard"
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("buff tooltip block: while-active + values + expiry honesty", (function()
         local text = linesText(HM.Tooltips.buffLines(13452, base))
         return text:find("While active:", 1, true) ~= nil
@@ -1260,6 +1315,7 @@ function HM.runSelftest(out)
             and text:find("(30m)", 1, true) ~= nil
             and text:find("On expiry these gains reverse.", 1, true) ~= nil
     end)())
+    end
     check("captureActiveBuffs degrades to none headless", (function()
         local found = HM.Snapshot.captureActiveBuffs()
         return type(found) == "table" and #found == 0
@@ -1295,6 +1351,7 @@ function HM.runSelftest(out)
     end)())
 
     -- IMBUE-compare: the "Rockbiter or Flametongue on my 2H axe" simulation (S17).
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("imbue data decodes the shaman chains", (function()
         local g = HM.gen.imbues
         if not g then return false end
@@ -1315,6 +1372,7 @@ function HM.runSelftest(out)
             and fb and fb.procs and fb.procs[1].damage == 32 and fb.procs[1].chance == nil
             and ip and ip.procs and ip.procs[1].chance == 20 and ip.procs[1].damage == 15
     end)())
+    end
     check("Flametongue per-hit scales with weapon speed, DPS constant", (function()
         local slow = select(1, HM.Imbues.compare({ weaponSpeed = 3.6 }, { 8024 }))[1]
         local fast = select(1, HM.Imbues.compare({ weaponSpeed = 1.5 }, { 8024 }))[1]
@@ -1322,6 +1380,7 @@ function HM.runSelftest(out)
             and approx(fast.perSwing, 326 * 1.5 / 100, 1e-6)
             and approx(slow.perSec, fast.perSec, 1e-6)
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("the 2H-axe question: FT out-DPSes Rockbiter r1, RB notes threat", (function()
         local rows = select(1, HM.Imbues.compare({ weaponSpeed = 3.6 }, { 8017, 8024 }))
         if not (rows[1] and rows[1].name == "Flametongue Weapon") then return false end
@@ -1334,10 +1393,12 @@ function HM.runSelftest(out)
         end
         return false
     end)())
+    end
     check("imbue rank dedupe keeps the strongest known rank", (function()
         local rows = select(1, HM.Imbues.compare({ weaponSpeed = 2.0 }, { 8017, 8018 }))
         return #rows == 1 and approx(rows[1].perSec, 58 / 14, 1e-6)
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("unknown proc rates say so; known ones get an expected value", (function()
         local rows = select(1, HM.Imbues.compare({ weaponSpeed = 2.0 }, { 8033, 8679 }))
         local fb, ip
@@ -1349,6 +1410,7 @@ function HM.runSelftest(out)
                 and table.concat(fb.notes, "\n"):find("unverified", 1, true)) then return false end
         return ip and approx(ip.perSwing, 3, 1e-6) and approx(ip.perSec, 1.5, 1e-6)
     end)())
+    end
     check("imbue tooltip block renders the per-swing answer", (function()
         local snap = testSnapshot()
         snap.weaponSpeed = 3.6
@@ -1369,10 +1431,12 @@ function HM.runSelftest(out)
         local u = HM.formulas.flurryUptime.fn(30, 3)
         return approx(u, 1 - 0.7 ^ 3, 1e-9)
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("generated crit-haste decode (Flurry +10% for 3 swings)", (function()
         local sh = gen and gen.critHaste and gen.critHaste[16256]
         return sh ~= nil and sh.hastePct == 10 and sh.swings == 3
     end)())
+    end
     check("generated Windfury decode (20%, 2 extra attacks, rank AP)", (function()
         local wf = gen and gen.imbues and gen.imbues[8232]
         return wf ~= nil and wf.chance == 20 and wf.extraAttacks ~= nil
@@ -1559,6 +1623,12 @@ function HM.runSelftest(out)
     end)())
     check("decode: Fireball r1 carries the real 0.429 coefficient", (function()
         local d = gen.spells[133] and gen.spells[133].dmg
+        if isClassic then
+            -- classic ships NO stored coef (the 1.15 column is untrustworthy); base+var
+            -- must be the exact vanilla roll: 13 + d9 -> base 18, spread 8/18.
+            return d ~= nil and d.coef == nil and math.abs(d.base - 18) < 0.001
+                and math.abs((d.var or 0) - 8 / 18) < 0.01
+        end
         return d ~= nil and d.coef ~= nil and math.abs(d.coef - 0.429) < 0.001
     end)())
     check("decode: Ice Lance resolves with damage data (Shatter claim gate)", (function()
@@ -1577,13 +1647,18 @@ function HM.runSelftest(out)
     check("abilityHit composes the spell formula exactly (Fireball fixture)", (function()
         local sp = gen.spells[133]
         local hit = HM.Sim.abilityHit(base, 133, {})
-        if not (hit and hit.kind == "spell" and hit.coefSource == "data") then return false end
+        if not (hit and hit.kind == "spell") then return false end
+        if not isClassic and hit.coefSource ~= "data" then return false end
+        -- classic: no stored coef -> the runtime derives castTime/3.5 (the vanilla law)
+        local coef = sp.dmg.coef
+            or HM.formulas.spellCoefficient.fn((sp.castMs or 3500) / 1000)
         local mn, mx = HM.formulas.spellBaseDamage.fn(sp.dmg.base, sp.dmg.var, sp.dmg.lvl,
             sp.baseLevel or sp.level, sp.dmg.maxLvl, 60)
-        return approx(hit.min, mn + 50 * sp.dmg.coef, 0.01)
-            and approx(hit.max, mx + 50 * sp.dmg.coef, 0.01)
+        return approx(hit.min, mn + 50 * coef, 0.01)
+            and approx(hit.max, mx + 50 * coef, 0.01)
             and hit.presumed == true
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("weapon normalization substitution identity (double-count gate)", (function()
         -- avg == weaponAvg - AP/14*actualSpeed + AP/14*normCoefficient, on classic
         -- Stormstrike (Effect 121, bp 0): the UnitDamage AP term swaps speeds exactly.
@@ -1597,6 +1672,7 @@ function HM.runSelftest(out)
         return hit ~= nil and hit.kind == "weapon"
             and approx(hit.min, expect, 1e-6) and approx(hit.max, expect, 1e-6)
     end)())
+    end
     check("weapon flat path (Heroic Strike rides your weapon range)", (function()
         local snap = testSnapshot()
         snap.classToken = "WARRIOR"
@@ -1627,6 +1703,7 @@ function HM.runSelftest(out)
             break
         end
     end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("spellmod talent moves the hit by the ONE rank rule", (function()
         if not dmgNodeId then return false end
         local node = gen.traits.nodes[dmgNodeId]
@@ -1646,6 +1723,7 @@ function HM.runSelftest(out)
             and approx(r2.min, plain.min * (1 + v2 / 100), 0.01)
             and r2.min > r1.min and r1.min > plain.min
     end)(), dmgNodeId)
+    end
     check("abilityHit nil-degrades without decoded fields (no absolute line)", (function()
         local plainId
         for id, sp in pairs(gen.spells) do
@@ -1660,6 +1738,7 @@ function HM.runSelftest(out)
         return text:find("Hits for", 1, true) == nil
             and text:find("Heals for", 1, true) == nil
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("abilityHitDelta: before/after/delta consistent", (function()
         if not dmgNodeId then return false end
         local d = HM.Sim.abilityHitDelta(base, 133, {}, dmgNodeId, 1)
@@ -1671,6 +1750,8 @@ function HM.runSelftest(out)
             and approx(d.delta, after.avg - before.avg, 1e-9)
             and d.delta > 0
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("display envelope: live-verified Lightning Bolt 25-30 + float-noise guard", (function()
         -- First in-game verification (2026-10-12): LB r2 at level 12 computes a raw
         -- 25.44-29.36 and the game renders "25 to 30" - the widest integer envelope
@@ -1688,19 +1769,22 @@ function HM.runSelftest(out)
         local flo, fhi = F.display(fmn, fmx)
         return lo == 25 and hi == 30 and flo == 14 and fhi == 22
     end)())
+    end
     check("spell tooltip leads with the absolute hit line", (function()
         local text = linesText(HM.Tooltips.spellLines(133, base))
         return text:find("Hits for", 1, true) ~= nil
             and text:find("(p)", 1, true) ~= nil
             and text:find("crits for ~1.5x", 1, true) ~= nil
-            and text:find("datamined", 1, true) ~= nil
+            and (isClassic or text:find("datamined", 1, true) ~= nil)
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("talent hover shows before -> after ability deltas", (function()
         if not dmgNodeId then return false end
         local text = linesText(HM.Tooltips.nodeImpactLines(dmgNodeId, base) or {})
         return text:find("per hit", 1, true) ~= nil
             and text:find("-> ~", 1, true) ~= nil
     end)())
+    end
 
     -- MATRIX panel model (S7b renderer spec: mockups/foresight-matrix-2026-10-12.html).
     check("matrix opacity validates untrusted values", (function()
@@ -1798,6 +1882,7 @@ function HM.runSelftest(out)
             and approx(links[1].x1, w) and approx(links[1].x2, w + 16)
             and approx(boxes[3].x, 2 * (w + 16))
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("gauges: Flurry uptime ring only when the engine is trained", (function()
         local sn = testSnapshot()
         sn.talents = { { spellID = 16256, rank = 1 } }
@@ -1810,6 +1895,7 @@ function HM.runSelftest(out)
         bare.talents = {}
         return #HM.PanelModel.gaugeModel(HM.Loadout.fromSnapshot(bare)) == 0
     end)())
+    end
     check("gauges: focused mana spell gets the OOM ring with a printed cap", (function()
         local gs = HM.PanelModel.gaugeModel(base, "Frostbolt")
         local gm
@@ -1865,6 +1951,7 @@ function HM.runSelftest(out)
         HM.overrides.rankRules[26] = nil
         return verified == "" and presumed == " (p)"
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("talent tooltip header goes green for a verified rank rule", (function()
         HM.overrides.rankRules[26] = "maxTotal"
         local lines = HM.Tooltips.talentLines(26, 1, base)
@@ -1872,6 +1959,7 @@ function HM.runSelftest(out)
         return lines ~= nil
             and (lines[1].right or ""):find("crowd%-verified") ~= nil
     end)())
+    end
 
     -- LIVE SELF-VERIFY (S33): the player's OWN captured tooltip settles the rank rule,
     -- outranks the shipped crowd rule, and flips the (p) mark to "from your scan". Uses a
@@ -2039,6 +2127,7 @@ function HM.runSelftest(out)
         return marked == "" and unmarked == " (p)"
             and (not valTalentId or header:find("datamined", 1, true) ~= nil)
     end)(), valTalentId)
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("values bridge reaches the live trait-node path", (function()
         for _, node in pairs(gen.traits.nodes) do
             for _, op in ipairs(node.ops or {}) do
@@ -2047,8 +2136,10 @@ function HM.runSelftest(out)
         end
         return false
     end)())
+    end
 
     -- Skill-centric Matrix (S22a): classified reverse lookup + dual highlight sets.
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("classifiedForSpell: direct + statFeeder buckets (Fireball, Mage)", (function()
         local c = HM.Mapping.classifiedForSpell(133, { classToken = "MAGE" })
         if not c then return false end
@@ -2069,6 +2160,8 @@ function HM.runSelftest(out)
         end
         return hasDirect and hasIntFeeder
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("classifiedForSpell: school bucket matches the spell's school mask", (function()
         -- Data-driven: find a schoolDamage% node, then a shipped damage spell of that
         -- school - the node must land in its school bucket (capped probes for speed).
@@ -2099,6 +2192,7 @@ function HM.runSelftest(out)
         end
         return false
     end)())
+    end
     check("classifiedForSpell: unknown spell returns nil (no false claims)", (function()
         return HM.Mapping.classifiedForSpell(999999999, { classToken = "MAGE" }) == nil
     end)())
@@ -2130,8 +2224,12 @@ function HM.runSelftest(out)
     check("pathway: caster chain = probe power x coefficient (Fireball)", (function()
         local p = HM.PanelModel.pathwayModel(base, 133)
         if not (p and #p.segments == 2) then return false end
+        -- Classic ships NO stored coef (the 1.15 column is untrustworthy) - the runtime
+        -- derives castTime/3.5, the vanilla law. Expect whichever path this flavor uses.
+        local coef = gen.spells[133].dmg.coef
+            or HM.formulas.spellCoefficient.fn((gen.spells[133].castMs or 3500) / 1000)
         return p.segments[1] == "+10 Spell Power"
-            and approx(p.hitDelta, 10 * gen.spells[133].dmg.coef, 0.01)
+            and approx(p.hitDelta, 10 * coef, 0.01)
     end)())
     check("pathway: no decoded endpoint -> no cascade (nil-degrade)", (function()
         local plainId
@@ -2140,6 +2238,7 @@ function HM.runSelftest(out)
         end
         return plainId ~= nil and HM.PanelModel.pathwayModel(base, plainId) == nil
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("focus model feeds the Matrix (classes + pathway + passthrough)", (function()
         local lo = HM.Loadout.fromSnapshot(meleeShamanSnap())
         local fm = HM.PanelModel.focusModel(lo, "Stormstrike")
@@ -2148,8 +2247,10 @@ function HM.runSelftest(out)
         local m = HM.PanelModel.matrixModel(lo, nil, nil, fm)
         return m.focus == fm
     end)())
+    end
 
     -- Skill-centric mode (S7b): dim the tree, glow an ability's modifiers.
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("ability members resolve tree nodes for a modified spell", (function()
         local ids, names, spell = HM.SynergyHighlight.abilityMembers("Fireball")
         if not ids then return false end
@@ -2158,6 +2259,7 @@ function HM.runSelftest(out)
         return count > 0 and names["Improved Fireball"] == true
             and spell == "Fireball"
     end)())
+    end
     check("ability members return nil for unknown abilities (no false glow)", (function()
         return HM.SynergyHighlight.abilityMembers("Totally Fake Spell") == nil
     end)())
@@ -2195,7 +2297,7 @@ function HM.runSelftest(out)
             { type = "stat", stat = "Agility", amount = 5 },
             { type = "stat", stat = "NotAStat", amount = 5 },
             { type = "stat", stat = "Spirit", amount = 1e9 },
-            { type = "trait", nodeId = 104756 },
+            { type = "trait", nodeId = isClassic and 614 or 104756 },
             { type = "trait", nodeId = -1 },
             { type = "buff", id = 13452 },
             { type = "item", label = "pants", stats = { Agility = 5, junk = 3 } },
@@ -2239,20 +2341,33 @@ function HM.runSelftest(out)
     check("plan lookup helpers resolve names", (function()
         local nodeId = HM.Plan.findTraitNode("ancestral knowledge")
         local itemId = HM.Plan.findConsumable("mongoose")
-        return nodeId ~= nil and HM.gen.traits.nodes[nodeId].name == "Ancestral Knowledge"
+        return nodeId ~= nil and HM.formulas.impactNodes()[nodeId].name == "Ancestral Knowledge"
             and itemId ~= nil and HM.gen.consumables[itemId].name:find("Mongoose", 1, true) ~= nil
     end)())
 
     check("synergy groups talents by shared theme", (function()
         HM.Synergy._reset()
-        local r = HM.Synergy.query("intellect")
+        -- classic's stat-lever talents are thin (AK is max-mana there); FIRE is the
+        -- vanilla-solid shared theme (Fire Power, Improved Scorch, Emberstorm...)
+        local q = isClassic and "fire" or "intellect"
+        local r = HM.Synergy.query(q)
+        if isClassic then return r ~= nil and #r.nodes > 1 end
         return r and r.label == "Intellect" and #r.nodes > 1
     end)())
     check("synergy themesFor lists a node's levers", (function()
+        if isClassic then
+            -- any classic talent sharing a theme with another proves the lever walk
+            for nid in pairs(HM.formulas.impactNodes()) do
+                local th = HM.Synergy.themesFor(nid)
+                if th and #th > 0 and (th[1].others or 0) > 0 then return true end
+            end
+            return false, "no classic node shares a theme"
+        end
         local themes = HM.Synergy.themesFor(104756) -- Ancestral Knowledge (Intellect%)
         for _, t in ipairs(themes) do if t.key == "Intellect" and t.others > 0 then return true end end
         return false
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("chained synergy: a stat talent names its converter bridge (chainsForNode)", (function()
         -- The owner's canonical chain: a talent boosting Intellect pays out through a
         -- CONVERTER (Mental Quickness/Dexterity: Int -> spell damage / attack power).
@@ -2271,6 +2386,7 @@ function HM.runSelftest(out)
         end
         return false, ("no Intellect chain (%d fragments)"):format(#(chains or {}))
     end)())
+    end
     -- SYNERGY phase 3: themes draw from ALL sources with player context.
     check("synergy ingests the player's racials (Spirit <- The Human Spirit)", (function()
         HM.Synergy._reset()
@@ -2282,6 +2398,7 @@ function HM.runSelftest(out)
         HM.Synergy._reset()
         return hit
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("synergy racials are class-gated (Gnome max mana for a Mage only)", (function()
         HM.Synergy._reset()
         local mage = HM.Synergy.query("max mana", { raceId = 7, classToken = "MAGE" })
@@ -2298,6 +2415,8 @@ function HM.runSelftest(out)
         HM.Synergy._reset()
         return mageHit and not warriorHit
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("synergy ingests active consumable buffs (crit <- Mongoose)", (function()
         HM.Synergy._reset()
         local r = HM.Synergy.query("crit", { buffs = { { itemId = 13452 } } })
@@ -2308,7 +2427,9 @@ function HM.runSelftest(out)
         HM.Synergy._reset()
         return hit
     end)())
+    end
     -- SYNERGY-highlight: the pure selector behind the talent-tree glow.
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("highlight selector returns trait ids + names for a theme", (function()
         HM.Synergy._reset()
         local ids, names = HM.SynergyHighlight.traitMembers("intellect")
@@ -2318,6 +2439,8 @@ function HM.runSelftest(out)
         for _ in pairs(ids) do n = n + 1 end
         return n > 1 and names["Ancestral Knowledge"] == true
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("highlight selector excludes racial/buff members (no tree buttons)", (function()
         HM.Synergy._reset()
         -- With Gnome-Mage context the "max mana" theme includes racial Expansive Mind,
@@ -2336,6 +2459,7 @@ function HM.runSelftest(out)
         end
         return names["Expansive Mind"] == nil
     end)())
+    end
     -- LEVER TAXONOMY: the completeness gate - EVERY op kind in the shipped data must be
     -- classified (has a lever) or declared label-only, so new content can never silently
     -- drop out of synergies. This is the "grows without breaking" guarantee.
@@ -2431,6 +2555,7 @@ function HM.runSelftest(out)
     end)())
 
     -- CATALOG: the unified content reference table over every impact source.
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("catalog unifies all source kinds with counts", (function()
         HM.Catalog._reset()
         local byKind = {}
@@ -2439,12 +2564,15 @@ function HM.runSelftest(out)
         return (byKind.talent or 0) > 100 and (byKind.trait or 0) > 400
             and (byKind.imbue or 0) > 50 and (byKind.elixir or byKind.flask or 0) > 0
     end)())
+    end
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("catalog search finds across kinds", (function()
         local hits = HM.Catalog.search("mongoose")
         local kinds = {}
         for _, h in ipairs(hits) do kinds[h.kind] = true end
         return #hits > 0 and kinds.elixir == true
     end)())
+    end
     check("catalog surfaces statConvert ops (chained-synergy primitive)", (function()
         local conv = HM.Catalog.withOpKind("statConvert")
         return #conv > 0
@@ -2495,6 +2623,7 @@ function HM.runSelftest(out)
         end
         return false
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("synergy chains attack power <-> the stat that feeds it", (function()
         HM.Synergy._reset()
         -- Synthesize a converter + an Int source + a direct AP source, prove the bridge.
@@ -2507,6 +2636,7 @@ function HM.runSelftest(out)
         HM.Synergy._reset()
         return r ~= nil and type(r.chains) == "table"
     end)())
+    end
     check("synergy without player context stays trait-only", (function()
         HM.Synergy._reset()
         local r = HM.Synergy.query("agility")
@@ -2517,6 +2647,7 @@ function HM.runSelftest(out)
         return true
     end)())
 
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("trait data covers NON-classic Forever nodes (the gap this fills)", (function()
         local classic = {}
         for _, t in pairs(gen.talents) do
@@ -2528,6 +2659,7 @@ function HM.runSelftest(out)
         end
         return nonClassic > 50
     end)())
+    end
 
     check("talentForSpell resolves a classic spell to its talent", (function()
         return HM.TalentAPI.talentForSpell(11069) == 26  -- Improved Fireball rank 1
@@ -2610,6 +2742,7 @@ function HM.runSelftest(out)
         return d.agility == 25 and d.meleeCritPct == 2
             and d.intellect == nil and d.armor == nil
     end)())
+    if not isClassic then -- Forever data pin (S43 classic-gated)
     check("observatory claim-filter keeps only a buff's own stats (anti-pollution)", (function()
         -- Elixir of the Mongoose (13452 -> buff 17538) claims Agility + crit only.
         local claimed = HM.Collect.claimedFields(HM.Collect.opsForBuffSpell(17538))
@@ -2617,6 +2750,7 @@ function HM.runSelftest(out)
         -- A coincidental gear swap would add armor/strength - those must be rejected.
         return claimed.armor == nil and claimed.strength == nil and claimed.intellect == nil
     end)())
+    end
     check("observatory attributes only single buff changes", (function()
         local id1, s1 = HM.Collect.attributeBuffChange({}, { [17538] = true })
         local id2, s2 = HM.Collect.attributeBuffChange({ [17538] = true }, {})
@@ -2667,6 +2801,18 @@ function HM.runSelftest(out)
         local TB = HM.TalentBuild
         if not TB then return false, "no TalentBuild" end
         local g = HM.gen or {}
+        if isClassic then
+            -- classic flavor: the planner MUST run on the real classic Talent.csv
+            if TB.talents() ~= g.talents then return false, "classic planner not on gen.talents" end
+            local n = 0
+            for _, tok in ipairs({ "MAGE", "WARRIOR", "PRIEST", "SHAMAN", "HUNTER", "ROGUE",
+                                   "WARLOCK", "PALADIN", "DRUID" }) do
+                local cid2 = TB.classIdFor(tok)
+                local tabs2 = cid2 and TB.tabsForClass(cid2) or {}
+                if #tabs2 >= 3 and #TB.talentsInTab(tabs2[1]) > 0 then n = n + 1 end
+            end
+            return n == 9, ("classic: %d/9 classes resolved"):format(n)
+        end
         -- The planner must draw Forever's REAL talents (trait nodes mapped into the classic
         -- grid), NOT the dead classic Talent.csv. This runs against the actual shipped data.
         if type(g.foreverTalents) ~= "table" or not next(g.foreverTalents) then
@@ -2718,6 +2864,23 @@ function HM.runSelftest(out)
         -- talents against the Forever dataset. The fence must (a) emit FT1F under forever
         -- data, (b) round-trip, (c) reject a bare FT1 code with a spoken reason.
         local TB = HM.TalentBuild
+        if isClassic then
+            -- classic keeps the plain FT1 prefix and round-trips against gen.talents
+            local ccid = TB.classIdFor("MAGE")
+            local ctabs = ccid and TB.tabsForClass(ccid) or {}
+            if #ctabs < 1 then return false, "no classic mage tabs" end
+            local cbuild = {}
+            for _, tid in ipairs(TB.talentsInTab(ctabs[1])) do
+                if (TB.talents()[tid].tier or 0) == 0 then cbuild[tid] = 1 break end
+            end
+            local code = TB.encode("MAGE", cbuild)
+            if not (type(code) == "string" and code:sub(1, 4) == "FT1-") then
+                return false, "classic prefix: " .. tostring(code)
+            end
+            local back = TB.decode(code)
+            local ctid = next(cbuild)
+            return back ~= nil and back[ctid] == 1, "classic FT1 round-trip"
+        end
         if not (TB and HM.gen and HM.gen.foreverTalents) then return false, "no forever data" end
         local cid = TB.classIdFor("MAGE")
         local tabs = cid and TB.tabsForClass(cid) or {}

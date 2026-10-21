@@ -54,6 +54,14 @@ TABLES = [
 
 BASE_URL = "https://wago.tools/db2/{table}/csv?build={build}"
 
+# Tables that only exist on SOME flavors (the Trait system is Forever/retail-only; Classic
+# Era 1.15 has none of it). Absent-on-this-build is a warning, not a fetch failure -
+# generate.py's read_opt degrades to [] and the classic planner uses the classic Talent.csv.
+OPTIONAL_TABLES = {
+    "TraitNode", "TraitNodeEntry", "TraitNodeXTraitNodeEntry", "TraitDefinition",
+    "SkillLineXTraitTree", "TraitEdge", "TraitNodeGroup", "TraitNodeGroupXTraitNode",
+}
+
 
 def fetch_table(table: str, build: str, cache_dir: Path, force: bool) -> str:
     dest = cache_dir / f"{table}.csv"
@@ -79,14 +87,20 @@ def main() -> int:
     cache_dir = Path(__file__).parent / "cache" / args.build
     cache_dir.mkdir(parents=True, exist_ok=True)
 
-    failures = []
+    failures, skipped = [], []
     for table in TABLES:
         try:
             print(fetch_table(table, args.build, cache_dir, args.force), flush=True)
         except Exception as exc:  # noqa: BLE001 - report and continue
-            failures.append(table)
-            print(f"FAILED  {table}: {exc}", flush=True)
+            if table in OPTIONAL_TABLES:
+                skipped.append(table)
+                print(f"skipped {table}: not in this flavor ({exc})", flush=True)
+            else:
+                failures.append(table)
+                print(f"FAILED  {table}: {exc}", flush=True)
 
+    if skipped:
+        print(f"\n{len(skipped)} flavor-optional table(s) absent: {', '.join(skipped)}")
     if failures:
         print(f"\n{len(failures)} table(s) failed: {', '.join(failures)}")
         return 1

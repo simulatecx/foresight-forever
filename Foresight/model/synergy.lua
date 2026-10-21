@@ -69,7 +69,7 @@ function Synergy.build(player)
         end
     end
 
-    for nid, node in pairs((HM.gen and HM.gen.traits and HM.gen.traits.nodes) or {}) do
+    for nid, node in pairs(HM.formulas.impactNodes()) do -- traits (forever) or talents (classic)
         ingest(nid, node.ops)
     end
     if player and player.raceId and HM.Racials then
@@ -91,7 +91,7 @@ end
 function Synergy._reset() cache, cacheKey = nil, nil end -- test hook
 
 local function nodeName(nid)
-    local node = HM.gen and HM.gen.traits and HM.gen.traits.nodes and HM.gen.traits.nodes[nid]
+    local node = HM.formulas.impactNodes()[nid]
     return node and node.name or ("node:" .. tostring(nid))
 end
 

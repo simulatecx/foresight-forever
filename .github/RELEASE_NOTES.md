@@ -1,16 +1,22 @@
-## 0.51.0
+## 0.52.0
 
-Chained synergies, and one math for every gear number.
+FORESIGHT COMES TO CLASSIC ERA. One addon, two games: alongside the WoW: Forever build,
+this release installs a Classic Era (1.15) flavor of Foresight - the same talent planner,
+honest tooltips, Matrix, and ladders, running on data generated from the classic client's
+own files.
 
-- **Chains: see where a point really pays out.** Talent tooltips (in the planner and on the
-  real tree) now show a "Chains:" line when a talent's stat feeds a converter - a talent
-  boosting Intellect chains through Mental Quickness into spell damage. Not just which
-  talents push the same lever, but where the lever leads.
-- **One math for gear.** The "vs equipped" dimension rows, the headline upgrade verdict, and
-  the "Best for your spells" lines are now computed from the same single swap model - they
-  can never disagree with each other.
-- The stats panel now appears even when another addon makes the character frame load late.
+**Classic, done faithfully**
+- The planner uses the real classic talent trees (432 talents, all nine classes, with
+  prerequisite arrows) - and **321 of them carry exact datamined per-rank values**.
+- Vanilla math is vanilla: Fireball rank 1 really is 14-22, Arcane Intellect rank 1 really
+  is +2, and spell coefficients follow the classic cast-time law (the data column modern
+  tools trust is wrong in the 1.15 export - we checked, and don't use it).
+- Vanilla item truths preserved: Elixir of the Mongoose is a 1-hour elixir here, your 8
+  classic races are exactly that, and anything only verified on Forever honestly starts
+  as "(p) presumed" on Classic until your own scans confirm it.
+- Synergies, chains, the catalog, and the ability map all work on classic talents.
 
-Includes everything from 0.50.x: the real talent-tree planner look with prerequisite
-arrows, cross-impact tooltips (credited to talentsforever.com), the ElvUI-friendly window
-and text behavior, and data current to the 2026-10-19 patch (1.60.1.70450).
+**Quality gate, doubled**: every release now has to pass the full test suite on BOTH
+flavors before it can ship.
+
+Forever players: everything from 0.51.0 and earlier is unchanged in this release.

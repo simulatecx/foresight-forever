@@ -153,6 +153,27 @@ def class_roster(cache: Path) -> dict:
                    for cid, name in CLASS_NAMES.items()}
 
 
+def eff_magnitude(e) -> tuple[float, float]:
+    """(effective value, variance) of a SpellEffect row, across flavors.
+
+    Modern (Forever/retail): value in EffectBasePointsF, spread in Variance
+    (min/max = v*(1 -/+ var/2)). Classic Era 1.15 keeps the VANILLA pair:
+    EffectBasePoints + EffectDieSides, roll = bp + random(1..die), so
+    value = bp + (1+die)/2 (die==1 -> flat bp+1), spread = (die-1)/value.
+    Verified on 1.15.9: Fireball r1 13+d9 -> 14-22, Arcane Intellect r1 1+1 -> +2,
+    Imp Fireball r1 -101+1 -> -100ms - all exact classic truth.
+    """
+    bpf = float(e.get("EffectBasePointsF") or 0)
+    if bpf != 0:
+        return bpf, float(e.get("Variance") or 0)
+    bp = float(e.get("EffectBasePoints") or 0)
+    die = float(e.get("EffectDieSides") or 0)
+    if die >= 1:
+        base = bp + (1 + die) / 2.0
+        return base, ((die - 1) / base if base != 0 else 0.0)
+    return bp, float(e.get("Variance") or 0)
+
+
 def read_csv(cache: Path, table: str) -> list[dict]:
     with open(cache / f"{table}.csv", newline="", encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
@@ -206,7 +227,7 @@ def build_ops(first, effects_by_spell, class_options, family_members, player_spe
         masks = tuple(to_int(eff[f"EffectSpellClassMask_{i}"]) for i in range(4))
         op = {
             "aura": aura,
-            "maxValue": float(eff["EffectBasePointsF"] or 0),
+            "maxValue": eff_magnitude(eff)[0],
             "rankRule": "linearToMax-presumed",
         }
         if aura in (107, 108):
@@ -348,11 +369,15 @@ def main() -> int:
     parser.add_argument("--build", default=DEFAULT_BUILD)
     parser.add_argument("--channel", default=DEFAULT_CHANNEL,
                         help="release channel stamped on the data (beta/live)")
+    parser.add_argument("--flavor", default="forever", choices=["forever", "classic"],
+                        help="classic writes to data/generated_classic (the Classic Era "
+                             "flavor dataset loaded by Foresight_Vanilla.toc)")
     args = parser.parse_args()
 
     root = Path(__file__).parent
     cache = root / "cache" / args.build
-    out_dir = root.parent / "Foresight" / "data" / "generated"
+    out_dir = root.parent / "Foresight" / "data" / (
+        "generated_classic" if args.flavor == "classic" else "generated")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     spell_names = {to_int(r["ID"]): r["Name_lang"] for r in read_csv(cache, "SpellName")}
@@ -404,12 +429,18 @@ def main() -> int:
             b = to_int(bit)
             if b not in bit_to_race or rid < bit_to_race[b]:
                 bit_to_race[b] = rid
+    # Column-name drift across flavors: Forever/retail = RaceMasks_0/_1, Classic Era 1.15 =
+    # RaceMask_0/_1 (singular). Same data, same bit semantics - read whichever exists.
+    def race_mask_pair(r):
+        return (to_int(r.get("RaceMasks_0", r.get("RaceMask_0"))),
+                to_int(r.get("RaceMasks_1", r.get("RaceMask_1"))))
+
     # Per-line race gate (SkillRaceClassInfo) as fallback for mask-less ability rows.
     line_races = {}
     for r in read_csv(cache, "SkillRaceClassInfo"):
         if to_int(r["SkillID"]) in racial_lines:
-            line_races[to_int(r["SkillID"])] = races_for_masks(
-                to_int(r["RaceMasks_0"]), to_int(r["RaceMasks_1"]), bit_to_race)
+            m0, m1 = race_mask_pair(r)
+            line_races[to_int(r["SkillID"])] = races_for_masks(m0, m1, bit_to_race)
 
     player_spells = set()
     racial_sla = defaultdict(dict)  # raceId -> {spellID: SLA ClassMask}
@@ -419,7 +450,8 @@ def main() -> int:
         if line in class_lines or line in poison_lines:
             player_spells.add(to_int(r["Spell"]))
         elif line in racial_lines:
-            races = races_for_masks(to_int(r["RaceMasks_0"]), to_int(r["RaceMasks_1"]),
+            local_m0, local_m1 = race_mask_pair(r)
+            races = races_for_masks(local_m0, local_m1,
                                     bit_to_race) or line_races.get(line, set())
             if not races:
                 racial_dropped += 1
@@ -583,9 +615,9 @@ def main() -> int:
             et = to_int(e["Effect"])
             if et not in (2, 6, 10, 17, 31, 58, 121):
                 continue
-            if to_int(e["ScalingClass"]):
+            if to_int(e.get("ScalingClass")):  # forever/retail-only column; absent on 1.15
                 scaling_flagged.add(f"{sid} ({entry['name']})")
-            bp = float(e["EffectBasePointsF"] or 0)
+            bp, eff_var = eff_magnitude(e)
             if et in (2, 10):
                 key = "dmg" if et == 2 else "heal"
                 if key in entry:
@@ -594,8 +626,14 @@ def main() -> int:
                 coef = float(e["EffectBonusCoefficient"] or 0)
                 if not bp and coef <= 0:
                     continue  # empty row claims nothing (nil-degrade, never invent)
+                if args.flavor == "classic":
+                    # 1.15's EffectBonusCoefficient is NOT the vanilla coefficient
+                    # (Fireball reads 0.123 vs the classic truth ~1.0 for a 3.5s cast).
+                    # Ship NO coef on classic: the runtime derives castTime/3.5 - which IS
+                    # the vanilla law - and tags it (p) until live tooltips verify.
+                    coef = 0
                 shape = {"base": bp}
-                var = float(e["Variance"] or 0)
+                var = eff_var
                 if var:
                     shape["var"] = var
                 ppl = float(e["EffectRealPointsPerLevel"] or 0)
@@ -700,7 +738,11 @@ def main() -> int:
         for s in t["spellRanks"]:
             talent_by_rank_spell.setdefault(s, t_id)
     node_pos = {}  # nodeID -> {tree, posX, posY}: the classic-grid layout (UI-talent-planner)
-    for r in read_opt("TraitNode"):
+    # Classic Era carries a handful of STUB TraitNode rows (junk for 1.15): shipping them
+    # poisons the flavor split (impactNodes/usingForever key on "any trait nodes present").
+    # The trait system is Forever/retail-only - classic ships traits EMPTY by design.
+    trait_rows = [] if args.flavor == "classic" else read_opt("TraitNode")
+    for r in trait_rows:
         nid = to_int(r["ID"])
         node_pos[nid] = {"tree": to_int(r["TraitTreeID"]),
                          "posX": to_int(r["PosX"]), "posY": to_int(r["PosY"])}
@@ -940,8 +982,16 @@ def main() -> int:
             sparse[iid] = (r["Display_lang"], to_int(r["RequiredLevel"]))
     item_effects = {to_int(r["ID"]): r for r in read_csv(cache, "ItemEffect")}
     item_links = defaultdict(list)
-    for r in read_csv(cache, "ItemXItemEffect"):
-        item_links[to_int(r["ItemID"])].append(to_int(r["ItemEffectID"]))
+    if (cache / "ItemXItemEffect.csv").exists():
+        for r in read_csv(cache, "ItemXItemEffect"):
+            item_links[to_int(r["ItemID"])].append(to_int(r["ItemEffectID"]))
+    else:
+        # Classic Era 1.15 has no ItemXItemEffect - the link lives directly on
+        # ItemEffect.ParentItemID (the pre-split schema). Same chain, one hop shorter.
+        for eid, r in item_effects.items():
+            pid = to_int(r.get("ParentItemID"))
+            if pid:
+                item_links[pid].append(eid)
     max_stacks = {to_int(r["SpellID"]): to_int(r["CumulativeAura"])
                   for r in read_csv(cache, "SpellAuraOptions") if to_int(r["DifficultyID"]) == 0}
 
@@ -974,7 +1024,7 @@ def main() -> int:
                             # +20). Classic foods keep the magnitude on the triggered
                             # spell (trigger bp 0/1, e.g. Dirge's Chops -> +25 Stam).
                             # So: scale hop ops by the trigger bp when it is > 1.
-                            scale = float(e["EffectBasePointsF"] or 0)
+                            scale = eff_magnitude(e)[0]
                             if scale > 1:
                                 for o in t_ops:
                                     o["maxValue"] = (o.get("maxValue") or 0) * scale
@@ -1093,7 +1143,7 @@ def main() -> int:
                 elif etype == 2 and pts:  # flat weapon damage (sharpening stones)
                     entry["flatDamage"] = (entry.get("flatDamage") or 0) + pts
                 elif etype == 1 and arg:  # proc-on-hit spell: flat school damage
-                    dmg = sum(float(pe["EffectBasePointsF"] or 0)
+                    dmg = sum(eff_magnitude(pe)[0]
                               for pe in effects_by_spell.get(arg, [])
                               if to_int(pe["Effect"]) == 2)
                     pm = misc.get(arg)
@@ -1112,7 +1162,7 @@ def main() -> int:
                 or re.search(r"/77;(\d+)m1", spell_desc.get(sid) or "")
             if basis_ref:
                 basis = to_int(basis_ref.group(1))
-                bp = sum(float(pe["EffectBasePointsF"] or 0)
+                bp = sum(eff_magnitude(pe)[0]
                          for pe in effects_by_spell.get(basis, []))
                 bm = misc.get(basis)
                 if bp:
@@ -1130,7 +1180,7 @@ def main() -> int:
                 basis = to_int(xa_ref.group(1))
                 bonus_ap, count = 0.0, 0.0
                 for pe in effects_by_spell.get(basis, []):
-                    bp = float(pe["EffectBasePointsF"] or 0)
+                    bp = eff_magnitude(pe)[0]
                     if to_int(pe["Effect"]) == 6 and to_int(pe["EffectAura"]) == 99:
                         bonus_ap = bp
                     elif to_int(pe["Effect"]) == 19:
@@ -1161,7 +1211,7 @@ def main() -> int:
         haste = 0.0
         for pe in effects_by_spell.get(buff, []):
             if to_int(pe["Effect"]) == 6 and to_int(pe["EffectAura"]) == 319:
-                haste = float(pe["EffectBasePointsF"] or 0)
+                haste = eff_magnitude(pe)[0]
         opts_row = aura_opts.get(buff)
         charges = to_int(opts_row["ProcCharges"]) if opts_row else 0
         if haste and charges:
@@ -1177,6 +1227,7 @@ def main() -> int:
         LuaWriter.file("build", {
             "build": args.build,
             "channel": args.channel,
+            "flavor": args.flavor,   # selftest + code branch on this, never on build strings
             "generated": stamp,
             "counts": {
                 "talents": len(talents_out),

@@ -1,0 +1,69 @@
+## Interface: 11509
+## Title: Foresight
+## Notes: The layman's oracle for Classic Era - know in plain terms what every talent point, stat, item, and buff actually does for you.
+## Author: SimulateCX
+## Version: 0.52.0
+## SavedVariables: ForesightDB
+## IconTexture: Interface\Icons\Spell_Nature_FarSight
+## X-License: All Rights Reserved
+## X-Website: https://github.com/simulatecx/foresight-forever
+## X-Curse-Project-ID: 1744126
+
+# CLASSIC ERA FLAVOR (S43). Same engine, classic data: game data loads from
+# data\generated_classic\ (built by `pipeline/generate.py --flavor classic` from the
+# 1.15.x client via wago.tools, classic bp+die magnitude semantics). Forever-only data is
+# DELIBERATELY not loaded: forever_talents.lua (an empty-but-truthy table would defeat
+# TB.talents()'s classic fallback), tf_talents.lua (Forever per-rank text, wrong here),
+# verified_rules.lua (rank rules verified ON Forever, not here - classic starts presumed
+# + own-scan). crowd_schema.lua and peer_baselines.lua are flavor-independent and shared.
+
+core\guards.lua
+core\client.lua
+core\settings.lua
+core\spellbook.lua
+core\talent_api.lua
+graph\graph.lua
+graph\dimensions.lua
+data\formulas.lua
+data\generated_classic\build.lua
+data\generated_classic\talent_tabs.lua
+data\generated_classic\talents.lua
+data\generated_classic\talent_impacts.lua
+data\generated_classic\spells.lua
+data\generated_classic\traits.lua
+data\generated_classic\race_racials.lua
+data\generated_classic\consumables.lua
+data\generated_classic\weapon_imbues.lua
+data\generated_classic\items.lua
+data\generated_classic\sim_procs.lua
+data\generated\peer_baselines.lua
+data\generated\crowd_schema.lua
+data\overrides.lua
+model\snapshot.lua
+model\racials.lua
+model\loadout.lua
+model\impact.lua
+model\plan.lua
+model\talentbuild.lua
+model\ft2.lua
+model\imbues.lua
+model\levers.lua
+model\catalog.lua
+model\mapping.lua
+model\sim.lua
+data\loops.lua
+model\synergy.lua
+ui\display.lua
+ui\motion.lua
+ui\panel_model.lua
+ui\stats_panel.lua
+ui\matrix_panel.lua
+ui\talent_tree.lua
+ui\options_panel.lua
+ui\export.lua
+ui\tooltips.lua
+ui\synergy_highlight.lua
+selftest.lua
+core\init.lua
+core\collect.lua
+core\crowd.lua

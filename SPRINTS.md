@@ -351,17 +351,35 @@ Owner: "continue the build - expand on all fronts, keep building to proof the ap
   report needed); regeneration determinism = implicitly gated daily by data-freshness's
   git-diff step. Still open: options widget pooling, X-Wago-ID (owner: needs a Wago project).
 
-### S43 - CLASSIC FORK PREP (owner intent 2026-10-20: "then we will fork this for classic") ☐
-Port map recorded ahead of the fork so it lands clean when the owner calls it:
-- `core/client.lua` is THE namespacing swap point (the one place API-flavor differences live).
-- Data pipeline is already multi-build: `fetch.py/generate.py --build X` + `check_updates.py
-  --prefix` (point at the classic-era product prefix); classic uses the REAL classic
-  Talent.csv (classId populated!) so `TB.talents()` falls back to gen.talents natively -
-  the planner works unchanged (the forever/classic split was designed in).
-- Packaging: separate TOC (## Interface for classic) + a second CurseForge project id; the
-  packager supports multi-flavor TOCs (Foresight-Classic.toc or -classic suffix tags).
-- Precedent: docs/RETAIL-FORK-HANDOFF.md (the retail validation fork program).
-- NOT building until the owner calls it; this story is the landing pad.
+### S43 - CLASSIC ERA FLAVOR BUILT ☑ (owner call 2026-10-21) -> 0.52.0
+One repo, two flavors (multi-TOC, NOT a diverging branch): `Foresight_Vanilla.toc`
+(Interface 11509) loads `data/generated_classic/` built from wago.tools wow_classic_era
+1.15.9.70003. VERIFIED CLASSIC DATAPOINTS:
+☑ Talent.csv ClassID POPULATED (432 talents / 9 classes) - the planner's classic fallback
+  (`TB.talents()` -> gen.talents) works natively; 321/432 talents carry EXACT datamined
+  per-rank values (classic keeps real rank spell rows; Forever has 31).
+☑ VANILLA MAGNITUDE SEMANTICS (`eff_magnitude` in generate.py): 1.15 keeps bp+DieSides
+  (bpF=0) - value = bp+(1+die)/2, spread (die-1)/value. Pinned: Fireball r1 13+d9 = 14-22,
+  Arcane Intellect r1 = +2, Imp Fireball r1 = -100ms, Mongoose = +25 Agi.
+☑ 1.15 EffectBonusCoefficient is NOT the vanilla coef (Fireball 0.123 vs ~1.0 truth) ->
+  classic ships NO coef; runtime derives castTime/3.5 (the vanilla law), (p)-tagged.
+☑ Flavor plumbing: fetch.py OPTIONAL_TABLES (trait tables absent on 1.15 = warn not fail),
+  ItemXItemEffect fallback (classic links via ItemEffect.ParentItemID), RaceMask_0 vs
+  RaceMasks_0 column drift, `--flavor classic` out-dir, gen.flavor stamp, classic traits
+  SCRUBBED (9 junk stub rows would poison the flavor split).
+☑ CROSS-FLAVOR ECOSYSTEM: `formulas.impactNodes()` (trait nodes on Forever / talent view on
+  classic) now feeds synergy/catalog/mapping/plan - synergies + chains + catalog work on both.
+☑ DUAL-FLAVOR SHIP GATE: run_tests loads + selftests BOTH TOCs (Forever 303/303, Classic
+  256/256); 47 Forever-only data pins flavor-gated; classic-truth DUALS pin: 8 races exactly
+  (no Skyborne), Mongoose 1h + type=consumable + melee-crit label op, Fireball coef-nil +
+  base 18/var 8-18ths, FT1 plain prefix round-trip, planner-on-gen.talents 9 classes.
+  deploy.py verifies BOTH TOC layouts.
+☑ Forever-only features degrade honestly on classic: no tf text, no verified_rules, no trait
+  overlay (PlayerSpellsFrame absent -> hooks never engage), crowd ships (schema shared).
+☐ FOLLOW-UPS: classic build watch in data-freshness (manual --build for now); classic
+  TalentFrame overlay port (live-tree glows); crowd flavor-bucketing before classic users
+  contribute (1.15 builds would mix into Forever brackets); classic CF project split if the
+  owner wants a separate listing (packager currently marks ONE project multi-flavor).
 
 ### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
 ☑ Re-audit with Fable -> fixed -> TAG + publish 0.49.1 (the prod re-ship; v0.49.0 was broken).

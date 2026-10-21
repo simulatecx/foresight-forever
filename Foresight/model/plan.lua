@@ -69,7 +69,7 @@ function Plan.validateDelta(d)
         local label = type(d.label) == "string" and d.label:sub(1, MAX_LABEL) or "item"
         if any then return { type = "item", label = label, stats = stats } end
     elseif d.type == "trait" then
-        local node = gen.traits and gen.traits.nodes and gen.traits.nodes[d.nodeId]
+        local node = HM.formulas.impactNodes()[d.nodeId]
         if node then
             local maxRank = node.maxRank or 1
             local rank = tonumber(d.rank) or maxRank
@@ -133,7 +133,7 @@ function Plan.describe(d)
         table.sort(parts)
         return ("%s (%s)"):format(d.label, table.concat(parts, ", "))
     elseif d.type == "trait" then
-        local node = gen.traits and gen.traits.nodes and gen.traits.nodes[d.nodeId]
+        local node = HM.formulas.impactNodes()[d.nodeId]
         local maxRank = node and node.maxRank or 1
         local name = node and node.name or ("node " .. tostring(d.nodeId))
         if maxRank > 1 then return ("%s %d/%d"):format(name, d.rank, maxRank) end
@@ -187,7 +187,7 @@ end
 function Plan.findTraitNode(name)
     if type(name) ~= "string" or name == "" then return nil end
     local q = name:lower()
-    local nodes = HM.gen and HM.gen.traits and HM.gen.traits.nodes or {}
+    local nodes = HM.formulas.impactNodes()
     local partial
     for nid, node in pairs(nodes) do
         local n = (node.name or ""):lower()

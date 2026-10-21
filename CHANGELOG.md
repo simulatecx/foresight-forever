@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.52.0 - 2026-10-21
+
+FORESIGHT COMES TO CLASSIC ERA. One addon, two flavors: the same engine now ships a
+Classic Era (1.15.9) build alongside the WoW: Forever one - `Foresight_Vanilla.toc` loads
+a classic dataset generated from the 1.15 client's own files.
+
+**Faithful to classic datapoints, verified against the raw data:**
+- The planner runs on the REAL classic talent table (432 talents, all 9 classes, ClassID
+  populated natively) - and classic ships **321 of 432 talents with exact datamined
+  per-rank values** (classic keeps real rank spell rows; Forever only has 31).
+- Vanilla magnitude semantics decoded correctly: damage is the old BasePoints + DieSides
+  roll (Fireball rank 1 = 13 + d9 -> **14-22 exactly**), flat values are bp + die
+  (Arcane Intellect r1 -> +2, Imp Fireball r1 -> -0.1s) - all cross-checked.
+- The 1.15 export's spell-coefficient column is NOT the vanilla coefficient (Fireball
+  reads 0.123 vs the true ~1.0) - classic ships no stored coefficient and derives the
+  vanilla castTime/3.5 law at runtime, tagged (p) until live tooltips verify.
+- Vanilla truths the tests now pin: Elixir of the Mongoose is **1 hour** (Forever
+  shortened it), the classic 8 races exactly (no Skyborne), classic build codes keep the
+  plain FT1 prefix.
+- Forever-only systems degrade honestly on classic: no trait trees, no talentsforever
+  text, no Forever-verified rank rules (classic starts presumed + your own scans).
+- The synergy/catalog/ability-map ecosystem now walks ONE cross-flavor source (trait
+  nodes on Forever, the classic talents on Classic) - synergies, chains, and the catalog
+  work on both.
+- The ship gate runs BOTH flavors: every release is green on Forever (303 checks) and
+  Classic (256 checks, with classic-truth duals) before it can tag.
+
+*Features:* UI-talent-planner, SYNERGY-engine, DATA-formula-registry
+
 ## 0.51.0 - 2026-10-20
 
 CHAINED SYNERGIES + ONE MATH FOR GEAR.

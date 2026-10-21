@@ -33,7 +33,7 @@ function Catalog.all()
                      ref = id, ops = imp and imp.ops or {},
                      needsCuration = imp and imp.needsCuration or nil })
     end
-    for nid, node in pairs((gen.traits and gen.traits.nodes) or {}) do
+    for nid, node in pairs(HM.formulas.impactNodes()) do -- traits (forever) or talents (classic)
         add(cache, { key = "trait:" .. nid, kind = "trait", name = node.name,
                      ref = nid, ops = node.ops or {}, needsCuration = node.needsCuration })
     end

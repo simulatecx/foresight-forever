@@ -10,6 +10,32 @@ if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 local F = {}
 HM.formulas = F
 
+-- Impact-source NODES across flavors (S43 classic fork): Forever's trait nodes
+-- (nodeId-keyed) when present, else a node-shaped VIEW of the classic talents
+-- (talentId-keyed: name/maxRank/spellID from rank 1 + ops from talentImpacts). Synergy,
+-- the catalog, the ability map, and plan validation all walk THIS one shape, so the
+-- whole ecosystem works on both flavors. Cached per session (generated data is static).
+local nodeViewCache
+function F.impactNodes()
+    local gen = HM.gen or {}
+    local nodes = (gen.flavor ~= "classic") and gen.traits and gen.traits.nodes or nil
+    if nodes and next(nodes) then return nodes end
+    if nodeViewCache then return nodeViewCache end
+    nodeViewCache = {}
+    for tid, t in pairs(gen.talents or {}) do
+        if type(t) == "table" then
+            local imp = gen.talentImpacts and gen.talentImpacts[tid]
+            nodeViewCache[tid] = {
+                name = t.name, maxRank = t.maxRank,
+                spellID = type(t.spellRanks) == "table" and t.spellRanks[1] or nil,
+                ops = (imp and imp.ops) or {},
+                needsCuration = (imp and imp.needsCuration) or false,
+            }
+        end
+    end
+    return nodeViewCache
+end
+
 -- Mana regen per 2s tick outside the five-second rule, by class token.
 -- Classic-era community formulas (zugzugdb.com/formulas, Warcraft Tavern).
 F.manaRegenTick = {
