@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.51.0 - 2026-10-20
+
+CHAINED SYNERGIES + ONE MATH FOR GEAR.
+
+- **Chains: see where a point really pays out.** Talent tooltips (planner and in-game) now
+  show a "Chains:" line when a talent's stat feeds a converter - e.g. a talent boosting
+  Intellect chains through Mental Quickness into spell damage. The long-promised layer on
+  top of the Synergy line: not just who pushes the same lever, but where the lever LEADS.
+- **Gear comparisons now use one math everywhere.** The per-dimension "vs equipped" rows
+  are computed from the same single swap model as the headline verdict and the
+  "Best for your spells" lines - the three can never disagree again (they could drift by
+  ~0.5% before on non-linear lenses).
+- **Honesty call, recorded**: of the talents whose cross-references our model can't fold
+  yet, nearly all are proc/conditional mechanics ("a 50% chance to...") that SHOULD NOT be
+  folded as flat stats - they await the proc-families expected-value program. Their
+  tooltips already tell the truth via the description + "Interacts with" lines.
+- The stats panel now boots even if the character frame loads late (addon-reskin setups).
+
+*Features:* SYNERGY-engine, DATA-items, UI-talent-tooltip
+
 ## 0.50.1 - 2026-10-20
 
 PLAYS NICE WITH YOUR UI. A full window-behavior + text-layout audit against how the big

@@ -1,21 +1,16 @@
-## 0.50.1
+## 0.51.0
 
-Plays nice with your UI - a full pass on window behavior and text layout, matched to how
-the big addons behave (ElvUI, WeakAuras, Details!).
+Chained synergies, and one math for every gear number.
 
-- **ESC closes Foresight windows** (planner, options, export) instead of opening the game
-  menu over them. The Matrix stays pinned like a Details! window - close it with its X.
-- **Windows behave like windows**: the one you click comes to the front, nothing can be
-  dragged off-screen, the Matrix no longer hides underneath other addons' frames, and the
-  options window remembers where you put it.
-- **One scale slider for everything**: the Layout panel-scale setting now sizes the planner,
-  options, and export windows too - the lever for fitting Foresight beside a scaled ElvUI.
-- **Text stays organized at any size**: the planner header can't overlap its controls
-  anymore, a long build summary pushes the trees down instead of running under the buttons,
-  saved builds page neatly instead of spilling off the frame, options descriptions grow
-  their row instead of covering the next setting, and tooltips wrap instead of going
-  mile-wide. Larger fonts (ElvUI font settings) grow the layout instead of clipping it.
-- Talent-tree glows now respect window layering instead of drawing over everything.
+- **Chains: see where a point really pays out.** Talent tooltips (in the planner and on the
+  real tree) now show a "Chains:" line when a talent's stat feeds a converter - a talent
+  boosting Intellect chains through Mental Quickness into spell damage. Not just which
+  talents push the same lever, but where the lever leads.
+- **One math for gear.** The "vs equipped" dimension rows, the headline upgrade verdict, and
+  the "Best for your spells" lines are now computed from the same single swap model - they
+  can never disagree with each other.
+- The stats panel now appears even when another addon makes the character frame load late.
 
-All of 0.50.0 (the talent-tree planner look, prerequisite arrows, cross-impact tooltips,
-and the 1.60.1.70450 patch data) is included.
+Includes everything from 0.50.x: the real talent-tree planner look with prerequisite
+arrows, cross-impact tooltips (credited to talentsforever.com), the ElvUI-friendly window
+and text behavior, and data current to the 2026-10-19 patch (1.60.1.70450).

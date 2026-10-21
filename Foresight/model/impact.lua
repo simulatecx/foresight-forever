@@ -117,26 +117,30 @@ function Impact.explainItemDelta(loadout, statDeltas)
 end
 
 -- Gear compare (DATA-items v0): net per-dimension impact of equipping item A instead of
--- item B. Both are mapped stat bundles ({ Agility=4, Stamina=6, ... }). Reuses
--- explainItemDelta (the diff path) - no forked value math. net > 0 means A wins that
--- dimension. Returns rows sorted by |net|, biggest swing first.
+-- item B. Both are mapped stat bundles ({ Agility=4, Stamina=6, ... }).
+-- CONSISTENCY-itemfold (audit 2026-10-15, unified 2026-10-20): ONE modeled loadout -
+-- minus the equipped bundle, plus the hovered one - diffed once. This is the SAME
+-- net-swap fold itemVerdict's ability path and itemSpellImpacts use, so the verdict,
+-- the per-dimension rows, and the per-spell lines can never disagree (the old
+-- two-base-relative subtraction diverged ~0.5pp on non-linear lenses).
+-- net > 0 means A wins that dimension. Rows sorted by |net|, biggest swing first.
 function Impact.compareItems(loadout, statsA, statsB)
-    local _, changesA = Impact.explainItemDelta(loadout, statsA)
-    local _, changesB = Impact.explainItemDelta(loadout, statsB)
-    local byId = {}
-    for _, c in ipairs(changesA or {}) do
-        byId[c.id] = { id = c.id, label = c.label, a = c.pct or 0, b = 0 }
+    local modeled = loadout
+    local function fold(bundle, sign)
+        for stat, amount in pairs(bundle or {}) do
+            if type(amount) == "number" and amount ~= 0 then
+                modeled = modeled:withStatDelta(stat, sign * amount,
+                    ("%+g %s (swap)"):format(sign * amount, stat))
+            end
+        end
     end
-    for _, c in ipairs(changesB or {}) do
-        local r = byId[c.id] or { id = c.id, label = c.label, a = 0, b = 0 }
-        r.b = c.pct or 0
-        byId[c.id] = r
-    end
+    fold(statsB, -1)
+    fold(statsA, 1)
     local rows = {}
-    for _, r in pairs(byId) do
-        local net = r.a - r.b
+    for _, c in ipairs(Impact.diff(loadout, modeled)) do
+        local net = c.pct or 0
         if math.abs(net) > 1e-9 then
-            rows[#rows + 1] = { id = r.id, label = r.label, net = net }
+            rows[#rows + 1] = { id = c.id, label = c.label, net = net }
         end
     end
     table.sort(rows, function(x, y) return math.abs(x.net) > math.abs(y.net) end)

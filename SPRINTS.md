@@ -330,6 +330,39 @@ with exact rects). ALL findings fixed, gate 302/302:*
 ☐ DEFERRED (recorded, low prob): CharacterFrame-nil retry at login; options widget pooling.
 ☐ IN-GAME eyeball on next login (layout surgery done blind; gate covers load/lint only).
 
+### S44 - Proofing wave: chained synergies + one item-fold + gap-curation verdict ☑ (2026-10-20) -> 0.51.0
+Owner: "continue the build - expand on all fronts, keep building to proof the app."
+☑ CHAINED SYNERGIES SHIPPED (the engine's long-noted "later layer"): `Synergy.chainsForNode`
+  (converters bridging a node's themes: "Intellect -> spell damage via Mental Quickness") +
+  a "Chains:" line in nodeImpactLines (planner + in-game talent hovers). Real-data selftest
+  (name-located, id-churn-proof).
+☑ CONSISTENCY-itemfold CLOSED (tracked since 2026-10-15): `Impact.compareItems` now folds ONE
+  modeled loadout (minus equipped, plus hovered, one diff) - the same math as itemVerdict's
+  ability path + itemSpellImpacts; the ~0.5pp two-base-relative divergence is gone. The
+  directional selftest still pins it.
+☑ GAP-CURATION VERDICT (S40 follow-up, prototype-measured): only 3/120 audit-gap talents are
+  mechanically derivable from the tf rank texts (strict patterns); the rest are PROC/
+  CONDITIONAL mechanics ("50% chance to Silence", "crits reduce next cast") that the model
+  CORRECTLY refuses to fold as flat stats - they are the DATA-proc-families EV program, not
+  curation lapses. Display already covers them honestly (tf text + Interacts-with links). No
+  enrichment pipeline built for 3 talents; decision recorded.
+☑ Stats panel boots even if CharacterFrame is load-on-demand (ADDON_LOADED retry; audit trap).
+☑ Follow-up closures: tf name-drift visibility = the audit's (NOT IN MODEL) flags (no second
+  report needed); regeneration determinism = implicitly gated daily by data-freshness's
+  git-diff step. Still open: options widget pooling, X-Wago-ID (owner: needs a Wago project).
+
+### S43 - CLASSIC FORK PREP (owner intent 2026-10-20: "then we will fork this for classic") ☐
+Port map recorded ahead of the fork so it lands clean when the owner calls it:
+- `core/client.lua` is THE namespacing swap point (the one place API-flavor differences live).
+- Data pipeline is already multi-build: `fetch.py/generate.py --build X` + `check_updates.py
+  --prefix` (point at the classic-era product prefix); classic uses the REAL classic
+  Talent.csv (classId populated!) so `TB.talents()` falls back to gen.talents natively -
+  the planner works unchanged (the forever/classic split was designed in).
+- Packaging: separate TOC (## Interface for classic) + a second CurseForge project id; the
+  packager supports multi-flavor TOCs (Foresight-Classic.toc or -classic suffix tags).
+- Precedent: docs/RETAIL-FORK-HANDOFF.md (the retail validation fork program).
+- NOT building until the owner calls it; this story is the landing pad.
+
 ### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
 ☑ Re-audit with Fable -> fixed -> TAG + publish 0.49.1 (the prod re-ship; v0.49.0 was broken).
 ☑ WEBSITE SHIPPED (2026-10-16, deployed to wow-foresight.web.app, ui-tested): "WHERE IT COMES

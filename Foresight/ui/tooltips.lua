@@ -335,6 +335,15 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
         end
+        -- CHAINED synergy (2026-10-20): the stat this talent pushes feeds a CONVERTER
+        -- (Int -> AP via Mental Dexterity), so the point pays out in another lane too.
+        local okn, chains = pcall(HM.Synergy.chainsForNode, nodeId, 2)
+        if okn and chains and #chains > 0 then
+            lines[#lines + 1] = {
+                text = "|cff9d9d9dChains:|r " .. table.concat(chains, "  ·  "),
+                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+            }
+        end
     end
 
     if node.needsCuration then

@@ -130,6 +130,29 @@ function Synergy.themesFor(nodeId)
     return out
 end
 
+-- CHAINED synergies for a NODE (the "later layer", shipped 2026-10-20): converters that
+-- bridge one of this node's themes into another output - the owner's canonical example:
+-- a talent boosting Intellect CHAINS through Mental Dexterity (Int -> attack power) into
+-- melee. Pure read of the built converts index; up to `limit` fragments, deduped.
+function Synergy.chainsForNode(nodeId, limit)
+    local c = Synergy.build()
+    local out, seen = {}, {}
+    for _, th in ipairs(Synergy.themesFor(nodeId)) do
+        for _, b in ipairs(c.converts or {}) do
+            if b.member ~= nodeId and (b.from == th.key or b.to == th.key) then
+                local line = ("%s -> %s via %s"):format(b.from, b.to, memberName(b.member))
+                if not seen[line] then
+                    seen[line] = true
+                    out[#out + 1] = line
+                end
+            end
+        end
+    end
+    table.sort(out)
+    while #out > (limit or 2) do table.remove(out) end
+    return out
+end
+
 -- Resolve a free-text query to a theme and return the member names (sorted). player
 -- context (optional) folds the player's racials + active buffs into the themes.
 -- Matches a stat, a mechanic lever, a school, or a spell-name substring (in that order).

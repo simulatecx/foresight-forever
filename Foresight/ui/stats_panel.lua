@@ -599,6 +599,11 @@ end
 
 local boot = _G.CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
-boot:SetScript("OnEvent", function()
+-- createPanel early-returns when CharacterFrame isn't loaded yet; retry on ADDON_LOADED so
+-- a load-on-demand/reskinned character frame can't silently kill the whole stats feature
+-- (UI audit 2026-10-20 latent trap).
+boot:RegisterEvent("ADDON_LOADED")
+boot:SetScript("OnEvent", function(self, event)
     if not panel then createPanel() end
+    if panel and event == "ADDON_LOADED" then self:UnregisterEvent("ADDON_LOADED") end
 end)

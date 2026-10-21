@@ -2253,6 +2253,24 @@ function HM.runSelftest(out)
         for _, t in ipairs(themes) do if t.key == "Intellect" and t.others > 0 then return true end end
         return false
     end)())
+    check("chained synergy: a stat talent names its converter bridge (chainsForNode)", (function()
+        -- The owner's canonical chain: a talent boosting Intellect pays out through a
+        -- CONVERTER (Mental Quickness/Dexterity: Int -> spell damage / attack power).
+        -- Real-data, name-located so node-id churn across builds can't break it.
+        if not (HM.Synergy and HM.Synergy.chainsForNode) then return false, "no chainsForNode" end
+        HM.Synergy._reset()
+        local nodes = (HM.gen and HM.gen.traits and HM.gen.traits.nodes) or {}
+        local ak
+        for nid, n in pairs(nodes) do
+            if n.name == "Ancestral Knowledge" then ak = nid break end
+        end
+        if not ak then return false, "no Ancestral Knowledge node" end
+        local chains = HM.Synergy.chainsForNode(ak, 4)
+        for _, c in ipairs(chains or {}) do
+            if c:find("Intellect", 1, true) and c:find("->", 1, true) then return true end
+        end
+        return false, ("no Intellect chain (%d fragments)"):format(#(chains or {}))
+    end)())
     -- SYNERGY phase 3: themes draw from ALL sources with player context.
     check("synergy ingests the player's racials (Spirit <- The Human Spirit)", (function()
         HM.Synergy._reset()
