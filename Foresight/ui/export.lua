@@ -38,6 +38,12 @@ local function ensureFrame()
     frame:SetPoint("CENTER")
     frame:SetFrameStrata("DIALOG")
     frame:SetMovable(true)
+    frame:SetToplevel(true)         -- clicked window raises (window-convention audit)
+    frame:SetClampedToScreen(true)  -- a drag can never strand it off-screen
+    if type(_G.UISpecialFrames) == "table" then
+        table.insert(_G.UISpecialFrames, "ForesightExportFrame")  -- ESC closes it anywhere,
+        -- not only while the EditBox has focus
+    end
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
@@ -76,6 +82,10 @@ end
 
 function HM.showExport(text)
     ensureFrame()
+    -- follow the user's panel scale (one slider scales every Foresight window)
+    if HM.Settings and HM.Settings.get then
+        frame:SetScale(HM.Settings.get("panelScale") or 1)
+    end
     editBox:SetText(text or "")
     frame:Show()
     editBox:SetFocus()

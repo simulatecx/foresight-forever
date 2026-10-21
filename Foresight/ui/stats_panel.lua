@@ -369,11 +369,11 @@ local function layout(model)
                 end
                 f:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD, y)
                 f:SetPoint("RIGHT", panel, "RIGHT", -PAD, 0)
+                -- MEASURED height for every row (not only wide ones): if ElvUI or a locale
+                -- grows the global fonts, rows grow instead of glyphs touching.
                 local rowH = ROW_HEIGHT
-                if row.wide then
-                    local h = f.label:GetStringHeight()
-                    if h and h > 0 then rowH = math.max(ROW_HEIGHT, math.ceil(h) + 4) end
-                end
+                local h = f.label:GetStringHeight()
+                if h and h > 0 then rowH = math.max(ROW_HEIGHT, math.ceil(h) + 4) end
                 f:SetHeight(rowH)
                 y = y - rowH
             end
@@ -443,6 +443,7 @@ local function createPanel()
     panel:SetMovable(true)
     panel:EnableMouse(true)
     panel:SetClampedToScreen(true) -- never let a drag strand the panel off-screen
+    panel:SetToplevel(true)        -- clicked window raises above our other windows
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", function(self) self:StartMoving() end)
     panel:SetScript("OnDragStop", function(self)
@@ -517,7 +518,7 @@ local function createPanel()
         btn:SetScript("OnEnter", function(self)
             if _G.GameTooltip then
                 _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                _G.GameTooltip:SetText(text, 0.2, 1, 0.6)
+                _G.GameTooltip:SetText(text, 0.2, 1, 0.6, 1, true) -- wrap: no mile-wide tooltip
                 _G.GameTooltip:Show()
             end
         end)

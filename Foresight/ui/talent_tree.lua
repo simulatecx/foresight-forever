@@ -25,6 +25,7 @@ local frame, treeHost
 local state = { class = nil, build = {}, name = nil, planLevel = nil, legacy = false }
 local trees = {}        -- [i] = { box, header, buttons = { [talentId] = button }, lines = {} }
 local chips = {}        -- saved-build chip buttons
+local chipPage = 0      -- chips show 5 per page + a pager (audit: 7+ chips overflowed the frame)
 
 -- ---- data + persistence ----------------------------------------------------------------
 local function TB() return HM.TalentBuild end
@@ -280,13 +281,16 @@ local function showTip(button, talentId)
         end
     end
     local locked = TB() and TB().lockReason(state.build, talentId)
-    if locked then gt:AddLine(locked, 1, 0.3, 0.3) end
+    if locked then gt:AddLine(locked, 1, 0.3, 0.3, true) end
     if not richShown then
         local imp = impactLine(talentId, math.min(maxR, cur + 1))
-        if imp then gt:AddLine("Next point: " .. imp, 0.3, 1, 0.6) end
+        if imp then gt:AddLine("Next point: " .. imp, 0.3, 1, 0.6, true) end
     end
     gt:AddLine(" ")
-    gt:AddLine("Left-click +  ·  Right-click -  (plan only; apply in-game yourself)", 0.5, 0.5, 0.55)
+    -- wrap=true: an unwrapped long line sets the MINIMUM tooltip width (the mile-wide
+    -- tooltip bug next to ElvUI skins + grown fonts)
+    gt:AddLine("Left-click +  ·  Right-click -  (plan only; apply in-game yourself)",
+        0.5, 0.5, 0.55, true)
     gt:Show()
 end
 
@@ -310,7 +314,16 @@ local function refreshHeader()
             -left, total, budget, lvl, state.legacy and "  ·  legacy talent" or ""))
         frame.points:SetTextColor(1, 0.42, 0.42)
     end
-    if frame.summary then frame.summary:SetText(buildSummaryText() or "") end
+    if frame.summary then
+        -- Never empty: the button bar + trees ANCHOR to this line, and an empty FontString
+        -- rect collapses (the row flow would jump). A space keeps one line of height.
+        local txt = buildSummaryText() or ""
+        frame.summary:SetText(txt ~= "" and txt or " ")
+        -- Grow the window with the summary (1 line = the classic 520; a wrapped 2-line
+        -- summary adds its extra height instead of squeezing the trees).
+        local sh = math.max(12, math.ceil(frame.summary:GetStringHeight() or 12))
+        frame:SetHeight(508 + sh)
+    end
     if frame.planControls then frame.planControls.refresh() end
 end
 
@@ -437,6 +450,8 @@ local function buildTrees(classToken)
         sep:SetHeight(1); sep:SetColorTexture(0.78, 0.64, 0.30, 0.25)
         local header = box:CreateFontString(nil, "ARTWORK", "GameFontNormal")
         header:SetPoint("TOP", box, "TOP", 0, -4)
+        header:SetWidth(TREE_W - 12)   -- long tree names ellipsize inside the plate,
+        header:SetWordWrap(false)      -- never overflow its borders (bigger ElvUI fonts)
         local footer = box:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
         footer:SetPoint("BOTTOM", box, "BOTTOM", 0, 5)
         local tab = g.talentTabs and g.talentTabs[tabId]
@@ -559,6 +574,16 @@ local function refreshChips()
         if type(name) == "string" then names[#names + 1] = name end
     end
     table.sort(names)
+    -- Page the chips: 5 fit beside the credit line; a pager chip cycles through the rest
+    -- (chips used to march past the frame edge at 7+ saved builds - audit 2026-10-20).
+    local PER = 5
+    local pages = math.max(1, math.ceil(#names / PER))
+    if chipPage >= pages then chipPage = 0 end
+    local page = {}
+    for i = chipPage * PER + 1, math.min(#names, (chipPage + 1) * PER) do
+        page[#page + 1] = names[i]
+    end
+    names = page
     local x = 0
     for _, name in ipairs(names) do
         local chip = _G.CreateFrame("Button", nil, frame.chipRow)
@@ -583,11 +608,35 @@ local function refreshChips()
         chip:RegisterForClicks("LeftButtonUp", "RightButtonUp")
         chip:SetScript("OnEnter", function(self)
             _G.GameTooltip:SetOwner(self, "ANCHOR_TOP")
-            _G.GameTooltip:AddLine(name); _G.GameTooltip:AddLine("Left-click load  ·  Right-click delete", 0.6, 0.6, 0.6); _G.GameTooltip:Show()
+            _G.GameTooltip:AddLine(name)
+            _G.GameTooltip:AddLine("Left-click load  ·  Right-click delete", 0.6, 0.6, 0.6, true)
+            _G.GameTooltip:Show()
         end)
         chip:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
         chips[#chips + 1] = chip
         x = x + 106
+    end
+    if pages > 1 then
+        local pager = _G.CreateFrame("Button", nil, frame.chipRow)
+        pager:SetSize(76, 20)
+        pager:SetPoint("LEFT", frame.chipRow, "LEFT", x, 0)
+        local bg = pager:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0.78, 0.64, 0.30, 0.14)
+        local fs = pager:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+        fs:SetPoint("CENTER")
+        fs:SetText(("%d/%d  >"):format(chipPage + 1, pages))
+        pager:SetScript("OnClick", function()
+            chipPage = (chipPage + 1) % pages
+            refreshChips()
+        end)
+        pager:SetScript("OnEnter", function(self)
+            _G.GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            _G.GameTooltip:AddLine("More saved builds", 1, 0.82, 0.25)
+            _G.GameTooltip:AddLine("Click to show the next page of your saved builds.", 0.8, 0.8, 0.8, true)
+            _G.GameTooltip:Show()
+        end)
+        pager:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+        chips[#chips + 1] = pager
     end
 end
 
@@ -603,8 +652,11 @@ end
 -- ---- frame -----------------------------------------------------------------------------
 local function makeButtonBar()
     local bar = _G.CreateFrame("Frame", nil, frame)
-    bar:SetPoint("TOPLEFT", PAD, -70)
+    -- Row flow: hangs off the summary line so a wrapped summary pushes the bar (and the
+    -- trees below it) down instead of being overdrawn by the buttons.
+    bar:SetPoint("TOPLEFT", frame.summary, "BOTTOMLEFT", 0, -8)
     bar:SetSize(10, 24)
+    frame.bar = bar
     local function tbtn(label, x, onClick)
         local b = _G.CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
         b:SetSize(72, 22); b:SetPoint("LEFT", x, 0); b:SetText(label)
@@ -675,9 +727,18 @@ local function makeImportBox()
         self:SetText(""); self:Hide()
     end)
     box:SetScript("OnEscapePressed", function(self) self:SetText(""); self:Hide() end)
-    -- The box overlaps the plan-level controls while typing; swap them for the duration.
-    box:SetScript("OnShow", function() if frame.planControls then frame.planControls:Hide() end end)
-    box:SetScript("OnHide", function() if frame.planControls then frame.planControls:Show() end end)
+    -- The box overlays the header band while typing; swap out EVERYTHING it covers
+    -- (plan controls, budget line, summary) so no text garbles through the translucent box.
+    box:SetScript("OnShow", function()
+        if frame.planControls then frame.planControls:Hide() end
+        if frame.points then frame.points:Hide() end
+        if frame.summary then frame.summary:Hide() end
+    end)
+    box:SetScript("OnHide", function()
+        if frame.planControls then frame.planControls:Show() end
+        if frame.points then frame.points:Show() end
+        if frame.summary then frame.summary:Show() end
+    end)
     frame.importBox = box
 end
 
@@ -688,6 +749,14 @@ local function ensureFrame()
     frame:SetSize(3 * (TREE_W + 10) + 2 * PAD, 520)
     frame:SetPoint("CENTER", _G.UIParent, "CENTER", 0, 30)
     frame:SetFrameStrata("HIGH")
+    -- Window conventions every big addon follows (UI/UX audit 2026-10-20): the clicked
+    -- window raises above its siblings, it can never be dragged off-screen, and ESC
+    -- closes it (UISpecialFrames) instead of opening the game menu over it.
+    frame:SetToplevel(true)
+    frame:SetClampedToScreen(true)
+    if type(_G.UISpecialFrames) == "table" then
+        table.insert(_G.UISpecialFrames, "ForesightTalentPlanner")
+    end
     frame:EnableMouse(true)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
@@ -695,7 +764,8 @@ local function ensureFrame()
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local point, _, rel, x, y = self:GetPoint()
-        planDb().pos = { point = point, relPoint = rel, x = x, y = y }
+        planDb().pos = { point = point, relPoint = rel,
+                         x = math.floor((x or 0) + 0.5), y = math.floor((y or 0) + 0.5) }
     end)
     if frame.SetBackdrop then
         frame:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8",
@@ -711,17 +781,21 @@ local function ensureFrame()
     frame.points:SetPoint("TOPLEFT", PAD, -36)
     frame.points:SetTextColor(0.94, 0.83, 0.53)
 
-    -- Whole-build impact readout ("This build: Spellcasting +4.2 ...") - the talent-impact payoff.
+    -- Whole-build impact readout ("This build: Spellcasting +4.2 ...") - the talent-impact
+    -- payoff. Wraps to at most 2 lines; everything below row-flows off it (audit 2026-10-20:
+    -- a wrapped line used to run under the button bar), and refreshHeader grows the frame.
     frame.summary = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     frame.summary:SetPoint("TOPLEFT", PAD, -52)
     frame.summary:SetWidth(3 * (TREE_W + 10))
     frame.summary:SetJustifyH("LEFT")
+    frame.summary:SetWordWrap(true)
+    if frame.summary.SetMaxLines then frame.summary:SetMaxLines(2) end
 
     local close = _G.CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 2, 2)
 
     local hint = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-    hint:SetPoint("TOPRIGHT", -30, -16)
+    hint:SetPoint("TOPRIGHT", close, "TOPLEFT", 4, -8)  -- bound to the close button, never under it
     hint:SetText("Plan only - apply the points yourself in-game")
 
     -- Plan-for-a-future-level controls: pick the level you're planning toward (you get the
@@ -760,6 +834,11 @@ local function ensureFrame()
         pc.legacy:SetText(state.legacy and "Legacy: ON" or "Legacy: off")
     end
     frame.planControls = pc
+    -- The budget line must never run under the plan controls (audit: the legacy variant
+    -- touched them at stock fonts): bound its right edge and ellipsize, never overlap.
+    frame.points:SetPoint("RIGHT", pc, "LEFT", -8, 0)
+    frame.points:SetJustifyH("LEFT")
+    frame.points:SetWordWrap(false)
 
     frame.chipRow = _G.CreateFrame("Frame", nil, frame)
     frame.chipRow:SetPoint("BOTTOMLEFT", PAD, 10)
@@ -772,18 +851,22 @@ local function ensureFrame()
         local credit = frame:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
         credit:SetPoint("BOTTOMRIGHT", -PAD, 12)
         credit:SetText("talent data: " .. HM.gen.tfCredit)
+        frame.credit = credit
     end
 
-    treeHost = _G.CreateFrame("Frame", nil, frame)
-    treeHost:SetPoint("TOPLEFT", PAD, -102)
-    treeHost:SetSize(3 * (TREE_W + 10), 380)
-
+    -- Row flow (audit 2026-10-20): the button bar hangs off the summary and the trees hang
+    -- off the bar, so a 2-line summary pushes everything down instead of overlapping it.
     makeButtonBar()
+    treeHost = _G.CreateFrame("Frame", nil, frame)
+    treeHost:SetPoint("TOPLEFT", frame.bar, "BOTTOMLEFT", 0, -10)
+    treeHost:SetSize(3 * (TREE_W + 10), 380)
     makeImportBox()
 
-    -- restore position
-    local pos = planDb().pos
-    if type(pos) == "table" and pos.point then
+    -- restore position (VALIDATED - SavedVariables is user-editable; an off-screen or
+    -- garbage pos heals to the default center, same law as the stats/Matrix panels)
+    local pos = HM.PanelModel and HM.PanelModel.normalizePanelPos
+        and HM.PanelModel.normalizePanelPos(planDb().pos) or nil
+    if pos then
         frame:ClearAllPoints()
         frame:SetPoint(pos.point, _G.UIParent, pos.relPoint or pos.point, pos.x or 0, pos.y or 0)
     end
@@ -827,6 +910,11 @@ end
 
 function TT.show(classToken)
     ensureFrame()
+    -- Follow the user's panel scale (addon coexistence: ElvUI users shrink/grow all our
+    -- windows with the one Layout slider - audit: only stats/Matrix honored it).
+    if HM.Settings and HM.Settings.get then
+        frame:SetScale(HM.Settings.get("panelScale") or 1)
+    end
     local cls = classToken or state.class or playerClass()
     if cls and cls ~= state.class then
         state.class = cls

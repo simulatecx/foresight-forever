@@ -85,6 +85,11 @@ local function acquireFS(layer, template)
             f:SetFontObject(template or "GameFontHighlightSmall")
             f:SetJustifyH("LEFT")
             f:SetJustifyV("TOP")
+            -- NORMALIZE wrap state on acquire: every measured GetStringHeight layout step
+            -- assumes wrapping; a sticky SetWordWrap(false) from a prior user would silently
+            -- break every measurement (the pool-stickiness class, audit 2026-10-20).
+            f:SetWordWrap(true)
+            if f.SetMaxLines then f:SetMaxLines(0) end
             f:ClearAllPoints()
             f:SetText("")
             f:Show()
@@ -756,6 +761,12 @@ end
 
 local function createPanel()
     panel = _G.CreateFrame("Frame", "ForesightMatrixPanel", _G.UIParent)
+    -- HIGH like its lockstep sibling (the stats panel): it defaulted to MEDIUM, so the FS
+    -- pair could open with the Matrix UNDERNEATH other HIGH frames (audit 2026-10-20).
+    -- Deliberately NOT in UISpecialFrames: the Matrix is a pinnable dashboard (the
+    -- Details!-window convention) - ESC should not close a pinned dashboard.
+    panel:SetFrameStrata("HIGH")
+    panel:SetToplevel(true)
     panel:SetWidth(WIDTH)
     panel:SetMovable(true)
     panel:SetResizable(true)
@@ -828,7 +839,7 @@ local function createPanel()
     titleBtn:SetScript("OnEnter", function(self)
         _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         _G.GameTooltip:SetText(panel.badgeTip or "Foresight Matrix", nil, nil, nil, nil, true)
-        _G.GameTooltip:AddLine("drag to move - click to change the view", 0.6, 0.6, 0.6)
+        _G.GameTooltip:AddLine("drag to move - click to change the view", 0.6, 0.6, 0.6, true)
         _G.GameTooltip:Show()
     end)
     titleBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)

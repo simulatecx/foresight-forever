@@ -1,28 +1,21 @@
-## 0.50.0
+## 0.50.1
 
-The planner looks like a real talent tree now - and it's updated for today's patch.
+Plays nice with your UI - a full pass on window behavior and text layout, matched to how
+the big addons behave (ElvUI, WeakAuras, Details!).
 
-**A proper talent-tree look**
-- **Prerequisite arrows** between talents, straight from the game's own data - grey until
-  the requirement is met in your plan, gold once it is.
-- Tree plates with class-colored headers, per-tree "points invested" footers, engraved
-  slot rims, and a clear **"N points left of 20"** budget readout that turns red (with the
-  exact overage) if a loaded build exceeds your planning level.
+- **ESC closes Foresight windows** (planner, options, export) instead of opening the game
+  menu over them. The Matrix stays pinned like a Details! window - close it with its X.
+- **Windows behave like windows**: the one you click comes to the front, nothing can be
+  dragged off-screen, the Matrix no longer hides underneath other addons' frames, and the
+  options window remembers where you put it.
+- **One scale slider for everything**: the Layout panel-scale setting now sizes the planner,
+  options, and export windows too - the lever for fitting Foresight beside a scaled ElvUI.
+- **Text stays organized at any size**: the planner header can't overlap its controls
+  anymore, a long build summary pushes the trees down instead of running under the buttons,
+  saved builds page neatly instead of spilling off the frame, options descriptions grow
+  their row instead of covering the next setting, and tooltips wrap instead of going
+  mile-wide. Larger fonts (ElvUI font settings) grow the layout instead of clipping it.
+- Talent-tree glows now respect window layering instead of drawing over everything.
 
-**Every talent names what it touches**
-- Hover any talent for its cross-references: modeled numbers where Foresight can compute
-  them ("Affects: ... / At max: ... / Synergy: ..."), and an honest **"Interacts with:
-  Lightning Bolt, Earth Shock..."** line - mined from the authoritative talent text
-  (credited to talentsforever.com) - where the model can't fold it yet.
-
-**Updated for the 2026-10-19 patch (client 1.60.1.70450)**
-- The Shaman Elemental tree's reshuffle, Mage's new **Arcane Wrath**, the Orc racial's
-  rename to **Savage** (its weapon condition is gone - it counts as unconditional crit
-  now), and more. A data change that split armor buffs into a new type briefly broke every
-  armor consumable in testing - caught by the test gate and fixed before shipping, so your
-  Scrolls of Protection still count.
-- Behind the scenes, Foresight's data now **watches for new patches daily** and prepares a
-  reviewed update automatically - so the addon keeps pace with Blizzard's changes.
-
-Talent data credit: talentsforever.com. Foresight is display and advice only - it never
-automates an action.
+All of 0.50.0 (the talent-tree planner look, prerequisite arrows, cross-impact tooltips,
+and the 1.60.1.70450 patch data) is included.

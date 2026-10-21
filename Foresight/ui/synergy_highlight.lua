@@ -179,6 +179,17 @@ local function overlayLayer()
     return container
 end
 
+-- Match the overlay layer to the TALENT FRAME's strata (+level) whenever it shows: a layer
+-- hard-pinned HIGH drew our glows over unrelated windows the user floated above the talent
+-- frame (audit 2026-10-20). Read-only, pcall'd, degrades to the HIGH default.
+local function syncOverlayStrata(psf)
+    if not (container and psf) then return end
+    local ok, strata = pcall(psf.GetFrameStrata, psf)
+    local okl, level = pcall(psf.GetFrameLevel, psf)
+    if ok and strata then pcall(container.SetFrameStrata, container, strata) end
+    if okl and level then pcall(container.SetFrameLevel, container, level + 10) end
+end
+
 local overlays = {} -- [button] = our overlay frame (pooled per button, reused)
 
 local function overlayFor(button)
@@ -339,7 +350,7 @@ local function planOverlayFor(button)
         _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         _G.GameTooltip:AddLine(self.nodeName or "Talent", 1, 0.82, 0.25)
         _G.GameTooltip:AddLine(("Planned %d/%d"):format(tonumber(activePlan and activePlan[self.nodeID]) or 0, self.maxRanks or 1), 0.7, 0.7, 0.7)
-        _G.GameTooltip:AddLine("Left-click +  ·  Right-click -  (plan only)", 0.5, 0.5, 0.55)
+        _G.GameTooltip:AddLine("Left-click +  ·  Right-click -  (plan only)", 0.5, 0.5, 0.55, true)
         _G.GameTooltip:Show()
     end)
     o:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
@@ -684,6 +695,7 @@ local function hookTalentUI()
     planBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
 
     psf:HookScript("OnShow", function()
+        syncOverlayStrata(psf)
         if _G.C_Timer and _G.C_Timer.After then
             _G.C_Timer.After(0.3, Highlight.restoreSaved)
             _G.C_Timer.After(0.35, Highlight.applyPlanPreview)  -- S35: auto-show the plan path

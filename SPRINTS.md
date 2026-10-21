@@ -303,6 +303,33 @@ BLIZZ PATCH REVIEWED + SHIPPED (owner "with the blizz changes today... review al
   (hotfix talk before data lands) feeding the review queue, not the data.
 ☑ DEFAULT_BUILD now 1.60.1.70450 across the pipeline. Gate 302/302, deployed + verified.
 
+### S42 - UI/UX conventions sweep + the wow-ui-ux skill ☑ (owner 2026-10-20) -> 0.50.1
+*Owner ask: "audit the way talents look/our ingame comparison, enhance for larger/smaller UIs,
+ElvUI coexistence (text stacking/wrapping/design), window open/close UX - then write a skill."
+Two parallel audits (window conventions vs big-addon behavior; text layout/overflow mapping
+with exact rects). ALL findings fixed, gate 302/302:*
+☑ WINDOW LAWS: ESC-close (UISpecialFrames) on planner/options/export - the addon had ZERO;
+  Matrix deliberately excluded (pinnable Details!-style dashboard, decision recorded).
+  SetToplevel on all 5 movable windows (clicked window raises). Matrix SetFrameStrata HIGH
+  (defaulted MEDIUM -> sank under other addons). panelScale now applies to planner/options/
+  export (was stats+Matrix only). Planner clamped + pos validated (normalizePanelPos);
+  options pos saved; export clamped.
+☑ TEXT LAWS (collisions existed at STOCK fonts): planner budget line right-bound to the plan
+  controls (legacy variant touched them); summary wraps max-2 + the bar/trees ROW-FLOW off it
+  + frame height grows; import box swaps out points/summary too; chips page 5+pager (7+
+  marched off the frame edge; 5+ collided with the credit); options rows measure desc height
+  (3-4-line descs overlapped the next row NOW) + per-widget width reserve (text under
+  sliders/editboxes); stats rows measured (ElvUI font growth); matrix acquireFS normalizes
+  wrap (pool stickiness); wrap=true on all long tooltip lines (mile-wide-tooltip class);
+  tree headers ellipsize in-plate; hint bound to the close button.
+☑ OVERLAY: syncOverlayStrata matches the talent frame's strata+level on show (hard-pinned
+  HIGH drew glows over unrelated floated windows).
+☑ SKILL: `.claude/skills/wow-ui-ux/SKILL.md` - the window taxonomy (window/dashboard/
+  furniture/overlay), window laws, text laws (+20-65% ElvUI font-growth design target),
+  coexistence facts, taint cross-ref, re-runnable audit checklist, repo reference impls.
+☐ DEFERRED (recorded, low prob): CharacterFrame-nil retry at login; options widget pooling.
+☐ IN-GAME eyeball on next login (layout surgery done blind; gate covers load/lint only).
+
 ### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
 ☑ Re-audit with Fable -> fixed -> TAG + publish 0.49.1 (the prod re-ship; v0.49.0 was broken).
 ☑ WEBSITE SHIPPED (2026-10-16, deployed to wow-foresight.web.app, ui-tested): "WHERE IT COMES

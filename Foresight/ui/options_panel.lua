@@ -76,8 +76,14 @@ local function renderKey(key, y, innerX, innerW)
     label:SetText(spec.label)
     local desc = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
     desc:SetPoint("TOPLEFT", row, "TOPLEFT", 0, -14)
-    desc:SetWidth(innerW - 60)
+    -- Reserve the width the row's CONTROL actually occupies (audit 2026-10-20: the flat
+    -- -60 ran description text underneath sliders and edit boxes).
+    local reserve = (spec.type == "text" and 170) or (spec.type == "slider" and 130)
+        or (spec.type == "enum" and 100) or 70
+    desc:SetWidth(innerW - reserve)
     desc:SetJustifyH("LEFT")
+    desc:SetWordWrap(true)
+    if desc.SetMaxLines then desc:SetMaxLines(0) end
     desc:SetText(spec.desc)
 
     local value = HM.Settings.get(key)
@@ -158,7 +164,11 @@ local function renderKey(key, y, innerX, innerW)
         end)
         widgets[#widgets + 1] = eb
     end
-    return y - ROW_STEP
+    -- MEASURED row height (the stats-panel wide-row law): a 3-4 line description grows its
+    -- row instead of running under the next row's label (which it did at stock fonts).
+    local rowH = math.max(ROW_H, 14 + math.ceil(desc:GetStringHeight() or 0) + 4)
+    row:SetHeight(rowH)
+    return y - rowH - 8
 end
 
 -- Character tab: a read-only identity readout at the very top (who you are / share as).
@@ -283,11 +293,22 @@ end
 local function createPanel()
     panel = _G.CreateFrame("Frame", "ForesightOptionsPanel", _G.UIParent)
     panel:SetSize(normalizeSize(optState().size))
-    panel:SetPoint("CENTER")
+    -- restore a saved position (VALIDATED - SavedVariables is user-editable)
+    local pos = HM.PanelModel and HM.PanelModel.normalizePanelPos
+        and HM.PanelModel.normalizePanelPos(optState().pos) or nil
+    if pos then
+        panel:SetPoint(pos.point, _G.UIParent, pos.relPoint or pos.point, pos.x or 0, pos.y or 0)
+    else
+        panel:SetPoint("CENTER")
+    end
     panel:SetMovable(true)
     panel:SetResizable(true)
     panel:EnableMouse(true)
     panel:SetClampedToScreen(true) -- always reachable, whatever UI overhaul is loaded
+    panel:SetToplevel(true)        -- clicked window raises above our other windows
+    if type(_G.UISpecialFrames) == "table" then
+        table.insert(_G.UISpecialFrames, "ForesightOptionsPanel")  -- ESC closes it
+    end
     if panel.SetResizeBounds then
         pcall(panel.SetResizeBounds, panel, WMIN, HMIN, WMAX, HMAX)
     else
@@ -296,7 +317,13 @@ local function createPanel()
     end
     panel:RegisterForDrag("LeftButton")
     panel:SetScript("OnDragStart", function(self) self:StartMoving() end)
-    panel:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+    panel:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        -- remember where the user put it (every other window does; audit 2026-10-20)
+        local point, _, relPoint, x, y = self:GetPoint()
+        optState().pos = { point = point, relPoint = relPoint,
+                           x = math.floor((x or 0) + 0.5), y = math.floor((y or 0) + 0.5) }
+    end)
     panel:SetFrameStrata("DIALOG")
 
     panel.bg = panel:CreateTexture(nil, "BACKGROUND", nil, -8)
@@ -358,6 +385,10 @@ function OptionsPanel.toggle()
         return
     end
     if panel:IsShown() then panel:Hide(); return end
+    -- follow the user's panel scale (one slider scales every Foresight window)
+    if HM.Settings and HM.Settings.get then
+        panel:SetScale(HM.Settings.get("panelScale") or 1)
+    end
     activeGroup = activeGroup or liveGroups()[1]
     layout()
     panel:Show()

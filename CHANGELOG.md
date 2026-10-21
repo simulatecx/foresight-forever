@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.50.1 - 2026-10-20
+
+PLAYS NICE WITH YOUR UI. A full window-behavior + text-layout audit against how the big
+addons behave (ElvUI, WeakAuras, Details!), with every finding fixed:
+
+- **ESC closes Foresight windows now** (planner, options, export) instead of opening the
+  game menu over them - the universal addon convention we were missing everywhere. The
+  Matrix deliberately stays pinned (the Details!-dashboard convention).
+- **Windows behave like windows**: the one you click raises above the others, nothing can
+  be dragged off-screen anymore, the Matrix no longer sinks UNDER other addons' frames
+  (it defaulted to a lower layer), and the options window remembers where you put it.
+- **One scale slider rules every window**: the Layout panel-scale setting now also applies
+  to the planner, options, and export windows (it only reached the stats panel and Matrix) -
+  the lever for fitting Foresight alongside a scaled ElvUI setup.
+- **Text can't pile up anymore**: the planner's budget line no longer runs under the level
+  controls, a wrapped build-summary pushes the trees down instead of being overdrawn,
+  saved-build chips page (5 + a pager) instead of marching off the frame edge, options
+  descriptions grow their row instead of overlapping the next setting, and long tooltip
+  lines wrap instead of making mile-wide tooltips. Rows measure their text so larger fonts
+  (ElvUI font settings) grow the layout instead of clipping it.
+- Talent-tree glows now match the talent window's layer instead of drawing over unrelated
+  windows floated above it.
+
+*Features:* UI-talent-planner, UI-stats-panel, UI-matrix-panel
+
 ## 0.50.0 - 2026-10-19
 
 THE PLANNER LOOKS LIKE A TALENT TREE NOW, and every talent names what it touches.
