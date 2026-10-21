@@ -46,6 +46,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S32 Action-bar synergy trigger (hold ALT, trace the button) | 3 | ☑ |
 | S33 UI dynamics: motion spine, eco diagram, radar chart, gauges | 3 | ◐ |
 | S34 Crowd pipeline hardening: single-source allow-list, verified-rules bake, show-off tier, coverage, auto-verify | - | ◐ |
+| S35 RUN: standalone danger/rare advisor (killcount + Deadliest Rares ladder) | 1 | ☐ |
 
 ## Active / next
 
@@ -1059,6 +1060,100 @@ Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
   param), falling back to `maxValue` only when unreadable. REMAINING: the imbue
   DPS-per-swing compare (`imbueLines` / `Imbues.compare`) still uses `maxValue` - feed it
   the live AP too, or record an observed override. In-game verify.
+
+### S35 - RUN: standalone danger/rare advisor ◐  (BUILDING in the separate `run-forever` repo)
+> 2026-10-21: S35 execution moved to the separate repo per the isolation decision - RUN is at
+> v0.8.0 there (dual-flavor Forever + Classic Era, gate 239/239; notoriety/Nemesis system,
+> P2P death network, quest targets, Ledger, wager, guild wipes, seasons, crowd backend).
+> THIS repo carries only the additive shared surface (see `CROWD-run-surface` in FEATURES.md
+> + the Unreleased CHANGELOG entry); its deploy is owner-gated. The story below is the
+> original planning record.
+*Fit & Overlap - Category PANIC-advisor -> CROWD + DATA + UI. Verdict: Enhance the PANIC-advisor
+pillar (RUN is its first real surface) + Enhance the CROWD contract / web LADDERS; Net-new only the
+standalone addon shell + rare DB. Complements: PANIC-advisor, ASSIST-hud, CROWD-share, the web
+LADDERS, and the survivability/EHP model (MODEL-impact-diff). Touches: new `RUN/` addon + `RUN.toc`;
+`pipeline/generate.py` (rares table from Forever DB2); `data/crowd-schema.json` + the three gen
+mirrors (new `rareKills` write path via `gen_crowd_schema.py`, NEVER hand-written); `functions/`
+(rollup -> `rareKillCounts`); `web/firestore.rules` + `web/app.js` + `web/index.html` (Deadliest
+Rares ladder); a documented inter-addon API on Foresight for the rich verdict. Avoid duplicating:
+the crowd single-source schema, the survivability/TTK math (expose from Foresight, don't fork into
+RUN), `core/guards.lua` (factor a shared guard lib), the ladder UI. Mobile: in-game danger banner +
+verdict + killcount tooltip readable at 1280x720 @ 0.65 UI scale; web ladder passes the armory
+mobile baseline. Languages: in-game strings via AceLocale, web via the translate layer; "killed {n}
+players on {mode}" is a full sentence with a locale-aware number, never concatenated. Trust: owner
+toggles for the banner, auto-waypoint, and killcount reporting (opt-out); claims phrased as "{n}
+reported deaths" (suppressed under MIN_BUCKET), never stated as absolute fact. Data: NEW anon-tier
+rare-death events (npcID = game data; mode PVE/PVP/HC + coarse region are low-cardinality
+non-identifying; class/level already anon) - realm/name stay FORBIDDEN; raw rows write-only +
+dedup-deletable, only suppressed counts public; schema change is additive via gen (safe-data-ops).
+Abuse: spoof/flood the killcount -> anon-auth + hasOnly shape-lock + server plausibility (npc must
+exist in our DB) + per-clientId rate limit + small-bucket suppression + App Check on restore;
+counts-only, no oracle, fail-closed.*
+
+As a hardcore-or-not player, I want a lightweight standalone addon that warns me when a nearby rare
+is likely to kill me - and tells me how many players it has already killed - so I can decide to fight
+or flee before it's too late; and if I also run Foresight, the verdict sharpens to my actual character.
+
+Build order A..G (ships as its own CurseForge project; house laws bind every story - never-networks,
+Lua 5.1, display-and-advice only / `check_compliance.py` green, no-PII anon tier):
+- ☐ S35a RUN shell + detection: `RUN/` addon + `RUN.toc` (Interface 16001); detect a nearby rare via
+  `NAME_PLATE_UNIT_ADDED` / `UPDATE_MOUSEOVER_UNIT` / `PLAYER_TARGET_CHANGED` -> npcID (GUID strsplit /
+  `C_CreatureInfo`) + `UnitClassification` rare/rareelite; all unit reads through a guard layer (shared
+  lib with Foresight's `core/guards.lua`). `C_VignetteInfo` is a BONUS only (classic-era rares may not
+  emit vignettes on Forever - verify in-game). AC: fresh install w/o Foresight detects a rare on
+  target/mouseover; secret-value reads degrade to display-only.
+- ☐ S35b Rare DB from the pipeline: `pipeline/generate.py` emits a rares table (npcID, name,
+  classification, zone coords) from Forever DB2 - OUR data, NOT RareScanner's DB. AC: generated file
+  ships in RUN; selftest gate covers shape; Forever-verified vs classic-presumed tagged.
+- ☐ S35c Civ-style combat-odds panel + waypoint: a compact "odds preview" (like Civilization's
+  attacker-vs-defender). SELECTED a hostile -> panel anchored UNDER `TargetFrame` (BOTTOM) showing
+  your stats vs it + a SUCCESS CHANCE % and FIGHT/RISKY/FLEE; NOT selected -> a standalone
+  nearest-threat unit frame (from nameplate detection) + the arrow, same odds. Success% = coarse
+  standalone model (level delta, classification, your HP/armor) OR, when Foresight is present,
+  `ForesightAPI.GetDangerVerdict(npcID)` (the survivability/EHP/TTK model = the PANIC-advisor engine);
+  CROWD-SHARPENED by S35d's killcount (a rare that has killed many at your level/class lowers the %).
+  All enemy reads via the guard layer (secret -> show "~? (p)", never error). Arrow/waypoint via
+  `C_Map.SetUserWaypoint` + `C_SuperTrack` (+ TomTom if present); minimap blip via HereBeDragons.
+  AC: odds show selected + not-selected, with and without Foresight; no protected calls (compliance
+  green); panel readable at 1280x720 @ 0.65 UI scale and not clipping the target frame.
+- ☐ S35d Killcount crowd (the differentiator): on `PLAYER_DEAD`, attribute the killer. Primary =
+  `COMBAT_LOG_EVENT_UNFILTERED` rolling damage buffer (sourceGUID of the last/most damage to the
+  player); FALLBACK = the Hardcore-addon heuristic (`UNIT_COMBAT` "WOUND" + current `UnitName/GUID`
+  of target) when CLEU is unavailable; plus env codes (fall/drown/fatigue/fire/lava) so non-npc
+  deaths don't mis-attribute to a rare. Record locally; contribute via a `/run share` link to a NEW
+  write-only `rareKills` collection (added through `data/crowd-schema.json` + `gen_crowd_schema.py`,
+  never hand-written), segmented by mode (PVE/PVP/HC) + coarse region. A Cloud Function rolls up ->
+  public read-only `rareKillCounts` (small-bucket suppressed). Surface: "This rare has killed ~{n}
+  players ({PVE}/{PVP}/{HC})" on the S35c panel, and feeds the success% back. Anti-spoof mirrors the
+  Hardcore addon's PROVEN model (Fletcher16 checksum + k-of-n peer consensus, they use k=3): our
+  crowd layer's shape-lock + plausibility + per-clientId rate limit + MIN_BUCKET suppression is the
+  same k-of-n discipline, server-side. OPTIONAL enhancement (defer): a Hardcore-style shared addon
+  channel (`SendAddonMessage`/`RegisterAddonMessagePrefix`, k-of-n confirm) for a LIVE in-game death
+  feed with no backend - gives real-time "someone just died here" while Firebase+bake holds the
+  all-time count. AC: flood/spoof rejected; counts suppressed under MIN_BUCKET; no PII (names only via
+  the opt-in named tier, deferred); env/pvp deaths not credited to rares.
+- ☐ S35e Deadliest Rares ladder: new category in the web LADDERS browser (`web/app.js` +
+  `web/index.html`) reading `rareKillCounts`, filterable by mode/region/zone; graceful-empty. AC:
+  renders on wow-foresight.web.app with 0 console errors; mobile baseline passes.
+- ☐ S35f Season model + Hardcore-kickoff reset: `rareKillCounts` gains a SEASON tag; a scripted,
+  dry-run-first, backed-up, read-back-verified admin op (safe-data-ops) ARCHIVES the active season and
+  opens a fresh one - NON-destructive (keep Season 0 history, flip the active pointer), not a wipe.
+  AC: dry-run shows the diff; backup written; old season archived + still readable; new season empty;
+  the ladder shows the season label and can browse past seasons.
+
+LAUNCH & SEASONS: RUN ships NET-NEW at **Forever launch (2026-11-04)** - kept gated until then (same
+as Foresight's current gated state). **Hardcore kickoff (~2026-12-04, ~1 month after Forever; exact
+date TBD)** triggers the S35f seasonal reset: archive Season 0, open the Hardcore season fresh so the
+Deadliest Rares ladder starts at zero for the event. Reference addons studied for mechanism (not
+copied; both others' IP): RareScanner (detection / HBD minimap / supertrack arrow), Hardcore
+(`PLAYER_DEAD` + `UNIT_COMBAT`/target attribution + Fletcher16 k-of-n peer consensus).
+
+DECIDED (owner, 2026-10-15): (1) LICENSE -> **All Rights Reserved** (done: `LICENSE`, both TOCs,
+`docs/CURSEFORGE.md`, `.github/SECURITY.md`; repo stays public/source-available; bundled libs keep
+their own licenses; not retroactive, so switched early before RUN ships). (2) killcount reporting
+default **ON for anon counts with a visible opt-out**. (3) Name **RUN** final. STILL DEFERRED: a
+"last victim" named entry per rare (opt-in, reuses the show-off `named` tier) - naming deaths is
+sensitive, revisit after S35d ships.
 
 ## Shipped (archived)
 - ☑ S6 Crowd data-collection loop (2026-10-10): collector + harvester + gated deploy;

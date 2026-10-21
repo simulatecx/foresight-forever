@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased (repo-level; ships with the next addon tag)
+
+LICENSE: MIT -> ALL RIGHTS RESERVED (owner decision 2026-10-15, applies to Foresight AND the
+RUN sibling). The repo stays public/source-available for transparency and review, but the
+source and generated data are no longer reusable; bundled third-party libraries keep their
+own licenses; already-shipped MIT builds remain MIT for those copies. `LICENSE`, the TOC
+`## X-License` line, `docs/CURSEFORGE.md`, and `.github/SECURITY.md` updated together.
+
+RUN SHARED SURFACE (2026-10-21, additive-only - no Foresight addon/gate/packaging change):
+the RUN sibling addon's crowd backend rides this project. Generated rules blocks (rareKills
+write-only, rareKillCounts/giantSlayers public-read, runWaitlist consent-gated),
+`functions/rareKills.js` rollups (server-recomputed wager tiers, k-of-n sighting names,
+MIN_BUCKET suppression; emulator 40/40), the armory "The Deadliest" boards, `web/run.html`
+(waitlist + contribute receiver), and the privacy page's RUN section in the same change.
+Deploy (rules then function then hosting) is owner-gated and has NOT run yet. RUN itself
+lives in the separate `run-forever` repo (v0.8.0, both-flavor gate 239/239).
+
+*Features:* CROWD-run-surface (new), CROWD-share (unchanged contract; schema file gains the
+sibling's generated blocks).
+
 ## 0.48.0 - 2026-10-14
 
 THE CROWD PIPELINE WAVE (S34). Your scans now become everyone's in-game-ready data, there's

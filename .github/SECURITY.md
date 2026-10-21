@@ -32,7 +32,7 @@ credit, say so and we'll name you once a fix ships.
 - The Firebase web `apiKey` and the reCAPTCHA site key appearing in client code - these
   are **public client identifiers by design**; security is enforced by Firestore rules +
   App Check, not by their secrecy.
-- Forking or copying the (MIT-licensed, public) source.
+- Forking or copying the (All-Rights-Reserved, source-available, public) source.
 - Reports requiring a tampered/unofficial build - only builds from our official channels
   (CurseForge, Wago Addons, GitHub Releases) are supported.
 

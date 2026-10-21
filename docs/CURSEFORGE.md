@@ -106,17 +106,19 @@ branching talent-tree node (the impact map).
 7. Tag a release: `git tag v0.22.0 && git push --tags` -> CI gates, packages, uploads.
 8. Upload the logo + this description on the CurseForge/Wago project pages.
 
-## License & distribution (owner-confirmed 2026-10-14)
+## License & distribution (owner-confirmed 2026-10-15; was MIT through 2026-10-14)
 
-- **License: MIT** on both GitHub and the CurseForge project page - match the repo; do
-  NOT use CurseForge's "All Rights Reserved" default (it would contradict the already-
-  MIT public source and protect nothing, since the moat is the crowd DATA - gitignored,
-  in Firebase - never the code).
-- **Distribution: allow third-party distribution** (WowUp etc. may fetch via the API).
-  Reach feeds the crowd database, we already publish to Wago + GitHub Releases too, and
-  it's a free open addon with nothing to gate. Opt in to the broadest distribution.
-- If commercial cloning ever becomes a concern, that's a repo license change (to a
-  source-available / non-commercial license) applied to GitHub + CurseForge together -
-  a deliberate decision, not CurseForge's dropdown. For now MIT + open stays.
+- **License: All Rights Reserved** (source-available) on GitHub and the CurseForge/Wago
+  project pages, for BOTH Foresight and RUN. The repo stays **public** for transparency
+  and security review, but the source is no longer reusable: as we build a differentiated
+  two-app product on crowd data, MIT let anyone fork, re-skin, or sell our code and lift
+  our generated data. ARR closes that. This is RareScanner's model.
+- **Caveats:** bundled third-party libraries (Ace3 / HereBeDragons / LibStub, etc.) keep
+  their own permissive licenses - ARR covers only OUR source + data. The switch is not
+  retroactive: builds already shipped under MIT remain MIT for those copies, which is why
+  we switched early (before RUN ships and before more MIT releases accumulate).
+- **Distribution: still allow third-party distribution** (WowUp etc. may fetch via the
+  CurseForge API) through the official channels - reach still feeds the crowd database.
+  ARR restricts *reuse of the source*, not installing the published addon.
 
-License file: MIT (`LICENSE`). Swap to GPL etc. via a one-line `## X-License` change.
+License file: All Rights Reserved (`LICENSE`). TOC declares `## X-License: All Rights Reserved`.
