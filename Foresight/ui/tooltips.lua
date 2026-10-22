@@ -150,7 +150,7 @@ function Tooltips.talentLines(talentId, currentRank, loadout)
         lines[#lines + 1] = {
             text = "|cff9d9d9dAffects:|r " .. table.concat(shown, ", ")
                 .. (more > 0 and (" (+%d more)"):format(more) or ""),
-            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true, detail = true,
         }
     end
 
@@ -183,6 +183,31 @@ function Tooltips.talentLines(talentId, currentRank, loadout)
     local dim = dimFragment(loadout, talentId, rank, maxRank)
     if dim then
         lines[#lines + 1] = { text = dim, r = BODY.r, g = BODY.g, b = BODY.b, wrap = true }
+    end
+
+    -- Synergy + Chains parity with the Forever node hover (2026-10-21): on classic the
+    -- talentId IS the impactNodes key, so the same themes/converter bridges resolve here.
+    -- Classic-flavor only: on Forever a classic talentId could collide with an unrelated
+    -- trait-node id in the synergy index (Forever hovers get these via nodeImpactLines).
+    if HM.Synergy and (HM.gen and HM.gen.flavor) == "classic" then
+        local okt, themes = pcall(HM.Synergy.themesFor, talentId)
+        if okt and themes and #themes > 0 then
+            local parts = {}
+            for i = 1, math.min(#themes, 2) do
+                parts[#parts + 1] = ("%s (+%d)"):format(themes[i].label, themes[i].others)
+            end
+            lines[#lines + 1] = {
+                text = "|cff9d9d9dSynergy:|r " .. table.concat(parts, ", "),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
+        local okn, chains = pcall(HM.Synergy.chainsForNode, talentId, 2)
+        if okn and chains and #chains > 0 then
+            lines[#lines + 1] = {
+                text = "|cff9d9d9dChains:|r " .. table.concat(chains, "  ·  "),
+                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+            }
+        end
     end
 
     if summary.needsCuration then
@@ -241,7 +266,7 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
         lines[#lines + 1] = {
             text = "|cff9d9d9dAffects:|r " .. table.concat(shown, ", ")
                 .. (more > 0 and (" (+%d more)"):format(more) or ""),
-            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true, detail = true,
         }
     end
 
@@ -260,7 +285,8 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
     if loadout then
         local okc, chain = pcall(HM.Impact.talentChainLines, loadout, nodeId, maxRank)
         for _, l in ipairs(okc and chain or {}) do
-            lines[#lines + 1] = { text = "  " .. l, r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
+            lines[#lines + 1] = { text = "  " .. l, r = GREY.r, g = GREY.g, b = GREY.b,
+                wrap = true, detail = true }
         end
         -- Context for crit talents (Thundering Strikes): show your CURRENT crit so
         -- "+1% crit" reads against a real baseline, not in a vacuum.
@@ -275,7 +301,7 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
             lines[#lines + 1] = {
                 text = ("Your crit now: %.1f%% melee, %.1f%% spell"):format(
                     st.meleeCritPct or 0, st.spellCritPct or 0),
-                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true, detail = true,
             }
         end
         -- Ability outcome deltas (MODEL-ability-outcomes): what the next point does to
@@ -1065,15 +1091,73 @@ end
 -- making our block flash then vanish. TAINT ISOLATION: the flag lives in OUR weak-keyed
 -- table - Foresight writes no key onto any Blizzard object, ever.
 local injectedTips = setmetatable({}, { __mode = "k" })
+
+-- Modifier-gated depth (the ElvUI/Pawn convention, 2026-10-21 stat-addon audit): the
+-- hover always shows the verdict lines; lines tagged detail=true (the derivation and
+-- context depth) show only while Shift is held. Pressing Shift MID-HOVER appends the
+-- depth live - no re-hover needed. pendingDepth tracks the one injected tooltip.
+local pendingDepth
+local shiftWatch
+local function ensureShiftWatch()
+    if shiftWatch or not _G.CreateFrame then return end
+    shiftWatch = _G.CreateFrame("Frame")
+    shiftWatch:RegisterEvent("MODIFIER_STATE_CHANGED")
+    shiftWatch:SetScript("OnEvent", function(_, _, key, down)
+        if down == 1 and (key == "LSHIFT" or key == "RSHIFT") and pendingDepth then
+            local tip = pendingDepth.tip
+            local depth = pendingDepth.lines
+            pendingDepth = nil
+            -- pendingDepth is cleared on OnTooltipCleared, so a set value + a shown tip
+            -- means OUR block is still the one on screen (the classic SetTalent path
+            -- never marks injectedTips, so don't gate on it here).
+            if tip and tip.IsShown and tip:IsShown() then
+                attach(tip, depth)
+            end
+        end
+    end)
+end
+
+-- Register depth lines for a shown tooltip so the Shift watcher can append them live.
+-- Exposed for the planner tree, which renders its hover lines itself.
+function Tooltips.registerDepth(tip, depthLines)
+    pendingDepth = (depthLines and #depthLines > 0) and { tip = tip, lines = depthLines } or nil
+end
+
+-- attach() honoring the detail tags: Shift already down = everything now; otherwise the
+-- compact verdict plus a one-line hint, with the depth parked for the live append.
+local function attachGated(tip, lines)
+    local shift = type(_G.IsShiftKeyDown) == "function" and _G.IsShiftKeyDown()
+    if shift then
+        pendingDepth = nil
+        attach(tip, lines)
+        return
+    end
+    local compact, depth = {}, {}
+    for _, L in ipairs(lines) do
+        if L.detail then depth[#depth + 1] = L else compact[#compact + 1] = L end
+    end
+    if #depth > 0 then
+        compact[#compact + 1] = {
+            text = "|cff9d9d9dShift: full breakdown|r", r = GREY.r, g = GREY.g, b = GREY.b,
+        }
+    end
+    attach(tip, compact)
+    Tooltips.registerDepth(tip, #depth > 0 and depth or nil)
+end
+
 local clearHooked = false
 local function ensureClearHook()
     if clearHooked then return end
     for _, name in ipairs({ "GameTooltip", "ItemRefTooltip" }) do
         local t = _G[name]
         if t and t.HookScript then
-            t:HookScript("OnTooltipCleared", function(self) injectedTips[self] = nil end)
+            t:HookScript("OnTooltipCleared", function(self)
+                injectedTips[self] = nil
+                if pendingDepth and pendingDepth.tip == self then pendingDepth = nil end
+            end)
         end
     end
+    ensureShiftWatch()
     clearHooked = true
 end
 
@@ -1088,7 +1172,7 @@ local function injectTalent(tip, tab, index)
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
     local lines = Tooltips.talentLines(talentId, info.rank, loadout)
-    if lines then attach(tip, lines) end
+    if lines then attachGated(tip, lines) end
 end
 
 local function onSetTalent(tip, tab, index, inspect)
@@ -1106,6 +1190,7 @@ function Tooltips.install()
     -- Post-hook on THIS tooltip object only - never the shared template metatable - so
     -- the hidden ForesightScanTooltip probe keeps capturing clean, uninjected text.
     _G.hooksecurefunc(tip, "SetTalent", onSetTalent)
+    ensureClearHook() -- pendingDepth lifecycle + the Shift watcher for this path too
     Tooltips.installed = true
     return true
 end
@@ -1628,7 +1713,7 @@ local function injectNodeBlock(tip, nodeId, source)
     if lines then
         injectedTips[tip] = true
         if HM.db and type(HM.db.collect) == "table" then HM.db.collect.traitTipProbe.injected = true end
-        attach(tip, lines)
+        attachGated(tip, lines)
     end
 end
 

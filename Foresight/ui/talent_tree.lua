@@ -268,9 +268,24 @@ local function showTip(button, talentId)
         end
         local okl, lines = pcall(HM.Tooltips.nodeImpactLines, talentId, lo)
         if okl and type(lines) == "table" and #lines > 1 then
+            -- Modifier-gated depth (same convention as the talent-frame hover): lines
+            -- tagged detail=true show while Shift is held; otherwise they park with
+            -- registerDepth so pressing Shift mid-hover appends them live.
+            local shift = type(_G.IsShiftKeyDown) == "function" and _G.IsShiftKeyDown()
+            local depth = {}
             for i = 2, #lines do  -- line 1 is the "Foresight" header; its honesty tag re-adds below
                 local l = lines[i]
-                if l and l.text then gt:AddLine(l.text, l.r or 0.8, l.g or 0.8, l.b or 0.8, l.wrap) end
+                if l and l.text then
+                    if l.detail and not shift then
+                        depth[#depth + 1] = l
+                    else
+                        gt:AddLine(l.text, l.r or 0.8, l.g or 0.8, l.b or 0.8, l.wrap)
+                    end
+                end
+            end
+            if #depth > 0 then
+                gt:AddLine("|cff9d9d9dShift: full breakdown|r", 0.62, 0.62, 0.62)
+                if HM.Tooltips.registerDepth then HM.Tooltips.registerDepth(gt, depth) end
             end
             -- The skipped header carries the confidence tag ("(p) rank rule presumed" /
             -- "verified from your scan") - every number keeps its tag (honesty invariant).

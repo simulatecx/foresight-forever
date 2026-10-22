@@ -981,6 +981,25 @@ function HM.runSelftest(out)
         local text = linesText(HM.Tooltips.talentLines(anyId, 0))
         return text:find("needs curation", 1, true) ~= nil
     end)())
+    check("tooltip depth lines carry the detail tag (Shift-gated hover)", (function()
+        -- The ElvUI-convention organization pass (2026-10-21): the Affects list is
+        -- depth, so the in-game hover can park it behind a held Shift.
+        for _, l in ipairs(tl or {}) do
+            if l.detail and (l.text or ""):find("Affects:", 1, true) then return true end
+        end
+        return false, linesText(tl)
+    end)())
+    if isClassic then -- classic-truth dual: the hover itself carries the synergy lines
+    check("classic hover chains Divine Spirit -> Spiritual Guidance (talentLines)", (function()
+        HM.Synergy._reset()
+        local ds = HM.findTalents("Divine Spirit")
+        if #ds ~= 1 then return false, "Divine Spirit not unique" end
+        local text = linesText(HM.Tooltips.talentLines(ds[1].id, 0))
+        HM.Synergy._reset()
+        return text:find("Chains:", 1, true) ~= nil
+            and text:find("Spiritual Guidance", 1, true) ~= nil, text
+    end)())
+    end
 
     -- Item tooltip injection (layman stat impact): mapper + line builder are pure.
     check("item stat mapper translates GetItemStats keys", (function()
