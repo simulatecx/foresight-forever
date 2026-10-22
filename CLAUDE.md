@@ -49,6 +49,23 @@ Map (current priority), Panic Advisor, what-to-press HUD. Design docs: `DATAFLOW
 - Secret-value discipline: in restricted contexts features degrade to display-only,
   never error.
 
+## The sibling surface (RUN) - two standing laws for new additions
+
+This repo also carries the DEPLOYABLE copies of the RUN sibling addon's
+backend surface (`functions/rareKills.js`, appended blocks in
+`web/firestore.rules`, `web/run.html`, `web/run-crowd-schema.js`); canonical
+sources + the RUN addon live in `..\run-forever` (ecosystem map:
+`run-forever/docs/ECOSYSTEM.md`). Owner directive 2026-10-21:
+1. **Never step on an existing deployment of EITHER app.** Shared-surface
+   changes are additive-only (new files, appended rules blocks before the
+   final deny, one-line exports); never modify existing rules blocks or
+   `rebuild()`; deploys are owner-gated and ordered rules -> functions ->
+   hosting.
+2. **Build for both.** Any shared-surface change runs BOTH repos' gates
+   (this repo's `run_tests.py` AND run-forever's dual-flavor gate) before
+   commit; data partitions hold (products never share collections; games
+   never share numbers - the `s*`/`c*` season namespace).
+
 ## Doc governance & feature lifecycle
 
 Doc spine (one home per fact): `SPRINTS.md` work tracker (status index -> active ->
