@@ -50,6 +50,13 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S36 HeroLog-style progression: activity feed + team view + gear-level/raid-readiness (SCOPING only) | - | ☐ |
 | S37 Gear -> your spells: per-ability item-impact under the verdict (ITEM-spellimpact) | 3 | ☑ |
 | S38 UI flexibility + planner access: Matrix drag, stats collapse, resizable grouped options, talent-frame button, copy-as-snapshot, plan-from-current | 3 | ◐ |
+| S39 Fable pre-release audit -> 0.49.1 prod re-ship | all | ☑ |
+| S40 Planner WoW-esque skin + the cross-impact map | 3 | ◐ |
+| S41 Patch-day data refresh (client 70450) + freshness automation | - | ☑ |
+| S42 UI/UX conventions sweep + the wow-ui-ux skill | 3 | ☑ |
+| S43 Classic Era flavor (multi-TOC, dual gate) | all | ☑ |
+| S44 Proofing wave: chained synergies + one item-fold | 3 | ☑ |
+| S45 Organized complexity: collapse/pin/forge UI + Shift-gated hover depth + classic synergy truth | 3 | ☑ |
 
 ## Active / next
 
@@ -380,6 +387,39 @@ One repo, two flavors (multi-TOC, NOT a diverging branch): `Foresight_Vanilla.to
   TalentFrame overlay port (live-tree glows); crowd flavor-bucketing before classic users
   contribute (1.15 builds would mix into Forever brackets); classic CF project split if the
   owner wants a separate listing (packager currently marks ONE project multi-flavor).
+
+### S45 - Organized complexity: collapse/pin/forge UI + Shift-gated hover depth + classic synergy truth ☑ (2026-10-21) -> 0.53.0
+Owner (two asks, run overnight): "enhance our UI elements overall - more wowEsk, allow for
+an expand/collapse button... an option to close both windows at once" + "run an audit on
+other character stat addons... we like the complexity, but we need to keep it organized."
+*Fit & Overlap - Category UI + SYNERGY. Verdict: ENHANCE matrix_panel/stats_panel/tooltips/
+settings + synergy. Research: stat-addon audit (ECS, DejaCharacterStats, Details!, Pawn,
+ElvUI, Titan Panel, Synergize) - digest below. No new data, no external surface.*
+☑ MATRIX COLLAPSE (Details!-style minimize): a title-bar chevron collapses the Matrix to
+  its 26px title bar (pools released, grip hidden, state persisted per char in uiState).
+☑ CLOSE-BOTH FLOW: closing the character menu now closes the Matrix with it by DEFAULT
+  (two windows opened by one button close together - the owner UX call); the new
+  `matrixPinned` setting (Synergy Matrix group, default off) keeps it open - the
+  Details!-style pinned dashboard. wow-ui-ux skill taxonomy updated (pinning is OPT-IN).
+☑ FORGED CHROME (more WoW-esque, code-drawn only): `Display.forge(frame, r,g,b,a)` - gold
+  corner L-brackets + studs, shared by the stats panel (class color) and Matrix (brand).
+☑ SHIFT-GATED HOVER DEPTH (the ElvUI/Pawn convention from the audit): talent hovers always
+  show the verdict (At max, ability deltas, Synergy, Chains); depth lines (Affects list,
+  fold context, crit baseline) are tagged detail=true and park behind a held Shift with a
+  one-line hint; pressing Shift MID-HOVER appends them live (MODIFIER_STATE_CHANGED +
+  pendingDepth, cleared on OnTooltipCleared). Talent-frame hover (both flavors) + planner.
+☑ SYNERGY OUTPUT ORGANIZED: `/foresight synergy` groups members by source (talents /
+  racials / buffs), 8 names per line + "(+N more)" - complexity kept, dump killed.
+☑ CLASSIC SYNERGY TRUTH: vanilla hardcodes auras 174/175 to SPIRIT (the 1.15 rows carry no
+  stat index; misc0 is a school mask) - generate.py classic decode now pins it, so
+  Spiritual Guidance reads Spirit -> spell damage/healing (was misread Strength). Classic
+  hover parity: talentLines emits the same Synergy:/Chains: lines (classic flavor only -
+  Forever ids could collide). New classic duals: Divine Spirit chains through Spiritual
+  Guidance (chainsForNode + the hover itself). Gate 304/304 + 259/259.
+☐ AUDIT BACKLOG (recorded, not built): ECS-style whole-panel dock-collapse to an edge tab;
+  Deja-style spec-relevant defaults + zero-row suppression; Details!-style right-click
+  title menu per Matrix block; Titan-style one-line summary strip; drag-to-reorder
+  sections in an unlock mode; profile-level layout save/switch.
 
 ### ROADMAP (owner, 2026-10-16) - wrap this phase then move on
 ☑ Re-audit with Fable -> fixed -> TAG + publish 0.49.1 (the prod re-ship; v0.49.0 was broken).

@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.53.0 - 2026-10-21
+
+ORGANIZED COMPLEXITY. A UI wave driven by an audit of the big character-stat addons
+(ExtendedCharacterStats, DejaCharacterStats, Details!, Pawn, ElvUI, Titan Panel): keep
+every number Foresight computes, put the depth one deliberate gesture away.
+
+- **Collapse the Matrix.** A title-bar chevron shrinks the Foresight Matrix to its title
+  bar (the Details!-style minimize); state persists per character.
+- **Both windows close together.** Closing the character menu now closes the Matrix with
+  it by default - two windows opened by one button close as one. Prefer the old behavior?
+  The new "Pin the Matrix open" setting keeps it up (the pinned-dashboard convention).
+- **More WoW-esque chrome.** Forged gold corner brackets + studs on the stats panel
+  (your class color) and the Matrix - code-drawn, so they match any UI skin.
+- **Hold Shift for the full breakdown.** Talent hovers now lead with the verdict (At max,
+  next-point ability deltas, Synergy, Chains); the depth - the Affects list, the fold
+  context, your crit baseline - appears while Shift is held, appended LIVE mid-hover.
+  Works on the talent-frame hover (both flavors) and the planner tree.
+- **`/foresight synergy` reads like a report, not a dump:** members grouped by source
+  (talents / racials / buffs), eight names per line, "(+N more)" past that.
+- **Classic synergy truth:** vanilla hardcodes its stat-conversion auras to Spirit - the
+  classic decode now pins that, so Spiritual Guidance correctly chains Spirit into spell
+  damage/healing (it misread Strength from the modern-shaped column). Classic talent
+  hovers now carry the same Synergy:/Chains: lines as Forever. New classic-truth duals:
+  Divine Spirit chains through Spiritual Guidance, on the engine AND the hover.
+- Ship gate: Forever 304/304, Classic 259/259.
+
+*Features:* UI-matrix-panel, UI-stats-panel, UI-talent-tooltip, SYNERGY-engine,
+CORE-options, CORE-classic-flavor
+
 ## 0.52.0 - 2026-10-21
 
 FORESIGHT COMES TO CLASSIC ERA. One addon, two flavors: the same engine now ships a

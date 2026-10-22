@@ -1,22 +1,29 @@
-## 0.52.0
+## 0.53.0
 
-FORESIGHT COMES TO CLASSIC ERA. One addon, two games: alongside the WoW: Forever build,
-this release installs a Classic Era (1.15) flavor of Foresight - the same talent planner,
-honest tooltips, Matrix, and ladders, running on data generated from the classic client's
-own files.
+ORGANIZED COMPLEXITY. We audited the big character-stat addons (ExtendedCharacterStats,
+DejaCharacterStats, Details!, Pawn, ElvUI, Titan Panel) and applied the conventions they
+converged on: keep every number, put the depth one gesture away.
 
-**Classic, done faithfully**
-- The planner uses the real classic talent trees (432 talents, all nine classes, with
-  prerequisite arrows) - and **321 of them carry exact datamined per-rank values**.
-- Vanilla math is vanilla: Fireball rank 1 really is 14-22, Arcane Intellect rank 1 really
-  is +2, and spell coefficients follow the classic cast-time law (the data column modern
-  tools trust is wrong in the 1.15 export - we checked, and don't use it).
-- Vanilla item truths preserved: Elixir of the Mongoose is a 1-hour elixir here, your 8
-  classic races are exactly that, and anything only verified on Forever honestly starts
-  as "(p) presumed" on Classic until your own scans confirm it.
-- Synergies, chains, the catalog, and the ability map all work on classic talents.
+**Less space, your call**
+- **Collapse the Matrix**: a new title-bar chevron shrinks the Foresight Matrix down to
+  just its title bar - the Details!-style minimize. Remembered per character.
+- **Both windows close together**: closing the character menu now closes the Matrix with
+  it, by default. Want it to stay? Turn on the new "Pin the Matrix open" option.
+- **Forged chrome**: gold corner brackets and studs on the panels - drawn in code, in
+  your class color, so they match any UI skin (ElvUI included).
 
-**Quality gate, doubled**: every release now has to pass the full test suite on BOTH
-flavors before it can ship.
+**Hold Shift for the full breakdown**
+Talent hovers now lead with the verdict: the at-max value, what the next point does to
+your actual abilities, and the Synergy/Chains lines. The depth - the full affected-spell
+list, the stat-fold context, your crit baseline - appears while you hold Shift, and it
+appends live mid-hover. Works on the talent frame and the planner, both flavors.
 
-Forever players: everything from 0.51.0 and earlier is unchanged in this release.
+**Classic synergy truth**
+Vanilla hardcodes its stat-conversion auras to Spirit - our classic decode now honors
+that, so Spiritual Guidance correctly chains Spirit into spell damage and healing (the
+modern-shaped column had it misread as Strength). Classic talent hovers now carry the
+same Synergy: and Chains: lines Forever gets, and `/foresight synergy` reads like a
+report: grouped by talents / racials / buffs instead of one long dump.
+
+Every release still passes the full test suite on BOTH flavors before it ships
+(Forever 304 checks, Classic 259).
