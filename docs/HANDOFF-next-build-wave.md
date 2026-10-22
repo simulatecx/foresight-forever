@@ -1,5 +1,9 @@
 # Handoff - next build wave (verified pipeline, show-off tier, coverage, zero-click verify)
 
+> SUPERSEDED: this wave shipped in v0.48.x. The ACTIVE handoff is
+> `docs/HANDOFF-dual-flavor-launch.md` (dual-flavor process + the 2026-11-04 launch
+> runbook). Kept for the A-G story detail and decisions of record.
+
 A self-contained spec for a fresh session with none of this conversation's context. Read
 every rule; the anchors are quoted strings (search for them - line numbers drift). Written
 2026-10-14 by the planning session. Companion to `docs/S13-CROWD-BACKEND.md` (crowd

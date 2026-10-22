@@ -60,6 +60,10 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 
 ## Active / next
 
+> LAUNCH: Forever goes live **2026-11-04**. The active handoff is
+> `docs/HANDOFF-dual-flavor-launch.md` - dual-flavor dev laws (Part 1) + the pre-launch
+> checklist and launch-day runbook (Part 2). Pre-launch blocker: crowd flavor-bucketing.
+
 ### S3 - Beta verification pass ◐  (the current gate)
 Verifying Foresight against the live Forever beta (pilot: Orc Shaman). Full log in
 CHANGELOG 0.5.1-0.8.2. State:
