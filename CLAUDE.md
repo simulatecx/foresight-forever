@@ -54,8 +54,10 @@ Map (current priority), Panic Advisor, what-to-press HUD. Design docs: `DATAFLOW
 This repo also carries the DEPLOYABLE copies of the RUN sibling addon's
 backend surface (`functions/rareKills.js`, appended blocks in
 `web/firestore.rules`, `web/run.html`, `web/run-crowd-schema.js`); canonical
-sources + the RUN addon live in `..\run-forever` (ecosystem map:
-`run-forever/docs/ECOSYSTEM.md`). Owner directive 2026-10-21:
+sources + the RUN addon live at
+`E:\Development_Related\development_projects\wowforever_addons\run-forever`
+(handoff: its `HANDOFF.md`; architecture: its `docs/ECOSYSTEM.md`). Owner
+directive 2026-10-21:
 1. **Never step on an existing deployment of EITHER app.** Shared-surface
    changes are additive-only (new files, appended rules blocks before the
    final deny, one-line exports); never modify existing rules blocks or
