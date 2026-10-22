@@ -210,6 +210,11 @@ def races_for_masks(rm0: int, rm1: int, bit_to_race: dict) -> set:
     return races
 
 
+# Set from --flavor in main(). A few aura decodes are flavor-semantic (vanilla's client
+# hardcodes behavior the modern data expresses in misc values), so build_ops needs to know.
+FLAVOR = "forever"
+
+
 def build_ops(first, effects_by_spell, class_options, family_members, player_spells,
               equipped_items=None):
     """Derive impact ops from a passive/modifier spell's SpellEffect rows. Shared by
@@ -259,8 +264,15 @@ def build_ops(first, effects_by_spell, class_options, family_members, player_spe
             op["kind"] = "statConvert"
             op["isPct"] = True
             op["to"] = {175: "spellDamage", 174: "healingPower", 598: "attackPower"}[aura]
-            src = misc0 if misc0 in (0, 1, 2, 3, 4) else misc1
-            op["from"] = STAT_NAMES.get(src, f"stat:{src}")
+            if FLAVOR == "classic" and aura in (174, 175):
+                # Vanilla hardcodes these auras to SPIRIT in the client (Spiritual
+                # Guidance is the only such conversion in 1.12); the 1.15 rows carry
+                # no stat index (174's misc0 is a school mask, misc1 unused) so the
+                # modern misc decode below would misread stat 0 = Strength.
+                op["from"] = "Spirit"
+            else:
+                src = misc0 if misc0 in (0, 1, 2, 3, 4) else misc1
+                op["from"] = STAT_NAMES.get(src, f"stat:{src}")
             readable = {"spellDamage": "Spell Power", "healingPower": "Healing Power",
                         "attackPower": "Attack Power"}[op["to"]]
             op["property"] = f"{readable} from {op['from']}"
@@ -373,6 +385,8 @@ def main() -> int:
                         help="classic writes to data/generated_classic (the Classic Era "
                              "flavor dataset loaded by Foresight_Vanilla.toc)")
     args = parser.parse_args()
+    global FLAVOR
+    FLAVOR = args.flavor
 
     root = Path(__file__).parent
     cache = root / "cache" / args.build

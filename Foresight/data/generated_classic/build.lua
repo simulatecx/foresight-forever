@@ -3,7 +3,7 @@ local _, HM = ...
 if not HM then HM = _G.Foresight or {}; _G.Foresight = HM end
 HM.gen = HM.gen or {}
 HM.gen.build = "1.15.9.70003"
-HM.gen.channel = "live"
+HM.gen.channel = "beta"
 HM.gen.flavor = "classic"
 HM.gen.generated = "2026-10-21"
 HM.gen.counts = {consumables=285,critHasteProcs=0,foreverPrereqs=0,foreverTalents=0,imbues=225,impactsNeedingCuration=160,items=9260,racialRaces=8,racialSpells=40,racialSpellsNeedingCuration=29,spells=3924,spellsWithDamage=455,spellsWithHeal=122,spellsWithWeaponHit=135,tabs=27,talents=432,talentsWithPartialRankValues=9,talentsWithRankValues=321,traitNodes=0,traitNodesNeedingCuration=0}

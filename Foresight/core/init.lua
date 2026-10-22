@@ -235,7 +235,31 @@ local function onSlash(input)
             local r = HM.Synergy.query(rest, player)
             if r then
                 printMsg(("%s synergy - %d sources push this lever:"):format(r.label, #r.nodes))
-                printMsg("  " .. table.concat(r.nodes, ", "))
+                -- ORGANIZED output (0.53.0, owner "keep the complexity organized"): grouped
+                -- by source kind, capped per line - a 20-source theme used to dump one
+                -- wall-of-text chat line. memberName formats are controlled: racials end
+                -- "(racial)", buffs "(<type>)", talents carry no suffix.
+                local groups = { talents = {}, racials = {}, buffs = {} }
+                for _, n in ipairs(r.nodes) do
+                    if n:find("(racial)", 1, true) then
+                        groups.racials[#groups.racials + 1] = n
+                    elseif n:find("(", 1, true) then
+                        groups.buffs[#groups.buffs + 1] = n
+                    else
+                        groups.talents[#groups.talents + 1] = n
+                    end
+                end
+                local function groupLine(label, list)
+                    if #list == 0 then return end
+                    local shown = {}
+                    for i = 1, math.min(#list, 8) do shown[i] = list[i] end
+                    printMsg(("  %s (%d): %s%s"):format(label, #list,
+                        table.concat(shown, ", "),
+                        #list > 8 and (" (+%d more)"):format(#list - 8) or ""))
+                end
+                groupLine("talents", groups.talents)
+                groupLine("racials", groups.racials)
+                groupLine("buffs", groups.buffs)
                 if r.chains and #r.chains > 0 then
                     printMsg("  chains (stat -> output):")
                     for _, ch in ipairs(r.chains) do printMsg("    " .. ch) end

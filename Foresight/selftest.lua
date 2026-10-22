@@ -2387,6 +2387,26 @@ function HM.runSelftest(out)
         return false, ("no Intellect chain (%d fragments)"):format(#(chains or {}))
     end)())
     end
+    if isClassic then -- classic-truth dual: vanilla's one converter is Spiritual Guidance
+    check("chained synergy (classic): Divine Spirit chains through Spiritual Guidance", (function()
+        -- Vanilla hardcodes auras 174/175 to SPIRIT (the 1.15 rows carry no stat index);
+        -- the generate.py classic decode pins that, so a Spirit-boosting talent must
+        -- chain through the Priest converter. Name-located, same as the Forever twin.
+        if not (HM.Synergy and HM.Synergy.chainsForNode) then return false, "no chainsForNode" end
+        HM.Synergy._reset()
+        local ds
+        for nid, n in pairs(HM.formulas.impactNodes() or {}) do
+            if n.name == "Divine Spirit" then ds = nid break end
+        end
+        if not ds then return false, "no Divine Spirit node" end
+        local chains = HM.Synergy.chainsForNode(ds, 4)
+        HM.Synergy._reset()
+        for _, c in ipairs(chains or {}) do
+            if c:find("Spirit ->", 1, true) and c:find("Spiritual Guidance", 1, true) then return true end
+        end
+        return false, ("no Spirit chain (%d fragments)"):format(#(chains or {}))
+    end)())
+    end
     -- SYNERGY phase 3: themes draw from ALL sources with player context.
     check("synergy ingests the player's racials (Spirit <- The Human Spirit)", (function()
         HM.Synergy._reset()
