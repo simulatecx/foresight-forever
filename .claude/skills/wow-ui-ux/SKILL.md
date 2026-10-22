@@ -14,8 +14,10 @@ audit or a live incident.
 
 - **WINDOW** (planner, options, export): standalone, movable, has a close button, ESC closes
   it, position/size/scale persist.
-- **DASHBOARD** (the Matrix): pinnable like a Details! window - movable, close button, but
-  deliberately NOT ESC-closable (a pinned dashboard surviving ESC is the convention).
+- **DASHBOARD** (the Matrix): movable, close button, collapse-to-title-bar, deliberately NOT
+  ESC-closable. Pinning is OPT-IN (the `matrixPinned` setting): by default a dashboard opened
+  alongside a host menu CLOSES with it (owner UX call 2026-10-21 - two windows opened by one
+  button must close together); pinned = the Details!-style survivor.
 - **FURNITURE** (FS/Share/Options buttons, the talent-frame planner button, hints): anchored
   to a host frame, shown/hidden WITH the host via HookScript, never independently closable.
 - **OVERLAY** (talent glows, plan preview): draws over a Blizzard frame; lifecycle bound to

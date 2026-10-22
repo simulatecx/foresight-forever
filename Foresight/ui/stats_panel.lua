@@ -477,6 +477,10 @@ local function createPanel()
         line:SetWidth(1)
         line:SetColorTexture(r, g, b, 0.35)
     end
+    -- Forged corners (0.53.0, the shared WoW-esque chrome - same look as the planner)
+    if HM.Display and HM.Display.forge then
+        HM.Display.forge(panel, r, g, b, 0.45)
+    end
     panel:Hide()
 
     local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
@@ -541,7 +545,7 @@ local function createPanel()
         StatsPanel.refresh()
         if HM.MatrixPanel and HM.MatrixPanel.setShown then HM.MatrixPanel.setShown(show) end
     end)
-    furnitureTip(toggleButton, "Foresight: show/hide your character stats + the Matrix")
+    furnitureTip(toggleButton, "Foresight: show/hide your character stats + the Matrix (both close with this menu unless the Matrix is pinned in options)")
 
     local shareBtn = _G.CreateFrame("Button", "ForesightShareButton", _G.UIParent, "UIPanelButtonTemplate")
     shareBtn:SetFrameStrata("HIGH")
@@ -567,7 +571,16 @@ local function createPanel()
         toggleButton:SetShown(show)
         shareBtn:SetShown(show)
         optBtn:SetShown(show)
-        if not show then panel:Hide() end  -- Matrix is independent/pinnable: it stays until FS-toggled
+        if not show then
+            panel:Hide()
+            -- Close-both flow (0.53.0, owner: "one stays open when we close the character
+            -- menu"): the Matrix follows the character menu closed UNLESS the user pinned
+            -- it (the matrixPinned setting - the Details!-dashboard behavior, now opt-in).
+            if HM.MatrixPanel and HM.MatrixPanel.setShown
+                    and not (HM.Settings and HM.Settings.get("matrixPinned") == true) then
+                HM.MatrixPanel.setShown(false)
+            end
+        end
     end
     charFrame:HookScript("OnShow", function() setFurnitureShown(true) end)
     charFrame:HookScript("OnHide", function() setFurnitureShown(false) end)

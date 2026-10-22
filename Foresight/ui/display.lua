@@ -25,6 +25,33 @@ function Display.color(sem, text)
         tostring(text))
 end
 
+-- FORGED FRAME chrome (0.53.0, the WoW-esque skin pass): the planner's corner treatment -
+-- a diamond stud + an L of gold bars at each corner - as ONE shared drawer so every panel
+-- carries the same forged identity (starts the UI-display-consolidation). Draws on the
+-- frame's BORDER layer with code-drawn textures only (no art files - skin/flavor proof).
+-- In-game only; headless harness never calls it (frames don't exist there).
+function Display.forge(frame, r, g, b, alpha)
+    r, g, b, alpha = r or 0.78, g or 0.64, b or 0.30, alpha or 0.6
+    local function tex(w, h, point, x, y)
+        local t = frame:CreateTexture(nil, "BORDER", nil, 2)
+        t:SetSize(w, h)
+        t:SetPoint(point, frame, point, x, y)
+        t:SetColorTexture(r, g, b, alpha)
+        return t
+    end
+    for _, c in ipairs({ { "TOPLEFT", 1, -1, 1, 1 }, { "TOPRIGHT", -1, -1, -1, 1 },
+                         { "BOTTOMLEFT", 1, 1, 1, -1 }, { "BOTTOMRIGHT", -1, 1, -1, -1 } }) do
+        local point, x, y = c[1], c[2], c[3]
+        tex(14, 2, point, x, y)            -- horizontal bar of the L
+        tex(2, 14, point, x, y)            -- vertical bar of the L
+        local stud = frame:CreateTexture(nil, "BORDER", nil, 3)
+        stud:SetSize(5, 5)
+        stud:SetPoint(point, frame, point, x + 2 * c[4], y + 2 * c[5])
+        stud:SetColorTexture(r * 1.2 > 1 and 1 or r * 1.2, g * 1.2 > 1 and 1 or g * 1.2,
+            b * 1.2 > 1 and 1 or b * 1.2, 0.9)
+    end
+end
+
 local function num(v)
     v = v or 0
     if v % 1 == 0 then return ("%d"):format(v) end

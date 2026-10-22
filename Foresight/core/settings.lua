@@ -67,6 +67,11 @@ Settings.KEYS = {
         label = "Auto-verify on talent open",
         desc = "When you open your talents, Foresight scans the ones you've trained so their rank rules verify themselves - no hover, no command. Off = verify only on hover or /foresight verify.",
     },
+    matrixPinned = {
+        group = "Synergy Matrix", type = "toggle", default = false,
+        label = "Pin the Matrix open",
+        desc = "Keep the Foresight Matrix open when the character menu closes (the Details!-style pinned dashboard). Off = closing the character menu closes both Foresight windows together.",
+    },
     plannerOverlay = {
         group = "Synergy Matrix", type = "toggle", default = true,
         label = "Show planned-build overlay",

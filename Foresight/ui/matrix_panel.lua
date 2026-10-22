@@ -644,6 +644,26 @@ end
 
 function MatrixPanel.refresh()
     if not panel or not panel:IsShown() then return end
+    -- COLLAPSED (0.53.0, owner "it takes up a lot of space"): shrink to the title bar -
+    -- the Details!-style minimize. No model compute, no layout churn while collapsed.
+    if uiState().collapsed then
+        releasePools()
+        if HM.Motion then
+            HM.Motion.cancelOwner("matrix")
+            HM.Motion.releaseLines(panel)
+            HM.Motion.releaseGauges(panel)
+        end
+        if panel.collapseChevron then panel.collapseChevron:SetText("+") end
+        if panel.grip then panel.grip:Hide() end
+        panel:SetHeight(26)
+        if HM.Settings and HM.Settings.get then
+            panel:SetScale(HM.Settings.get("panelScale") or 1)
+        end
+        panel.bg:SetColorTexture(0.055, 0.055, 0.07, opacity())
+        return
+    end
+    if panel.collapseChevron then panel.collapseChevron:SetText("-") end
+    if panel.grip then panel.grip:Show() end
     local snapshot = HM.Snapshot.capture()
     if not snapshot then return end
     local loadout = HM.Loadout.fromSnapshot(snapshot)
@@ -810,6 +830,10 @@ local function createPanel()
         line:SetWidth(1)
         line:SetColorTexture(BRAND.r, BRAND.g, BRAND.b, 0.25)
     end
+    -- Forged corners (0.53.0, the shared WoW-esque chrome - same look as the planner)
+    if HM.Display and HM.Display.forge then
+        HM.Display.forge(panel, BRAND.r, BRAND.g, BRAND.b, 0.5)
+    end
 
     -- Title bar: the brand header doubles as the loop cycler (mockup's dropdown).
     local titleBtn = _G.CreateFrame("Button", nil, panel)
@@ -864,9 +888,28 @@ local function createPanel()
     end)
     optBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
 
+    -- Collapse/expand (0.53.0): shrink the Matrix to its title bar (the Details! minimize).
+    local collapseBtn = _G.CreateFrame("Button", nil, panel)
+    collapseBtn:SetSize(18, 18)
+    collapseBtn:SetPoint("TOPRIGHT", optBtn, "TOPLEFT", -2, 0)
+    panel.collapseChevron = collapseBtn:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    panel.collapseChevron:SetAllPoints()
+    panel.collapseChevron:SetText("-")
+    collapseBtn:SetScript("OnClick", function()
+        uiState().collapsed = not uiState().collapsed and true or nil
+        MatrixPanel.refresh()
+    end)
+    collapseBtn:SetScript("OnEnter", function(self)
+        _G.GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        _G.GameTooltip:SetText("Collapse / expand the Matrix", 0.2, 1, 0.6, 1, true)
+        _G.GameTooltip:Show()
+    end)
+    collapseBtn:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
+
     -- S33 RESIZE GRIP: drag the bottom-right corner to stretch the panel wider; the
     -- layout re-flows to the new width live and the validated width is saved per char.
     local grip = _G.CreateFrame("Button", nil, panel)
+    panel.grip = grip
     grip:SetSize(16, 16)
     grip:SetPoint("BOTTOMRIGHT", -2, 2)
     grip:EnableMouse(true)
