@@ -12,7 +12,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-DEFAULT_BUILD = "1.60.1.70450"
+DEFAULT_BUILD = "1.60.1.70658"
 
 # Tables needed for the Talent Impact Map and the impact graph foundation.
 TABLES = [

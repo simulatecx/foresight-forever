@@ -17,7 +17,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-DEFAULT_BUILD = "1.60.1.70450"
+DEFAULT_BUILD = "1.60.1.70658"
 # Release channel of the client these tables came from. Forever is in beta until
 # 2026-10-21 (launches 2026-11-04); flip to "live" when generating from a launch build.
 # Stamps every generated fact as "Forever-verified - <channel> <build>".
