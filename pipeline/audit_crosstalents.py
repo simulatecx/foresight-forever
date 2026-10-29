@@ -30,7 +30,7 @@ ROOT = Path(__file__).parent
 TF_CACHE = ROOT / "cache" / "talentsforever"
 OUT_DIR = ROOT / "collected"
 FOREVER_LUA = ROOT.parent / "Foresight" / "data" / "generated" / "forever_talents.lua"
-DEFAULT_BUILD = "1.60.1.70450"
+DEFAULT_BUILD = "1.60.1.70685"
 
 CLASS_IDS = {"WARRIOR": 1, "PALADIN": 2, "HUNTER": 3, "ROGUE": 4, "PRIEST": 5,
              "SHAMAN": 7, "MAGE": 8, "WARLOCK": 9, "DRUID": 11}
