@@ -63,6 +63,31 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > LAUNCH: Forever goes live **2026-11-04**. The active handoff is
 > `docs/HANDOFF-dual-flavor-launch.md` - dual-flavor dev laws (Part 1) + the pre-launch
 > checklist and launch-day runbook (Part 2). Pre-launch blocker: crowd flavor-bucketing.
+> 2026-10-29: the runbook RAN FOR REAL - live `wowf` client (1.60.1.70685) installed to
+> `_forever_`, Classic Era (1.15.9.70576) to `_classic_era_`; both datasets refreshed
+> (Frost Mage rework; classic unchanged), dual gate green with zero re-pins, deploy.py
+> retargeted to both live installs + deployed. TAG HELD until the owner's in-game verify.
+
+### S46 - Crowd flavor-bucketing (the pre-launch blocker) ☐
+As a classic player contributing scans, I want my numbers ranked against classic
+players only, so Forever and Classic percentiles never poison each other.
+*Fit & Overlap - Category CROWD. Verdict: ENHANCE functions/index.js aggregation +
+fetch_baselines.py bake + PanelModel.peerModel. The payload ALREADY carries `build`
+(32-char string) - flavor derives from its prefix (1.60. forever / 1.15. classic);
+no addon payload change, no rules change. Unknown prefix -> bucket "other", never
+merge. Mobile: no UI surface (readout already ships). Data: no new data.*
+AC: ☐ aggregation keys include flavor ☐ bake + peer_baselines.lua + in-game readout
+carry it through ☐ seeded two-flavor E2E proves no cross-contamination ☐ deployed
+before launch-week contribution volume.
+
+### S47 - Classic build watch in CI ☐
+As the maintainer, I want data-freshness to detect new Classic Era builds the way it
+detects Forever ones, so a 1.15 patch can't silently stale the classic dataset.
+*Fit & Overlap - Category DATA. Verdict: ENHANCE check_updates.py (classic mode:
+scan `wow_classic_era` / prefix 1.15., CLASSIC_BUILD constant pair) + a second
+data-freshness.yml job (detect -> fetch+generate --flavor classic -> git-diff gate ->
+dual ship gate -> review PR). Proof of the gap: 70576 was only noticed via the local
+install (2026-10-29). No UI surface, no new data.*
 
 ### S3 - Beta verification pass ◐  (the current gate)
 Verifying Foresight against the live Forever beta (pilot: Orc Shaman). Full log in
@@ -1447,19 +1472,11 @@ over every impact source (`/foresight catalog`), the query spine for synergy/sea
 Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 
 ## Backlog (not yet scheduled)
-- ☐ DATA-freshness AUTO-SYNC completion (owner asked 2026-10-15 "do we auto-stay-in-sync
-  with WoW updates or wait for crowdsourcing?"). The STRUCTURAL game data (talents/spells/
-  items/trait trees) comes from the client DB2 via wago.tools (`fetch.py` -> `generate.py`) -
-  deterministic, NOT crowdsourced. `.github/workflows/data-freshness.yml` scaffolds a daily
-  fetch+generate+gate, BUT `fetch.py` hardcodes `DEFAULT_BUILD` (no latest-build detect) and
-  the PR/issue steps are stubbed - so a new Forever build is NOT auto-picked-up today; a patch
-  = manual `fetch.py --build <new>` + `generate.py` + gate + version bump. TO MAKE IT
-  CONTINUOUS: (1) query wago.tools for the latest Forever build id, (2) fetch+generate+gate it,
-  (3) auto-open a regen PR (or auto-ship after gate). Crowdsourcing is a SEPARATE layer - it
-  only fills the gaps the raw data leaves (rank-scaling presumptions, buff magnitudes), it does
-  not keep structural data in sync. (Verified-rule feed itself is continuous + version-free into
-  Firestore via push_verified/bake, but captures reach disk only on /reload/logout and only
-  TRAINED hovers decide a rule; those baked rules reach players on the next addon version.)
+- ☑ DATA-freshness AUTO-SYNC (owner ask 2026-10-15): SHIPPED in S41 (2026-10-19) for
+  Forever - check_updates.py latest-build detect + data-freshness.yml daily
+  detect->fetch+generate->gate->review PR. Crowdsourcing remains a separate layer (fills
+  rank-scaling/buff gaps only, never structural sync). REMAINING = the classic flavor
+  watch, now scheduled as S47.
 - ☐ Options GUI menu: one panel listing every /foresight setting (standing toggle,
   opacity, goal, focus) - groomed via S27; until then /foresight set is the lever.
 - ☐ DATA-proc-families: pipeline decode of proc rates beyond critHaste (Nightfall /

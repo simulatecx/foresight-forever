@@ -143,9 +143,14 @@ backend work, and launch prep; expect a NEW Forever client build on or near laun
 5. ☐ Owner account items: CF listing description + talentsforever credit text, logo,
    X-Wago-ID (needs a Wago project + WAGO_API_TOKEN), App Check `&& appChecked()`
    restore check (was pending backend token propagation), reddit app creds (parked).
-6. ☐ **Dry-run the launch-day runbook (2.2) against the CURRENT build** so the commands
-   and the diff-review muscle are warm. `deploy.py --verify` is the pre-launch health
-   check for the local install.
+6. ☑ **Dry-run of the launch-day runbook: RAN FOR REAL 2026-10-29.** The live `wowf`
+   client (1.60.1.70685) installed to `_forever_` and Classic Era 1.15.9.70576 to
+   `_classic_era_`; check_updates --apply, both flavors refetched+regenerated, tf
+   refreshed, dual gate green with ZERO fixture re-pins, deploy.py retargeted to both
+   live installs (beta retired) and deployed layout-verified. Diff of record: Frost Mage
+   rework (Piercing Ice removed, Winter's Chill -> Fingers of Frost, Ice Barrier
+   redesigned+decoded, Frost Blast coef 0.343 -> 0.271), warlock curse consolidation,
+   itemization polish; classic content unchanged. TAG HELD for the owner's in-game verify.
 7. ☐ RUN addon (separate track, ARR, shares the Firebase): launch-gated; its kickoff is
    its own plan ([[run-addon-plan]] in memory / SPRINTS S35-RUN). Don't let it steal
    launch week.
