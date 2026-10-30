@@ -22,8 +22,12 @@ import sys
 from pathlib import Path
 
 ADDON_SRC = Path(__file__).parent.parent / "Foresight"
+# One multi-TOC folder serves both clients: wowf loads Foresight.toc (16001), Classic
+# Era loads Foresight_Vanilla.toc (11509). _classic_beta_ retired 2026-10-29 (beta over;
+# the live wowf product installed to _forever_).
 DEFAULT_TARGETS = [
-    Path(r"D:\Games\World of Warcraft\_classic_beta_\Interface\AddOns\Foresight"),
+    Path(r"D:\Games\World of Warcraft\_forever_\Interface\AddOns\Foresight"),
+    Path(r"D:\Games\World of Warcraft\_classic_era_\Interface\AddOns\Foresight"),
 ]
 
 
