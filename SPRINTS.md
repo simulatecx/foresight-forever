@@ -67,6 +67,13 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > `_forever_`, Classic Era (1.15.9.70576) to `_classic_era_`; both datasets refreshed
 > (Frost Mage rework; classic unchanged), dual gate green with zero re-pins, deploy.py
 > retargeted to both live installs + deployed. TAG HELD until the owner's in-game verify.
+> 2026-11-03 (launch eve): client took 70707 - refreshed + deployed as 0.54.0 (CHANGELOG
+> has the diff; ten name-literal fixtures broke on the Accelerant rename and were
+> re-pinned to talent-26's LIVE name - the S41 Savage law, now addon-wide). The STAGED
+> launch build 70753 is pre-diffed (Paladin rework + Champion of the Light Int->Healing
+> converter + Savage->Command/Earth Fury->Artisan's Precision renames = one known
+> fixture re-pin); ship it when the client takes it. v0.54.0 TAG + the 70753 refresh
+> are the launch-day actions, gated on the owner's in-game verify.
 
 ### S46 - Crowd flavor-bucketing (the pre-launch blocker) ☐
 As a classic player contributing scans, I want my numbers ranked against classic

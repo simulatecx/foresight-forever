@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.54.0 - 2026-11-03 (launch-eve data refresh; tag pending the owner's in-game verify)
+
+LAUNCH-EVE CLIENT SYNC. The live `wowf` client took build 1.60.1.70707 - the shipped
+data now matches it exactly (and we pre-diffed the STAGED launch build 70753 so Nov 4
+holds no surprises; it ships the moment the client takes it).
+
+- **70707 data refreshed**: second Mage pass (Arcane Focus node removed - 553 trait
+  nodes; Improved Fireball RENAMED Accelerant and now covers Arcane Wrath; Elemental
+  Precision -> Precision, all spells; Arcane Resilience/Missile Barrage swapped),
+  Trueshot Aura ranged AP halved 30 -> 15, Orc Blood Fury cooldown 3min -> 2min,
+  Elixir of Wisdom nerfed (+3 Int, 30m) and six Well-Fed fish cut, seven new ilvl-10
+  launch-event epics in the gear compare, Watcher's Signet renames.
+- **Rename-proof fixtures (incident-to-gate)**: the Accelerant rename broke ten
+  name-literal checks (the harvest rank-rule voting selfcheck + nine selftests). All
+  re-pinned to the LIVE name of talent id 26 - pin the id's math, never a name
+  Blizzard owns (the S41 Savage law, now applied addon-wide). Presence check keeps a
+  known-names pin so an UNKNOWN rename still trips.
+- **Deploy targets moved to the live clients**: `deploy.py` now installs to
+  `_forever_` (wowf) and `_classic_era_` - one multi-TOC folder serves both; the dead
+  beta install is retired. Classic Era data refreshed to 1.15.9.70576 (zero content
+  change - stamps only).
+- Known for launch day (70753, pre-diffed): Paladin tree rework incl. Champion of the
+  Light as an Int -> Healing CONVERTER, Savage -> Command + Earth Fury -> Artisan's
+  Precision racial renames (one known fixture re-pin), two new racials.
+- Ship gate: Forever 304/304, Classic 259/259.
+
+*Features:* DATA-generated-tables, DATA-pipeline-generate, DATA-pipeline-fetch
+
 ## 0.53.0 - 2026-10-21
 
 ORGANIZED COMPLEXITY. A UI wave driven by an audit of the big character-stat addons
