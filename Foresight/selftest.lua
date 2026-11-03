@@ -76,7 +76,10 @@ function HM.runSelftest(out)
     check("generated data loaded", gen and gen.talents and gen.spells and gen.build)
     if gen and gen.talents then
         local impFireball = gen.talents[26]
-        check("Improved Fireball present", impFireball and impFireball.name == "Improved Fireball")
+        -- Build 70707 renamed it Accelerant on Forever; classic keeps Improved Fireball.
+        -- Known-names pin: a rename WE don't know about still trips this.
+        check("talent 26 present (Improved Fireball/Accelerant)", impFireball
+            and (impFireball.name == "Improved Fireball" or impFireball.name == "Accelerant"))
         local imp = gen.talentImpacts and gen.talentImpacts[26]
         local castOp = imp and imp.ops and imp.ops[1]
     if not isClassic then -- Forever data pin (S43 classic-gated)
@@ -149,7 +152,10 @@ function HM.runSelftest(out)
     check("talentSummary humanizes rank 3", summary and approx(summary.ops[1].value, -300)
         and #summary.ops[1].affectedNames > 0)
 
-    local byName = HM.findTalents("improved fireball")
+    -- Name-located via the LIVE name of talent 26 (renamed Accelerant on Forever,
+    -- build 70707) - the case-insensitive mechanism is what's under test, not the name.
+    local t26name = (HM.gen.talents[26] and HM.gen.talents[26].name or ""):lower()
+    local byName = HM.findTalents(t26name)
     check("findTalents by name (case-insensitive)", #byName == 1 and byName[1].id == 26)
     check("findTalents partial lists candidates", #HM.findTalents("improved") > 1)
 
@@ -942,10 +948,11 @@ function HM.runSelftest(out)
             end
         end
     end
+    -- impFB.name, not a literal: the live name renamed under us (Accelerant, 70707).
     check("tooltip resolves talent by position", impFB and HM.Tooltips.resolveTalent(
-        "MAGE", fireTabIndex, impFB.tier + 1, impFB.column + 1, "Improved Fireball") == 26)
+        "MAGE", fireTabIndex, impFB.tier + 1, impFB.column + 1, impFB.name) == 26)
     check("tooltip resolve falls back to name, rejects unknowns",
-        impFB and HM.Tooltips.resolveTalent("MAGE", fireTabIndex, impFB.tier + 7, 1, "Improved Fireball") == 26
+        impFB and HM.Tooltips.resolveTalent("MAGE", fireTabIndex, impFB.tier + 7, 1, impFB.name) == 26
         and HM.Tooltips.resolveTalent("MAGE", 1, 1, 1, "No Such Talent") == nil)
     local tl = HM.Tooltips.talentLines(26, 2)
     if not isClassic then -- Forever data pin (S43 classic-gated)
@@ -2162,9 +2169,10 @@ function HM.runSelftest(out)
     check("classifiedForSpell: direct + statFeeder buckets (Fireball, Mage)", (function()
         local c = HM.Mapping.classifiedForSpell(133, { classToken = "MAGE" })
         if not c then return false end
+        local liveT26 = HM.gen.talents[26] and HM.gen.talents[26].name
         local hasDirect, hasIntFeeder = false, false
         for _, e in ipairs(c.direct) do
-            if e.name == "Improved Fireball" then hasDirect = true end
+            if e.name == liveT26 then hasDirect = true end
         end
         for _, e in ipairs(c.statFeeders) do
             if e.nodeId == 104756 then hasIntFeeder = true end -- the Intellect% node
@@ -2275,7 +2283,8 @@ function HM.runSelftest(out)
         if not ids then return false end
         local count = 0
         for _ in pairs(ids) do count = count + 1 end
-        return count > 0 and names["Improved Fireball"] == true
+        local liveT26 = HM.gen.talents[26] and HM.gen.talents[26].name
+        return count > 0 and names[liveT26] == true
             and spell == "Fireball"
     end)())
     end
@@ -2551,11 +2560,13 @@ function HM.runSelftest(out)
     -- MAPPING (S7b): the bidirectional talent<->ability impact map.
     check("impact map: inverse lists what modifies an ability", (function()
         HM.Catalog._reset(); HM.Mapping._reset()
-        -- Improved Fireball modifies Fireball - the inverse query must find it.
+        -- Talent 26 (Improved Fireball/Accelerant) modifies Fireball - the inverse
+        -- query must find it, by whatever name the build gives it.
         local r = HM.Mapping.forSpell("Fireball")
         if not (r and r.spell:find("Fireball", 1, true)) then return false end
+        local liveT26 = HM.gen.talents[26] and HM.gen.talents[26].name
         for _, s in ipairs(r.sources) do
-            if s.name == "Improved Fireball" then return true end
+            if s.name == liveT26 then return true end
         end
         return false
     end)())
@@ -2577,20 +2588,23 @@ function HM.runSelftest(out)
         return HM.Mapping.forSpell("Nonexistent Spell XYZ") == nil
     end)())
     check("ability tooltip shows which talents modify it", (function()
-        -- Fireball (133) is modified by Improved Fireball - the spell tooltip surfaces it.
+        -- Fireball (133) is modified by talent 26 - the spell tooltip surfaces it,
+        -- under the build's live name (Improved Fireball / Accelerant).
+        local liveT26 = HM.gen.talents[26] and HM.gen.talents[26].name
         local lines = HM.Tooltips.abilityMapLines(133)
         if not lines then return false end
         local text = {}
         for _, l in ipairs(lines) do text[#text + 1] = l.text or l.left or "" end
-        return table.concat(text, "\n"):find("Improved Fireball", 1, true) ~= nil
+        return table.concat(text, "\n"):find(liveT26, 1, true) ~= nil
     end)())
     check("ability map resolves by NAME when the id isn't ours (hover-rank fix)", (function()
         -- A spell id we never shipped, but the displayed name matches - must still map.
+        local liveT26 = HM.gen.talents[26] and HM.gen.talents[26].name
         local lines = HM.Tooltips.abilityMapLines(99999999, "Fireball")
         if not lines then return false end
         local text = {}
         for _, l in ipairs(lines) do text[#text + 1] = l.text or l.left or "" end
-        return table.concat(text, "\n"):find("Improved Fireball", 1, true) ~= nil
+        return table.concat(text, "\n"):find(liveT26, 1, true) ~= nil
     end)())
 
     -- CATALOG: the unified content reference table over every impact source.

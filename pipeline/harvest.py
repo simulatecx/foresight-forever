@@ -130,9 +130,11 @@ def analyze_selfcheck() -> bool:
          "tooltip": "Increases the damage done by your Lightning Bolt, Chain Lightning, and Earth Shock spells by 1%."},
         {"name": "Concussion", "rank": 2,
          "tooltip": "Increases the damage done by your Lightning Bolt, Chain Lightning, and Earth Shock spells by 2%."},
-        # Improved Fireball stores the max-rank total (hypothesis A): -500ms over 5
-        # ranks -> rank-2 tooltip says 0.2 sec.
-        {"name": "Improved Fireball", "rank": 2,
+        # Talent 26 stores the max-rank total (hypothesis A): -500ms over 5 ranks ->
+        # rank-2 tooltip says 0.2 sec. NAME-LOCATED by id: the live name has renamed
+        # under us before (Improved Fireball -> Accelerant, build 70707) and the vote
+        # matches by name - pin the ID's math, not a name Blizzard owns.
+        {"name": talents["26"]["name"], "rank": 2,
          "tooltip": "Reduces the casting time of your Fireball and Frostfire Bolt spells by 0.2 sec."},
     ]}
     analysis = analyze_rank_rule(probe, gen)
