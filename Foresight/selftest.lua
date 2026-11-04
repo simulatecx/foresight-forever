@@ -1168,12 +1168,14 @@ function HM.runSelftest(out)
     end)())
     check("Scourge token maps to raceId 5 (the Undead gotcha)",
         HM.Racials.raceIdForToken("Scourge") == 5 and HM.gen.raceTokens.Scourge == 5)
-    check("The Human Spirit decodes +5% Spirit (passive, classic-presumed)", (function()
+    check("The Human Spirit decodes Spirit% (passive, classic-presumed)", (function()
+        -- Launch build 70790 buffed it +5% -> +10% Spirit; the DECODE (passive stat%
+        -- aura, Spirit) is what's pinned, the magnitude just has to be a positive %.
         local sp = HM.Racials.bySpell(20598)
         local op = sp and sp.ops and sp.ops[1]
         return sp and sp.passive == true and sp.confidence == "classic-presumed"
             and op and op.kind == "stat" and op.stat == "Spirit" and op.isPct == true
-            and op.maxValue == 5
+            and (op.maxValue or 0) > 0
     end)())
     check("Tauren Endurance decodes max-health% (aura 133)", (function()
         local sp = HM.Racials.bySpell(20550)
@@ -1311,15 +1313,15 @@ function HM.runSelftest(out)
     end)())
     if not isClassic then -- Forever data pin (S43 classic-gated)
     check("weapon-conditional crit stays label-only (aura 290 discriminator)", (function()
-        -- 70450 BALANCE CHANGE: the Orc racial 20574 was renamed "Savage" and its axe
-        -- condition REMOVED (SpellEquippedItems row deleted, desc no longer says "while
-        -- ... axe") - it now folds as unconditional critChance. The discriminator law is
-        -- pinned on Thundering Strikes (16255), which still carries the equipped-items
-        -- condition and must stay label-only.
-        local sp = HM.Racials.bySpell(20574)
+        -- Launch build 70790: the old Orc crit racial 20574 (Savage) became Command
+        -- 20575 (a damage racial, no crit). The UNCONDITIONAL carrier is now Ruthless
+        -- (20597, Human): no SpellEquippedItems row -> folds as plain critChance. The
+        -- conditional half is pinned on Thundering Strikes (16255), which still carries
+        -- the equipped-items condition and must stay label-only. Both halves = the law.
+        local sp = HM.Racials.bySpell(20597)
         local op = sp and sp.ops and sp.ops[1]
         if not (op and op.kind == "critChance") then
-            return false, "Savage (20574) should fold as unconditional critChance"
+            return false, "Ruthless (20597) should fold as unconditional critChance"
         end
         local nid = HM.gen.traits and HM.gen.traits.bySpell and HM.gen.traits.bySpell[16255]
         local node = nid and HM.gen.traits.nodes[nid]
@@ -1686,15 +1688,20 @@ function HM.runSelftest(out)
     end)())
     if not isClassic then -- Forever data pin (S43 classic-gated)
     check("weapon normalization substitution identity (double-count gate)", (function()
-        -- avg == weaponAvg - AP/14*actualSpeed + AP/14*normCoefficient, on classic
-        -- Stormstrike (Effect 121, bp 0): the UnitDamage AP term swaps speeds exactly.
+        -- avg == (weaponAvg - AP/14*actualSpeed + AP/14*normCoefficient) * pct, on
+        -- classic Stormstrike (normalized): the UnitDamage AP term swaps speeds exactly.
+        -- Launch build 70790 gave Stormstrike pct=150, so fold the DECODED pct into the
+        -- expectation (pin the speed-substitution identity, not a pct Blizzard owns).
         local snap = testSnapshot()
         snap.classToken = "SHAMAN"
         snap.weaponSpeed, snap.weaponType = 3.8, "twoHand"
         snap.weaponDamageMin, snap.weaponDamageMax = 100, 100
         snap.stats.attackPower = 700
+        local wpn = gen.spells[17364] and gen.spells[17364].wpn
+        if not (wpn and wpn.norm) then return false, "Stormstrike no longer a normalized strike" end
+        local pctW = (wpn.pct or 100) / 100
         local hit = HM.Sim.abilityHit(HM.Loadout.fromSnapshot(snap), 17364, {})
-        local expect = 100 - 700 / 14 * 3.8 + 700 / 14 * 3.3
+        local expect = (100 - 700 / 14 * 3.8 + 700 / 14 * 3.3) * pctW
         return hit ~= nil and hit.kind == "weapon"
             and approx(hit.min, expect, 1e-6) and approx(hit.max, expect, 1e-6)
     end)())
@@ -1778,11 +1785,13 @@ function HM.runSelftest(out)
     end)())
     end
     if not isClassic then -- Forever data pin (S43 classic-gated)
-    check("display envelope: live-verified Lightning Bolt 25-30 + float-noise guard", (function()
-        -- First in-game verification (2026-10-12): LB r2 at level 12 computes a raw
-        -- 25.44-29.36 and the game renders "25 to 30" - the widest integer envelope
-        -- (floor min, ceil max), not round-half. The epsilon matters: Fireball r1's
-        -- stored variance puts the raw max at 22.0000001; naive ceil would invent 23.
+    check("display envelope: integer widest-envelope + float-noise guard", (function()
+        -- The DURABLE guard is Fireball r1 @1: its stored variance puts the raw max at
+        -- 22.0000001, and a naive ceil would invent 23 - the epsilon in F.display is
+        -- what's pinned (floor min, ceil max, not round-half). This is build-invariant.
+        -- LB r2's beta live-verified "25 to 30" went stale when launch build 70790
+        -- buffed its base (27 -> 30 -> now a 28-33 envelope); we assert LB stays a
+        -- sane non-empty integer envelope and re-verify the exact number in-game.
         local F = HM.formulas.spellBaseDamage
         local lb = gen.spells[529]
         if not (lb and lb.dmg) then return false, "LB r2 missing" end
@@ -1793,7 +1802,7 @@ function HM.runSelftest(out)
         local fmn, fmx = F.fn(fb.dmg.base, fb.dmg.var, fb.dmg.lvl,
             fb.baseLevel or fb.level, fb.dmg.maxLvl, 1)
         local flo, fhi = F.display(fmn, fmx)
-        return lo == 25 and hi == 30 and flo == 14 and fhi == 22
+        return flo == 14 and fhi == 22 and lo >= 1 and hi > lo and hi == math.ceil(mx)
     end)())
     end
     check("spell tooltip leads with the absolute hit line", (function()

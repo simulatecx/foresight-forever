@@ -67,13 +67,16 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > `_forever_`, Classic Era (1.15.9.70576) to `_classic_era_`; both datasets refreshed
 > (Frost Mage rework; classic unchanged), dual gate green with zero re-pins, deploy.py
 > retargeted to both live installs + deployed. TAG HELD until the owner's in-game verify.
-> 2026-11-03 (launch eve): client took 70707 - refreshed + deployed as 0.54.0 (CHANGELOG
-> has the diff; ten name-literal fixtures broke on the Accelerant rename and were
-> re-pinned to talent-26's LIVE name - the S41 Savage law, now addon-wide). The STAGED
-> launch build 70753 is pre-diffed (Paladin rework + Champion of the Light Int->Healing
-> converter + Savage->Command/Earth Fury->Artisan's Precision renames = one known
-> fixture re-pin); ship it when the client takes it. v0.54.0 TAG + the 70753 refresh
-> are the launch-day actions, gated on the owner's in-game verify.
+> 2026-11-04 (LAUNCH DAY): client landed on 1.60.1.70790 (the real launch build, past
+> the pre-diffed 70753) - refreshed + deployed as 0.54.0. The launch balance pass is in
+> CHANGELOG 0.54.0 (Paladin/Rogue tree reworks, Druid Starfire/Shred buffs, Champion of
+> the Light is now a 4th Forever converter the chains engine shows automatically). 14
+> name-literal fixtures broke across the launch builds and were re-pinned to stable-ID
+> LIVE values (the S41 Savage law, now addon-wide): Savage->Command moved the crit
+> discriminator to Ruthless 20597, Stormstrike's new pct=150 folds via the decoded
+> wpn.pct, LB's beta 25-30 gave way to Fireball's durable 14-22 float-noise guard.
+> Dual gate 304/304 + 259/259; deployed to _forever_ + _classic_era_. THE v0.54.0 TAG
+> is the one remaining launch action, gated on the owner's in-game verify.
 
 ### S46 - Crowd flavor-bucketing (the pre-launch blocker) ☐
 As a classic player contributing scans, I want my numbers ranked against classic

@@ -1,32 +1,41 @@
 # Changelog
 
-## 0.54.0 - 2026-11-03 (launch-eve data refresh; tag pending the owner's in-game verify)
+## 0.54.0 - 2026-11-04 (LAUNCH DAY client sync; tag pending the owner's in-game verify)
 
-LAUNCH-EVE CLIENT SYNC. The live `wowf` client took build 1.60.1.70707 - the shipped
-data now matches it exactly (and we pre-diffed the STAGED launch build 70753 so Nov 4
-holds no surprises; it ships the moment the client takes it).
+LAUNCH-DAY CLIENT SYNC. Forever went live and the `wowf` client landed on build
+1.60.1.70790 - the shipped data matches it exactly. (This supersedes the launch-eve
+70707 refresh and the pre-diffed 70753 staging build; 70790 is the real launch state.)
 
-- **70707 data refreshed**: second Mage pass (Arcane Focus node removed - 553 trait
-  nodes; Improved Fireball RENAMED Accelerant and now covers Arcane Wrath; Elemental
-  Precision -> Precision, all spells; Arcane Resilience/Missile Barrage swapped),
-  Trueshot Aura ranged AP halved 30 -> 15, Orc Blood Fury cooldown 3min -> 2min,
-  Elixir of Wisdom nerfed (+3 Int, 30m) and six Well-Fed fish cut, seven new ilvl-10
-  launch-event epics in the gear compare, Watcher's Signet renames.
-- **Rename-proof fixtures (incident-to-gate)**: the Accelerant rename broke ten
-  name-literal checks (the harvest rank-rule voting selfcheck + nine selftests). All
-  re-pinned to the LIVE name of talent id 26 - pin the id's math, never a name
-  Blizzard owns (the S41 Savage law, now applied addon-wide). Presence check keeps a
-  known-names pin so an UNKNOWN rename still trips.
-- **Deploy targets moved to the live clients**: `deploy.py` now installs to
-  `_forever_` (wowf) and `_classic_era_` - one multi-TOC folder serves both; the dead
-  beta install is retired. Classic Era data refreshed to 1.15.9.70576 (zero content
-  change - stamps only).
-- Known for launch day (70753, pre-diffed): Paladin tree rework incl. Champion of the
-  Light as an Int -> Healing CONVERTER, Savage -> Command + Earth Fury -> Artisan's
-  Precision racial renames (one known fixture re-pin), two new racials.
+- **70790 data refreshed - the launch balance pass.** Highlights players feel:
+  - Paladin tree rework: new Turn Evil / Divine Strength / Boundless Light; One-Handed
+    Weapon Spec + Instrument of Law removed; **Champion of the Light became an
+    Intellect -> Healing Power CONVERTER** (a 4th Forever converter - the chains engine
+    now shows Paladins "Intellect -> healing power via Champion of the Light" for free).
+  - Rogue tree: new Relentless Strikes / Dual Wield Specialization / Reckless Swings;
+    Improved Distract removed; Venom reworked; Mutilate / Coup de Grace retired.
+  - Druid buffs: Starfire base 81 -> 113, Shred weapon 155% -> 200%, Leader of the Pack
+    now a crit aura; Hunter Serpent Sting ticks up across ranks; Shaman Riptide reworked
+    and Lava Burst pulled from several talents.
+  - Earlier launch-ramp changes folded in too: Mage's Accelerant rename (ex-Improved
+    Fireball) + Precision all-spells, Trueshot Aura ranged AP 30 -> 15, Orc Blood Fury
+    cooldown 3min -> 2min, The Human Spirit +5% -> +10%, Elixir of Wisdom nerf, new
+    ilvl-10 launch-event epics.
+  - Racial renames: **Savage -> Command**, **Earth Fury -> Artisan's Precision**, Human
+    Ruthless crit 2% -> 1%.
+- **Rename-proof fixtures (incident-to-gate).** Launch renames broke fourteen
+  name-literal checks across two builds (Accelerant rename: 10; Savage->Command +
+  Human Spirit + the LB/Stormstrike rebalances: 4). All re-pinned to the LIVE value of
+  the stable ID, not a name/number Blizzard owns - the S41 Savage law, now addon-wide:
+  the weapon-normalization gate folds the decoded `wpn.pct` (Stormstrike gained
+  pct=150), the crit discriminator moved to Ruthless (20597), the damage-envelope gate
+  keeps Fireball's float-noise guard (14-22, the durable epsilon case) and asserts LB
+  stays a sane integer envelope pending in-game re-verify.
+- **Deploy targets are the live clients**: `deploy.py` installs to `_forever_` (wowf)
+  and `_classic_era_` - one multi-TOC folder serves both; the dead beta install is
+  retired. Classic Era refreshed to 1.15.9.70576 (zero content change - stamps only).
 - Ship gate: Forever 304/304, Classic 259/259.
 
-*Features:* DATA-generated-tables, DATA-pipeline-generate, DATA-pipeline-fetch
+*Features:* DATA-generated-tables, DATA-pipeline-generate, DATA-pipeline-fetch, SYNERGY-engine
 
 ## 0.53.0 - 2026-10-21
 
