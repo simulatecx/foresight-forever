@@ -30,6 +30,7 @@ data\generated\consumables.lua
 data\generated\weapon_imbues.lua
 data\generated\items.lua
 data\generated\sim_procs.lua
+data\generated\preset_builds.lua
 data\generated\peer_baselines.lua
 data\generated\crowd_schema.lua
 data\generated\verified_rules.lua

@@ -36,6 +36,7 @@ data\generated_classic\consumables.lua
 data\generated_classic\weapon_imbues.lua
 data\generated_classic\items.lua
 data\generated_classic\sim_procs.lua
+data\generated_classic\preset_builds.lua
 data\generated\peer_baselines.lua
 data\generated\crowd_schema.lua
 data\overrides.lua

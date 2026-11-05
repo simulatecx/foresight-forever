@@ -18,6 +18,12 @@ LAUNCH-DAY CLIENT SYNC. Forever went live and the `wowf` client landed on build
   175 = spell HEALING (we had them reversed). It never surfaced earlier because every
   prior converter - Mental Quickness, Spiritual Guidance - carries BOTH auras ("damage
   and healing"), so the direction never mattered. Now correct on both flavors.
+- **Example builds in the planner (new).** The planner gains an "Examples" button:
+  one ready-made deep build per spec, for every class (27 in all), that you can load as
+  a starting point and tweak - nothing is applied in-game, it's the planner as always.
+  The builds are generated from the live talent grid itself (legal by construction, so
+  a balance patch can never ship a broken example) and load through the same code path
+  as Import. Works on both flavors.
   - Rogue tree: new Relentless Strikes / Dual Wield Specialization / Reckless Swings;
     Improved Distract removed; Venom reworked; Mutilate / Coup de Grace retired.
   - Druid buffs: Starfire base 81 -> 113, Shred weapon 155% -> 200%, Leader of the Pack
@@ -42,7 +48,7 @@ LAUNCH-DAY CLIENT SYNC. Forever went live and the `wowf` client landed on build
   retired. Classic Era refreshed to 1.15.9.70576 (zero content change - stamps only).
 - Ship gate: Forever 304/304, Classic 259/259.
 
-*Features:* DATA-generated-tables, DATA-pipeline-generate, DATA-pipeline-fetch, SYNERGY-engine
+*Features:* DATA-generated-tables, DATA-pipeline-generate, DATA-pipeline-fetch, SYNERGY-engine, UI-talent-planner
 
 ## 0.53.0 - 2026-10-21
 

@@ -2894,6 +2894,36 @@ function HM.runSelftest(out)
         end
         return n == 9, ("only %d/9 classes resolved to talents"):format(n)
     end)())
+    check("preset example builds: every one decodes LEGAL for its class (27, all trees)", (function()
+        -- UI-talent-planner presets (pipeline/gen_presets.py): one deep example build per
+        -- (class, tree), shipped as the flavor's own FT code. The whole contract is that
+        -- each decodes through TB.decode -> isLegal (same path the Load button uses), so a
+        -- data refresh can never ship an illegal/empty preset. Pins count + legality.
+        local TB = HM.TalentBuild
+        local presets = HM.gen and HM.gen.presetBuilds
+        if type(presets) ~= "table" or #presets == 0 then return false, "no presetBuilds" end
+        local seen = {}
+        for _, p in ipairs(presets) do
+            if type(p.code) ~= "string" or type(p.class) ~= "string" then
+                return false, "malformed preset entry"
+            end
+            local build, clsOrErr = TB.decode(p.code)
+            if not build then
+                return false, ("%s/%s did not decode: %s"):format(p.class, tostring(p.spec), tostring(clsOrErr))
+            end
+            if clsOrErr ~= p.class then
+                return false, ("%s/%s decoded to class %s"):format(p.class, tostring(p.spec), tostring(clsOrErr))
+            end
+            if TB.totalPoints(build) ~= (p.points or 0) then
+                return false, ("%s/%s point mismatch"):format(p.class, tostring(p.spec))
+            end
+            seen[p.class] = (seen[p.class] or 0) + 1
+        end
+        local classes = 0
+        for _ in pairs(seen) do classes = classes + 1 end
+        return classes == 9 and #presets >= 9,
+            ("%d presets across %d classes"):format(#presets, classes)
+    end)())
     check("shipped prereq graph: acyclic + arrows point down the tree (deadlock guard)", (function()
         -- Audit 2026-10-16: TraitEdge Type-0 back-edges created prereq CYCLES that made both
         -- talents permanently unclickable (Druid Nature's Majesty <-> Splendor, Hunter Bestial

@@ -1,29 +1,27 @@
-## 0.53.0
+## 0.54.0 - launch day
 
-ORGANIZED COMPLEXITY. We audited the big character-stat addons (ExtendedCharacterStats,
-DejaCharacterStats, Details!, Pawn, ElvUI, Titan Panel) and applied the conventions they
-converged on: keep every number, put the depth one gesture away.
+Forever is live, and Foresight is tuned to the launch client (build 1.60.1.70790). This
+is the day-1 patch: the data matches what you're playing, with one real decode fix and a
+new way to start a talent plan.
 
-**Less space, your call**
-- **Collapse the Matrix**: a new title-bar chevron shrinks the Foresight Matrix down to
-  just its title bar - the Details!-style minimize. Remembered per character.
-- **Both windows close together**: closing the character menu now closes the Matrix with
-  it, by default. Want it to stay? Turn on the new "Pin the Matrix open" option.
-- **Forged chrome**: gold corner brackets and studs on the panels - drawn in code, in
-  your class color, so they match any UI skin (ElvUI included).
+**Tuned to the launch balance pass**
+Paladin and Rogue tree reworks, Druid Starfire/Shred buffs, Hunter Serpent Sting, Shaman
+Riptide - the shipped talent, spell, and item data all match the live client, so your
+hover numbers and gear comparisons are right for launch. Classic Era players: your build
+is refreshed too (1.15.9.70576), no content changes.
 
-**Hold Shift for the full breakdown**
-Talent hovers now lead with the verdict: the at-max value, what the next point does to
-your actual abilities, and the Synergy/Chains lines. The depth - the full affected-spell
-list, the stat-fold context, your crit baseline - appears while you hold Shift, and it
-appends live mid-hover. Works on the talent frame and the planner, both flavors.
+**Example builds in the planner**
+New "Examples" button in the talent planner: a ready-made deep build for every spec, for
+all nine classes - load one as a starting point and tweak it however you like. Like
+everything in the planner, it's advice only; nothing is applied to your character. The
+builds are generated straight from the live talent tree, so they're always legal and
+always current.
 
-**Classic synergy truth**
-Vanilla hardcodes its stat-conversion auras to Spirit - our classic decode now honors
-that, so Spiritual Guidance correctly chains Spirit into spell damage and healing (the
-modern-shaped column had it misread as Strength). Classic talent hovers now carry the
-same Synergy: and Chains: lines Forever gets, and `/foresight synergy` reads like a
-report: grouped by talents / racials / buffs instead of one long dump.
+**A launch-day fix**
+The launch reworks shipped the first talents that convert Intellect into *only* spell
+damage or *only* healing (Champion of the Light, Arcane Blast, Natural Instinct), which
+let us catch and fix a spot where those two were labeled backwards. Champion of the Light
+now correctly shows Intellect -> spell damage, and the chains it feeds are right.
 
-Every release still passes the full test suite on BOTH flavors before it ships
-(Forever 304 checks, Classic 259).
+As always: every release passes the full test suite on both flavors before it ships
+(Forever 305 checks, Classic 260), display-and-advice only, official APIs only.

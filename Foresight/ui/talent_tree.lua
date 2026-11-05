@@ -664,6 +664,89 @@ function TT.refreshGlow()
     pcall(HM.SynergyHighlight.mergeGridPlan, HM.TalentBuild.toNodePlan(state.build))
 end
 
+-- ---- preset/example builds (UI-talent-planner) -----------------------------------------
+-- The generated example builds for a class token (one per tree), from preset_builds.lua.
+local function presetsForClass(classToken)
+    local all = HM.gen and HM.gen.presetBuilds
+    if type(all) ~= "table" or not classToken then return {} end
+    local up, out = tostring(classToken):upper(), {}
+    for _, p in ipairs(all) do
+        if type(p) == "table" and p.class == up and type(p.code) == "string" then
+            out[#out + 1] = p
+        end
+    end
+    return out
+end
+
+-- A small OWNED popup (never UIDropDownMenu - taint law) listing the current class's
+-- example builds; clicking one loads it through the same loadBuild/decode path as Import.
+local function togglePresetMenu(anchorBtn)
+    local menu = frame.presetMenu
+    if menu and menu:IsShown() then menu:Hide(); return end
+    local list = presetsForClass(state.class or playerClass())
+    if not menu then
+        menu = _G.CreateFrame("Frame", nil, frame)
+        menu:SetFrameStrata("DIALOG")
+        local bg = menu:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.07, 0.95)
+        menu.rows = {}
+        frame.presetMenu = menu
+    end
+    for _, r in ipairs(menu.rows) do r:Hide() end
+    menu.rows = menu.rows or {}
+    local width, y, rowH = 220, 4, 20
+    for i, p in ipairs(list) do
+        local row = menu.rows[i]
+        if not row then
+            row = _G.CreateFrame("Button", nil, menu)
+            local fs = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            fs:SetPoint("LEFT", 8, 0); fs:SetPoint("RIGHT", -8, 0); fs:SetJustifyH("LEFT")
+            fs:SetWordWrap(false)
+            row.label = fs
+            local hl = row:CreateTexture(nil, "HIGHLIGHT")
+            hl:SetAllPoints(); hl:SetColorTexture(0.9, 0.75, 0.3, 0.2)
+            menu.rows[i] = row
+        end
+        row:SetSize(width - 8, rowH)
+        row:SetPoint("TOPLEFT", 4, -y)
+        -- measured row height (ElvUI font growth): grow to the text if larger
+        row.label:SetText(("%s  -  %d pts"):format(tostring(p.spec or "Tree"), p.points or 0))
+        local h = math.max(rowH, row.label:GetStringHeight() + 6)
+        row:SetHeight(h)
+        row:SetScript("OnClick", function()
+            menu:Hide()
+            local ok, err = loadBuild(p.code)
+            if ok then
+                buildTrees(state.class); updateButtons()
+                if HM.print then HM.print(("loaded example: %s %s (edit freely - nothing is applied in-game)")
+                    :format(tostring(p.class), tostring(p.spec))) end
+            elseif HM.print then
+                HM.print("example load failed: " .. tostring(err))
+            end
+        end)
+        row:Show()
+        y = y + h
+    end
+    if #list == 0 then
+        -- a single non-clickable "none" row keeps the menu from being an empty rect
+        local row = menu.rows[1]
+        if not row then
+            row = _G.CreateFrame("Button", nil, menu)
+            local fs = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+            fs:SetPoint("LEFT", 8, 0); fs:SetPoint("RIGHT", -8, 0); fs:SetJustifyH("LEFT")
+            row.label = fs; menu.rows[1] = row
+        end
+        row:SetSize(width - 8, rowH); row:SetPoint("TOPLEFT", 4, -4)
+        row.label:SetText("no examples for this class"); row:SetScript("OnClick", nil); row:Show()
+        y = y + rowH
+    end
+    menu:SetSize(width, y + 4)
+    menu:ClearAllPoints()
+    menu:SetPoint("TOPLEFT", anchorBtn, "BOTTOMLEFT", 0, -2)
+    menu:SetScale(HM.Settings and HM.Settings.get("panelScale") or 1)
+    menu:Show()
+end
+
 -- ---- frame -----------------------------------------------------------------------------
 local function makeButtonBar()
     local bar = _G.CreateFrame("Frame", nil, frame)
@@ -722,6 +805,10 @@ local function makeButtonBar()
                 or tostring(err or "couldn't read your current build - open your talents"))
         end
     end)
+    -- Example builds: a deep starting build per spec, generated from the real tree (legal
+    -- by construction), loaded through the same decode path as Import. A starting point.
+    local ex = tbtn("Examples", 596, function(self) togglePresetMenu(self) end)
+    ex:SetWidth(84)
 end
 
 local function makeImportBox()

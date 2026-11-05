@@ -17,6 +17,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+import gen_presets
+
 DEFAULT_BUILD = "1.60.1.70790"
 # Release channel of the client these tables came from. Forever is in beta until
 # 2026-10-21 (launches 2026-11-04); flip to "live" when generating from a launch build.
@@ -1240,6 +1242,14 @@ def main() -> int:
                 "confidence": "forever-new-unverified",
             }
 
+    # ---- Preset/example builds (UI-talent-planner) -----------------------------
+    # One legal deep build per (class, tree), computed from THIS dataset's grid so they
+    # stay legal across balance patches. Keyed like the planner's state.build for this
+    # flavor: foreverTalents (nodeID) on Forever, talents (talentId) on classic.
+    preset_grid = forever_talents if forever_talents else talents_out
+    preset_builds = gen_presets.build_presets(
+        preset_grid, tabs_out, class_roster(cache), args.flavor)
+
     # ---- Emit ------------------------------------------------------------------
     stamp = dt.date.today().isoformat()
     written = [
@@ -1287,6 +1297,7 @@ def main() -> int:
         LuaWriter.file("weapon_imbues", {"imbues": imbues_out}, out_dir, args.build),
         LuaWriter.file("items", {"items": items_out}, out_dir, args.build),
         LuaWriter.file("sim_procs", {"critHaste": crit_haste}, out_dir, args.build),
+        LuaWriter.file("preset_builds", {"presetBuilds": preset_builds}, out_dir, args.build),
     ]
     for path in written:
         print(f"wrote {path.relative_to(root.parent)} ({path.stat().st_size:,} bytes)")
