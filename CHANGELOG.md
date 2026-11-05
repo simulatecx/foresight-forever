@@ -9,8 +9,15 @@ LAUNCH-DAY CLIENT SYNC. Forever went live and the `wowf` client landed on build
 - **70790 data refreshed - the launch balance pass.** Highlights players feel:
   - Paladin tree rework: new Turn Evil / Divine Strength / Boundless Light; One-Handed
     Weapon Spec + Instrument of Law removed; **Champion of the Light became an
-    Intellect -> Healing Power CONVERTER** (a 4th Forever converter - the chains engine
-    now shows Paladins "Intellect -> healing power via Champion of the Light" for free).
+    Intellect -> Spell Damage CONVERTER** (a 4th Forever converter - the chains engine
+    now shows Paladins "Intellect -> spell power via Champion of the Light" for free).
+- **Decode fix - the 174/175 stat-conversion auras were swapped (caught at launch).**
+  The launch Paladin/Mage reworks shipped the FIRST single-aura converters (Champion of
+  the Light, Arcane Blast = 174-only; Natural Instinct = 175-only), and their own
+  tooltip text settled a mapping that was ambiguous before: aura 174 = spell DAMAGE,
+  175 = spell HEALING (we had them reversed). It never surfaced earlier because every
+  prior converter - Mental Quickness, Spiritual Guidance - carries BOTH auras ("damage
+  and healing"), so the direction never mattered. Now correct on both flavors.
   - Rogue tree: new Relentless Strikes / Dual Wield Specialization / Reckless Swings;
     Improved Distract removed; Venom reworked; Mutilate / Coup de Grace retired.
   - Druid buffs: Starfire base 81 -> 113, Shred weapon 155% -> 200%, Leader of the Pack

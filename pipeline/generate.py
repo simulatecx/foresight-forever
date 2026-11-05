@@ -256,14 +256,19 @@ def build_ops(first, effects_by_spell, class_options, family_members, player_spe
             op["stat"] = stat_label(misc0, misc1)
         elif aura in (175, 174, 598):
             # Stat-CONVERSION auras (the chained-synergy primitive): a derived output
-            # scales from a primary stat. 175 = spell damage, 174 = spell healing,
+            # scales from a primary stat. 174 = spell DAMAGE, 175 = spell HEALING,
             # 598 = attack power; the SOURCE stat is whichever of misc0/misc1 is a
-            # valid stat index (598/175 carry it in misc0, 174 in misc1). Ground-
-            # truthed: Mental Dexterity (598, Int->AP), Mental Quickness (175, Int->
-            # spell damage). This makes "what supports Attack Power" include Intellect.
+            # valid stat index. GROUND-TRUTHED on the launch build (70790) against the
+            # single-aura converters' own tooltip text: Arcane Blast + Champion of the
+            # Light (174-only) both read "spell DAMAGE ... of your Intellect"; Natural
+            # Instinct (175-only) reads "spell HEALING ... of your Intellect". (The
+            # earlier 174<->175 swap survived because every prior converter -
+            # Mental Quickness, Spiritual Guidance - carries BOTH auras, i.e. "damage
+            # AND healing", so it never disambiguated; the first 174-only converters
+            # arrived with the launch Paladin/Mage reworks and settled it.)
             op["kind"] = "statConvert"
             op["isPct"] = True
-            op["to"] = {175: "spellDamage", 174: "healingPower", 598: "attackPower"}[aura]
+            op["to"] = {174: "spellDamage", 175: "healingPower", 598: "attackPower"}[aura]
             if FLAVOR == "classic" and aura in (174, 175):
                 # Vanilla hardcodes these auras to SPIRIT in the client (Spiritual
                 # Guidance is the only such conversion in 1.12); the 1.15 rows carry
