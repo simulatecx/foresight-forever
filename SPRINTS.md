@@ -60,6 +60,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S48 Planner example builds: one deep preset per spec, all 9 classes, generated + legal | 3 | ☑ |
 | S49 Why-a-build-works synergy analysis + daily top-builds listener + button robustness | 3 | ☑ |
 | S50 Weapon-config survivability comparison + hidden cross-tree synergy insights | 3 | ☑ |
+| S51 Understand-your-character onboarding + armory top-builds source + listener dedup | 3 | ☑ |
 
 ## Active / next
 
@@ -83,6 +84,36 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S51 - Understand-your-character onboarding + armory top-builds source + listener dedup ☑ (2026-11-06) -> 0.59.0
+Owner: "a daily listener for top players' builds now that WoW Armory Forever is live -
+could we simply do that? and scan to understand the character / give insights for new
+users. Plus harden the listener."
+*Fit & Overlap - Category UI (new UI-insights) + DATA (top-builds). Verdict: NET-NEW
+surface UI-insights but ENHANCE under the hood (reuses Impact/Sim/Synergy/PanelModel, no
+new analysis math); ENHANCE fetch_top_builds (armory source + dedup). Complements S49/S50
+synergy work + the planner. Avoid duplicating: no new analysis engine (Insights composes
+the existing ones); no second build store. Mobile: insights are chat lines (/foresight
+insights) - no frame; first-run is a delayed chat greeting. Trust: display-only, shows
+once, re-runnable. Data: `seenInsights` flag in the account DB (no PII); armory ingests
+BUILDS not identities (no names republished - the no-PII contract). Abuse: addon never
+networks; armory codes decoded + re-validated (isLegal), never executed; listener stays
+human-review-gated.*
+☑ `model/insights.lua` `Insights.forCharacter`: archetype + primary lens + biggest hits +
+  build stack/capstone + hidden cross-tree synergy + one coaching nudge; `textLines` for
+  chat; every piece nil-guarded. First-run once per account (`seenInsights`, 6s delay) +
+  `/foresight insights`. Added to both TOCs after panel_model. Selftest: no-build path
+  returns a head line + degrades headless.
+☑ ARMORY source in fetch_top_builds: ingest top players' BUILDS from the Forever armory
+  (no identity republished - no-PII), credited, config-gated (`armory_source.json`),
+  returns [] until enabled. "Could we simply do that?" -> yes, this is the wired hook; it
+  needs the real endpoint + the owner's confirmation the site's terms allow it.
+☑ LISTENER DEDUP (hardening): sha1 of the sorted legal candidate codes in the draft +
+  issue title `[tb:<hash>]`; the workflow skips opening a duplicate issue when an open one
+  already carries the hash.
+☐ FOLLOW-UP: confirm the Forever armory endpoint + terms, then populate `armory_source.json`
+  (or wire a reviewed live fetch); an in-UI insights panel (today it's chat + the Matrix);
+  wire crowd/tf top-rated sources (S46).
 
 ### S50 - Weapon-config survivability comparison + hidden cross-tree synergy insights ☑ (2026-11-06) -> 0.58.0
 Owner: "top-rated public builds as examples (not ones we invent), but we should surface

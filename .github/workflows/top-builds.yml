@@ -33,9 +33,10 @@ jobs:
       - name: Pull + analyze candidate top builds (data-only, synergy-explained)
         id: listen
         run: |
-          python pipeline/fetch_top_builds.py --sources crowd,talentsforever,seed
+          python pipeline/fetch_top_builds.py --sources crowd,talentsforever,armory,seed
           if [ -f pipeline/collected/top_builds_review.md ]; then
             echo "draft=true" >> "$GITHUB_OUTPUT"
+            echo "hash=$(cat pipeline/collected/top_builds_review.hash)" >> "$GITHUB_OUTPUT"
           else
             echo "draft=false" >> "$GITHUB_OUTPUT"
             echo "No candidates from any source - nothing to review."
@@ -48,15 +49,22 @@ jobs:
           name: top-builds-review
           path: pipeline/collected/top_builds_review.*
 
-      - name: Open / update the review issue
+      - name: Open the review issue (only when the candidate set CHANGED)
         if: steps.listen.outputs.draft == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          HASH: ${{ steps.listen.outputs.hash }}
         run: |
-          TITLE="Top-builds review $(date -u +%Y-%m-%d)"
-          # Cap the body so a huge draft can't blow the issue size limit.
+          # Dedup hardening (2026-11-06): the candidate-set hash is carried in the issue
+          # title; if an OPEN top-builds issue already has this hash, the set is unchanged,
+          # so skip - no duplicate issue every day while the sources are still seed-only.
+          EXISTING="$(gh issue list --state open --search "in:title [tb:${HASH}]" --json number --jq 'length')"
+          if [ "${EXISTING:-0}" != "0" ]; then
+            echo "Unchanged candidate set (tb:${HASH}) already has an open issue - skipping."
+            exit 0
+          fi
+          TITLE="Top-builds review $(date -u +%Y-%m-%d) [tb:${HASH}]"
           BODY="$(head -c 60000 pipeline/collected/top_builds_review.md)"
-          gh issue create --title "$TITLE" --body "$BODY" \
-            --label "top-builds" 2>/dev/null \
+          gh issue create --title "$TITLE" --body "$BODY" --label "top-builds" 2>/dev/null \
             || gh issue create --title "$TITLE" --body "$BODY" \
-            || echo "could not open issue (label missing?) - draft is in the artifact"
+            || echo "could not open issue - draft is in the artifact"

@@ -2987,6 +2987,19 @@ function HM.runSelftest(out)
         return checked > 0 and withCluster >= 5,
             ("%d/%d presets show a synergy cluster"):format(withCluster, checked)
     end)())
+    check("character insights: a plain read with an archetype head line (onboarding)", (function()
+        -- INSIGHTS (S51): the first-run / `/foresight insights` read. The fixture Mage
+        -- has stats but no talents, so it exercises the no-build path: it must still
+        -- return a non-empty list led by a "head" who-you-are line, degrade gracefully
+        -- (headless = no spellbook/top-hits), and never error.
+        if not (HM.Insights and HM.Insights.forCharacter) then return false, "no Insights" end
+        local lo = HM.Loadout.fromSnapshot(testSnapshot())
+        local r = HM.Insights.forCharacter(lo)
+        if not (r and r.lines and #r.lines > 0) then return false, "no insight lines" end
+        if r.lines[1].tone ~= "head" then return false, "first line is not the who-you-are head" end
+        local txt = HM.Insights.textLines(lo)
+        return #txt == #r.lines and #txt > 0
+    end)())
     check("shipped prereq graph: acyclic + arrows point down the tree (deadlock guard)", (function()
         -- Audit 2026-10-16: TraitEdge Type-0 back-edges created prereq CYCLES that made both
         -- talents permanently unclickable (Druid Nature's Majesty <-> Splendor, Hunter Bestial

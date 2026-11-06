@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.59.0 - 2026-11-06 (understand your character + the armory source + listener dedup)
+
+- **"Understand your character" for new players.** The first time you log in with
+  Foresight, it gives you a plain read of your character - your archetype and strongest
+  lens, your biggest hits, what your talent build actually stacks (and the capstone it
+  pays off into), the hidden cross-tree synergy your class can exploit, and one coaching
+  nudge. Anytime after: `/foresight insights`. It reuses the existing engines, stays
+  display-only, and shows once (never nags).
+- **Top players' builds from the Forever Armory.** The daily top-builds listener gains an
+  `armory` source so community top-rated builds can feed the examples (ranked by rating,
+  with the synergy analysis attached). It ingests the BUILD, not the player's identity
+  (no names republished - the no-PII contract), credits the armory, and still runs through
+  the same human-review gate before anything ships. Wired and ready; it activates once the
+  armory endpoint + terms are confirmed (`pipeline/data/armory_source.json`).
+- **Listener dedup (hardening).** The daily job now carries a content hash of the
+  candidate set and only opens a review issue when that set actually changed - no more
+  duplicate issue every day while the sources are still seed-only.
+- Ship gate: Forever 312/312, Classic 266/266.
+
+*Features:* UI-insights, DATA-top-builds
+
 ## 0.58.0 - 2026-11-06 (weapon-config survivability + hidden cross-tree synergies)
 
 Two kinds of synergy you shouldn't have to work out yourself.

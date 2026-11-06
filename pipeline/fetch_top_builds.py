@@ -26,6 +26,7 @@ Sources (pluggable, priority order):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -69,9 +70,46 @@ def _talentsforever_candidates() -> list[dict]:
     return []
 
 
+# The Forever ARMORY (owner 2026-11-06: "WoW Armory Forever is live - look at top players'
+# builds"). A public character armory lists real players' live talent trees. We can ingest
+# TOP players' BUILDS as top-rated examples PROVIDED:
+#   - DATA ONLY: read the talent tree, map it to an FT code, re-validate via TB.decode. The
+#     armory is public-by-design, but we store/show the BUILD, not the player's identity -
+#     no name/realm republished in-addon (the no-PII crowd-data contract; named tiers are
+#     the separate opt-in S8a). Credit the armory site as a source, like talentsforever.
+#   - ENDPOINT CONFIG: the base URL + how to list "top" characters + how to read a tree live
+#     in pipeline/data/armory_source.json (NOT hardcoded - we don't know the live shape yet,
+#     and the owner confirms the site's terms allow it). Absent/!enabled = [] (today).
+# This keeps it "simply wired" the moment the real endpoint + shape are known, without
+# fabricating a scraper against an unverified site.
+ARMORY_CONFIG = DATA / "armory_source.json"
+
+
+def _armory_candidates() -> list[dict]:
+    if not ARMORY_CONFIG.exists():
+        return []
+    try:
+        cfg = json.loads(ARMORY_CONFIG.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return []
+    if not (isinstance(cfg, dict) and cfg.get("enabled")):
+        return []
+    # When enabled, cfg supplies pre-fetched candidates (a human/tool populates `builds`
+    # from the armory out-of-band so this file never makes a live call without a reviewed,
+    # terms-checked integration). Each: {class, spec, code, rating?, player?} - player is
+    # kept ONLY for the review draft's provenance, never shipped into the addon.
+    out = []
+    for b in cfg.get("builds", []) if isinstance(cfg.get("builds"), list) else []:
+        if isinstance(b, dict) and isinstance(b.get("code"), str):
+            out.append({"class": str(b.get("class", "?")), "spec": str(b.get("spec", "?")),
+                        "code": b["code"], "source": "forever-armory",
+                        "rating": b.get("rating"), "player": b.get("player")})
+    return out
+
+
 def gather_candidates(sources: list[str]) -> list[dict]:
     funcs = {"crowd": _crowd_candidates, "talentsforever": _talentsforever_candidates,
-             "seed": _seed_candidates}
+             "armory": _armory_candidates, "seed": _seed_candidates}
     cands, seen = [], set()
     for s in sources:
         for c in funcs.get(s, lambda: [])():
@@ -146,15 +184,21 @@ def write_draft(results: list[dict]) -> tuple[Path, Path]:
             md.append(f"- {r['class']} / {r['spec']} (`{r['code'][:32]}...`): {r['reason']}")
     md_path = COLLECTED / "top_builds_review.md"
     json_path = COLLECTED / "top_builds_review.json"
+    hash_path = COLLECTED / "top_builds_review.hash"
     md_path.write_text("\n".join(md) + "\n", encoding="utf-8")
     json_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    # Content hash over the LEGAL candidate set (sorted codes), so the daily job can skip
+    # opening a duplicate review issue when nothing changed - the dedup hardening. Only the
+    # codes matter (same builds = same review), not ordering or transient analysis text.
+    digest = hashlib.sha1("\n".join(sorted(r["code"] for r in ok)).encode("utf-8")).hexdigest()[:12]
+    hash_path.write_text(digest + "\n", encoding="utf-8")
     return md_path, json_path
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--sources", default="crowd,talentsforever,seed",
-                    help="comma list: crowd,talentsforever,seed")
+    ap.add_argument("--sources", default="crowd,talentsforever,armory,seed",
+                    help="comma list: crowd,talentsforever,armory,seed")
     ap.add_argument("--toc", default="Foresight.toc", help="flavor TOC to analyze against")
     args = ap.parse_args()
 

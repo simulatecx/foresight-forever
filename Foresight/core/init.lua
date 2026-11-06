@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.58.0"
+HM.version = "0.59.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -200,6 +200,23 @@ local function onSlash(input)
             printMsg(("  %s: %s"):format(r.stat,
                 r.bestLabel and ("%+.1f%% %s"):format(r.bestPct, r.bestLabel)
                     or "no modeled effect"))
+        end
+    elseif cmd == "insights" or cmd == "understand" then
+        -- "Understand your character" (INSIGHTS, S51): the onboarding read - archetype,
+        -- biggest hits, what your build stacks, the hidden synergy, one coaching nudge.
+        local snapshot = HM.Snapshot and HM.Snapshot.capture()
+        if not (snapshot and HM.Insights) then
+            printMsg("no character snapshot available yet - log in fully, then try again")
+            return
+        end
+        local loadout = HM.Loadout.fromSnapshot(snapshot)
+        local out = HM.Insights.textLines(loadout)
+        if #out == 0 then
+            printMsg("couldn't read your character yet - open your character sheet, then retry")
+        else
+            printMsg("understanding your character:")
+            for _, l in ipairs(out) do printMsg("  " .. l) end
+            printMsg("  more: /foresight planner (plan a build) · the Matrix (character tab)")
         end
     elseif cmd == "build" or cmd == "playstyle" then
         local snapshot = HM.Snapshot and HM.Snapshot.capture()
@@ -1093,6 +1110,24 @@ if _G.CreateFrame then
             end
             if HM.Guards.inRestrictedContext() then
                 printMsg("restricted context detected - advisory features degrade to display-only")
+            end
+            -- First-run onboarding (INSIGHTS, S51): ONCE per account, greet new users with
+            -- a plain read of their character and point at /foresight insights. Delayed so
+            -- the sheet/talents/spellbook have loaded; the flag persists in the account DB
+            -- so it never nags. Any user can re-run it anytime with /foresight insights.
+            if HM.db and not HM.db.seenInsights then
+                HM.db.seenInsights = true
+                if _G.C_Timer and _G.C_Timer.After and HM.Insights then
+                    _G.C_Timer.After(6, function()
+                        local snap = HM.Snapshot and HM.Snapshot.capture()
+                        local lo = snap and HM.Loadout.fromSnapshot(snap)
+                        local out = lo and HM.Insights.textLines(lo) or {}
+                        if #out > 0 then
+                            printMsg("welcome - a quick read of your character (/foresight insights anytime):")
+                            for _, l in ipairs(out) do printMsg("  " .. l) end
+                        end
+                    end)
+                end
             end
         end
     end)

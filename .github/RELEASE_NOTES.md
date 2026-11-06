@@ -1,21 +1,19 @@
-## 0.58.0 - the synergies you shouldn't have to work out
+## 0.59.0 - understand your character
 
-**Weapon swaps now tell you the whole story**
-Thinking of dropping your one-hander and shield for a two-hander? Foresight now folds in
-the shield you'd lose, so the comparison shows the hit to your survivability - not just
-the weapon's damage. It names what comes off ("also unequips your shield - you lose its
-block and armor") and always shows the survivability change for that swap, so a tankiness
-trade never hides behind a damage number. Same when a two-hander would drop your off-hand.
+**New here? Foresight reads your character for you.**
+The first time you log in with Foresight installed, it gives you a plain-language read of
+your character: your archetype and strongest lens, your biggest hits, what your talent
+build actually stacks (and the payoff it builds toward), a hidden synergy your class can
+exploit, and one quick coaching nudge. Want it again later? `/foresight insights`. It's
+all advice, nothing is changed on your character, and it only greets you once.
 
-**Hidden synergies the guides miss**
-Foresight now points out when one stat quietly powers several things at once for your
-class - like an Intellect-stacked Shaman, whose Enhancement talents turn Intellect into
-attack power *and* spell power *and* healing, so a single stat scales melee, casting, and
-totems together. It shows up on `/foresight synergy` and in the "why it works" on every
-example build - always for your own class, computed from the live talent data.
+**Learning from top players**
+Now that the Forever Armory is live, the build listener can draw on top players' builds as
+examples - ranked by rating, with Foresight's synergy analysis attached, and run through
+human review before anything ships. It uses the build, never the player's identity. (The
+hook is in place; it switches on once the armory endpoint is confirmed.)
 
-**Top-rated examples**
-The build listener now ranks what it pulls by community rating, so the examples lean on
-builds players actually rate highly - with Foresight's synergy analysis attached to each.
+Under the hood: the daily listener no longer files a duplicate review each day when nothing
+has changed.
 
-Ship gate: Forever 311 checks, Classic 265. Display-and-advice only, official APIs only.
+Ship gate: Forever 312 checks, Classic 266. Display-and-advice only, official APIs only.
