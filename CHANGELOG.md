@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.63.0 - 2026-11-06 (every class gets investment insights: talents + skills + gear)
+
+A roster-law pass (every class checked against the client's own roster) plus an audit of
+what the big advisor addons provide. Three gaps found and closed:
+
+- **Gear check: does what you wear back what you built?** A new insight compares your
+  equipped gear's dominant stat against what actually moves your build's primary lens
+  (the same marginal numbers the advisor uses). Misaligned gear gets the honest callout -
+  "your gear carries mostly Spirit (+40), but Strength is what moves your Melee DPS
+  (+0.5%/pt vs +0.0%)" - and aligned gear gets the affirmation. Stamina is deliberately
+  neutral (survivability is a valid investment, never judged). Shows in /foresight
+  insights and the first-run read.
+- **Every class with a stat converter now gets its hidden-synergy line.** Paladin, Hunter,
+  and Druid each own exactly one converter (e.g. Champion of the Light: Intellect ->
+  spell damage) and were getting nothing because the old threshold wanted 2+ lanes. A
+  single-lane converter now reads "Intellect also converts into spell damage for you -
+  Intellect gear counts twice."
+- **The engine card is spec-aware for six more classes.** The Mage (Frost), Shaman
+  (Enhancement), Rogue (Assassination), Paladin (Retribution), Priest (Shadow), and
+  Warlock (Affliction) loops are now tagged to their tree (data-located, not guessed),
+  so the Matrix leads with the loop matching where YOUR points are - and when you're
+  building into a tree we have no curated engine for (a Fire mage), it says so honestly:
+  "You're building into Fire - no curated Fire engine yet; showing the Frost loop."
+- Ship gate: Forever 318/318, Classic 272/272 (new roster-law insight test: every class
+  yields a head line + a converter line where one exists).
+
+*Features:* UI-insights, SYNERGY-engine, SIM-engine, UI-matrix-panel
+
 ## 0.62.0 - 2026-11-06 (the engine follows your spec + bleed ticks + crit->bleed)
 
 - **The engine card follows where you spec.** Put points in Arms and the Matrix leads with

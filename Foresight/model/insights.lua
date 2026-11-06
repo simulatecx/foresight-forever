@@ -23,6 +23,47 @@ local function buildFromSnapshot(snap)
     return b, n
 end
 
+-- GEAR-INVESTMENT ALIGNMENT (S54, owner: "look at what they are investing in - talents +
+-- skills + GEAR"). Compares what the equipped gear stacks against what actually moves the
+-- build's primary lens (Impact.rankStats marginals - the same numbers the advisor shows).
+-- Returns ONE honest line or nil: a misalignment calls out the gap with both numbers; an
+-- alignment affirms it. Stamina is deliberately NEUTRAL (survivability is a valid
+-- investment, never called dead - the S20 coaching philosophy). In-game only (needs the
+-- live equipped scan); headless returns nil.
+local OFFENSE_PRIMARIES = { "Strength", "Agility", "Intellect", "Spirit" }
+-- gearOverride: a pre-summed {stat=amount} bundle for tests/headless; live callers omit it
+-- and the equipped scan is used.
+function Insights.gearAlignment(loadout, gearOverride)
+    local gear = gearOverride
+        or (HM.PanelModel and HM.PanelModel._equippedStatSum and HM.PanelModel._equippedStatSum())
+    if type(gear) ~= "table" then return nil end
+    -- The gear's dominant OFFENSIVE primary (Stamina excluded from judgment).
+    local topStat, topAmt = nil, 0
+    for _, s in ipairs(OFFENSE_PRIMARIES) do
+        local v = tonumber(gear[s]) or 0
+        if v > topAmt then topStat, topAmt = s, v end
+    end
+    if not topStat or topAmt < 5 then return nil end -- too little gear to judge
+    local ranked, focus = HM.Impact.rankStats(loadout, OFFENSE_PRIMARIES)
+    if not (ranked and ranked[1]) then return nil end
+    local dim = HM.dimensions and HM.dimensions.byId and HM.dimensions.byId(focus)
+    local lens = dim and dim.label or "your build"
+    local best = ranked[1]
+    if best.focusPct <= 0 then return nil end -- nothing moves the lens; say nothing
+    local topRank
+    for _, r in ipairs(ranked) do if r.stat == topStat then topRank = r end end
+    if topStat == best.stat then
+        return ("Gear check: your gear and build agree - %s (+%d on gear) is also what moves your %s most (+%.1f%%/pt) (p)")
+            :format(topStat, topAmt, lens, best.focusPct)
+    end
+    if topRank and topRank.focusPct <= best.focusPct * 0.25 then
+        -- The dominant gear stat barely moves the build's lens: the honest callout.
+        return ("Gear check: your gear carries mostly %s (+%d), but %s is what moves your %s (+%.1f%%/pt vs +%.1f%%) (p)")
+            :format(topStat, topAmt, best.stat, lens, best.focusPct, topRank.focusPct)
+    end
+    return nil -- gear top stat is a reasonable mover: no nagging
+end
+
 -- forCharacter(loadout) -> { lines = {{text, tone}...}, archetype, primary, hasBuild }
 -- tone is "head"|"body"|"muted" so the caller can color without re-deciding anything.
 function Insights.forCharacter(loadout)
@@ -72,13 +113,18 @@ function Insights.forCharacter(loadout)
         add("No talent points spent yet - open your talents, or try /foresight planner.", "muted")
     end
 
-    -- 4) The hidden cross-tree synergy your class can exploit (the off-meta lever).
+    -- 4) GEAR investment vs the build (S54): does what you wear back what you built?
+    local okGear, gearLine = pcall(Insights.gearAlignment, loadout)
+    if okGear and gearLine then add(gearLine, "body") end
+
+    -- 5) The hidden synergy your class can exploit (multi-lane hybrid OR the simpler
+    -- single-converter "this stat counts twice" - every class with a converter gets one).
     if HM.Synergy and HM.Synergy.crossTreeInsights then
         local ins = HM.Synergy.crossTreeInsights({ classToken = classToken, raceId = snap.raceId })
         if ins and ins[1] then add("Hidden synergy: " .. ins[1].text .. ".", "body") end
     end
 
-    -- 5) ONE coaching nudge (a mechanism-dead stat for your build), reusing the S20 line.
+    -- 6) ONE coaching nudge (a mechanism-dead stat for your build), reusing the S20 line.
     if HM.Impact and HM.Impact.coachingLine and HM.Impact.rankStats then
         local ranked, focus = HM.Impact.rankStats(loadout, nil, primary)
         local ok, coach = pcall(HM.Impact.coachingLine, loadout, ranked, focus)

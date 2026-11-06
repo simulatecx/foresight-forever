@@ -64,6 +64,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S52 FS character-button reliability fix + shared-color consolidation start (duplication audit) | 3 | ☑ |
 | S53 DoT/bleed scoring (Rend) in the output rankings + an Arms warrior loop | 3 | ☑ |
 | S53b Spec-aware loop default (Arms->bleed, Fury->Flurry) + bleed-tick + crit->bleed description | 3 | ☑ |
+| S54 All-class investment insights: gear-alignment + single-lane converters + spec tags/honesty | 3 | ☑ |
 
 ## Active / next
 
@@ -87,6 +88,42 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S54 - All-class investment insights (talents + skills + gear) ☑ (2026-11-06) -> 0.63.0
+Owner: "analyze what other addons provide - we want to provide insights; run an analysis
+on ALL classes so we're applicable to their class, looking at what they're investing in
+(talents + skills + gear)."
+*Fit & Overlap - Category UI-insights + SYNERGY + SIM. Verdict: ENHANCE insights.lua
+(gearAlignment), synergy.lua (single-lane), loops.lua (specTab tags), panel_model
+(specNote). Roster-law analysis ran FIRST (every class vs the engine): gaps = gear not
+analyzed anywhere, 3 classes with converters got no synergy line, 6 classes' loops not
+spec-tagged. Research agent audited 10 advisor addons -> roadmap below. Display-only,
+no new data, selftest-pinned per gap.*
+☑ ROSTER MATRIX (the analysis): all 9 classes enumerated from gen.classes; checked loops/
+  specTab/crossTreeInsights/conversions per class. Findings fixed this wave.
+☑ GEAR-ALIGNMENT INSIGHT: `Insights.gearAlignment` - equipped gear's dominant offensive
+  primary vs Impact.rankStats marginals on the primary lens; misalign = callout with both
+  numbers, align = affirmation, Stamina neutral. In /foresight insights + first-run.
+☑ SINGLE-LANE CONVERTERS: crossTreeInsights now emits 1-lane entries ("X also converts
+  into Y for you - X gear counts twice") - Paladin/Hunter/Druid had 0 insights before.
+☑ SPEC TAGS ALL CLASSES (data-located): shatter=Frost, windfury=Enhancement,
+  combo=Assassination, seal=Retribution, weave=Shadow, nightfall=Affliction + the
+  eco.specNote honesty line when the dominant tree has no curated engine.
+☑ Selftests: roster-law (every class -> head line + converter line where owned),
+  gear-alignment both directions, Fire-mage spec note present / Frost absent.
+☐ INSIGHT ROADMAP (research agent, 10 addons audited; prioritized for the suggest-only
+  doctrine - each is a future story): (1) cap/threshold distance ("1% short of spell-hit
+  cap") - ECS shows numbers, nobody interprets; (2) dead/anti-synergy investment detection
+  ("5/5 melee-crit talent but your damage is spells") - nobody does this in-game, highest
+  differentiation; (3) untrained-ability gap + training BUDGET with per-rank impact
+  (What's Training 10.4M downloads proves demand; we add the WHY); (4) next-talent-point
+  vs the planner's saved build with the value stated (Talent Sequence pattern + our
+  impact graph); (5) missing-enhancement audit (empty enchant slots, stale items);
+  (6) progression-milestone roadmap (mount gold, next rank unlocks); (7) reactive-window
+  surfacing as "your talent paying off" (SAO pattern, ties to ASSIST-hud); (8) death-risk
+  recap tying investments to outcomes (Details! death-log pattern, ties to PANIC).
+  Research sources recorded in the agent output (Pawn/ECS/DCS/RestedXP/What's Training/
+  SAO/Talented/GearScore/Attune/Details!/Hekili/AMR).
 
 ### S53b - Spec-aware loop default + bleed-tick + crit->bleed description ☑ (2026-11-06) -> 0.62.0
 Owner (follow-on): "if we invest in arms it should lead that way, or fury to flurry; and

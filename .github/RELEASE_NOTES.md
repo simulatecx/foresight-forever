@@ -1,16 +1,24 @@
-## 0.62.0 - the engine follows your spec, and bleeds get explained
+## 0.63.0 - investment insights for every class
 
-**The class engine now follows where you spec.** Put points into Arms and the Matrix leads
-with the Bleed & Strike engine; put them into Fury and it leads with Flurry - automatically,
-based on where your talent points actually are. Title-click the Matrix title to cycle to
-the other.
+We checked every class against what you're actually investing in - talents, skills, and
+gear - and closed the gaps.
 
-**Bleeds are spelled out.** A bleed now shows its per-tick impact and its total - e.g.
-"Rend ~7/3s tick -> ~28 over 12s" - so you can see what each tick does, not just a lump sum.
+**Gear check: does what you wear back what you built?**
+Foresight now compares your gear's dominant stat against what actually moves your build.
+If they disagree, it tells you plainly - "your gear carries mostly Spirit, but Strength is
+what moves your Melee DPS" - with the real numbers for both. If they agree, it says that
+too. (Stamina is never judged - surviving is always a valid investment.) See it in
+`/foresight insights`.
 
-**Crit -> bleed, explained.** The Arms engine now describes the crit scaling that drives it:
-"Deep Wounds makes each crit add a bleed on top; more crit = more bleed uptime." We're
-honest about the gap - Deep Wounds' bleed damage is a talent proc we haven't decoded yet,
-so there's no invented number, but the crit relationship is real and now stated.
+**Every class gets its hidden synergy.** Paladins, Hunters, and Druids each have a talent
+that converts one stat into another kind of power (like Champion of the Light turning
+Intellect into spell damage) - and Foresight now points it out: "Intellect gear counts
+twice for you."
 
-Ship gate: Forever 315 checks, Classic 269. Display-and-advice only, official APIs only.
+**The engine card knows your tree - for every class.** Frost mages, Enhancement shamans,
+Assassination rogues, Retribution paladins, Shadow priests, and Affliction warlocks: the
+class engine now leads with the loop that matches where your points are. And if you're
+building into a tree we haven't curated an engine for yet, it says so honestly instead of
+pretending.
+
+Ship gate: Forever 318 checks, Classic 272. Display-and-advice only, official APIs only.

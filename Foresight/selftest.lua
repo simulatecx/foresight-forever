@@ -1758,6 +1758,78 @@ function HM.runSelftest(out)
         return hit.kind == "dot" and hit.ticks == ticks
             and approx(hit.avg, sp.dotTick * ticks)
     end)())
+    check("roster law: EVERY class gets insights (head line + a converter line where one exists)", (function()
+        -- S54 (owner: "run an analysis on all classes - applicable to their class"). For
+        -- every class in the client's own roster: Insights.forCharacter yields a head
+        -- line, and every class owning a stat CONVERTER gets a hidden-synergy entry (the
+        -- single-lane phrasing fixed Paladin/Hunter/Druid, which had 0 under the old
+        -- 2-lane threshold). Data-driven: converters discovered from the shipped index.
+        if not (HM.Insights and HM.Synergy and HM.TalentBuild) then return false, "modules missing" end
+        local missing = {}
+        for cid, c in pairs(gen.classes or {}) do
+            local token = c.token or (c.name or ""):upper()
+            local snap = testSnapshot()
+            snap.classToken = token
+            local lo = HM.Loadout.fromSnapshot(snap)
+            local r = HM.Insights.forCharacter(lo)
+            if not (r and r.lines and #r.lines > 0 and r.lines[1].tone == "head") then
+                missing[#missing + 1] = token .. ":no-head"
+            end
+            HM.Synergy._reset()
+            local ins = HM.Synergy.crossTreeInsights(nil, cid)
+            -- does this class own any converter? (walk the index the same way)
+            local owns = false
+            for _, b in ipairs(HM.Synergy.build().converts or {}) do
+                local t = HM.TalentBuild.talents()[b.member]
+                if t and (t.classId == cid or HM.TalentBuild.talentClassId(t) == cid) then
+                    owns = true
+                end
+            end
+            if owns and #ins == 0 then missing[#missing + 1] = token .. ":no-insight" end
+            HM.Synergy._reset()
+        end
+        return #missing == 0, table.concat(missing, ", ")
+    end)())
+    check("gear-alignment insight: misaligned gear called out, aligned gear affirmed", (function()
+        -- S54 (owner: "looking at what they are investing in - talents + skills + gear").
+        -- A WARRIOR whose gear stacks Spirit gets the honest callout naming the stat that
+        -- actually moves their lens; Strength-stacked gear gets the agreement line.
+        if not (HM.Insights and HM.Insights.gearAlignment) then return false, "no gearAlignment" end
+        local snap = testSnapshot()
+        snap.classToken = "WARRIOR"
+        snap.weaponDamageMin, snap.weaponDamageMax = 80, 120
+        local lo = HM.Loadout.fromSnapshot(snap)
+        local bad = HM.Insights.gearAlignment(lo, { Spirit = 40, Strength = 2 })
+        if not (bad and bad:find("mostly Spirit", 1, true)) then
+            return false, "no misalignment callout: " .. tostring(bad)
+        end
+        local good = HM.Insights.gearAlignment(lo, { Strength = 40 })
+        return good ~= nil and good:find("agree", 1, true) ~= nil, tostring(good)
+    end)())
+    check("spec honesty note: a tree with no curated engine says so (Fire mage)", (function()
+        -- S54: a MAGE invested in Fire sees the Frost Shatter loop WITH the note; a
+        -- Frost-invested mage sees it without. Data-located Fire/Frost talents.
+        local PM = HM.PanelModel
+        local grid = gen.foreverTalents or gen.talents
+        local function talentIn(tabName)
+            local tabId
+            for tid, t in pairs(gen.talentTabs) do if t.name == tabName then tabId = tid break end end
+            for id, def in pairs(grid) do
+                if type(def) == "table" and def.tab == tabId then return id end
+            end
+        end
+        local fire, frost = talentIn("Fire"), talentIn("Frost")
+        if not (fire and frost) then return false, "no Fire/Frost talent in data" end
+        local snap = testSnapshot()
+        snap.talents = { { nodeId = fire, rank = 3 } }
+        local m1 = PM.matrixModel(HM.Loadout.fromSnapshot(snap))
+        snap.talents = { { nodeId = frost, rank = 3 } }
+        local m2 = PM.matrixModel(HM.Loadout.fromSnapshot(snap))
+        local fireNote = m1 and m1.eco and m1.eco.specNote
+        local frostNote = m2 and m2.eco and m2.eco.specNote
+        return fireNote ~= nil and fireNote:find("Fire", 1, true) ~= nil and frostNote == nil,
+            ("fire=%s frost=%s"):format(tostring(fireNote), tostring(frostNote))
+    end)())
     check("spec-aware loop: Arms points -> the Matrix leads with the Arms loop", (function()
         -- Owner 2026-11-06: "invest in Arms -> lead that way, Fury -> Flurry." The Matrix
         -- default loop follows the tree you've put points in. Data-located Arms talent.

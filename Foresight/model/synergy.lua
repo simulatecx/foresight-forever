@@ -378,13 +378,23 @@ function Synergy.crossTreeInsights(player, classIdFilter)
                 if not viaSet[nm] then viaSet[nm] = true; via[#via + 1] = nm end
             end
         end
-        if #laneList >= 2 then   -- a single stat into 2+ output lanes = the hybrid insight
-            table.sort(laneList)
-            table.sort(via)
+        -- 2+ lanes = the multi-lane hybrid ("one stat powers them together"); a SINGLE
+        -- lane is still an insight (roster audit 2026-11-06: Paladin/Hunter/Druid each
+        -- have exactly one converter and were getting NO line) - phrased as the simpler
+        -- "this stat converts for you, it counts twice". multi flags the difference.
+        table.sort(laneList)
+        table.sort(via)
+        if #laneList >= 2 then
             out[#out + 1] = {
-                stat = stat, lanes = laneList, via = via,
+                stat = stat, lanes = laneList, via = via, multi = true,
                 text = ("%s scales %d lanes for you (%s) - stacking it powers them together, via %s"):format(
                     stat, #laneList, table.concat(laneList, ", "), table.concat(via, " + ")),
+            }
+        elseif #laneList == 1 then
+            out[#out + 1] = {
+                stat = stat, lanes = laneList, via = via, multi = false,
+                text = ("%s also converts into %s for you (via %s) - %s gear counts twice"):format(
+                    stat, laneList[1], table.concat(via, " + "), stat),
             }
         end
     end

@@ -312,6 +312,16 @@ local function layout(model)
             (model.loopCount or 0) > 1 and "  |cff9d9d9d(click title to cycle)|r" or ""))
         y = y - math.max(14, goal:GetStringHeight() + 2) - 6
 
+        -- Spec honesty (S54): building into a tree with no curated engine says so - this
+        -- loop is the closest curated one, not a claim about YOUR tree.
+        if model.eco.specNote then
+            local sn = acquireFS("ARTWORK", "GameFontDisableSmall")
+            sn:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)
+            sn:SetWidth(sw)
+            sn:SetText(model.eco.specNote)
+            y = y - math.max(12, sn:GetStringHeight() + 2) - 4
+        end
+
         -- Lead with what matters for this character right now: their biggest learned hits.
         if model.eco.nowBest and #model.eco.nowBest > 0 then
             local parts = {}

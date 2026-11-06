@@ -48,6 +48,7 @@ local PROC_GAP = "the engine's proc rate is not yet decoded - no expected value 
 HM.loops = {
     {
         id = "shatter", classToken = "MAGE", name = "The Shatter Loop",
+        specTab = "Frost",  -- data-located: this loop's talents live in Frost (S54 spec-aware default)
         confidence = "classic-presumed",
         enablers = { "Frost Nova", "Frostbite", "Cone of Cold" },
         engine = { "Shatter", "Ice Shards" },
@@ -90,6 +91,7 @@ HM.loops = {
     },
     {
         id = "windfury", classToken = "SHAMAN", name = "The Windfury Engine",
+        specTab = "Enhancement",  -- data-located: this loop's talents live in Enhancement (S54 spec-aware default)
         confidence = "classic-presumed",
         enablers = { "Windfury Weapon" },
         engine = { "Flurry" },
@@ -151,6 +153,7 @@ HM.loops = {
     },
     {
         id = "combo", classToken = "ROGUE", name = "The Combo Engine",
+        specTab = "Assassination",  -- data-located: this loop's talents live in Assassination (S54 spec-aware default)
         confidence = "classic-presumed",
         enablers = { "Sinister Strike", "Slice and Dice" },
         engine = { "Lethality", "Instant Poison" },
@@ -181,6 +184,7 @@ HM.loops = {
     },
     {
         id = "seal", classToken = "PALADIN", name = "Seal and Judgement",
+        specTab = "Retribution",  -- data-located: this loop's talents live in Retribution (S54 spec-aware default)
         confidence = "classic-presumed",
         enablers = { "Seal of Command", "Seal of Righteousness" },
         engine = { "Vengeance" },
@@ -191,6 +195,7 @@ HM.loops = {
     },
     {
         id = "weave", classToken = "PRIEST", name = "The Shadow Weave",
+        specTab = "Shadow",  -- data-located: this loop's talents live in Shadow (S54 spec-aware default)
         confidence = "classic-presumed",
         enablers = { "Shadow Word: Pain" },
         engine = { "Shadow Weaving" },
@@ -201,6 +206,7 @@ HM.loops = {
     },
     {
         id = "nightfall", classToken = "WARLOCK", name = "The Nightfall Engine",
+        specTab = "Affliction",  -- data-located: this loop's talents live in Affliction (S54 spec-aware default)
         confidence = "classic-presumed",
         enablers = { "Corruption", "Immolate" },
         engine = { "Nightfall" },

@@ -461,17 +461,25 @@ function PanelModel.matrixModel(loadout, activeLoopId, pathways, focus)
     for _, l in ipairs(loops) do
         if l.id == activeLoopId then active = l end  -- an explicit title-click wins
     end
+    local dominantSpec = PanelModel.dominantSpec(loadout)
     if not active then
         -- Spec-aware DEFAULT (owner 2026-11-06): lead with the loop matching the tree you've
         -- invested in - Arms points -> the Bleed & Strike engine, Fury points -> Flurry.
-        local spec = PanelModel.dominantSpec(loadout)
-        if spec then
+        if dominantSpec then
             for _, l in ipairs(loops) do
-                if l.specTab == spec then active = l; break end
+                if l.specTab == dominantSpec then active = l; break end
             end
         end
     end
     active = active or loops[1]
+    -- Honesty note (S54): when you're building into a tree we have NO curated engine for
+    -- (a Fire mage seeing the Frost Shatter loop), say so instead of implying this IS your
+    -- spec's engine. Only when the mismatch is real (both sides known and different).
+    local specNote
+    if active and dominantSpec and active.specTab and active.specTab ~= dominantSpec then
+        specNote = ("You're building into %s - no curated %s engine yet; showing the %s loop.")
+            :format(dominantSpec, dominantSpec, active.specTab)
+    end
     local eco
     if active then
         local okc, computed = pcall(active.compute, loadout)
@@ -504,6 +512,7 @@ function PanelModel.matrixModel(loadout, activeLoopId, pathways, focus)
             nodes = nodes,
             building = building,
             nowBest = PanelModel._topHits(loadout, 3),
+            specNote = specNote,
         }
     end
 
