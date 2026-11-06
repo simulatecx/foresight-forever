@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.58.0 - 2026-11-06 (weapon-config survivability + hidden cross-tree synergies)
+
+Two kinds of synergy you shouldn't have to work out yourself.
+
+- **Weapon swaps now account for the whole configuration change.** Hover a two-hander
+  while you're wearing a one-hander and a shield: Foresight now folds in the shield you'd
+  drop, so the comparison shows the survivability you lose - not just the weapon's damage.
+  It names what comes off ("also unequips your Bulwark - you lose its block and armor")
+  and always shows the survivability row for that swap, even when it isn't the biggest
+  number. Same for dropping an off-hand weapon when going two-handed.
+- **Hidden synergies the meta overlooks.** Foresight now surfaces when a single stat
+  scales several output lanes for your class at once - e.g. an Intellect-stacked Shaman
+  whose Enhancement converters turn Int into attack power AND spell power AND healing, so
+  one stat powers melee, casting, and totems together. Shown on `/foresight synergy`, and
+  folded into the "why it works" on every example build. Class-scoped (it only ever lists
+  your own class's converters) and data-driven, so it stays correct across patches.
+- **Top-rated framing for the builds listener.** The daily top-builds pipeline now ranks
+  candidates by the source's rating (top-rated first), per the steer that examples should
+  be what the community rates highly - with the hidden-synergy analysis attached to each.
+- Ship gate: Forever 311/311, Classic 265/265.
+
+*Features:* UI-item-tooltip, SYNERGY-engine, DATA-top-builds
+
 ## 0.57.0 - 2026-11-05 (why builds work + a top-builds listener + button robustness)
 
 Understanding builds, not just showing them - and a pipeline that learns from popular ones.

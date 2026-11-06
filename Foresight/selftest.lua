@@ -458,6 +458,24 @@ function HM.runSelftest(out)
         end
         return built.graph:value("stat.spellDamage", built.ctx, {}) == 50
     end)())
+    check("weapon-config swap: dropping a shield for a 2H nets survivability DOWN", (function()
+        -- Owner 2026-11-06: a 1H+shield -> 2H swap must show the tankiness lost with the
+        -- shield. The UI folds the vacated off-hand into the REMOVED bundle; this pins the
+        -- MODEL end of it - compareItems(2H-stats, (1H+shield)-stats) yields a negative
+        -- survivability row (the shield's armor + stamina leave the EHP calc).
+        local snap = testSnapshot()
+        snap.classToken = "WARRIOR"
+        local lo = HM.Loadout.fromSnapshot(snap)
+        local twoH = { Strength = 40 }                       -- a big 2H's stats
+        local oneHandPlusShield = { Strength = 18, armor = 400, Stamina = 25 } -- 1H + shield
+        local rows = HM.Impact.compareItems(lo, twoH, oneHandPlusShield)
+        local surv
+        for _, c in ipairs(rows) do
+            if c.id == "survivability" or c.id == "tankability" then surv = c end
+        end
+        if not surv then return false, "no survivability row from the swap" end
+        return surv.net < 0, ("survivability net %.2f (want < 0)"):format(surv.net)
+    end)())
     check("school pools: generic delta feeds ALL six + the max node", (function()
         local built = base:withStatDelta("spellDamage", 10, "+10 sp"):build()
         for _, name in ipairs({ "holy", "fire", "nature", "frost", "shadow", "arcane" }) do
@@ -2422,6 +2440,19 @@ function HM.runSelftest(out)
             if c:find("Intellect", 1, true) and c:find("->", 1, true) then return true end
         end
         return false, ("no Intellect chain (%d fragments)"):format(#(chains or {}))
+    end)())
+    check("cross-tree insight: Intellect scales 2+ lanes for Shaman (the hybrid pick)", (function()
+        -- Owner 2026-11-06: the overlooked synergy - an Int-stacked Shaman gets attack
+        -- power (Mental Dexterity) AND spell/healing (Mental Quickness), so one stat
+        -- powers melee + casting + totems together. Data-located, not hardcoded ids.
+        if not (HM.Synergy and HM.Synergy.crossTreeInsights) then return false, "no crossTreeInsights" end
+        HM.Synergy._reset()
+        local ins = HM.Synergy.crossTreeInsights()
+        HM.Synergy._reset()
+        for _, i in ipairs(ins or {}) do
+            if i.stat == "Intellect" and #i.lanes >= 2 then return true end
+        end
+        return false, ("no multi-lane Intellect insight (%d insights)"):format(#(ins or {}))
     end)())
     end
     if isClassic then -- classic-truth dual: vanilla's one converter is Spiritual Guidance

@@ -110,6 +110,20 @@ local function memberName(m)
     return tostring(m)
 end
 
+-- The classId that owns a converter member (a trait/talent node id), or nil for a
+-- racial/buff member or when the planner data can't resolve it. Lets the build + insight
+-- analysis keep to the player's OWN class converters - the converts index spans every
+-- class (it's built from all impactNodes), so an unfiltered Int bridge would wrongly list
+-- a Hunter's Careful Aim on a Shaman build (live catch 2026-11-06).
+local function memberClassId(m)
+    if type(m) ~= "number" then return nil end
+    local TB = HM.TalentBuild
+    local t = TB and TB.talents and TB.talents()[m]
+    if not t then return nil end
+    if t.classId and t.classId ~= 0 then return t.classId end
+    return TB.talentClassId and TB.talentClassId(t) or nil
+end
+
 -- The concise themes a node belongs to (stat/school/mechanic only - not its many spell
 -- themes), each with how many OTHER nodes share it. Feeds the tooltip "Synergy:" line.
 function Synergy.themesFor(nodeId)
@@ -253,14 +267,25 @@ function Synergy.analyzeBuild(build, player)
         return a.label < b.label
     end)
 
+    -- The build's OWN class, derived from its talents, so chains/insights never list
+    -- another class's converter (the converts index spans every class).
+    local buildClassId
+    for id in pairs(inBuild) do
+        local cid = memberClassId(id)
+        if cid then buildClassId = cid; break end
+    end
+
     -- Converter bridges this build pays into: the converter is in the build, OR the build
     -- stacks the converter's source stat (a cluster whose key == the converter's `from`).
+    -- Scoped to the build's class - a converter in the build is always kept.
     local clusterKeys = {}
     for _, cl in ipairs(clusters) do clusterKeys[cl.key:lower()] = true end
     local chains, seenChain = {}, {}
     for _, b in ipairs(c.converts or {}) do
+        local sameClass = (not buildClassId) or inBuild[b.member]
+            or memberClassId(b.member) == buildClassId
         local relevant = inBuild[b.member] or (b.from and clusterKeys[b.from:lower()])
-        if relevant then
+        if relevant and sameClass then
             local line = ("%s -> %s via %s"):format(b.from, b.to, memberName(b.member))
             if not seenChain[line] then
                 seenChain[line] = true
@@ -295,8 +320,79 @@ function Synergy.analyzeBuild(build, player)
         headline = "A spread build - few shared levers"
     end
 
+    -- Cross-tree insights RELEVANT to this build: a multi-lane stat the build stacks (a
+    -- cluster on it) or feeds (a chain from it) - the "you may not realize this scales
+    -- several lanes" payoff. Surfaced even when the build is single-tree, because the
+    -- insight is often the off-meta reason a hybrid works.
+    local insights = {}
+    local clusterKeyset = {}
+    for _, cl in ipairs(clusters) do clusterKeyset[cl.key:lower()] = true end
+    for _, ins in ipairs(Synergy.crossTreeInsights(player, buildClassId)) do
+        local lower = ins.stat:lower()
+        local fed = false
+        for _, ch in ipairs(chains) do if ch:lower():find("^" .. lower .. " ->") then fed = true end end
+        if clusterKeyset[lower] or fed then insights[#insights + 1] = ins end
+    end
+
     return { clusters = clusters, chains = chains, capstone = capstone,
-             headline = headline, allocated = allocated }
+             headline = headline, allocated = allocated, insights = insights }
+end
+
+-- CROSS-TREE INSIGHTS (0.58.x, owner: "we should come up with synergies they may not think
+-- of - ie. an Int-based Shaman whose Enhancement converters scale melee AND casting"). The
+-- overlooked lever: a single PRIMARY STAT that feeds 2+ different OUTPUTS through converters
+-- that may live in DIFFERENT trees - so stacking that one stat pays off in several lanes at
+-- once (the off-meta hybrid). Pure read of the converts index; `player` folds racials/buffs.
+-- Returns a list of { stat, lanes = {output...}, via = {converterName...}, text } sorted by
+-- how many lanes the stat unlocks (the more lanes, the more the meta overlooks it).
+local CONVERT_OUTPUT_LABEL = { spellDamage = "spell damage", healingPower = "healing",
+                               attackPower = "attack power" }
+-- classIdFilter (optional): keep only converters owned by that class. When omitted, a
+-- player.classToken is resolved to a classId (so /foresight synergy shows YOUR class's
+-- hybrid, not every class's). nil/unresolved = unfiltered (headless/no-context).
+function Synergy.crossTreeInsights(player, classIdFilter)
+    local c = Synergy.build(player)
+    local classId = classIdFilter
+    if not classId and player and player.classToken and HM.TalentBuild then
+        classId = HM.TalentBuild.classIdFor and HM.TalentBuild.classIdFor(player.classToken)
+    end
+    local byStat = {}   -- from-stat -> { [output] = { converterName... } }
+    for _, b in ipairs(c.converts or {}) do
+        if b.from and b.to and (not classId or memberClassId(b.member) == classId) then
+            local out = CONVERT_OUTPUT_LABEL[b.to] or b.to
+            local s = byStat[b.from] or {}
+            s[out] = s[out] or {}
+            local nm = memberName(b.member)
+            local dup = false
+            for _, x in ipairs(s[out]) do if x == nm then dup = true end end
+            if not dup then s[out][#s[out] + 1] = nm end
+            byStat[b.from] = s
+        end
+    end
+    local out = {}
+    for stat, lanes in pairs(byStat) do
+        local laneList, viaSet, via = {}, {}, {}
+        for lane, convs in pairs(lanes) do
+            laneList[#laneList + 1] = lane
+            for _, nm in ipairs(convs) do
+                if not viaSet[nm] then viaSet[nm] = true; via[#via + 1] = nm end
+            end
+        end
+        if #laneList >= 2 then   -- a single stat into 2+ output lanes = the hybrid insight
+            table.sort(laneList)
+            table.sort(via)
+            out[#out + 1] = {
+                stat = stat, lanes = laneList, via = via,
+                text = ("%s scales %d lanes for you (%s) - stacking it powers them together, via %s"):format(
+                    stat, #laneList, table.concat(laneList, ", "), table.concat(via, " + ")),
+            }
+        end
+    end
+    table.sort(out, function(a, b)
+        if #a.lanes ~= #b.lanes then return #a.lanes > #b.lanes end
+        return a.stat < b.stat
+    end)
+    return out
 end
 
 -- Human-readable lines for an analysis (shared by the planner popup + the pipeline draft).
@@ -312,6 +408,9 @@ function Synergy.analysisLines(analysis, limit)
     end
     for _, line in ipairs(analysis.chains or {}) do
         out[#out + 1] = { text = "- Chains: " .. line }
+    end
+    for _, ins in ipairs(analysis.insights or {}) do
+        out[#out + 1] = { text = "- Hidden synergy: " .. ins.text }
     end
     return out
 end

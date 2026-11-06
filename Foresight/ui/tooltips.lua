@@ -695,6 +695,18 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
                 r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
             }
         end
+        -- WEAPON-CONFIG callout (owner 2026-11-06): a two-hander frees the off-hand, so
+        -- name what's dropped - the shield's block + armor is the survivability the %
+        -- rows below now reflect (its stats are folded into the vs-equipped nets).
+        if ctx and ctx.configChange and ctx.configChange.removedOffhand then
+            local o = ctx.configChange.removedOffhand
+            local why = o.isShield and "you lose its block and armor"
+                or "you lose its stats (and its off-hand hits)"
+            lines[#lines + 1] = {
+                text = ("|cff9d9d9dTwo-handed:|r also unequips %s - %s."):format(o.name, why),
+                r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+            }
+        end
     end
     -- GEAR -> YOUR SPELLS (ITEM-spellimpact): the per-ability drill-down under the verdict -
     -- which of YOUR top spells this item lifts most, ranked. Every item type (a Strength item
@@ -791,6 +803,7 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
         -- The per-ability "what is this FOR" drill-down is now the unified
         -- Impact.itemSpellImpacts block above (every item type, ranked over YOUR top
         -- spells), shown for both the added and the vs-equipped case.
+        local shown = {}
         for i = 1, math.min(#rows, 4) do
             local c = rows[i]
             local color = c.net >= 0 and "|cff4ade80" or "|cfff87171"
@@ -799,6 +812,23 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
                     color, c.net, c.label),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
+            shown[c.id] = true
+        end
+        -- Dropping a shield for a two-hander is a survivability decision first - ALWAYS
+        -- show the survivability/tankability row for that swap even if it didn't make the
+        -- top-4 by magnitude (owner 2026-11-06: "illustrate the changes to tankiness").
+        if ctx and ctx.configChange and ctx.configChange.removedOffhand then
+            for _, c in ipairs(rows) do
+                if (c.id == "survivability" or c.id == "tankability") and not shown[c.id] then
+                    local color = c.net >= 0 and "|cff4ade80" or "|cfff87171"
+                    lines[#lines + 1] = {
+                        text = ("%s%+.1f%%|r %s |cff9d9d9d(vs equipped)|r"):format(
+                            color, c.net, c.label),
+                        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
+                    }
+                    break
+                end
+            end
         end
     elseif ok and changes and #changes > 0 then
         for i = 1, math.min(#changes, 4) do
@@ -1214,18 +1244,54 @@ end
 
 -- Mapped stats of the item currently equipped where a hovered item would go (live only,
 -- no shipped item DB). nil if the slot is empty or the item isn't equippable gear.
+-- Sum two mapped-stat bundles ({statKey=number}) into a fresh table. Used to combine the
+-- several equipped slots a swap vacates (a two-hander frees the off-hand as well).
+local function mergeStats(a, b)
+    local out = {}
+    for k, v in pairs(a or {}) do if type(v) == "number" then out[k] = (out[k] or 0) + v end end
+    for k, v in pairs(b or {}) do if type(v) == "number" then out[k] = (out[k] or 0) + v end end
+    return out
+end
+
+-- The off-hand/shield a TWO-HANDER would unequip (slot 17), with its stats + whether it's a
+-- shield. nil when the hovered item isn't a 2H, or the off-hand slot is already empty (you
+-- already wield a two-hander, so there's nothing to lose). This is the missing half of a
+-- 1H+shield -> 2H comparison: the survivability you drop with the shield (owner ask
+-- 2026-11-06). Dual-wield -> 2H returns the off-hand WEAPON here too (its stats removed;
+-- its off-hand white-DPS is a deeper sim follow-up, noted honestly, not silently dropped).
+local function offhandRemovedByTwoHander(link)
+    if select(9, getItemInfo(link)) ~= "INVTYPE_2HWEAPON" then return nil end
+    if not _G.GetInventoryItemLink then return nil end
+    local offLink = _G.GetInventoryItemLink("player", 17)
+    if not offLink or sameItem(offLink, link) then return nil end
+    local offLoc = select(9, getItemInfo(offLink))
+    return {
+        link = offLink,
+        name = (type(offLink) == "string" and offLink:match("%[(.-)%]")) or "off-hand",
+        isShield = offLoc == "INVTYPE_SHIELD",
+        stats = Tooltips.mapItemStats(resolveItemStats(offLink)),
+    }
+end
+
+-- The REMOVED bundle for a swap (everything the hovered item vacates), plus the off-hand
+-- removal descriptor for the callout. A two-hander removes BOTH the main-hand it replaces
+-- AND the off-hand/shield it blocks - so the dimension nets (survivability included) fold
+-- the whole configuration change, not just one slot.
 local function equippedCompareStats(link)
-    local equipLoc
-    equipLoc = select(9, getItemInfo(link))
+    local equipLoc = select(9, getItemInfo(link))
     local slots = equipLoc and INVSLOT[equipLoc]
     if not (slots and _G.GetInventoryItemLink) then return nil end
+    local bundle
     for _, slot in ipairs(slots) do
         local eqLink = _G.GetInventoryItemLink("player", slot)
         if eqLink and not sameItem(eqLink, link) then
-            return Tooltips.mapItemStats(resolveItemStats(eqLink))
+            bundle = Tooltips.mapItemStats(resolveItemStats(eqLink))
+            break
         end
     end
-    return nil
+    local off = offhandRemovedByTwoHander(link)
+    if off then bundle = mergeStats(bundle or {}, off.stats) end
+    return bundle, off
 end
 
 -- Write-back journal (CONSUME-buffs QA loop): every consumable hover is logged to
@@ -1386,9 +1452,9 @@ local function injectItem(tip)
     local loadout
     local snap = HM.Snapshot and HM.Snapshot.capture()
     if snap then loadout = HM.Loadout.fromSnapshot(snap) end
-    local compared
-    local okc, c = pcall(equippedCompareStats, link)
-    if okc then compared = c end
+    local compared, offRemoved
+    local okc, c, off = pcall(equippedCompareStats, link)
+    if okc then compared = c; offRemoved = off end
     local itemId = tonumber(type(link) == "string" and link:match("item:(%d+)") or nil)
     local ctx
     local genItem = itemId and HM.gen and HM.gen.items and HM.gen.items[itemId]
@@ -1403,6 +1469,14 @@ local function injectItem(tip)
         ctx = ctx or {}
         ctx.weaponSwap = swap
         ctx.weaponSwapWhy = (not swap) and why or nil
+    end
+    -- Weapon-CONFIG change (owner 2026-11-06): a two-hander also vacates the off-hand, so
+    -- the tooltip must say the player loses that shield/off-hand (and its survivability).
+    -- The removed stats are already folded into `compared` by equippedCompareStats; this
+    -- carries the human callout + flags that the survivability row must be surfaced.
+    if offRemoved then
+        ctx = ctx or {}
+        ctx.configChange = { removedOffhand = offRemoved }
     end
     -- BASELINE LAW: hovering an item you're WEARING switches to baseline mode - its
     -- stats are already inside every number, so no verdict/% is ever claimed for it.

@@ -1,10 +1,13 @@
 """Daily top-builds listener (DATA-top-builds).
 
-Pulls candidate "popular" talent builds from a PUBLIC source, treats every imported code
-as DATA ONLY (decoded + re-validated by the addon's own TB.decode -> isLegal; never
-executed), runs each through the addon's OWN synergy engine (Synergy.analyzeBuild, via
-lupa - one analyzer, no Python re-implementation to drift) to explain WHY it works, and
-writes a HUMAN-REVIEW draft. NOTHING auto-ships: this mirrors the reddit / data-freshness
+Pulls TOP-RATED talent builds from a PUBLIC source (owner steer 2026-11-06: examples are
+what the community rates highly, NOT builds we invent) - each candidate carries the
+source's rating so the draft ranks by it. Treats every imported code as DATA ONLY (decoded
++ re-validated by the addon's own TB.decode -> isLegal; never executed), runs each through
+the addon's OWN synergy engine (Synergy.analyzeBuild, via lupa - one analyzer, no Python
+re-implementation to drift) to explain WHY it works - INCLUDING cross-tree "hidden synergy"
+insights the community often overlooks (Synergy.crossTreeInsights) - and writes a
+HUMAN-REVIEW draft. NOTHING auto-ships: this mirrors the reddit / data-freshness
 review-gated flow and the crowd-data law (k-of-n + a human-reviewed PR). Approved builds
 are promoted BY HAND into pipeline/data/curated_builds.json, which gen_presets.py merges as
 extra named presets (re-validated legal at generate time).
@@ -46,7 +49,8 @@ def _seed_candidates() -> list[dict]:
             for b in raw if isinstance(raw, list) else []:
                 if isinstance(b, dict) and isinstance(b.get("code"), str):
                     out.append({"class": str(b.get("class", "?")), "spec": str(b.get("spec", "?")),
-                                "code": b["code"], "source": b.get("source", "community_builds.json")})
+                                "code": b["code"], "source": b.get("source", "community_builds.json"),
+                                "rating": b.get("rating")})
         except (ValueError, OSError):
             pass
     return out
@@ -125,9 +129,12 @@ def write_draft(results: list[dict]) -> tuple[Path, Path]:
           ""]
     ok = [r for r in results if r.get("ok")]
     bad = [r for r in results if not r.get("ok")]
-    md.append(f"## {len(ok)} legal candidate(s)\n")
+    # Rank by the source's rating (top-rated first); unrated sink to the bottom.
+    ok.sort(key=lambda r: (r.get("rating") is None, -(r.get("rating") or 0)))
+    md.append(f"## {len(ok)} legal candidate(s) (top-rated first)\n")
     for r in ok:
-        md.append(f"### {r['class']} - {r['spec']}  _(source: {r.get('source','?')})_")
+        rating = f", rating {r['rating']}" if r.get("rating") is not None else ""
+        md.append(f"### {r['class']} - {r['spec']}  _(source: {r.get('source','?')}{rating})_")
         md.append(f"- code: `{r['code']}`")
         md.append(f"- why it works: **{r.get('headline','')}**")
         for line in r.get("rationale", []):

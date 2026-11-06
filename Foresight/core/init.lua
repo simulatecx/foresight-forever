@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.57.0"
+HM.version = "0.58.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -225,6 +225,13 @@ local function onSlash(input)
         if rest == "" then
             printMsg("synergy themes - /foresight synergy <name> (or clear):")
             printMsg("  " .. table.concat(HM.Synergy.themes(player), ", "))
+            -- The off-meta hybrid picks: one stat that scales several output lanes at once
+            -- (owner 2026-11-06: the Int-stacked Shaman that powers melee + casting).
+            local insights = HM.Synergy.crossTreeInsights and HM.Synergy.crossTreeInsights(player)
+            if insights and #insights > 0 then
+                printMsg("  hidden synergies (one stat, many lanes):")
+                for i = 1, math.min(#insights, 3) do printMsg("    " .. insights[i].text) end
+            end
         elseif rest == "clear" then
             if HM.SynergyHighlight then
                 HM.SynergyHighlight.setTheme(nil)

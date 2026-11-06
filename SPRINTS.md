@@ -59,6 +59,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S45 Organized complexity: collapse/pin/forge UI + Shift-gated hover depth + classic synergy truth | 3 | ☑ |
 | S48 Planner example builds: one deep preset per spec, all 9 classes, generated + legal | 3 | ☑ |
 | S49 Why-a-build-works synergy analysis + daily top-builds listener + button robustness | 3 | ☑ |
+| S50 Weapon-config survivability comparison + hidden cross-tree synergy insights | 3 | ☑ |
 
 ## Active / next
 
@@ -82,6 +83,36 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S50 - Weapon-config survivability comparison + hidden cross-tree synergy insights ☑ (2026-11-06) -> 0.58.0
+Owner: "top-rated public builds as examples (not ones we invent), but we should surface
+synergies they may not think of - ie. an Int-based Shaman whose Enhancement converters
+scale melee AND casting. AND item comparisons should expand: a 1H+shield -> 2H swap must
+illustrate the tankiness/survivability lost with the shield (also staff vs wand+offhand,
+dual-wield vs 2H)."
+*Fit & Overlap - Category UI (item tooltip) + SYNERGY. Verdict: ENHANCE
+ui/tooltips.lua (config-aware equippedCompareStats) + model/synergy.lua (crossTreeInsights)
++ fetch_top_builds (top-rated framing). Complements S49 analyzeBuild + S23 weapon-swap.
+Avoid duplicating: reuse compareItems (the removed bundle already nets dimensions incl.
+survivability) + the ONE synergy index. Mobile: extra tooltip lines, wrap=true, 1280x720
+@ 0.65. Trust: display-only. Data: no new data (config read live; insights computed).
+Abuse: not externally reachable.*
+☑ WEAPON-CONFIG SURVIVABILITY: a 2H hover folds the vacated off-hand/shield (slot 17)
+  into the removed bundle (`offhandRemovedByTwoHander` + `mergeStats` ->
+  `equippedCompareStats`), so compareItems nets the whole config change; a callout names
+  what's dropped + the survivability/tankability row is ALWAYS surfaced for the swap.
+  Model selftest: shield drop nets survivability DOWN.
+☑ HIDDEN CROSS-TREE SYNERGY: `Synergy.crossTreeInsights(player, classId)` - one stat into
+  2+ output lanes via (possibly cross-tree) converters, CLASS-SCOPED (`memberClassId`);
+  the owner's Shaman Int hybrid surfaces as "Intellect scales 3 lanes ... via Mental
+  Dexterity + Mental Quickness". On `/foresight synergy` + folded into analyzeBuild. Fixed
+  a cross-class leak (Int bridge listed other classes' converters). Selftest-pinned.
+☑ TOP-RATED framing: fetch_top_builds ranks candidates by the source's rating, analysis
+  (incl. hidden synergies) attached; generated deep presets remain the always-legal
+  baseline, imported top-rated builds are the examples.
+☐ FOLLOW-UP: staff vs wand+off-hand + the off-hand WEAPON white-DPS term on dual-wield->2H
+  (stats fold today; the off-hand hit math is a deeper Sim pass). Wire the crowd/tf
+  top-rated sources once the backend aggregates builds (S46).
 
 ### S49 - Why-a-build-works analysis + daily top-builds listener + button robustness ☑ (2026-11-05) -> 0.57.0
 Owner: "ensure our character button still works so people can click on the forever button;
