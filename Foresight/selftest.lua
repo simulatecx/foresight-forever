@@ -3322,6 +3322,18 @@ function HM.runSelftest(out)
         return dark and dark.available == false
     end)())
 
+    -- RUN bridge (ForesightAPI combat profile) -------------------------------------
+    check("bridge profile shape", (function()
+        local p = HM.BridgeAPI.profileFrom(13, 120, 90, 0, 400, 8, 537, "WARRIOR")
+        return p.v == 1 and p.level == 13 and p.stamina == 120 and p.attackPower == 90
+            and p.maxHealth == 537 and p.class == "WARRIOR" and p.source == "foresight"
+    end)())
+    check("bridge profile clamps junk/secret to 0", (function()
+        local q = HM.BridgeAPI.profileFrom("x", -5, nil, "y", nil, nil, 0 / 0, "ROGUE")
+        return q.level == 1 and q.stamina == 0 and q.attackPower == 0
+            and q.spellPower == 0 and q.maxHealth == 0 and q.class == "ROGUE"
+    end)())
+
     -- Scoreboard -------------------------------------------------------------------
     for _, c in ipairs(checks) do
         out(("%s %s%s"):format(c.ok and "PASS" or "FAIL", c.name,

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.55.0 - 2026-11-05 (the RUN bridge: a read-only character-profile API)
+
+ADDITIVE, addon-to-addon. New `core/bridge_api.lua` publishes `_G.ForesightAPI`
+for the sibling living-world addon **RUN** (`_G.RunAdvisor`):
+
+- `ForesightAPI.GetCombatProfile()` returns a light, STABLE character combat
+  profile - `{ v, level, stamina, attackPower, spellPower, armor, avoidancePct,
+  maxHealth, class, source }` - read straight off the live sheet through
+  Guards (missing/secret values land as 0). Read-only, pcall-wrapped, never
+  throws at the caller.
+- Why: RUN computes "your odds vs this creature" and was falling back to
+  "advice degraded" when Forever hides the player's live health (PvP realms /
+  restricted contexts). Foresight already knows the character, so it hands RUN
+  the survivability + offense it needs - Foresight owns the CHARACTER, RUN owns
+  the ODDS (no capability duplication; the two addons stack as addons do).
+- Scope guard: **nothing leaves the client, no backend, no T&Cs/privacy
+  surface** - this is two addons sharing a table in memory. No existing
+  Foresight behaviour changes (new file + 2 `.toc` lines + version trio).
+- Tests: `profileFrom` shape + junk/secret-clamp selftests; gate 262/262 both
+  flavors. Consumed by RUN v0.9.0 (`core/bridge.lua` -> `model/odds.lua`
+  `Odds.readiness`), which validates the profile as untrusted sibling input.
+
 ## 0.54.0 - 2026-11-04 (LAUNCH DAY client sync; tag pending the owner's in-game verify)
 
 LAUNCH-DAY CLIENT SYNC. Forever went live and the `wowf` client landed on build
