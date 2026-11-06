@@ -62,6 +62,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S50 Weapon-config survivability comparison + hidden cross-tree synergy insights | 3 | ☑ |
 | S51 Understand-your-character onboarding + armory top-builds source + listener dedup | 3 | ☑ |
 | S52 FS character-button reliability fix + shared-color consolidation start (duplication audit) | 3 | ☑ |
+| S53 DoT/bleed scoring (Rend) in the output rankings + an Arms warrior loop | 3 | ☑ |
 
 ## Active / next
 
@@ -85,6 +86,30 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S53 - DoT/bleed scoring (Rend) + an Arms warrior loop ☑ (2026-11-06) -> 0.61.0
+Owner (screenshot, level-15 Arms warrior): "what does this flurry comment mean as an Arms
+warrior, and we should be noting things like Rend."
+*Fit & Overlap - Category SIM (ability outcomes + loops). Verdict: ENHANCE model/sim.lua
+(abilityHit DoT branch) + data/loops.lua (Arms loop) + the render sites. Complements
+MODEL-ability-outcomes + the Matrix eco card. Avoid duplicating: reuse the ONE abilityHit
+path (a DoT is just another kind) + the existing loop structure. Mobile: extra text lines.
+Trust: display-only, (p)-tagged. Data: no new data (dotTick was already decoded, just
+dropped). Abuse: not externally reachable.*
+☑ BLEED/DOT SCORING: `Sim.abilityHit` now handles a pure DoT (dotTick + tickMs + durationMs,
+  no direct dmg/heal/wpn) - returns the TOTAL over the full duration, kind="dot" (classic
+  bleeds don't crit/scale with spell power; talent spellmods still apply; presumed). Was
+  returning nil -> Rend/Deep Wounds/poisons were invisible in the biggest-hits ranking.
+  Renders "Rend ~28 over 12s (bleed)" in top outputs, "~28/12s" in the Matrix biggest-hits,
+  "bleeds for ~N over Ns" in loop lines. Selftest-pinned (data-located pure-DoT spell).
+☑ ARMS WARRIOR LOOP: the warrior had ONLY a Fury "Flurry Engine" loop, shown as THE engine
+  even for Arms/leveling. Added "The Bleed & Strike Engine" (Rend/Deep Wounds + Mortal
+  Strike/Heroic Strike/Overpower) as the DEFAULT; Flurry is now second + relabelled "(Fury)".
+  Every named member resolves in BOTH flavors (loop-roster selftest green). Title-click the
+  Matrix cycles to Flurry.
+☐ FOLLOW-UP: auto-select the warrior loop by the player's dominant talent tree (so a Fury
+  warrior defaults to Flurry without a title-click); Arms/Fury/Prot loops for the other
+  specs; DoT crit on Forever if the launch client changed bleed behavior (verify in-game).
 
 ### S52 - FS character-button reliability + shared-color consolidation start ☑ (2026-11-06) -> 0.60.0
 Owner (screenshot): "I don't see the FS button for character" + "a hardening check across

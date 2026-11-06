@@ -316,7 +316,14 @@ local function layout(model)
         if model.eco.nowBest and #model.eco.nowBest > 0 then
             local parts = {}
             for _, h in ipairs(model.eco.nowBest) do
-                parts[#parts + 1] = ("%s ~%d"):format(h.name, math.floor((h.avg or 0) + 0.5))
+                -- A bleed shows its total over its duration, flagged so ~35 over 15s isn't
+                -- mistaken for a single hit (owner 2026-11-06: "note things like rend").
+                if h.dot then
+                    parts[#parts + 1] = ("%s ~%d/%ds"):format(h.name,
+                        math.floor((h.avg or 0) + 0.5), math.floor((h.durationSec or 0) + 0.5))
+                else
+                    parts[#parts + 1] = ("%s ~%d"):format(h.name, math.floor((h.avg or 0) + 0.5))
+                end
             end
             local nb = acquireFS("ARTWORK", "GameFontHighlightSmall")
             nb:SetPoint("TOPLEFT", panel, "TOPLEFT", sx, y)

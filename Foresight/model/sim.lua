@@ -183,7 +183,13 @@ function Sim.abilityHit(loadout, spellId, opts)
     local spell = HM.gen and HM.gen.spells and HM.gen.spells[spellId]
     if not (loadout and spell and F) then return nil end
     local dmg, heal, wpn = spell.dmg, spell.heal, spell.wpn
-    if not (dmg or heal or wpn) then return nil end
+    -- Pure DAMAGE-OVER-TIME (a bleed like Rend / Deep Wounds, or a poison): the decode
+    -- carries dotTick + tickMs + durationMs but NO direct dmg/heal/wpn. These used to be
+    -- dropped entirely (owner 2026-11-06: "we should be noting things like rend"); now
+    -- they score as their TOTAL over the full duration so they rank among the big buttons.
+    local isDot = spell.dotTick and spell.tickMs and spell.durationMs
+        and not (dmg or heal or wpn)
+    if not (dmg or heal or wpn or isDot) then return nil end
     local snap = loadout.snapshot or {}
     local built = loadout:build()
     local function stat(node)
@@ -195,7 +201,20 @@ function Sim.abilityHit(loadout, spellId, opts)
     local lawPresumed = F.presumedMark(F.spellBaseDamage) ~= ""
     local out
 
-    if wpn then
+    if isDot then
+        -- Total bleed/poison damage over the full duration. Classic bleeds don't crit and
+        -- don't scale with spell power at these ranks (the dotTick IS the per-tick value),
+        -- but talent spellmods still apply (e.g. Improved Rend). Presumed until a live tick
+        -- confirms. kind="dot" so the display says "over Ns", not "avg hit".
+        local ticks = math.floor((spell.durationMs or 0) / (spell.tickMs or 1) + 0.0001)
+        local perTick = (spell.dotTick or 0) * (1 + pctMods / 100) + flatMods
+        local total = perTick * ticks
+        out = {
+            min = total, max = total, kind = "dot",
+            durationSec = (spell.durationMs or 0) / 1000, ticks = ticks, perTick = perTick,
+            critPct = 0, critMult = 1, presumed = true,
+        }
+    elseif wpn then
         local wmin, wmax = snap.weaponDamageMin or 0, snap.weaponDamageMax or 0
         if wmax <= 0 then return nil end -- no weapon baseline: claim nothing
         local ap = stat("stat.attackPower")
@@ -338,6 +357,7 @@ function Sim.topOutputs(loadout, spellIds, topN)
                     critPct = hit.critPct, critMult = hit.critMult,
                     crit = hit.avg * (hit.critMult or 1), presumed = hit.presumed,
                     weapon = hit.kind == "weapon",
+                    dot = hit.kind == "dot", durationSec = hit.durationSec,
                 }
             end
         end

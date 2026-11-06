@@ -1742,6 +1742,22 @@ function HM.runSelftest(out)
         return hit ~= nil and approx(hit.min, 218) and approx(hit.max, 258)
             and hit.kind == "weapon" and hit.critMult == 2
     end)())
+    check("pure DoT (bleed like Rend) scores as its total over time (not dropped)", (function()
+        -- Owner 2026-11-06: bleeds/poisons (dotTick + tickMs + durationMs, no direct
+        -- dmg/heal/wpn) were excluded from the biggest-hits ranking. Now they score as
+        -- the full-duration total, kind="dot". Data-located so it holds across builds.
+        local dotId, sp
+        for id, s in pairs(gen.spells or {}) do
+            if type(s) == "table" and s.dotTick and s.tickMs and s.durationMs
+                    and not (s.dmg or s.heal or s.wpn) then dotId, sp = id, s; break end
+        end
+        if not dotId then return false, "no pure-DoT spell in the shipped data" end
+        local hit = HM.Sim.abilityHit(base, dotId, {})
+        if not hit then return false, "DoT still returns nil (dropped)" end
+        local ticks = math.floor(sp.durationMs / sp.tickMs + 0.0001)
+        return hit.kind == "dot" and hit.ticks == ticks
+            and approx(hit.avg, sp.dotTick * ticks)
+    end)())
     -- One trait node with exactly one +damage% op touching Fireball(133), found from
     -- the shipped data (never hardcoded), backs the spellmod/delta/hover checks.
     local dmgNodeId, dmgNodeOp

@@ -1,15 +1,15 @@
-## 0.60.0 - the character button, made reliable
+## 0.61.0 - bleeds count now, and warriors get an Arms loop
 
-**Fixes the missing Foresight button on the character sheet.**
-On the launch client, the FS / Share / Options buttons on your character sheet could fail
-to appear if the sheet's show signal was missed. Foresight now hooks the character-sheet
-open directly and re-checks for a few seconds after login, so the buttons reliably show
-whenever your character sheet is open. (The `/foresight` commands and the talent-frame
-Planner button remain independent ways in.)
+**Rend and other bleeds finally show up.** Damage-over-time abilities - Rend, Deep Wounds,
+poisons - were being left out of your "biggest hits" because they aren't a single swing.
+Now Foresight scores them as their full total over time and shows it honestly, e.g. "Rend
+~28 over 12s (bleed)". That's real damage that used to be invisible.
 
-**Under the hood.** Kicked off a shared-element cleanup from an internal audit: the
-green-up / red-down number coloring now runs through one shared helper so it stays
-consistent everywhere, with the rest of the cleanup tracked for careful, verified
-follow-ups. No visible change.
+**Warriors get an Arms engine - and it's the default.** The class engine card used to show
+only "The Flurry Engine," which is a Fury talent, even for an Arms or still-leveling
+warrior. There's now a default "Bleed & Strike Engine": keep Rend bleeding, let Deep Wounds
+stack from your crits, spend rage on Mortal Strike and Heroic Strike, and punish a dodge
+with Overpower. The Flurry (Fury) loop is still there - click the Matrix title to cycle to
+it.
 
-Ship gate: Forever 313 checks, Classic 267. Display-and-advice only, official APIs only.
+Ship gate: Forever 314 checks, Classic 268. Display-and-advice only, official APIs only.

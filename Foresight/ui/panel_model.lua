@@ -386,7 +386,7 @@ function PanelModel._topHits(loadout, n)
     local out = {}
     for _, e in ipairs(tops.damage or {}) do
         if e.name and e.avg and #out < n then
-            out[#out + 1] = { name = e.name, avg = e.avg }
+            out[#out + 1] = { name = e.name, avg = e.avg, dot = e.dot, durationSec = e.durationSec }
         end
     end
     return out
@@ -696,16 +696,21 @@ function PanelModel.build(loadout)
             for _, grp in ipairs(order) do
                 local kind, list = grp[1], grp[2]
                 for _, o in ipairs(list) do
-                    local lo, hi = HM.formulas.spellBaseDamage.display(o.min, o.max, o.kind)
-                    local crit = (o.critPct and o.critPct > 0)
-                        and (" | ~%d crit"):format(math.floor(o.crit + 0.5)) or ""
-                    rows[#rows + 1] = {
-                        label = o.name,
+                    local value
+                    if o.dot then
+                        -- A bleed/poison: its TOTAL over the duration, not a single hit
+                        -- (owner 2026-11-06: "note things like rend"). No crit on classic bleeds.
+                        value = ("~%d over %ds (bleed)%s"):format(math.floor(o.avg + 0.5),
+                            math.floor((o.durationSec or 0) + 0.5), o.presumed and " (p)" or "")
+                    else
+                        local lo, hi = HM.formulas.spellBaseDamage.display(o.min, o.max, o.kind)
+                        local crit = (o.critPct and o.critPct > 0)
+                            and (" | ~%d crit"):format(math.floor(o.crit + 0.5)) or ""
                         value = ("~%d-%d avg %s%s%s"):format(lo, hi,
                             kind == "heal" and "heal" or "hit", crit,
-                            o.presumed and " (p)" or ""),
-                        wide = true,
-                    }
+                            o.presumed and " (p)" or "")
+                    end
+                    rows[#rows + 1] = { label = o.name, value = value, wide = true }
                 end
             end
             if #rows > 0 then

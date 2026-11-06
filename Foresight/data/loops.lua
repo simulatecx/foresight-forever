@@ -22,7 +22,12 @@ local function loopCompute(payoffs, procNote)
                 and HM.Sim.resolveSpellLevelCapped(name, level)
             local hit = sid and HM.Sim.abilityHit
                 and HM.Sim.abilityHit(loadout, sid, { selected = selected })
-            if hit then
+            if hit and hit.kind == "dot" then
+                -- A bleed/poison: its total over the duration, not a single hit.
+                lines[#lines + 1] = ("%s bleeds for ~%d over %ds%s"):format(name,
+                    math.floor((hit.avg or 0) + 0.5), math.floor((hit.durationSec or 0) + 0.5),
+                    hit.presumed and " (p)" or "")
+            elseif hit then
                 local lo, hi = HM.formulas.spellBaseDamage.display(hit.min, hit.max,
                     hit.kind)
                 lines[#lines + 1] = ("%s %s for ~%d-%d with your gear%s"):format(
@@ -102,13 +107,27 @@ HM.loops = {
         end,
     },
     {
-        id = "flurry", classToken = "WARRIOR", name = "The Flurry Engine",
+        -- Arms / generic melee - the DEFAULT warrior loop (owner 2026-11-06: an Arms
+        -- warrior shouldn't be shown Fury's Flurry as their engine). Bleeds tick between
+        -- swings; rage spends on strikes. Fury players title-click to cycle to Flurry.
+        id = "arms", classToken = "WARRIOR", name = "The Bleed & Strike Engine",
+        confidence = "classic-presumed",
+        enablers = { "Battle Shout", "Rend" },
+        engine = { "Deep Wounds", "Overpower" },
+        payoffs = { "Mortal Strike", "Heroic Strike" },
+        insight = "Keep Rend bleeding and let Deep Wounds stack from your crits, then spend "
+            .. "rage on Mortal Strike and Heroic Strike - punish a dodge with Overpower. "
+            .. "Your bleeds tick between every swing, so they add up even while you auto-attack.",
+        compute = loopCompute({ "Mortal Strike", "Heroic Strike", "Overpower", "Rend" }),
+    },
+    {
+        id = "flurry", classToken = "WARRIOR", name = "The Flurry Engine (Fury)",
         confidence = "classic-presumed",
         enablers = { "Battle Shout" },
         engine = { "Flurry" },
         payoffs = { "Heroic Strike" },
-        insight = "Critical strikes keep Flurry's attack speed running; attack power "
-            .. "and crit gear feed each other through it.",
+        insight = "Fury path: critical strikes keep Flurry's attack speed running; attack "
+            .. "power and crit gear feed each other through it. Spec into Flurry to light it.",
         compute = function(loadout)
             local sel = HM.TalentAPI and HM.TalentAPI.walkTraits
                 and HM.TalentAPI.walkTraits(true) or nil

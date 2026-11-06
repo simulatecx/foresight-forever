@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.61.0 - 2026-11-06 (bleeds like Rend now count + an Arms warrior loop)
+
+Answering an Arms warrior's two good questions: why "Flurry", and where's Rend.
+
+- **Bleeds and poisons now count among your biggest hits.** Damage-over-time abilities -
+  Rend, Deep Wounds, poisons - were being left out of the "top outputs / biggest hits"
+  ranking because they aren't a single hit. Now they're scored as their total over the
+  full duration and shown honestly as, e.g., "Rend ~28 over 12s (bleed)". That's a real
+  chunk of a warrior's (or rogue's, or druid's) damage that was invisible before.
+- **Warriors get an Arms loop, and it's the default.** The class engine card used to show
+  only "The Flurry Engine" - a Fury talent - even for an Arms or still-leveling warrior.
+  There's now a default "Bleed & Strike Engine" (keep Rend bleeding + Deep Wounds from
+  crits, spend rage on Mortal Strike / Heroic Strike, punish dodges with Overpower). The
+  Flurry (Fury) loop is still there - click the Matrix title to cycle to it.
+- Ship gate: Forever 314/314, Classic 268/268.
+
+*Features:* MODEL-ability-outcomes, SIM-engine
+
 ## 0.60.0 - 2026-11-06 (the FS character button, made reliable + a shared-color cleanup)
 
 - **The Foresight button on the character sheet is reliable now.** On the launch client,
