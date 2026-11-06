@@ -120,3 +120,83 @@ branching talent-tree node (the impact map).
   a deliberate decision, not CurseForge's dropdown. For now MIT + open stays.
 
 License file: MIT (`LICENSE`). Swap to GPL etc. via a one-line `## X-License` change.
+
+---
+
+## Listing description (drafted 2026-11-06, v0.65.0 - owner reviews/pastes to CurseForge)
+
+NOTE: the license note above is STALE (repo moved to All Rights Reserved 2026-10-15);
+the TOC `## X-License: All Rights Reserved` is current. Kept for history.
+
+# Foresight - know what every choice actually does
+
+**The layman's oracle for WoW: Forever.** Every talent point, stat, item, and buff -
+explained in plain terms, with your character's real numbers. Built for players who want
+to understand their character, and hardcore players who can't afford to guess.
+
+## Understand your character
+
+Log in and Foresight reads your character back to you: your archetype and strongest
+lens, your biggest hits, what your talent build actually stacks (and the capstone it
+pays off into), the hidden synergy your class can exploit, and one coaching nudge.
+Re-run it anytime: `/foresight insights`.
+
+## Talents that explain themselves
+
+- Hover any talent - in the talent frame or our planner - and see what it affects,
+  what the next point does to YOUR abilities ("Fireball: ~141 -> ~148 per hit"), and
+  the synergies it joins. Hold Shift for the full breakdown.
+- **Chains**: see where a point really pays out - "Intellect -> spell damage via
+  Mental Quickness." Hidden synergies too: when one stat scales several lanes for
+  your class (the Int-stacked Shaman that powers melee, casting, AND totems), we say so.
+- **The planner**: click-to-allocate talent trees usable at ANY level (even before 10),
+  with example builds for every spec ("why it works" on hover), import/export codes,
+  saved builds, a live overlay that glows your planned path on the real talent tree,
+  and plan-for-a-future-level. Suggest-only: you always spend your own points.
+
+## Gear verdicts that tell the whole story
+
+- Pawn-style one-line verdicts ("Upgrade for Melee DPS +2.8%") - but from a real
+  net-swap model of your character, not static weights.
+- Weapon swaps account for the whole configuration: hover a two-hander while wearing
+  a shield and Foresight shows the survivability you'd lose with it.
+- "Best for your spells" - which of YOUR abilities an item lifts the most.
+- Bleeds count: Rend-style damage shows per-tick and total, not a mystery.
+
+## The Foresight Matrix
+
+A dashboard of your character's engine: honest dimension bars, your class's
+Enabler -> Engine -> Payoff loop (spec-aware - Arms warriors see the bleed engine,
+Fury sees Flurry; hybrids are named hybrids), best-next-points for your goal, and
+crowd comparisons ("Among your spec") with daily featured challenges.
+
+## Honesty is the feature
+
+Numbers come from the game client's own data. Anything not yet verified on Forever is
+tagged **(p)** presumed - and your own talent scans verify rank rules live, flipping
+tags green with "verified from your scan." No invented numbers, ever: when we can't
+model something (a proc rate, a trinket effect), we say so out loud.
+
+## Account safety
+
+Display and advice ONLY. No automation, no casting, no targeting, no memory reading -
+a normal addon using official APIs, enforced by an automated compliance gate on every
+release. Crowd features are opt-in, anonymous by default, and the addon never
+networks: sharing happens by a link YOU copy.
+
+**Classic Era too:** the same addon works on Classic Era (1.15) with faithful classic
+data - one install, both games.
+
+Per-rank talent text credit: **talentsforever.com** (fan-made Forever talent calculator).
+Web armory + ladders: **wow-foresight.web.app**
+
+---
+
+### Also from us: RUN - Immersive Enemy Builder
+
+Foresight tells you about YOUR character; **RUN** makes the world's enemies worth
+fearing. A living-world danger advisor: combat odds before you pull ("your chances vs
+this creature"), rare hunts, and a Nemesis system where the enemies that kill you gain
+notoriety and titles. Pairs with Foresight automatically - RUN reads a light combat
+profile through our addon-to-addon bridge (nothing leaves your client) so its odds
+sharpen when both are installed.
