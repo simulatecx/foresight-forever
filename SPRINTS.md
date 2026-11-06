@@ -58,6 +58,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S44 Proofing wave: chained synergies + one item-fold | 3 | ☑ |
 | S45 Organized complexity: collapse/pin/forge UI + Shift-gated hover depth + classic synergy truth | 3 | ☑ |
 | S48 Planner example builds: one deep preset per spec, all 9 classes, generated + legal | 3 | ☑ |
+| S49 Why-a-build-works synergy analysis + daily top-builds listener + button robustness | 3 | ☑ |
 
 ## Active / next
 
@@ -81,6 +82,38 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S49 - Why-a-build-works analysis + daily top-builds listener + button robustness ☑ (2026-11-05) -> 0.57.0
+Owner: "ensure our character button still works so people can click on the forever button;
+a daily listener for top builds from public sources that are 'imported'; analyze why they
+work for each class - the synergies that builds provided."
+*Fit & Overlap - Category SYNERGY -> UI (planner) + DATA (pipeline). Verdict: ENHANCE
+model/synergy.lua (new analyzeBuild/analysisLines), ui/talent_tree.lua (Examples hover),
+and the pipeline (new fetch_top_builds + _addon_lua, gen_presets curated-merge). NET-NEW
+feature id DATA-top-builds. Complements UI-talent-planner presets (S48) + SYNERGY-engine
+chains. Avoid duplicating: reuse the ONE synergy index (no second analyzer - the pipeline
+loads the addon's engine via lupa) and the loadBuild/TB.decode path. Mobile: the why-it-
+works tooltip rides GameTooltip, wrap=true, readable at 1280x720 @ 0.65. Trust: display-
+only, nothing applied in-game; imported builds are data-only + human-review-gated. Data:
+new generated nothing (analysis is live); the listener writes gitignored drafts; approved
+builds commit to curated_builds.json (dev input, not runtime-untrusted). Abuse: the addon
+never networks; imported codes are decoded+re-validated (isLegal), never executed.*
+☑ `Synergy.analyzeBuild` + `analysisLines` (model, pure): clusters (>=2 build talents on a
+  theme) + converter chains the build feeds + capstone payoff + plain-language headline;
+  selftest pins the mechanism on real data (both flavors).
+☑ Planner "Examples" hover -> the why-it-works tooltip (decode + analyzeBuild), so the
+  rationale shows BEFORE loading.
+☑ Button robustness (owner "ensure the forever button still works"): the talent-frame
+  Foresight-Planner hook retries for ~10s after login (load-on-demand / frame-rename
+  insurance); slash + character-sheet buttons stay independent entry points.
+☑ Daily top-builds listener: `pipeline/fetch_top_builds.py` (DATA-ONLY decode via the
+  addon's TB.decode, synergy analysis via the addon's own engine through
+  `pipeline/_addon_lua.py`, human-review draft) + `.github/workflows/top-builds.yml`
+  (daily -> review issue + artifact); `gen_presets.py` merges approved
+  `curated_builds.json` as extra presets. Nothing auto-ships (crowd-data law).
+☐ FOLLOW-UP (S46): wire the crowd-aggregate source once the backend aggregates submitted
+  builds per spec (the share payload already carries the build); talentsforever featured
+  builds if exposed. Today: local-seed source proves the pipeline end to end.
 
 ### S48 - Planner example builds (one deep preset per spec, all classes) ☑ (2026-11-04) -> 0.54.0
 Owner (launch day): "scan some popular builds for all characters, import them as

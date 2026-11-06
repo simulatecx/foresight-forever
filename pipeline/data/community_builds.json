@@ -1,0 +1,14 @@
+[
+  {
+    "class": "WARRIOR",
+    "spec": "Arms",
+    "code": "FT1F-WARRIOR-35323213132110001--",
+    "source": "seed-demo"
+  },
+  {
+    "class": "MAGE",
+    "spec": "Fire",
+    "code": "FT1F-MAGE--55523331000003001-",
+    "source": "seed-demo"
+  }
+]

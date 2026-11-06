@@ -750,6 +750,23 @@ boot:SetScript("OnEvent", function(_, event, addon)
             or event == "PLAYER_TALENT_UPDATE" then
         pcall(Highlight.applyPlanPreview)
     end
+    -- Launch-robustness (0.56.x, owner "ensure the forever button still works"): the talent
+    -- UI is load-on-demand and the ADDON_LOADED("Blizzard_PlayerSpells") signal can race or
+    -- differ by client build, so the Foresight-Planner button could miss its anchor and
+    -- never appear. Poll a few times after login until PlayerSpellsFrame exists and the hook
+    -- lands (hookTalentUI is idempotent via `hooked`). Bounded + self-stopping; no live frame
+    -- is touched beyond the sanctioned HookScript. The /foresight planner slash + the
+    -- CharacterFrame furniture remain independent entry points if the frame never appears.
+    if event == "PLAYER_LOGIN" and not hooked and _G.C_Timer and _G.C_Timer.After then
+        local tries = 0
+        local function poll()
+            if hooked then return end
+            hookTalentUI()
+            tries = tries + 1
+            if not hooked and tries < 10 then _G.C_Timer.After(1, poll) end
+        end
+        _G.C_Timer.After(1, poll)
+    end
 end)
 
 return Highlight

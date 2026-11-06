@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.57.0 - 2026-11-05 (why builds work + a top-builds listener + button robustness)
+
+Understanding builds, not just showing them - and a pipeline that learns from popular ones.
+
+- **Every build now explains WHY it works.** Hover an example build in the planner's
+  Examples list and Foresight shows its synergy rationale: the shared-lever clusters it
+  stacks ("3 talents push Fire damage"), the stat-converter chains it feeds, and the
+  capstone it pays off into. Powered by a new `Synergy.analyzeBuild` that reads the same
+  synergy index the tooltips use - no new data, no network.
+- **Daily top-builds listener (dev pipeline, review-gated).** A new
+  `pipeline/fetch_top_builds.py` + daily GitHub Action pulls candidate popular builds
+  from a public source, decodes them DATA-ONLY (the addon's own `TB.decode` re-validates;
+  imported content is never executed), runs each through the SAME synergy analyzer to
+  explain why it works, and opens a human-review issue. Nothing auto-ships - approved
+  builds are promoted by hand into `curated_builds.json` and merged as example presets at
+  the next build, legal-by-construction (the selftest decodes every preset). Sources are
+  pluggable; the crowd-aggregate and talentsforever feeds are scaffolded (S46), with a
+  local seed so the job runs today. Honors the crowd-data law (k-of-n + human PR).
+- **The Forever button is more robust.** The "Foresight Planner" button on the talent
+  frame now retries its hook for a few seconds after login, so a load-on-demand or
+  renamed talent frame on the launch client can't leave it missing. The slash command and
+  the character-sheet buttons remain independent ways in.
+- Ship gate: Forever 309/309, Classic 264/264. (Also publishes the untagged RUN-bridge
+  API work from 0.55.0/0.56.0 below.)
+
+*Features:* SYNERGY-engine, UI-talent-planner, DATA-top-builds
+
 ## 0.56.0 - 2026-11-05 (RUN bridge grows: offense/dps + the growth contract)
 
 The bridge is designed to DEEPEN as Foresight grows. API v1 -> v2:

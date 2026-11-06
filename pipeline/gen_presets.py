@@ -13,8 +13,17 @@ generate.py calls `build_presets(...)` and writes `preset_builds.lua`; run_tests
 every emitted build is legal on both flavors.
 """
 
+import json
+from pathlib import Path
+
 POINTS_PER_TIER = 5     # mirror TB.POINTS_PER_TIER (classic tier-unlock basis)
 TARGET_POINTS = 31      # the classic deep-spec number: 30 below + the tier-6 capstone
+
+# Human-APPROVED imported builds (the DATA-top-builds promotion target): a human copies a
+# vetted candidate here out of fetch_top_builds.py's review draft. Merged as extra presets;
+# the selftest decodes EVERY preset through TB.decode->isLegal, so an illegal entry reds the
+# gate rather than shipping. Absent file = no extra presets (today's behavior).
+CURATED_FILE = Path(__file__).parent / "data" / "curated_builds.json"
 
 
 def _tabs_for_class(tabs, class_mask):
@@ -179,4 +188,35 @@ def build_presets(talents, tabs, classes, flavor):
                 "points": sum(build.values()),
                 "code": code,
             })
+    out.extend(_curated_presets(prefix))
+    return out
+
+
+def _curated_presets(prefix):
+    """Human-approved imported builds for THIS flavor (prefix FT1F/FT1), appended as
+    presets. Shape-validated here; legality is enforced by the Lua selftest decoding every
+    preset. Points = sum of the rank digits in the code's tab sections."""
+    if not CURATED_FILE.exists():
+        return []
+    try:
+        raw = json.loads(CURATED_FILE.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return []
+    out = []
+    for b in raw if isinstance(raw, list) else []:
+        code = b.get("code") if isinstance(b, dict) else None
+        if not isinstance(code, str) or not code.startswith(prefix + "-"):
+            continue  # wrong flavor or malformed - skip (never ship another flavor's code)
+        # points = digits after the "<PREFIX>-<CLASS>-" head
+        body = code.split("-", 2)[2] if code.count("-") >= 2 else ""
+        points = sum(int(ch) for ch in body if ch.isdigit())
+        out.append({
+            "class": str(b.get("class", "?")).upper(),
+            "classId": b.get("classId", 0),
+            "spec": str(b.get("spec", "Imported")),
+            "tab": b.get("tab", 0),
+            "points": points,
+            "code": code,
+            "curated": True,
+        })
     return out

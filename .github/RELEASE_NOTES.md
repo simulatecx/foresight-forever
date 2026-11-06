@@ -1,27 +1,27 @@
-## 0.54.0 - launch day
+## 0.57.0 - why builds work
 
-Forever is live, and Foresight is tuned to the launch client (build 1.60.1.70790). This
-is the day-1 patch: the data matches what you're playing, with one real decode fix and a
-new way to start a talent plan.
+Foresight has always shown you what a talent does. Now it explains why a whole build
+holds together - and starts learning from the builds players actually run.
 
-**Tuned to the launch balance pass**
-Paladin and Rogue tree reworks, Druid Starfire/Shred buffs, Hunter Serpent Sting, Shaman
-Riptide - the shipped talent, spell, and item data all match the live client, so your
-hover numbers and gear comparisons are right for launch. Classic Era players: your build
-is refreshed too (1.15.9.70576), no content changes.
+**Every example build explains itself**
+Open the planner's "Examples" list and hover a build: Foresight now shows its synergy
+rationale - the levers it stacks ("3 talents push Fire damage"), the stat converters it
+feeds, and the capstone it pays off into. You see why a build works before you load it,
+for all nine classes, on both Forever and Classic Era.
 
-**Example builds in the planner**
-New "Examples" button in the talent planner: a ready-made deep build for every spec, for
-all nine classes - load one as a starting point and tweak it however you like. Like
-everything in the planner, it's advice only; nothing is applied to your character. The
-builds are generated straight from the live talent tree, so they're always legal and
-always current.
+**A listener for popular builds**
+Behind the scenes, a new daily pipeline pulls candidate popular builds from public
+sources, analyzes each one through Foresight's own synergy engine to explain why it
+works, and queues it for human review. Approved builds become new example presets you
+can load. Nothing is automated onto your character and nothing leaves your client - the
+addon still only reads your sheet and gives advice.
 
-**A launch-day fix**
-The launch reworks shipped the first talents that convert Intellect into *only* spell
-damage or *only* healing (Champion of the Light, Arcane Blast, Natural Instinct), which
-let us catch and fix a spot where those two were labeled backwards. Champion of the Light
-now correctly shows Intellect -> spell damage, and the chains it feeds are right.
+**A sturdier Forever button**
+The "Foresight Planner" button on the talent frame now re-checks for its home for a few
+seconds after you log in, so it reliably appears even when the talent UI loads late. The
+`/foresight planner` command and the character-sheet buttons remain independent ways in.
 
-As always: every release passes the full test suite on both flavors before it ships
-(Forever 305 checks, Classic 260), display-and-advice only, official APIs only.
+Also folds in the read-only RUN-bridge character-profile API (0.55-0.56) for the sibling
+living-world addon - addon-to-addon only, nothing leaves the client.
+
+Ship gate: Forever 309 checks, Classic 264. Display-and-advice only, official APIs only.

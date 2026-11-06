@@ -2924,6 +2924,38 @@ function HM.runSelftest(out)
         return classes == 9 and #presets >= 9,
             ("%d presets across %d classes"):format(#presets, classes)
     end)())
+    check("analyzeBuild explains WHY a build works (clusters/chains/headline)", (function()
+        -- The synergy rationale shown on the Examples popup + the imported-build draft:
+        -- a deep single-tree preset MUST surface at least one shared-lever cluster (>=2
+        -- of its own talents on one theme) and a plain-language headline. Real data.
+        if not (HM.Synergy and HM.Synergy.analyzeBuild) then return false, "no analyzeBuild" end
+        local TB = HM.TalentBuild
+        local presets = HM.gen and HM.gen.presetBuilds
+        if type(presets) ~= "table" or #presets == 0 then return false, "no presets" end
+        HM.Synergy._reset()
+        local withCluster, checked = 0, 0
+        for _, p in ipairs(presets) do
+            local b = TB.decode(p.code)
+            local an = b and HM.Synergy.analyzeBuild(b)
+            if an then
+                checked = checked + 1
+                if type(an.headline) ~= "string" or an.headline == "" then
+                    return false, ("%s/%s no headline"):format(p.class, tostring(p.spec))
+                end
+                if #(an.clusters or {}) > 0 then withCluster = withCluster + 1 end
+                local lines = HM.Synergy.analysisLines(an, 3)
+                if #lines < 1 then return false, "no analysis lines" end
+            end
+        end
+        HM.Synergy._reset()
+        -- Assert the cluster MECHANISM fires on real data (clusters are detected where
+        -- shared themes exist), not a coverage %: classic ships many presumed/unmapped
+        -- talents so its themes are sparser than Forever's - a percentage gate would be
+        -- a decode-completeness proxy, not a test of analyzeBuild. Every build still must
+        -- yield a headline + lines (checked above); several must surface a cluster.
+        return checked > 0 and withCluster >= 5,
+            ("%d/%d presets show a synergy cluster"):format(withCluster, checked)
+    end)())
     check("shipped prereq graph: acyclic + arrows point down the tree (deadlock guard)", (function()
         -- Audit 2026-10-16: TraitEdge Type-0 back-edges created prereq CYCLES that made both
         -- talents permanently unclickable (Druid Nature's Majesty <-> Splendor, Hunter Bestial

@@ -212,6 +212,110 @@ function Synergy.query(q, player)
     return nil
 end
 
+-- WHY A BUILD WORKS (0.56.x, owner: "analyze why they work for each class - the synergies
+-- that builds provided"). Given a build (talent/node id -> rank), explain its synergies
+-- from the SAME index the tooltips use - no new data, no network. Returns:
+--   clusters : themes (stat / school / mechanic) that >=2 of the BUILD'S OWN talents push,
+--              each with the count and the member ids - the "this build stacks N talents
+--              into Fire damage" rationale, ranked by how concentrated the build is.
+--   chains   : converter bridges the build benefits from - either the converter talent is
+--              IN the build, or the build stacks the stat a converter consumes (so the
+--              points pay out in a second lane). Deduped, "Intellect -> spell damage via X".
+--   capstone : the deepest allocated talent (the payoff the stacking unlocks), when the
+--              planner's tier data is available; nil otherwise.
+--   headline : one plain-language line summarizing why it holds together.
+-- Pure read; `player` optionally folds racials/buffs into the index (same as build()).
+function Synergy.analyzeBuild(build, player)
+    if type(build) ~= "table" then return nil end
+    local c = Synergy.build(player)
+    local inBuild, allocated = {}, 0
+    for id, rank in pairs(build) do
+        if (tonumber(rank) or 0) > 0 then inBuild[id] = true; allocated = allocated + 1 end
+    end
+    if allocated == 0 then return nil end
+
+    -- Theme clusters WITHIN the build (intersect each index bucket with the build).
+    local clusters = {}
+    for _, group in ipairs({ { c.stat, "" }, { c.school, " damage" }, { c.mechanic, "" } }) do
+        for key, list in pairs(group[1]) do
+            local members, n = {}, 0
+            for _, m in ipairs(list) do
+                if inBuild[m] then n = n + 1; members[#members + 1] = m end
+            end
+            if n >= 2 then
+                clusters[#clusters + 1] =
+                    { label = key .. group[2], key = key, count = n, members = members }
+            end
+        end
+    end
+    table.sort(clusters, function(a, b)
+        if a.count ~= b.count then return a.count > b.count end
+        return a.label < b.label
+    end)
+
+    -- Converter bridges this build pays into: the converter is in the build, OR the build
+    -- stacks the converter's source stat (a cluster whose key == the converter's `from`).
+    local clusterKeys = {}
+    for _, cl in ipairs(clusters) do clusterKeys[cl.key:lower()] = true end
+    local chains, seenChain = {}, {}
+    for _, b in ipairs(c.converts or {}) do
+        local relevant = inBuild[b.member] or (b.from and clusterKeys[b.from:lower()])
+        if relevant then
+            local line = ("%s -> %s via %s"):format(b.from, b.to, memberName(b.member))
+            if not seenChain[line] then
+                seenChain[line] = true
+                chains[#chains + 1] = line
+            end
+        end
+    end
+    table.sort(chains)
+
+    -- Capstone = the deepest-tier allocated talent (the payoff), via the planner grid.
+    local capstone
+    local TB = HM.TalentBuild
+    if TB and TB.talents then
+        local tals, bestTier = TB.talents(), -1
+        for id in pairs(inBuild) do
+            local t = tals[id]
+            if t and (t.tier or 0) > bestTier then bestTier = t.tier or 0; capstone = t.name end
+        end
+    end
+
+    -- Plain-language headline, built from the strongest cluster + the payoff.
+    local headline
+    if clusters[1] then
+        headline = ("Stacks %d talents into %s"):format(clusters[1].count, clusters[1].label)
+        if #chains > 0 then headline = headline .. ", which feeds a converter" end
+        if capstone then headline = headline .. (", paying off in " .. capstone) end
+    elseif #chains > 0 then
+        headline = "Feeds a stat converter into a second output lane"
+    elseif capstone then
+        headline = "A focused line into " .. capstone
+    else
+        headline = "A spread build - few shared levers"
+    end
+
+    return { clusters = clusters, chains = chains, capstone = capstone,
+             headline = headline, allocated = allocated }
+end
+
+-- Human-readable lines for an analysis (shared by the planner popup + the pipeline draft).
+-- Each entry is { text = <string> }; the caller colors them. Caps the cluster list.
+function Synergy.analysisLines(analysis, limit)
+    if not analysis then return {} end
+    local out = { { text = analysis.headline } }
+    local shown = 0
+    for _, cl in ipairs(analysis.clusters or {}) do
+        shown = shown + 1
+        if shown > (limit or 3) then break end
+        out[#out + 1] = { text = ("- %d talents push %s"):format(cl.count, cl.label) }
+    end
+    for _, line in ipairs(analysis.chains or {}) do
+        out[#out + 1] = { text = "- Chains: " .. line }
+    end
+    return out
+end
+
 -- The themes available to browse (for a no-argument listing).
 function Synergy.themes(player)
     local c = Synergy.build(player)

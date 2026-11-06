@@ -1,0 +1,62 @@
+# Top-builds listener (DATA-top-builds, zero-PII, review-gated): a daily cron pulls
+# candidate "popular" talent builds from a PUBLIC source, decodes them DATA-ONLY (the
+# addon's TB.decode re-validates; imported content is never executed), analyzes WHY each
+# works through the addon's OWN Synergy engine, and opens a REVIEW ISSUE with the draft.
+# NOTHING auto-ships: a human promotes approved builds into pipeline/data/curated_builds.json
+# (a normal PR), and gen_presets.py merges them as presets at the next build - the same
+# human-review + owner-tag release path as every other data source. Mirrors data-freshness.
+#
+# SECURITY: action refs pinned to full commit SHAs; Dependabot proposes pin bumps. The
+# review draft lives under pipeline/collected/ (gitignored) and is attached as an artifact +
+# posted into the issue body - it is never committed by the bot.
+name: Top builds
+
+on:
+  schedule:
+    - cron: "30 9 * * *"   # daily 09:30 UTC (just after data-freshness)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  listen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: pip install lupa
+
+      - name: Pull + analyze candidate top builds (data-only, synergy-explained)
+        id: listen
+        run: |
+          python pipeline/fetch_top_builds.py --sources crowd,talentsforever,seed
+          if [ -f pipeline/collected/top_builds_review.md ]; then
+            echo "draft=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "draft=false" >> "$GITHUB_OUTPUT"
+            echo "No candidates from any source - nothing to review."
+          fi
+
+      - name: Upload the review draft as an artifact
+        if: steps.listen.outputs.draft == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: top-builds-review
+          path: pipeline/collected/top_builds_review.*
+
+      - name: Open / update the review issue
+        if: steps.listen.outputs.draft == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="Top-builds review $(date -u +%Y-%m-%d)"
+          # Cap the body so a huge draft can't blow the issue size limit.
+          BODY="$(head -c 60000 pipeline/collected/top_builds_review.md)"
+          gh issue create --title "$TITLE" --body "$BODY" \
+            --label "top-builds" 2>/dev/null \
+            || gh issue create --title "$TITLE" --body "$BODY" \
+            || echo "could not open issue (label missing?) - draft is in the artifact"

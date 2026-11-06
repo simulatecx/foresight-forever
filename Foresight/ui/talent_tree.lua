@@ -724,6 +724,29 @@ local function togglePresetMenu(anchorBtn)
                 HM.print("example load failed: " .. tostring(err))
             end
         end)
+        -- WHY IT WORKS: hover decodes the code -> analyzeBuild -> the synergy rationale,
+        -- so a player sees the clusters/chains/payoff BEFORE loading it. Decode is pure.
+        row:SetScript("OnEnter", function(self)
+            local gt = _G.GameTooltip
+            gt:SetOwner(self, "ANCHOR_RIGHT")
+            gt:SetText(("%s - %s"):format(tostring(p.class), tostring(p.spec)), 0.95, 0.82, 0.25)
+            local an
+            if HM.Synergy and HM.Synergy.analyzeBuild and TB() then
+                local b = TB().decode(p.code)
+                if b then an = HM.Synergy.analyzeBuild(b) end
+            end
+            if an then
+                for i, l in ipairs(HM.Synergy.analysisLines(an, 3)) do
+                    gt:AddLine(l.text, i == 1 and 0.85 or 0.7, i == 1 and 0.85 or 0.7,
+                        i == 1 and 0.6 or 0.7, true)
+                end
+            else
+                gt:AddLine("A legal deep build into this tree.", 0.7, 0.7, 0.7, true)
+            end
+            gt:AddLine("Click to load (planner only - nothing is applied).", 0.5, 0.5, 0.5, true)
+            gt:Show()
+        end)
+        row:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
         row:Show()
         y = y + h
     end
