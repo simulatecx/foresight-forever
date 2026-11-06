@@ -258,8 +258,8 @@ local function layout(model)
             local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
             f:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 6, y)
             f:SetWidth(sw - 12)
-            f:SetText(("%d. %s  |cff4ade80%+.1f%s|r"):format(i, row.label,
-                row.pct, row.unit or "%"))
+            f:SetText(("%d. %s  %s"):format(i, row.label,
+                HM.Display.signed(row.pct, ("%+.1f%s"):format(row.pct, row.unit or "%"))))
             y = y - math.max(13, f:GetStringHeight() + 1)
         end
         return y - 8
@@ -596,7 +596,8 @@ local function layout(model)
             local f = acquireFS("ARTWORK", "GameFontHighlightSmall")
             f:SetPoint("TOPLEFT", panel, "TOPLEFT", sx + 6, y)
             f:SetWidth(sw - 12)
-            local topTxt = r.top and ("|cff4ade80top ~%d%%|r"):format(r.top) or "|cff9d9d9d-|r"
+            local topTxt = r.top and HM.Display.color("gain", ("top ~%d%%"):format(r.top))
+                or "|cff9d9d9d-|r"
             f:SetText(("%s: %s  |cff9d9d9d%s|r"):format(r.label, topTxt, r.meta or ""))
             y = y - math.max(13, f:GetStringHeight() + 1)
         end

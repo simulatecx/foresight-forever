@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.65.0 - 2026-11-06 (consolidation: one color helper, one net-swap fold)
+
+Internal simplification - no visible change, less to keep in sync.
+
+- **One home for the gain/loss colors.** Every green-up/red-down number now routes through
+  the shared display grammar (`Display.signed` / the one color table). Zero hardcoded
+  gain/loss hex codes remain outside `display.lua` - including two stragglers the original
+  audit missed (the stale-file warning and the options [ON] badge).
+- **One net-swap fold.** The "minus equipped bundle, plus hovered bundle" stat-folding
+  loop existed in four places (gear compare, the ability-goal verdict, per-spell impacts,
+  the plan-relevance line); it's now a single `Impact.foldStats` with the exclusion rules
+  made explicit, pinned by a new selftest (sign round-trip + pseudo-stat exclusions).
+- Ship gate: Forever 322/322, Classic 276/276.
+
+*Features:* UI-display-grammar, MODEL-impact
+
 ## 0.64.0 - 2026-11-06 (spec hardening: hybrids are hybrids + a Classic Era fix)
 
 A hardening pass on the spec-aware work, aligned with how the community (and other

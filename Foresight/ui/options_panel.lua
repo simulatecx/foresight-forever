@@ -92,7 +92,7 @@ local function renderKey(key, y, innerX, innerW)
         box:SetPoint("TOPRIGHT", row, "TOPRIGHT", 0, 0)
         local function paint()
             local on = HM.Settings.get(key) == true
-            box:SetText(on and "|cff4ade80[ON]|r" or "|cff9d9d9d[off]|r")
+            box:SetText(on and HM.Display.color("gain", "[ON]") or "|cff9d9d9d[off]|r")
         end
         paint()
         row:SetScript("OnClick", function()

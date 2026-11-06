@@ -66,6 +66,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S53b Spec-aware loop default (Arms->bleed, Fury->Flurry) + bleed-tick + crit->bleed description | 3 | ☑ |
 | S54 All-class investment insights: gear-alignment + single-lane converters + spec tags/honesty | 3 | ☑ |
 | S54b Spec hardening: hybrid naming/triplet + deterministic ties + the classic no-id capture fix | 3 | ☑ |
+| S55 Consolidation: color migration complete + Impact.foldStats (UI-CONSOLIDATION items 1-2) | 3 | ☑ |
 
 ## Active / next
 
@@ -89,6 +90,22 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S55 - Consolidation: color migration complete + Impact.foldStats ☑ (2026-11-06) -> 0.65.0
+Owner: "lets finish the color migration + impact fold stats" (UI-CONSOLIDATION items 1-2).
+*Fit & Overlap - no new feature: pure consolidation of S52-audited duplication. No
+behavior change intended; model-side pinned by selftests, UI strings unchanged in shape.*
+☑ COLOR MIGRATION COMPLETE: zero literal |cff4ade80/|cfff87171 outside display.lua
+  (exit-grep-verified). Sign-dependent -> Display.signed; fixed greens (verified/
+  positive-add/[ON]) -> Display.color("gain")/the color table via a gainOpen local in
+  tooltips. Caught 2 sites the original audit missed (init stale-warning, options [ON]).
+☑ Impact.foldStats = THE net-swap fold (replaced 4 copies: compareItems, itemVerdict
+  ability path, itemSpellImpacts, tooltips _planRelevanceLine); abilityFold flag makes
+  the pseudo-stat exclusions (weaponDps/resist.*) explicit. Selftest: +/- round-trip
+  neutral + exclusions pin.
+☐ UI-CONSOLIDATION remaining (backlog): playstyleLabel -> Sim.standing delegate, verdict
+  threshold unify, pool-manager, tooltip abilityHit cache, tooltips.lua provider split
+  (next per owner), onSlash command table.
 
 ### S54b - Spec hardening: hybrids + deterministic ties + the classic capture fix ☑ (2026-11-06) -> 0.64.0
 Owner: "do a hardening check once more - ensure we consider how other apps work: spec

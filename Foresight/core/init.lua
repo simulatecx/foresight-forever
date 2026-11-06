@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.64.0"
+HM.version = "0.65.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -1105,7 +1105,7 @@ if _G.CreateFrame then
                 gen and gen.counts and gen.counts.talents or "?"))
             local stale = HM.staleCodeCheck and HM.staleCodeCheck()
             if stale then
-                printMsg("|cfff87171STALE FILE LIST|r - " .. stale
+                printMsg(HM.Display.color("loss", "STALE FILE LIST") .. " - " .. stale
                     .. ". Fully EXIT and restart the game (a /reload cannot load newly added files).")
             end
             if HM.Guards.inRestrictedContext() then

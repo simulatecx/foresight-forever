@@ -458,6 +458,27 @@ function HM.runSelftest(out)
         end
         return built.graph:value("stat.spellDamage", built.ctx, {}) == 50
     end)())
+    check("foldStats is THE one net-swap fold (sign, labels, ability-fold exclusions)", (function()
+        -- S52 consolidation: the fold loop lived in 4 places; Impact.foldStats replaced
+        -- them with UNCHANGED semantics. Pins: +/- folding nets to the same dimension diff
+        -- as compareItems; abilityFold=true drops weaponDps/resist.* (the abilityHit paths
+        -- must never fold pseudo-stats); plain fold keeps them inert.
+        local F = HM.Impact.foldStats
+        if not F then return false, "no foldStats" end
+        local m1 = F(base, { Strength = 10 }, 1)
+        local d = HM.Impact.diff(base, m1)
+        if #d == 0 then return false, "+10 Strength folded to no change" end
+        -- round-trip: +10 then -10 = no net change
+        local m2 = F(m1, { Strength = 10 }, -1)
+        if #HM.Impact.diff(base, m2) ~= 0 then return false, "fold round-trip not neutral" end
+        -- abilityFold drops pseudo-stats: Fireball's hit must be IDENTICAL after folding
+        -- a weaponDps/resist-only bundle with abilityFold=true
+        local before = HM.Sim.abilityHit(base, 133, {})
+        local m3 = F(base, { weaponDps = 50, ["resist.fire"] = 30 }, 1, "t:", true)
+        local after = HM.Sim.abilityHit(m3, 133, {})
+        return before and after and approx(before.avg, after.avg),
+            "pseudo-stats leaked into the ability fold"
+    end)())
     check("weapon-config swap: dropping a shield for a 2H nets survivability DOWN", (function()
         -- Owner 2026-11-06: a 1H+shield -> 2H swap must show the tankiness lost with the
         -- shield. The UI folds the vacated off-hand into the REMOVED bundle; this pins the

@@ -19,6 +19,10 @@ local BRAND = { r = 0.2, g = 1, b = 0.6 }
 local GREY = { r = 0.62, g = 0.62, b = 0.62 }
 local BODY = { r = 0.9, g = 0.9, b = 0.9 }
 local MAX_AFFECTED_NAMES = 8
+-- The gain-green open tag, read from THE color table (S52 consolidation: no literal
+-- |cff4ade80 outside display.lua). Fixed-meaning greens (verified/positive-add) use this;
+-- sign-DEPENDENT values go through HM.Display.signed instead.
+local gainOpen = "|cff" .. HM.Display.COLORS.gain
 
 -- Talent resolver: classic-API position (1-based tab/tier/column) -> generated talent id ---
 
@@ -108,8 +112,8 @@ local function dimFragment(loadout, talentId, rank, maxRank)
     end)
     if not ok or type(changes) ~= "table" or #changes == 0 then return nil end
     local top = changes[1]
-    local color = top.delta >= 0 and "|cff4ade80" or "|cfff87171"
-    return ("-> for you now: %s%+.1f|r %s"):format(color, top.delta, top.label)
+    return ("-> for you now: %s %s"):format(
+        HM.Display.signed(top.delta, ("%+.1f"):format(top.delta)), top.label)
 end
 
 -- Build the injected block for a talent at the player's current rank. Returns a list
@@ -332,7 +336,7 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
                                     shown = shown + 1
                                     local unit = dlt.before.kind == "heal" and "per cast" or "per hit"
                                     lines[#lines + 1] = {
-                                        text = ("%s: ~%d -> ~%d %s (|cff4ade80%+d|r)%s"):format(
+                                        text = ("%s: ~%d -> ~%d %s (" .. gainOpen .. "%+d|r)%s"):format(
                                             name, math.floor(dlt.before.avg + 0.5),
                                             math.floor(dlt.after.avg + 0.5), unit,
                                             math.floor(dlt.delta + 0.5),
@@ -671,8 +675,11 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
         if ctx and ctx.weaponSwap then
             local w = ctx.weaponSwap
             local net = w.newDps - w.curDps
-            local color = (w.pct >= 0.5 and "|cff4ade80")
-                or (w.pct <= -0.5 and "|cfff87171") or "|cff9d9d9d"
+            -- Three-way: near-zero swaps stay neutral (the +/-0.5% display gate), so this
+            -- keeps its own threshold check and reads the hues from THE color table.
+            local C = HM.Display.COLORS
+            local color = "|cff" .. ((w.pct >= 0.5 and C.gain)
+                or (w.pct <= -0.5 and C.loss) or C.neutral)
             lines[#lines + 1] = {
                 -- S27: the ONE comparison shape (Display grammar), direction-colored.
                 text = "|cff9d9d9dMelee DPS change:|r " .. color
@@ -721,9 +728,9 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
                 r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
             }
             for _, s in ipairs(rows) do
-                local color = s.pct >= 0 and "|cff4ade80" or "|cfff87171"
                 lines[#lines + 1] = {
-                    text = ("  %s %s%+.1f%%|r"):format(s.name, color, s.pct),
+                    text = ("  %s %s"):format(s.name,
+                        HM.Display.signed(s.pct, ("%+.1f%%"):format(s.pct))),
                     r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
                 }
             end
@@ -754,7 +761,7 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
             ctx.speedMs / 1000)
         if wline then
             lines[#lines + 1] = {
-                text = "|cff4ade80" .. wline .. "|r",
+                text = gainOpen .. wline .. "|r",
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
         end
@@ -860,17 +867,9 @@ function Tooltips._planRelevanceLine(loadout, mapped, comparedStats)
     end
     local goals = HM.Plan.goals()
     if #goals == 0 then return nil end
-    local modeled = loadout
-    local function fold(bundle, sign)
-        for stat, v in pairs(bundle or {}) do
-            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps"
-                    and not stat:find("^resist%.") then
-                modeled = modeled:withStatDelta(stat, sign * v, "planswap:" .. stat)
-            end
-        end
-    end
-    fold(comparedStats, -1)
-    fold(mapped, 1)
+    -- ONE net-swap fold (S52: Impact.foldStats replaced the four hand-rolled copies).
+    local modeled = HM.Impact.foldStats(loadout, comparedStats, -1, "planswap:", true)
+    modeled = HM.Impact.foldStats(modeled, mapped, 1, "planswap:", true)
     local bestName, bestDelta, bestKind
     for _, sid in ipairs(goals) do
         local okB, b = pcall(HM.Sim.abilityHit, loadout, sid, {})
@@ -884,7 +883,7 @@ function Tooltips._planRelevanceLine(loadout, mapped, comparedStats)
         end
     end
     if not bestName then return nil end
-    return ("|cff9d9d9dYour '%s' plan:|r this adds |cff4ade80~%+.1f|r per %s (p)")
+    return ("|cff9d9d9dYour '%s' plan:|r this adds " .. gainOpen .. "~%+.1f|r per %s (p)")
         :format(bestName, bestDelta, bestKind == "heal" and "cast" or "hit")
 end
 
@@ -1059,7 +1058,7 @@ function Tooltips.spellLines(spellId, loadout, live)
         local lo, hi = HM.formulas.spellBaseDamage.display(hit.min, hit.max, hit.kind)
         local range = (lo == hi) and ("~%d"):format(lo) or ("~%d-%d"):format(lo, hi)
         lines[#lines + 1] = {
-            text = ("%s for |cff4ade80%s|r with your gear%s"):format(
+            text = ("%s for " .. gainOpen .. "%s|r with your gear%s"):format(
                 hit.kind == "heal" and "Heals" or "Hits", range,
                 hit.presumed and " (p)" or ""),
             r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
@@ -1075,7 +1074,7 @@ function Tooltips.spellLines(spellId, loadout, live)
     -- Power translation: only where spell power actually lands (never on weapon hits).
     if power > 0 and not (hit and hit.kind == "weapon") then
         lines[#lines + 1] = {
-            text = ("Your %s (+%d) adds about |cff4ade80+%d|r to this spell per cast"):format(
+            text = ("Your %s (+%d) adds about " .. gainOpen .. "+%d|r to this spell per cast"):format(
                 powerLabel, power, added),
             r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
         }
@@ -1508,7 +1507,7 @@ local function injectItem(tip)
     -- knows the data is real Forever content at a known patch, not a datamined guess.
     if lines and itemId and HM.gen and HM.gen.items and HM.gen.items[itemId] then
         lines[#lines + 1] = {
-            text = "|cff4ade80" .. (HM.provenance and HM.provenance() or "Forever-verified") .. "|r",
+            text = gainOpen .. (HM.provenance and HM.provenance() or "Forever-verified") .. "|r",
             r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
         }
     end
@@ -1562,7 +1561,7 @@ function Tooltips.imbueLines(spellId, loadout)
     }
     if r.perSwing > 0 then
         lines[#lines + 1] = {
-            text = ("On your %.1fs weapon: |cff4ade80~%+.1f|r damage per swing (%+.2f DPS)")
+            text = ("On your %.1fs weapon: " .. gainOpen .. "~%+.1f|r damage per swing (%+.2f DPS)")
                 :format(speed, r.perSwing, r.perSec),
             r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
         }

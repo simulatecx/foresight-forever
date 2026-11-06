@@ -124,18 +124,28 @@ end
 -- the per-dimension rows, and the per-spell lines can never disagree (the old
 -- two-base-relative subtraction diverged ~0.5pp on non-linear lenses).
 -- net > 0 means A wins that dimension. Rows sorted by |net|, biggest swing first.
-function Impact.compareItems(loadout, statsA, statsB)
+-- THE net-swap fold (S52 consolidation 2026-11-06: this exact loop lived in FOUR places -
+-- compareItems, itemVerdict's ability path, itemSpellImpacts, and the tooltip plan line).
+-- Folds a mapped stat bundle into a loadout as what-if deltas and returns the new loadout.
+-- abilityFold=true excludes the display-only pseudo-stats (weaponDps, resist.*) that the
+-- abilityHit paths must never fold; compareItems keeps them (its dimension diff only reads
+-- real graph nodes, so they are inert there - unchanged behavior, one implementation).
+function Impact.foldStats(loadout, bundle, sign, labelPrefix, abilityFold)
     local modeled = loadout
-    local function fold(bundle, sign)
-        for stat, amount in pairs(bundle or {}) do
-            if type(amount) == "number" and amount ~= 0 then
-                modeled = modeled:withStatDelta(stat, sign * amount,
-                    ("%+g %s (swap)"):format(sign * amount, stat))
-            end
+    for stat, amount in pairs(bundle or {}) do
+        if type(amount) == "number" and amount ~= 0
+                and not (abilityFold and (stat == "weaponDps" or stat:find("^resist%."))) then
+            modeled = modeled:withStatDelta(stat, sign * amount,
+                labelPrefix and (labelPrefix .. stat)
+                    or ("%+g %s (swap)"):format(sign * amount, stat))
         end
     end
-    fold(statsB, -1)
-    fold(statsA, 1)
+    return modeled
+end
+
+function Impact.compareItems(loadout, statsA, statsB)
+    local modeled = Impact.foldStats(loadout, statsB, -1)
+    modeled = Impact.foldStats(modeled, statsA, 1)
     local rows = {}
     for _, c in ipairs(Impact.diff(loadout, modeled)) do
         local net = c.pct or 0
@@ -166,17 +176,8 @@ function Impact.itemVerdict(loadout, mapped, comparedStats, goalId, weaponSwap)
     if abilitySid and HM.Sim and HM.Sim.abilityHit then
         local before = HM.Sim.abilityHit(loadout, abilitySid, {})
         if before and before.avg ~= 0 then
-            local modeled = loadout
-            local function fold(bundle, sign)
-                for stat, v in pairs(bundle or {}) do
-                    if type(v) == "number" and v ~= 0 and stat ~= "weaponDps"
-                            and not stat:find("^resist%.") then
-                        modeled = modeled:withStatDelta(stat, sign * v, "goalswap:" .. stat)
-                    end
-                end
-            end
-            fold(comparedStats, -1)
-            fold(mapped, 1)
+            local modeled = Impact.foldStats(loadout, comparedStats, -1, "goalswap:", true)
+            modeled = Impact.foldStats(modeled, mapped, 1, "goalswap:", true)
             local after = HM.Sim.abilityHit(modeled, abilitySid, {})
             if after then
                 local sp = HM.gen and HM.gen.spells and HM.gen.spells[abilitySid]
@@ -470,17 +471,8 @@ function Impact.itemSpellImpacts(loadout, mapped, comparedStats, opts)
     if #cands == 0 then return {}, false end
 
     -- Net-of-swap modeled loadout (baseline law: minus equipped, plus hovered).
-    local modeled = loadout
-    local function fold(bundle, sign)
-        for stat, v in pairs(bundle or {}) do
-            if type(v) == "number" and v ~= 0 and stat ~= "weaponDps"
-                    and not stat:find("^resist%.") then
-                modeled = modeled:withStatDelta(stat, sign * v, "itemspell:" .. stat)
-            end
-        end
-    end
-    fold(comparedStats, -1)
-    fold(mapped, 1)
+    local modeled = Impact.foldStats(loadout, comparedStats, -1, "itemspell:", true)
+    modeled = Impact.foldStats(modeled, mapped, 1, "itemspell:", true)
 
     local selected = loadout.snapshot and loadout.snapshot.talents
     local rows, presumed, seen = {}, false, {}

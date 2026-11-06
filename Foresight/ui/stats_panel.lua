@@ -74,10 +74,12 @@ local function releaseAll(pool)
     end
 end
 
--- Color positive/negative percentages in what-if lines green/red.
+-- Color positive/negative percentages in what-if lines green/red (hues from THE color
+-- table - S52 consolidation: no literal gain/loss hex outside display.lua).
 local function colorizeDeltas(text)
-    text = text:gsub("(%+%d+%.?%d*%%?)", "|cff4ade80%1|r")
-    text = text:gsub("(%-%d+%.?%d*%%)", "|cfff87171%1|r")
+    local C = HM.Display.COLORS
+    text = text:gsub("(%+%d+%.?%d*%%?)", "|cff" .. C.gain .. "%1|r")
+    text = text:gsub("(%-%d+%.?%d*%%)", "|cff" .. C.loss .. "%1|r")
     return text
 end
 
