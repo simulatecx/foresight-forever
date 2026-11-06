@@ -1,15 +1,16 @@
-## 0.61.0 - bleeds count now, and warriors get an Arms loop
+## 0.62.0 - the engine follows your spec, and bleeds get explained
 
-**Rend and other bleeds finally show up.** Damage-over-time abilities - Rend, Deep Wounds,
-poisons - were being left out of your "biggest hits" because they aren't a single swing.
-Now Foresight scores them as their full total over time and shows it honestly, e.g. "Rend
-~28 over 12s (bleed)". That's real damage that used to be invisible.
+**The class engine now follows where you spec.** Put points into Arms and the Matrix leads
+with the Bleed & Strike engine; put them into Fury and it leads with Flurry - automatically,
+based on where your talent points actually are. Title-click the Matrix title to cycle to
+the other.
 
-**Warriors get an Arms engine - and it's the default.** The class engine card used to show
-only "The Flurry Engine," which is a Fury talent, even for an Arms or still-leveling
-warrior. There's now a default "Bleed & Strike Engine": keep Rend bleeding, let Deep Wounds
-stack from your crits, spend rage on Mortal Strike and Heroic Strike, and punish a dodge
-with Overpower. The Flurry (Fury) loop is still there - click the Matrix title to cycle to
-it.
+**Bleeds are spelled out.** A bleed now shows its per-tick impact and its total - e.g.
+"Rend ~7/3s tick -> ~28 over 12s" - so you can see what each tick does, not just a lump sum.
 
-Ship gate: Forever 314 checks, Classic 268. Display-and-advice only, official APIs only.
+**Crit -> bleed, explained.** The Arms engine now describes the crit scaling that drives it:
+"Deep Wounds makes each crit add a bleed on top; more crit = more bleed uptime." We're
+honest about the gap - Deep Wounds' bleed damage is a talent proc we haven't decoded yet,
+so there's no invented number, but the crit relationship is real and now stated.
+
+Ship gate: Forever 315 checks, Classic 269. Display-and-advice only, official APIs only.

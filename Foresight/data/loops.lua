@@ -111,6 +111,7 @@ HM.loops = {
         -- warrior shouldn't be shown Fury's Flurry as their engine). Bleeds tick between
         -- swings; rage spends on strikes. Fury players title-click to cycle to Flurry.
         id = "arms", classToken = "WARRIOR", name = "The Bleed & Strike Engine",
+        specTab = "Arms",  -- the Matrix leads with this loop when you've invested in Arms
         confidence = "classic-presumed",
         enablers = { "Battle Shout", "Rend" },
         engine = { "Deep Wounds", "Overpower" },
@@ -118,10 +119,23 @@ HM.loops = {
         insight = "Keep Rend bleeding and let Deep Wounds stack from your crits, then spend "
             .. "rage on Mortal Strike and Heroic Strike - punish a dodge with Overpower. "
             .. "Your bleeds tick between every swing, so they add up even while you auto-attack.",
-        compute = loopCompute({ "Mortal Strike", "Heroic Strike", "Overpower", "Rend" }),
+        compute = function(loadout)
+            local lines = loopCompute({ "Mortal Strike", "Heroic Strike", "Overpower", "Rend" })(loadout)
+            -- CRIT -> BLEED (owner 2026-11-06: "crits to bleed"): Deep Wounds (Arms talent)
+            -- turns each crit into an extra bleed - the Arms crit-scaling loop. Its bleed
+            -- damage is a talent PROC we haven't decoded, so no EV is claimed; the crit
+            -- RELATIONSHIP is real and that's what we describe (honest-gap law).
+            local crit = loadout.snapshot and loadout.snapshot.stats
+                and loadout.snapshot.stats.meleeCritPct
+            if crit then
+                lines[#lines + 1] = ("Crit -> bleed: Deep Wounds makes each crit (%.0f%% now) add a bleed on top; more crit = more bleed uptime (proc damage not yet decoded, no EV)"):format(crit)
+            end
+            return lines
+        end,
     },
     {
         id = "flurry", classToken = "WARRIOR", name = "The Flurry Engine (Fury)",
+        specTab = "Fury",  -- the Matrix leads with this once you've invested in Fury
         confidence = "classic-presumed",
         enablers = { "Battle Shout" },
         engine = { "Flurry" },

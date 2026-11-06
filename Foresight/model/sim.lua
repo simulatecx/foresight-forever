@@ -358,6 +358,8 @@ function Sim.topOutputs(loadout, spellIds, topN)
                     crit = hit.avg * (hit.critMult or 1), presumed = hit.presumed,
                     weapon = hit.kind == "weapon",
                     dot = hit.kind == "dot", durationSec = hit.durationSec,
+                    perTick = hit.perTick, tickSec = hit.ticks and hit.durationSec
+                        and (hit.ticks > 0 and hit.durationSec / hit.ticks) or nil,
                 }
             end
         end

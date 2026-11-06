@@ -374,6 +374,30 @@ end
 
 -- The character's current biggest hits (learned abilities ranked by output) - the "what
 -- matters right now" lead for the engine card. {} when the spellbook/sim aren't available.
+-- The talent TREE the player has invested the most points in (the de-facto spec), by its
+-- display name ("Arms"/"Fury"/...) - nil when nothing is spent. Lets the Matrix LEAD with
+-- the loop that matches where you're building (owner 2026-11-06: "invest in Arms -> lead
+-- that way, Fury -> Flurry"). Reads the snapshot's own talents; nodeId on Forever /
+-- talentId on classic, each mapped to its tab through the shipped grid.
+function PanelModel.dominantSpec(loadout)
+    local talents = loadout and loadout.snapshot and loadout.snapshot.talents
+    local tabs = HM.gen and HM.gen.talentTabs
+    local grid = (HM.gen and (HM.gen.foreverTalents or HM.gen.talents)) or {}
+    if type(talents) ~= "table" or type(tabs) ~= "table" then return nil end
+    local byTab = {}
+    for _, t in ipairs(talents) do
+        local id = t.nodeId or t.talentId
+        local def = id and grid[id]
+        local tab = def and def.tab
+        if tab then byTab[tab] = (byTab[tab] or 0) + (tonumber(t.rank) or 0) end
+    end
+    local bestTab, bestPts
+    for tab, pts in pairs(byTab) do
+        if pts > 0 and (not bestPts or pts > bestPts) then bestTab, bestPts = tab, pts end
+    end
+    return bestTab and tabs[bestTab] and tabs[bestTab].name or nil
+end
+
 function PanelModel._topHits(loadout, n)
     n = n or 3
     if not (HM.Spellbook and HM.Spellbook.known and HM.Sim and HM.Sim.topOutputs) then
@@ -435,7 +459,17 @@ function PanelModel.matrixModel(loadout, activeLoopId, pathways, focus)
     local loops = HM.loopsForClass and HM.loopsForClass(snapshot.classToken) or {}
     local active
     for _, l in ipairs(loops) do
-        if l.id == activeLoopId then active = l end
+        if l.id == activeLoopId then active = l end  -- an explicit title-click wins
+    end
+    if not active then
+        -- Spec-aware DEFAULT (owner 2026-11-06): lead with the loop matching the tree you've
+        -- invested in - Arms points -> the Bleed & Strike engine, Fury points -> Flurry.
+        local spec = PanelModel.dominantSpec(loadout)
+        if spec then
+            for _, l in ipairs(loops) do
+                if l.specTab == spec then active = l; break end
+            end
+        end
     end
     active = active or loops[1]
     local eco
@@ -698,10 +732,14 @@ function PanelModel.build(loadout)
                 for _, o in ipairs(list) do
                     local value
                     if o.dot then
-                        -- A bleed/poison: its TOTAL over the duration, not a single hit
-                        -- (owner 2026-11-06: "note things like rend"). No crit on classic bleeds.
-                        value = ("~%d over %ds (bleed)%s"):format(math.floor(o.avg + 0.5),
-                            math.floor((o.durationSec or 0) + 0.5), o.presumed and " (p)" or "")
+                        -- A bleed/poison: per-TICK impact + the TOTAL over the duration, not a
+                        -- single hit (owner 2026-11-06: "describe the impact of rend bleed
+                        -- ticks"). No crit on classic bleeds.
+                        local tickSec = math.floor((o.tickSec or 3) + 0.5)
+                        value = ("~%d/%ds tick -> ~%d over %ds (bleed)%s"):format(
+                            math.floor((o.perTick or 0) + 0.5), tickSec,
+                            math.floor(o.avg + 0.5), math.floor((o.durationSec or 0) + 0.5),
+                            o.presumed and " (p)" or "")
                     else
                         local lo, hi = HM.formulas.spellBaseDamage.display(o.min, o.max, o.kind)
                         local crit = (o.critPct and o.critPct > 0)

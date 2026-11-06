@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.62.0 - 2026-11-06 (the engine follows your spec + bleed ticks + crit->bleed)
+
+- **The engine card follows where you spec.** Put points in Arms and the Matrix leads with
+  the Bleed & Strike engine; put them in Fury and it leads with Flurry - automatically,
+  from where your talent points actually are. (Title-click still cycles to the other.)
+- **Bleed ticks are spelled out.** A bleed now shows its per-tick impact and its total,
+  e.g. "Rend ~7/3s tick -> ~28 over 12s", so you can see what each tick is doing - not
+  just a lump sum.
+- **Crit -> bleed is described.** The Arms engine now explains the crit-scaling that makes
+  it tick: "Deep Wounds makes each crit add a bleed on top; more crit = more bleed uptime."
+  Honest about the gap - Deep Wounds' bleed damage is a talent proc we haven't decoded yet,
+  so no fabricated number, but the crit relationship is real and now stated.
+- Ship gate: Forever 315/315, Classic 269/269.
+
+*Features:* SIM-engine, MODEL-ability-outcomes, UI-matrix-panel
+
 ## 0.61.0 - 2026-11-06 (bleeds like Rend now count + an Arms warrior loop)
 
 Answering an Arms warrior's two good questions: why "Flurry", and where's Rend.

@@ -1758,6 +1758,28 @@ function HM.runSelftest(out)
         return hit.kind == "dot" and hit.ticks == ticks
             and approx(hit.avg, sp.dotTick * ticks)
     end)())
+    check("spec-aware loop: Arms points -> the Matrix leads with the Arms loop", (function()
+        -- Owner 2026-11-06: "invest in Arms -> lead that way, Fury -> Flurry." The Matrix
+        -- default loop follows the tree you've put points in. Data-located Arms talent.
+        local PM = HM.PanelModel
+        if not (PM and PM.dominantSpec and PM.matrixModel) then return false, "no PanelModel" end
+        local grid = gen.foreverTalents or gen.talents
+        local tabs = gen.talentTabs
+        local armsTab
+        for tid, tab in pairs(tabs) do if tab.name == "Arms" then armsTab = tid break end end
+        local armsTalent
+        for id, def in pairs(grid) do
+            if type(def) == "table" and def.tab == armsTab then armsTalent = id break end
+        end
+        if not armsTalent then return false, "no Arms-tab talent in data" end
+        local snap = testSnapshot()
+        snap.classToken = "WARRIOR"
+        snap.talents = { { nodeId = armsTalent, rank = 3 } }
+        local lo = HM.Loadout.fromSnapshot(snap)
+        if PM.dominantSpec(lo) ~= "Arms" then return false, "dominantSpec not Arms" end
+        local m = PM.matrixModel(lo)
+        return m and m.eco and m.eco.id == "arms", m and m.eco and ("loop=" .. tostring(m.eco.id))
+    end)())
     -- One trait node with exactly one +damage% op touching Fireball(133), found from
     -- the shipped data (never hardcoded), backs the spellmod/delta/hover checks.
     local dmgNodeId, dmgNodeOp

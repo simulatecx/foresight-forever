@@ -63,6 +63,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S51 Understand-your-character onboarding + armory top-builds source + listener dedup | 3 | ☑ |
 | S52 FS character-button reliability fix + shared-color consolidation start (duplication audit) | 3 | ☑ |
 | S53 DoT/bleed scoring (Rend) in the output rankings + an Arms warrior loop | 3 | ☑ |
+| S53b Spec-aware loop default (Arms->bleed, Fury->Flurry) + bleed-tick + crit->bleed description | 3 | ☑ |
 
 ## Active / next
 
@@ -86,6 +87,23 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S53b - Spec-aware loop default + bleed-tick + crit->bleed description ☑ (2026-11-06) -> 0.62.0
+Owner (follow-on): "if we invest in arms it should lead that way, or fury to flurry; and
+describe the impact of rend bleed ticks and crits to bleed."
+*Fit & Overlap - Category SIM/UI. Verdict: ENHANCE panel_model (dominantSpec + loop pick)
++ loops.lua (crit->bleed line) + the DoT render (per-tick). No new data. Display-only.*
+☑ SPEC-AWARE LOOP DEFAULT: `PanelModel.dominantSpec(loadout)` = the tab name with the most
+  talent points (snapshot talents -> grid -> tab); `matrixModel` leads with the loop whose
+  `specTab` matches (Arms->arms, Fury->flurry) when no explicit title-click. Loops tagged
+  `specTab`. Selftest: an Arms-invested warrior -> the arms loop. Verified both: Arms->Bleed
+  & Strike, Fury->Flurry.
+☑ BLEED-TICK DESCRIPTION: the DoT render now shows per-tick + total ("Rend ~7/3s tick ->
+  ~28 over 12s"); abilityHit carries perTick/tickSec through topOutputs.
+☑ CRIT->BLEED: the Arms loop compute adds the Deep Wounds crit->bleed line driven by the
+  player's crit% - honest-gap (proc damage not decoded, no EV, the crit relationship stated).
+☐ FOLLOW-UP: Arms/Fury/Prot loops for the other hybrid classes; decode Deep Wounds / bleed
+  proc EV (DATA-proc-families) so the crit->bleed line can carry a number.
 
 ### S53 - DoT/bleed scoring (Rend) + an Arms warrior loop ☑ (2026-11-06) -> 0.61.0
 Owner (screenshot, level-15 Arms warrior): "what does this flurry comment mean as an Arms
