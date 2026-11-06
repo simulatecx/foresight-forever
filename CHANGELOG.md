@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.64.0 - 2026-11-06 (spec hardening: hybrids are hybrids + a Classic Era fix)
+
+A hardening pass on the spec-aware work, aligned with how the community (and other
+addons) actually reason about specs.
+
+- **Hybrid builds are named hybrids.** A 20/21 split no longer reads as "a Fury warrior
+  by one point" - Foresight now builds the community-standard X/Y/Z triplet and calls a
+  near-even split what it is: "Arms/Fury hybrid (20/21/0)". A 31/20 stays named by its
+  deep tree, like players name it. Hybrids try BOTH their trees' engines (primary first),
+  and the engine card's note names the hybrid honestly.
+- **Classic Era fix: spec detection actually works there now.** The classic client's
+  talent capture carries no internal ids - just names - so the spec-aware engine
+  selection was silently doing nothing on Classic Era. Spec resolution now falls back to
+  name matching within your own class's trees.
+- **Deterministic ties.** Equal points in two trees now always resolve the same way (tab
+  display order) instead of varying by table iteration.
+- **The insights read leads with your spec identity** - "Your build - Arms (12/0/0): ..."-
+  the way Pawn/DCS key everything off spec.
+- Ship gate: Forever 321/321, Classic 275/275 (new: classic no-id capture resolution,
+  tie determinism, hybrid naming + hybrid loop pick).
+
+*Features:* UI-matrix-panel, UI-insights, SIM-engine
+
 ## 0.63.0 - 2026-11-06 (every class gets investment insights: talents + skills + gear)
 
 A roster-law pass (every class checked against the client's own roster) plus an audit of

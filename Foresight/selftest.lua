@@ -1830,6 +1830,85 @@ function HM.runSelftest(out)
         return fireNote ~= nil and fireNote:find("Fire", 1, true) ~= nil and frostNote == nil,
             ("fire=%s frost=%s"):format(tostring(fireNote), tostring(frostNote))
     end)())
+    check("spec profile: the classic NO-ID capture (name-only talents) still resolves", (function()
+        -- Hardening catch 2026-11-06: the classic client's live capture returns entries
+        -- with name/rank/tier only - NO talentId, NO nodeId - so an id-only resolver
+        -- silently returned nil on Classic Era. specProfile must resolve by NAME within
+        -- the player's own class tabs. Data-located warrior talent, both flavors.
+        local grid = gen.foreverTalents or gen.talents
+        local TB = HM.TalentBuild
+        local cid = TB.classIdFor("WARRIOR")
+        local tabs = TB.tabsForClass(cid)
+        local nm
+        for id, def in pairs(grid) do
+            if type(def) == "table" and def.tab == tabs[1] and def.name then nm = def.name break end
+        end
+        if not nm then return false, "no warrior talent name in data" end
+        local snap = testSnapshot()
+        snap.classToken = "WARRIOR"
+        snap.talents = { { name = nm, rank = 3 } } -- the REAL classic capture shape
+        local p = HM.PanelModel.specProfile(HM.Loadout.fromSnapshot(snap))
+        return p ~= nil and p.primary ~= nil and p.triplet ~= nil,
+            p and p.label or "nil profile"
+    end)())
+    check("spec profile: ties are deterministic + a 20/21 split is a NAMED hybrid", (function()
+        -- S54b (owner: "consider how other apps work - spec aware, hybrid specs"). A
+        -- near-even split must read as a hybrid with its X/Y/Z triplet, never "the Fury
+        -- warrior by one point"; equal points resolve by tab display order every time.
+        local grid = gen.foreverTalents or gen.talents
+        local TB = HM.TalentBuild
+        local cid = TB.classIdFor("WARRIOR")
+        local tabs = TB.tabsForClass(cid)
+        local function talentIn(tabId)
+            for id, def in pairs(grid) do
+                if type(def) == "table" and def.tab == tabId then return id end
+            end
+        end
+        local a, b = talentIn(tabs[1]), talentIn(tabs[2])
+        if not (a and b) then return false, "missing tab talents" end
+        local snap = testSnapshot()
+        snap.classToken = "WARRIOR"
+        -- 4/5: a real co-investment split -> hybrid (secondary 4/5 = 80% and >= ... wait
+        -- hybrid needs secondary >= 5: use 5/6 to clear both gates.
+        snap.talents = { { nodeId = a, rank = 5 }, { nodeId = b, rank = 6 } }
+        local p = HM.PanelModel.specProfile(HM.Loadout.fromSnapshot(snap))
+        if not (p and p.hybrid) then return false, "5/6 split not hybrid: " .. tostring(p and p.label) end
+        if not p.label:find("hybrid", 1, true) then return false, "label lacks hybrid: " .. p.label end
+        -- tie determinism: equal points -> primary = first tab in display order, stable
+        snap.talents = { { nodeId = a, rank = 3 }, { nodeId = b, rank = 3 } }
+        local lo = HM.Loadout.fromSnapshot(snap)
+        local p1 = HM.PanelModel.specProfile(lo)
+        local p2 = HM.PanelModel.specProfile(lo)
+        local firstName = gen.talentTabs[tabs[1]].name
+        return p1 and p2 and p1.primary == firstName and p2.primary == firstName,
+            ("tie primary=%s want=%s"):format(tostring(p1 and p1.primary), tostring(firstName))
+    end)())
+    check("hybrid loop pick: a 5/6 Arms/Fury warrior gets a warrior engine + hybrid note", (function()
+        -- The hybrid tries BOTH its trees' engines (primary first) and the note NAMES the
+        -- hybrid with its triplet instead of claiming a single identity.
+        local grid = gen.foreverTalents or gen.talents
+        local TB = HM.TalentBuild
+        local cid = TB.classIdFor("WARRIOR")
+        local tabs = TB.tabsForClass(cid)
+        local function talentIn(tabId)
+            for id, def in pairs(grid) do
+                if type(def) == "table" and def.tab == tabId then return id end
+            end
+        end
+        local snap = testSnapshot()
+        snap.classToken = "WARRIOR"
+        snap.talents = { { nodeId = talentIn(tabs[1]), rank = 5 },
+                         { nodeId = talentIn(tabs[2]), rank = 6 } }
+        local m = HM.PanelModel.matrixModel(HM.Loadout.fromSnapshot(snap))
+        if not (m and m.eco) then return false, "no eco" end
+        -- Fury (6) is primary -> flurry; Arms (5) is the hybrid partner; either engine is
+        -- acceptable as long as the note says hybrid + the triplet.
+        local okLoop = m.eco.id == "flurry" or m.eco.id == "arms"
+        local note = m.eco.specNote or ""
+        return okLoop and note:find("hybrid", 1, true) ~= nil
+            and note:find("5", 1, true) ~= nil,
+            ("loop=%s note=%s"):format(tostring(m.eco.id), note)
+    end)())
     check("spec-aware loop: Arms points -> the Matrix leads with the Arms loop", (function()
         -- Owner 2026-11-06: "invest in Arms -> lead that way, Fury -> Flurry." The Matrix
         -- default loop follows the tree you've put points in. Data-located Arms talent.

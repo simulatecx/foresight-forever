@@ -103,8 +103,13 @@ function Insights.forCharacter(loadout)
     if hasBuild and HM.Synergy and HM.Synergy.analyzeBuild then
         local an = HM.Synergy.analyzeBuild(build, { classToken = classToken,
             raceId = snap.raceId })
+        -- Lead the build line with the SPEC IDENTITY the community uses (the X/Y/Z
+        -- triplet; hybrids NAMED hybrids - S54b, "how other apps work").
+        local prof = HM.PanelModel and HM.PanelModel.specProfile
+            and HM.PanelModel.specProfile(loadout)
         if an and an.headline then
-            add("Your build: " .. an.headline .. ".", "body")
+            add(("Your build%s: %s."):format(prof and (" - " .. prof.label) or "",
+                an.headline), "body")
             for _, line in ipairs((an.chains and { an.chains[1] }) or {}) do
                 if line then add("  Chains: " .. line, "muted") end
             end

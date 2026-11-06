@@ -374,28 +374,79 @@ end
 
 -- The character's current biggest hits (learned abilities ranked by output) - the "what
 -- matters right now" lead for the engine card. {} when the spellbook/sim aren't available.
--- The talent TREE the player has invested the most points in (the de-facto spec), by its
--- display name ("Arms"/"Fury"/...) - nil when nothing is spent. Lets the Matrix LEAD with
--- the loop that matches where you're building (owner 2026-11-06: "invest in Arms -> lead
--- that way, Fury -> Flurry"). Reads the snapshot's own talents; nodeId on Forever /
--- talentId on classic, each mapped to its tab through the shipped grid.
-function PanelModel.dominantSpec(loadout)
-    local talents = loadout and loadout.snapshot and loadout.snapshot.talents
-    local tabs = HM.gen and HM.gen.talentTabs
+-- SPEC PROFILE (S54b hardening): the player's talent investment per TREE, the way other
+-- apps and the community reason about it - the X/Y/Z triplet, a primary tree, and HYBRID
+-- detection (a 20/21 split is a hybrid, not "a Fury warrior by one point"). Returns nil
+-- when nothing is spent, else { primary, secondary, hybrid, label, triplet, points }.
+-- Resolution is three-way robust:
+--   Forever: snapshot talents carry nodeId -> foreverTalents grid.
+--   Classic: the live capture carries NO ids at all (name/rank/tier only - hardening
+--   catch 2026-11-06), so entries resolve by NAME against this class's own tabs.
+-- Ties are DETERMINISTIC: the class's tab display order (TB.tabsForClass) breaks them.
+-- Hybrid rule: the second tree is a real co-investment (>= 5 pts) at >= 80% of the
+-- primary - "Arms 31/20" stays Arms; "20/21" reads as the hybrid it is.
+function PanelModel.specProfile(loadout)
+    local snap = loadout and loadout.snapshot
+    local talents = snap and snap.talents
+    local tabsGen = HM.gen and HM.gen.talentTabs
     local grid = (HM.gen and (HM.gen.foreverTalents or HM.gen.talents)) or {}
-    if type(talents) ~= "table" or type(tabs) ~= "table" then return nil end
+    local TB = HM.TalentBuild
+    if type(talents) ~= "table" or type(tabsGen) ~= "table" or not TB then return nil end
+    -- This class's tabs in display order (the deterministic frame for sums + ties).
+    local cid = snap.classToken and TB.classIdFor and TB.classIdFor(snap.classToken)
+    local tabOrder = (cid and TB.tabsForClass and TB.tabsForClass(cid)) or {}
+    if #tabOrder == 0 then return nil end
+    local inClass = {}
+    for _, tid in ipairs(tabOrder) do inClass[tid] = true end
+    -- Name -> tab map, THIS class's tabs only (name resolution must never cross classes).
+    local nameTab = {}
+    for id, def in pairs(grid) do
+        if type(def) == "table" and def.name and inClass[def.tab] then
+            nameTab[def.name] = def.tab
+        end
+    end
     local byTab = {}
     for _, t in ipairs(talents) do
         local id = t.nodeId or t.talentId
         local def = id and grid[id]
-        local tab = def and def.tab
+        local tab = (def and inClass[def.tab] and def.tab)
+            or (t.name and nameTab[t.name])  -- the classic no-id capture path
         if tab then byTab[tab] = (byTab[tab] or 0) + (tonumber(t.rank) or 0) end
     end
-    local bestTab, bestPts
-    for tab, pts in pairs(byTab) do
-        if pts > 0 and (not bestPts or pts > bestPts) then bestTab, bestPts = tab, pts end
+    local points, total = {}, 0
+    for _, tid in ipairs(tabOrder) do
+        local pts = byTab[tid] or 0
+        points[#points + 1] = { tab = tid, name = (tabsGen[tid] and tabsGen[tid].name) or "?",
+                                pts = pts }
+        total = total + pts
     end
-    return bestTab and tabs[bestTab] and tabs[bestTab].name or nil
+    if total == 0 then return nil end
+    -- Rank by points; display order breaks ties (stable: a 1/1 split is "first tree").
+    local ranked = {}
+    for i, p in ipairs(points) do ranked[i] = p end
+    table.sort(ranked, function(a, b)
+        if a.pts ~= b.pts then return a.pts > b.pts end
+        for _, p in ipairs(points) do -- display order
+            if p == a then return true elseif p == b then return false end
+        end
+        return false
+    end)
+    local prim, sec = ranked[1], ranked[2]
+    local hybrid = sec and sec.pts >= 5 and sec.pts >= prim.pts * 0.8 or false
+    local tript = {}
+    for _, p in ipairs(points) do tript[#tript + 1] = tostring(p.pts) end
+    local triplet = table.concat(tript, "/")
+    local label = hybrid
+        and ("%s/%s hybrid (%s)"):format(prim.name, sec.name, triplet)
+        or ("%s (%s)"):format(prim.name, triplet)
+    return { primary = prim.name, secondary = sec and sec.pts > 0 and sec.name or nil,
+             hybrid = hybrid, label = label, triplet = triplet, points = points }
+end
+
+-- Back-compat thin wrapper (0.62.0 callers/selftests): the primary tree's name.
+function PanelModel.dominantSpec(loadout)
+    local p = PanelModel.specProfile(loadout)
+    return p and p.primary or nil
 end
 
 function PanelModel._topHits(loadout, n)
@@ -461,24 +512,34 @@ function PanelModel.matrixModel(loadout, activeLoopId, pathways, focus)
     for _, l in ipairs(loops) do
         if l.id == activeLoopId then active = l end  -- an explicit title-click wins
     end
-    local dominantSpec = PanelModel.dominantSpec(loadout)
-    if not active then
-        -- Spec-aware DEFAULT (owner 2026-11-06): lead with the loop matching the tree you've
-        -- invested in - Arms points -> the Bleed & Strike engine, Fury points -> Flurry.
-        if dominantSpec then
+    local profile = PanelModel.specProfile(loadout)
+    if not active and profile then
+        -- Spec-aware DEFAULT (owner 2026-11-06, hardened S54b for HYBRIDS the way other
+        -- apps reason: a 20/21 split tries BOTH its trees' engines, primary first, instead
+        -- of pretending the one-point lead is an identity).
+        local tryTabs = { profile.primary }
+        if profile.hybrid and profile.secondary then tryTabs[#tryTabs + 1] = profile.secondary end
+        for _, want in ipairs(tryTabs) do
             for _, l in ipairs(loops) do
-                if l.specTab == dominantSpec then active = l; break end
+                if l.specTab == want then active = l; break end
             end
+            if active then break end
         end
     end
     active = active or loops[1]
-    -- Honesty note (S54): when you're building into a tree we have NO curated engine for
-    -- (a Fire mage seeing the Frost Shatter loop), say so instead of implying this IS your
-    -- spec's engine. Only when the mismatch is real (both sides known and different).
+    -- Honesty note (S54/S54b): never imply the shown engine IS your tree's. A hybrid is
+    -- NAMED a hybrid (with its triplet); a mismatch says the curated gap out loud.
     local specNote
-    if active and dominantSpec and active.specTab and active.specTab ~= dominantSpec then
-        specNote = ("You're building into %s - no curated %s engine yet; showing the %s loop.")
-            :format(dominantSpec, dominantSpec, active.specTab)
+    if active and profile then
+        local matchesPrimary = active.specTab == profile.primary
+        local matchesSecondary = profile.hybrid and active.specTab == profile.secondary
+        if profile.hybrid and (matchesPrimary or matchesSecondary) then
+            specNote = ("You're building a %s - showing its %s engine.")
+                :format(profile.label, active.specTab)
+        elseif active.specTab and not matchesPrimary and not matchesSecondary then
+            specNote = ("You're building %s - no curated %s engine yet; showing the %s loop.")
+                :format(profile.label, profile.primary, active.specTab)
+        end
     end
     local eco
     if active then

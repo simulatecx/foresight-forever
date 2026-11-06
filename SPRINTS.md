@@ -65,6 +65,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S53 DoT/bleed scoring (Rend) in the output rankings + an Arms warrior loop | 3 | ☑ |
 | S53b Spec-aware loop default (Arms->bleed, Fury->Flurry) + bleed-tick + crit->bleed description | 3 | ☑ |
 | S54 All-class investment insights: gear-alignment + single-lane converters + spec tags/honesty | 3 | ☑ |
+| S54b Spec hardening: hybrid naming/triplet + deterministic ties + the classic no-id capture fix | 3 | ☑ |
 
 ## Active / next
 
@@ -88,6 +89,26 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S54b - Spec hardening: hybrids + deterministic ties + the classic capture fix ☑ (2026-11-06) -> 0.64.0
+Owner: "do a hardening check once more - ensure we consider how other apps work: spec
+aware, hybrid specs etc."
+*Fit & Overlap - Category UI/SIM. Verdict: HARDEN S53b/S54 (specProfile replaces the naive
+dominantSpec; dominantSpec stays as a wrapper). No new data. Display-only.*
+☑ HARDENING CATCH (real bug): the CLASSIC client's live talent capture returns NO ids at
+  all (name/rank/tier only - TalentAPI classic path) -> the id-only dominantSpec silently
+  returned nil on Classic Era; spec-aware selection was dead there. specProfile resolves
+  by NAME within the player's own class tabs as the fallback. Selftest pins the real
+  no-id capture shape on both flavors.
+☑ HYBRID SPECS (how other apps/community reason): `PanelModel.specProfile` builds the
+  X/Y/Z triplet; hybrid = secondary >= 5 pts and >= 80% of primary ("Arms/Fury hybrid
+  (20/21/0)"); a 31/20 stays named by its deep tree. Hybrids try BOTH trees' engines
+  (primary first); eco.specNote NAMES the hybrid with its triplet.
+☑ DETERMINISTIC TIES: equal points resolve by tab display order (was pairs() iteration =
+  nondeterministic across sessions).
+☑ Insights build line leads with the spec identity ("Your build - Arms (12/0/0): ...").
+☐ FOLLOW-UP: a 31-point "deep capstone" signal could sharpen naming further (the classic
+  "31/20 = the 31 tree" convention is approximated by the 80% rule today).
 
 ### S54 - All-class investment insights (talents + skills + gear) ☑ (2026-11-06) -> 0.63.0
 Owner: "analyze what other addons provide - we want to provide insights; run an analysis

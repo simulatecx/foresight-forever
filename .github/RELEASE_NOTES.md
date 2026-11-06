@@ -1,24 +1,17 @@
-## 0.63.0 - investment insights for every class
+## 0.64.0 - hybrids are hybrids
 
-We checked every class against what you're actually investing in - talents, skills, and
-gear - and closed the gaps.
+A hardening pass on spec awareness, matched to how players actually talk about builds.
 
-**Gear check: does what you wear back what you built?**
-Foresight now compares your gear's dominant stat against what actually moves your build.
-If they disagree, it tells you plainly - "your gear carries mostly Spirit, but Strength is
-what moves your Melee DPS" - with the real numbers for both. If they agree, it says that
-too. (Stamina is never judged - surviving is always a valid investment.) See it in
-`/foresight insights`.
+**Hybrid builds get named properly.** A 20/21 split now reads "Arms/Fury hybrid (20/21/0)"
+with the familiar X/Y/Z triplet - not "a Fury warrior by one point." Deep builds like
+31/20 stay named by their deep tree, the way everyone names them. Hybrid characters get an
+engine from either of their trees, honestly labeled.
 
-**Every class gets its hidden synergy.** Paladins, Hunters, and Druids each have a talent
-that converts one stat into another kind of power (like Champion of the Light turning
-Intellect into spell damage) - and Foresight now points it out: "Intellect gear counts
-twice for you."
+**Classic Era fix.** Spec-aware engine selection silently didn't work on Classic Era (the
+classic client reports talents by name only, and we were matching by internal id). Fixed -
+your Era characters now get the spec-matched engine too.
 
-**The engine card knows your tree - for every class.** Frost mages, Enhancement shamans,
-Assassination rogues, Retribution paladins, Shadow priests, and Affliction warlocks: the
-class engine now leads with the loop that matches where your points are. And if you're
-building into a tree we haven't curated an engine for yet, it says so honestly instead of
-pretending.
+**Small but real:** equal points in two trees now always resolve the same way, and the
+character insights read leads with your spec identity ("Your build - Arms (12/0/0): ...").
 
-Ship gate: Forever 318 checks, Classic 272. Display-and-advice only, official APIs only.
+Ship gate: Forever 321 checks, Classic 275. Display-and-advice only, official APIs only.
