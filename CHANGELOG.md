@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.60.0 - 2026-11-06 (the FS character button, made reliable + a shared-color cleanup)
+
+- **The Foresight button on the character sheet is reliable now.** On the launch client,
+  the FS / Share / Options buttons could fail to appear if the character frame's show
+  signal was missed. Foresight now hooks the character-sheet open directly and re-checks
+  for a few seconds after login, so the buttons show whenever your character sheet is
+  open - with the slash commands and the talent-frame button as independent ways in. A
+  diagnostic is journaled so any remaining edge case is easy to pin.
+- **Internal cleanup (no visible change).** Started a shared-element pass from a duplication
+  audit: the green-up/red-down coloring now goes through one helper (`Display.signed`)
+  instead of being hand-written in each spot, so the look stays consistent and there's
+  less to keep in sync. The rest of the audit is tracked for in-game-verified follow-ups.
+- Ship gate: Forever 313/313, Classic 267/267.
+
+*Features:* UI-stats-panel, UI-display-grammar
+
 ## 0.59.0 - 2026-11-06 (understand your character + the armory source + listener dedup)
 
 - **"Understand your character" for new players.** The first time you log in with

@@ -61,6 +61,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S49 Why-a-build-works synergy analysis + daily top-builds listener + button robustness | 3 | ☑ |
 | S50 Weapon-config survivability comparison + hidden cross-tree synergy insights | 3 | ☑ |
 | S51 Understand-your-character onboarding + armory top-builds source + listener dedup | 3 | ☑ |
+| S52 FS character-button reliability fix + shared-color consolidation start (duplication audit) | 3 | ☑ |
 
 ## Active / next
 
@@ -84,6 +85,32 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S52 - FS character-button reliability + shared-color consolidation start ☑ (2026-11-06) -> 0.60.0
+Owner (screenshot): "I don't see the FS button for character" + "a hardening check across
+the app - are we using common elements for calculations/display so we aren't duplicating;
+use feature-triage to ensure we aren't causing duplication; it should simplify overall."
+*Fit & Overlap - Category UI. Verdict: BUG FIX (stats_panel furniture visibility) + ENHANCE
+(Display sign-color helper). No new feature id. Complements UI-stats-panel + UI-display-
+grammar. Avoid duplicating: the consolidation REMOVES duplication (shared Display.signed).
+Mobile: no layout change. Trust: display-only. Data: a `statsPanelProbe` diagnostic in the
+account DB (no PII). Abuse: not externally reachable.*
+☑ FS BUTTON FIX (user report: no FS/Share/Options buttons on the launch client): all three
+  were hidden together -> a missed CharacterFrame OnShow, or a mid-createPanel error that
+  left panel set but no button (the old `if not panel` guard never retried). Fix:
+  `StatsPanel.syncFurniture` module-level; boot retries `createPanel` until the BUTTON
+  exists (pcall'd, self-heals) + polls ~10s post-login + hooks `ToggleCharacter`
+  (hooksecurefunc, never taints) to re-sync on every sheet-open independent of OnShow; a
+  `statsPanelProbe` diagnostic is journaled. (Mirrors the talent-button hardening.)
+☑ DUPLICATION AUDIT (Explore agent): 10 patterns found. Started the fix with
+  `Display.signColor`/`Display.signed` (THE green-up/red-down helper; item vs-equipped rows
+  migrated; selftest-pinned). The rest are tracked in the UI-CONSOLIDATION backlog - the
+  gate can't runtime-test headless-guarded UI, so each remaining swap gets an in-game
+  eyeball rather than a blind mass-edit on a live launch addon (no broken windows, but no
+  flailing on prod either).
+☐ FOLLOW-UP (UI-CONSOLIDATION backlog): finish the color migration, `Impact.foldStats` (one
+  net-swap fold, 4 copies), panel_model.playstyleLabel -> Sim.standing, verdict-threshold
+  unify, pool-manager consolidation, tooltip-scoped abilityHit cache.
 
 ### S51 - Understand-your-character onboarding + armory top-builds source + listener dedup ☑ (2026-11-06) -> 0.59.0
 Owner: "a daily listener for top players' builds now that WoW Armory Forever is live -
@@ -1609,6 +1636,23 @@ over every impact source (`/foresight catalog`), the query spine for synergy/sea
 Remaining: deeper multi-hop chains, catalog-backed planner/search UI.
 
 ## Backlog (not yet scheduled)
+- ◐ UI-CONSOLIDATION: shared-element hardening (duplication audit 2026-11-06, owner "are we
+  using common elements so we aren't duplicating - should simplify overall"). Audit found
+  10 duplication patterns; the gate CAN'T runtime-test headless-guarded UI, so the bigger
+  swaps need in-game verification before they ship (no blind mass-edit on a live launch
+  addon). DONE so far (0.60.0): `Display.signColor`/`Display.signed` = THE sign-color helper
+  (replaces inlined |cff4ade80/|cfff87171 in the item-tooltip vs-equipped rows; selftest-
+  pinned). REMAINING, by priority: (1) finish migrating the remaining gain/loss hex sites
+  (stats_panel.lua colorizeDeltas, matrix_panel.lua:261, other tooltips rows) to
+  Display.signed; (2) `Impact.foldStats(loadout, bundle, sign)` = ONE net-swap fold (4
+  copies: impact.lua compareItems/itemVerdict/itemSpellImpacts + tooltips _planRelevanceLine);
+  (3) panel_model.playstyleLabel should DELEGATE to Sim.standing (it reimplements the lean
+  logic - verify the label text is unchanged in-game before swapping); (4) unify the
+  verdict threshold (impact.lua uses +/-0.05, tooltips weaponSwap uses +/-0.5 - confirm
+  which is intended, then a Display constant); (5) consolidate the two FontString pool
+  patterns (matrix_panel vs stats_panel) behind one helper; (6) a tooltip-scoped abilityHit
+  cache (perf, not duplication - a single item hover recomputes abilityHit 6+ times). Each
+  item = a separate small change WITH an in-game eyeball, not one big refactor.
 - ☑ DATA-freshness AUTO-SYNC (owner ask 2026-10-15): SHIPPED in S41 (2026-10-19) for
   Forever - check_updates.py latest-build detect + data-freshness.yml daily
   detect->fetch+generate->gate->review PR. Crowdsourcing remains a separate layer (fills

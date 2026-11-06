@@ -25,6 +25,19 @@ function Display.color(sem, text)
         tostring(text))
 end
 
+-- Color by the SIGN of a value: the "green up / red down" convention that was inlined with
+-- literal |cff4ade80 / |cfff87171 across tooltips + panels (duplication audit 2026-11-06).
+-- signColor returns the 6-hex code; signed wraps text. Gain at exactly 0 (an item that
+-- changes nothing reads as a non-loss), matching every `>= 0 and gain or loss` site it
+-- replaces. Callers wanting a THREE-way near-zero neutral keep their own threshold check.
+function Display.signColor(value)
+    return (tonumber(value) or 0) < 0 and Display.COLORS.loss or Display.COLORS.gain
+end
+
+function Display.signed(value, text)
+    return ("|cff%s%s|r"):format(Display.signColor(value), tostring(text))
+end
+
 -- FORGED FRAME chrome (0.53.0, the WoW-esque skin pass): the planner's corner treatment -
 -- a diamond stud + an L of gold bars at each corner - as ONE shared drawer so every panel
 -- carries the same forged identity (starts the UI-display-consolidation). Draws on the

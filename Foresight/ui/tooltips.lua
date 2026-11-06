@@ -803,16 +803,19 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
         -- The per-ability "what is this FOR" drill-down is now the unified
         -- Impact.itemSpellImpacts block above (every item type, ranked over YOUR top
         -- spells), shown for both the added and the vs-equipped case.
-        local shown = {}
-        for i = 1, math.min(#rows, 4) do
-            local c = rows[i]
-            local color = c.net >= 0 and "|cff4ade80" or "|cfff87171"
-            lines[#lines + 1] = {
-                text = ("%s%+.1f%%|r %s |cff9d9d9d(vs equipped)|r"):format(
-                    color, c.net, c.label),
+        -- vs-equipped dimension row: the net %, sign-colored (one shared helper now -
+        -- Display.signed - instead of the inlined gain/loss hex, audit 2026-11-06).
+        local function vsEquippedRow(c)
+            return {
+                text = ("%s %s |cff9d9d9d(vs equipped)|r"):format(
+                    HM.Display.signed(c.net, ("%+.1f%%"):format(c.net)), c.label),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
-            shown[c.id] = true
+        end
+        local shown = {}
+        for i = 1, math.min(#rows, 4) do
+            lines[#lines + 1] = vsEquippedRow(rows[i])
+            shown[rows[i].id] = true
         end
         -- Dropping a shield for a two-hander is a survivability decision first - ALWAYS
         -- show the survivability/tankability row for that swap even if it didn't make the
@@ -820,12 +823,7 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
         if ctx and ctx.configChange and ctx.configChange.removedOffhand then
             for _, c in ipairs(rows) do
                 if (c.id == "survivability" or c.id == "tankability") and not shown[c.id] then
-                    local color = c.net >= 0 and "|cff4ade80" or "|cfff87171"
-                    lines[#lines + 1] = {
-                        text = ("%s%+.1f%%|r %s |cff9d9d9d(vs equipped)|r"):format(
-                            color, c.net, c.label),
-                        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
-                    }
+                    lines[#lines + 1] = vsEquippedRow(c)
                     break
                 end
             end
@@ -833,9 +831,9 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
     elseif ok and changes and #changes > 0 then
         for i = 1, math.min(#changes, 4) do
             local c = changes[i]
-            local color = c.delta >= 0 and "|cff4ade80" or "|cfff87171"
             lines[#lines + 1] = {
-                text = ("%s%+.1f%%|r %s"):format(color, c.pct or 0, c.label),
+                text = ("%s %s"):format(
+                    HM.Display.signed(c.delta, ("%+.1f%%"):format(c.pct or 0)), c.label),
                 r = BODY.r, g = BODY.g, b = BODY.b, wrap = true,
             }
         end

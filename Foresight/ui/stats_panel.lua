@@ -15,6 +15,9 @@ local HEADER_HEIGHT = 20
 local PAD = 10
 
 local panel, toggleButton
+local furniture = {}  -- the FS / Share / Options buttons, stored so the boot can re-sync
+                      -- their visibility to the live character frame (a missed OnShow hook
+                      -- on the launch client left ALL THREE hidden - 2026-11-06 user report)
 local rowPool, headerPool = {}, {}
 
 local function classColor()
@@ -416,6 +419,23 @@ end
 -- the pair adjacent). Returns nil out of game / before creation.
 function StatsPanel.getFrame() return panel end
 
+-- Show/hide the FS/Share/Options furniture buttons (+ close the panel/Matrix on hide).
+-- Module-level so the boot can RE-ASSERT it against the live character-frame visibility -
+-- the OnShow hook can be missed on the launch/reskinned client, which left all three
+-- buttons hidden (user report 2026-11-06). Idempotent; safe to call repeatedly.
+function StatsPanel.syncFurniture(show)
+    for _, b in ipairs(furniture) do if b and b.SetShown then b:SetShown(show) end end
+    if not show and panel then
+        panel:Hide()
+        -- Close-both flow (0.53.0): the Matrix follows the character menu closed UNLESS
+        -- pinned (the matrixPinned opt-in - the Details!-dashboard behavior).
+        if HM.MatrixPanel and HM.MatrixPanel.setShown
+                and not (HM.Settings and HM.Settings.get("matrixPinned") == true) then
+            HM.MatrixPanel.setShown(false)
+        end
+    end
+end
+
 -- Clear the saved position and re-dock beside the character frame.
 function StatsPanel.resetPosition()
     if not panel then return end
@@ -565,26 +585,14 @@ local function createPanel()
     end)
     furnitureTip(optBtn, "Foresight options")
 
-    -- Track the character frame's visibility (we're anchored, not parented): the
-    -- buttons appear only while the char sheet is open; closing it also hides the panel.
-    local function setFurnitureShown(show)
-        toggleButton:SetShown(show)
-        shareBtn:SetShown(show)
-        optBtn:SetShown(show)
-        if not show then
-            panel:Hide()
-            -- Close-both flow (0.53.0, owner: "one stays open when we close the character
-            -- menu"): the Matrix follows the character menu closed UNLESS the user pinned
-            -- it (the matrixPinned setting - the Details!-dashboard behavior, now opt-in).
-            if HM.MatrixPanel and HM.MatrixPanel.setShown
-                    and not (HM.Settings and HM.Settings.get("matrixPinned") == true) then
-                HM.MatrixPanel.setShown(false)
-            end
-        end
-    end
-    charFrame:HookScript("OnShow", function() setFurnitureShown(true) end)
-    charFrame:HookScript("OnHide", function() setFurnitureShown(false) end)
-    setFurnitureShown(charFrame.IsShown and charFrame:IsShown() and true or false)
+    -- Track the character frame's visibility (we're anchored, not parented): the buttons
+    -- appear only while the char sheet is open; closing it also hides the panel. The
+    -- show/hide logic lives in StatsPanel.syncFurniture (module-level) so the boot can
+    -- re-assert it if an OnShow hook is missed on the launch client.
+    furniture = { toggleButton, shareBtn, optBtn }
+    charFrame:HookScript("OnShow", function() StatsPanel.syncFurniture(true) end)
+    charFrame:HookScript("OnHide", function() StatsPanel.syncFurniture(false) end)
+    StatsPanel.syncFurniture(charFrame.IsShown and charFrame:IsShown() and true or false)
 
     -- S33 throttle law: a hidden panel runs zero animation work.
     panel:SetScript("OnHide", function()
@@ -610,13 +618,59 @@ local function createPanel()
     end)
 end
 
+-- Ensure the panel + furniture buttons exist AND their visibility matches the live
+-- character frame. Retries until the BUTTON exists (not just the panel - a mid-createPanel
+-- error used to leave panel set but no button, and the old `if not panel` guard then never
+-- retried). createPanel is pcall'd so a partial failure self-heals on the next event, and a
+-- diagnostic is journaled so the harvest can confirm the exact state. The re-sync only ever
+-- SHOWS furniture when the frame is open (never force-hides - a user collapse via the FS
+-- button is respected). This is the fix for the "no FS button on the launch client" report.
+local function ensureStatsFurniture()
+    if not toggleButton then pcall(createPanel) end
+    local charFrame = _G.CharacterFrame
+    local charShown = (charFrame and charFrame.IsShown and charFrame:IsShown()) and true or false
+    if toggleButton and charShown then
+        StatsPanel.syncFurniture(true)
+    end
+    if HM.db and type(HM.db.collect) == "table" then
+        HM.db.collect.statsPanelProbe = {
+            button = toggleButton ~= nil, panel = panel ~= nil,
+            charFrame = charFrame ~= nil, charShown = charShown,
+            at = _G.date and _G.date("%H:%M:%S") or "?",
+        }
+    end
+end
+
 local boot = _G.CreateFrame("Frame")
 boot:RegisterEvent("PLAYER_LOGIN")
 -- createPanel early-returns when CharacterFrame isn't loaded yet; retry on ADDON_LOADED so
 -- a load-on-demand/reskinned character frame can't silently kill the whole stats feature
 -- (UI audit 2026-10-20 latent trap).
 boot:RegisterEvent("ADDON_LOADED")
+local toggleHooked
 boot:SetScript("OnEvent", function(self, event)
-    if not panel then createPanel() end
-    if panel and event == "ADDON_LOADED" then self:UnregisterEvent("ADDON_LOADED") end
+    ensureStatsFurniture()
+    if toggleButton and event == "ADDON_LOADED" then self:UnregisterEvent("ADDON_LOADED") end
+    if event == "PLAYER_LOGIN" then
+        -- Belt-and-suspenders: hook the global that OPENS the character sheet, so the
+        -- furniture re-syncs on every open even if the frame's OnShow hook is missed on
+        -- the launch client (the reported failure). hooksecurefunc never taints.
+        if not toggleHooked and _G.hooksecurefunc and type(_G.ToggleCharacter) == "function" then
+            toggleHooked = true
+            _G.hooksecurefunc("ToggleCharacter", function()
+                ensureStatsFurniture()
+                if _G.C_Timer and _G.C_Timer.After then _G.C_Timer.After(0, ensureStatsFurniture) end
+            end)
+        end
+        -- CharacterFrame can be load-on-demand on the launch client; poll a few seconds
+        -- after login until the button exists (bounded, self-stopping).
+        if _G.C_Timer and _G.C_Timer.After then
+            local tries = 0
+            local function poll()
+                ensureStatsFurniture(); tries = tries + 1
+                if not toggleButton and tries < 10 then _G.C_Timer.After(1, poll) end
+            end
+            _G.C_Timer.After(1, poll)
+        end
+    end
 end)

@@ -1,19 +1,15 @@
-## 0.59.0 - understand your character
+## 0.60.0 - the character button, made reliable
 
-**New here? Foresight reads your character for you.**
-The first time you log in with Foresight installed, it gives you a plain-language read of
-your character: your archetype and strongest lens, your biggest hits, what your talent
-build actually stacks (and the payoff it builds toward), a hidden synergy your class can
-exploit, and one quick coaching nudge. Want it again later? `/foresight insights`. It's
-all advice, nothing is changed on your character, and it only greets you once.
+**Fixes the missing Foresight button on the character sheet.**
+On the launch client, the FS / Share / Options buttons on your character sheet could fail
+to appear if the sheet's show signal was missed. Foresight now hooks the character-sheet
+open directly and re-checks for a few seconds after login, so the buttons reliably show
+whenever your character sheet is open. (The `/foresight` commands and the talent-frame
+Planner button remain independent ways in.)
 
-**Learning from top players**
-Now that the Forever Armory is live, the build listener can draw on top players' builds as
-examples - ranked by rating, with Foresight's synergy analysis attached, and run through
-human review before anything ships. It uses the build, never the player's identity. (The
-hook is in place; it switches on once the armory endpoint is confirmed.)
+**Under the hood.** Kicked off a shared-element cleanup from an internal audit: the
+green-up / red-down number coloring now runs through one shared helper so it stays
+consistent everywhere, with the rest of the cleanup tracked for careful, verified
+follow-ups. No visible change.
 
-Under the hood: the daily listener no longer files a duplicate review each day when nothing
-has changed.
-
-Ship gate: Forever 312 checks, Classic 266. Display-and-advice only, official APIs only.
+Ship gate: Forever 313 checks, Classic 267. Display-and-advice only, official APIs only.

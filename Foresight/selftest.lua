@@ -639,6 +639,16 @@ function HM.runSelftest(out)
                 == "|cff33ff99[|r+12 Strength|cff33ff99]|r -> |cff33ff99[|r+24 AP|cff33ff99]|r"
             and D.attribution("1 Str = 2 AP") == "|cff9d9d9d(via 1 Str = 2 AP)|r"
     end)())
+    check("display grammar: signed() is THE sign-color helper (gain>=0 / loss<0)", (function()
+        -- The shared home for the green-up/red-down convention that was inlined with
+        -- literal |cff codes across tooltips + panels (duplication audit 2026-11-06). The
+        -- replaced sites all used `>= 0 and gain or loss`, so 0 colors as a gain.
+        local D = HM.Display
+        return D.signColor(5) == D.COLORS.gain and D.signColor(-5) == D.COLORS.loss
+            and D.signColor(0) == D.COLORS.gain
+            and D.signed(2, "+2.0%") == "|cff4ade80+2.0%|r"
+            and D.signed(-2, "-2.0%") == "|cfff87171-2.0%|r"
+    end)())
     check("display grammar: honesty ladder + weakest-tag inheritance", (function()
         local D = HM.Display
         return D.mark("presumed") == " |cff9d9d9d(p)|r"
