@@ -3323,15 +3323,23 @@ function HM.runSelftest(out)
     end)())
 
     -- RUN bridge (ForesightAPI combat profile) -------------------------------------
-    check("bridge profile shape", (function()
-        local p = HM.BridgeAPI.profileFrom(13, 120, 90, 0, 400, 8, 537, "WARRIOR")
-        return p.v == 1 and p.level == 13 and p.stamina == 120 and p.attackPower == 90
-            and p.maxHealth == 537 and p.class == "WARRIOR" and p.source == "foresight"
+    check("bridge profile shape (v2)", (function()
+        local p = HM.BridgeAPI.profileFrom({ level = 13, stamina = 120, attackPower = 90,
+            armor = 400, avoidancePct = 8, maxHealth = 537, dps = 42, class = "WARRIOR" })
+        return p.v == 2 and p.level == 13 and p.stamina == 120 and p.attackPower == 90
+            and p.maxHealth == 537 and p.dps == 42 and p.class == "WARRIOR"
+            and p.source == "foresight"
     end)())
     check("bridge profile clamps junk/secret to 0", (function()
-        local q = HM.BridgeAPI.profileFrom("x", -5, nil, "y", nil, nil, 0 / 0, "ROGUE")
+        local q = HM.BridgeAPI.profileFrom({ level = "x", stamina = -5, spellPower = "y",
+            maxHealth = 0 / 0, dps = -1, class = "ROGUE" })
         return q.level == 1 and q.stamina == 0 and q.attackPower == 0
-            and q.spellPower == 0 and q.maxHealth == 0 and q.class == "ROGUE"
+            and q.spellPower == 0 and q.maxHealth == 0 and q.dps == 0 and q.class == "ROGUE"
+    end)())
+    check("bridge estimateDPS is a sane positive number", (function()
+        local d = HM.BridgeAPI.estimateDPS(10, 18, 2.5, 80, 0)   -- level-12-ish melee
+        local none = HM.BridgeAPI.estimateDPS(0, 0, 0, 0, 0)
+        return d > 0 and d < 100 and none == 0
     end)())
 
     -- Scoreboard -------------------------------------------------------------------

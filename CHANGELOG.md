@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.56.0 - 2026-11-05 (RUN bridge grows: offense/dps + the growth contract)
+
+The bridge is designed to DEEPEN as Foresight grows. API v1 -> v2:
+
+- `GetCombatProfile()` now includes **`dps`** - a sustained-offense estimate
+  from the live weapon + power reads (`BridgeAPI.estimateDPS`: white-swing +
+  AP scaling + a spell-power contribution). Rough + presumed for now;
+  Foresight's real sim can refine it later WITHOUT changing the contract.
+- `profileFrom` takes a named `fields` table (not positional) so new optional
+  fields append cleanly. Every field stays optional + additive; RUN reads them
+  defensively, so each capability Foresight exposes (offense now; mitigation,
+  sustain, burst, schools next) sharpens RUN's odds with no lockstep release.
+- `API_VERSION` bumped to 2 so both sides negotiate the shape.
+- Still addon-to-addon only - nothing leaves the client. New selftest for
+  `estimateDPS`; gate green both flavors. Consumed by RUN v0.9.2
+  (`Odds.readiness` now folds in mitigation = armor + avoidance, and uses
+  `dps` for offense when present).
+
 ## 0.55.0 - 2026-11-05 (the RUN bridge: a read-only character-profile API)
 
 ADDITIVE, addon-to-addon. New `core/bridge_api.lua` publishes `_G.ForesightAPI`
