@@ -16,6 +16,7 @@ ignore:
     - pipeline
     - web
     - data
+    - marketing
     - functions
     - firebase.json
     - CHANGELOG.md
