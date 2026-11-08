@@ -200,3 +200,27 @@ this creature"), rare hunts, and a Nemesis system where the enemies that kill yo
 notoriety and titles. Pairs with Foresight automatically - RUN reads a light combat
 profile through our addon-to-addon bridge (nothing leaves your client) so its odds
 sharpen when both are installed.
+
+---
+
+## Wago Addons automation (added 2026-11-08; RUN is the proven template)
+
+The release workflow ALREADY passes `WAGO_API_TOKEN` to the BigWigs packager
+(`.github/workflows/release.yml:44`) and the packager auto-detects both flavors - so Wago
+publishing needs exactly TWO one-time inputs, then every `git tag vX.Y.Z` ships to
+CurseForge + Wago + GitHub together (missing token/id = packager skips Wago silently,
+which is why past releases never failed):
+
+1. **The Foresight Wago project id** (owner): on addons.wago.io, create/import the
+   project from the GitHub repo (same flow as RUN, whose id is `ANz7Dw64` in its TOCs),
+   then copy the ID from the project's developer page. Paste it to the agent -> it lands
+   `## X-Wago-ID: <id>` in BOTH TOCs (Foresight.toc + Foresight_Vanilla.toc, same id -
+   one Wago project, multi-flavor, exactly like CurseForge project 1744126).
+2. **The repo secret** (owner, token must never appear in chat/commits): copy the Wago
+   API token (wago.io account -> API keys - same account token RUN uses) to the
+   clipboard, then run:
+   `powershell -c "Get-Clipboard | gh secret set WAGO_API_TOKEN -R simulatecx/foresight-forever"`
+   (the clipboard pipe keeps the value out of the terminal history and the chat).
+
+Verify on the next tag: the Release run's package log shows
+"Uploading Foresight-vX.Y.Z.zip ... to Wago" + Success, same as the CurseForge line.
