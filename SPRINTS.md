@@ -27,7 +27,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S9 ASSIST-hud: what-to-press HUD | 2 | ☐ |
 | S10 PANIC-advisor: escape registry + triggers + flash | 1 | ☐ |
 | S11 QA-probe: empirical formula verification from live play | - | ☐ |
-| S12 Publishing train: GitHub remote + packager CI + CurseForge/Wago | - | ◐ |
+| S12 Publishing train: GitHub remote + packager CI + CurseForge/Wago | - | ☑ |
 | S13 Crowd scale-up: companion uploader + ingestion + privacy pass | - | ☐ |
 | S18 SIM-engine: simulation & synergy math core (PRD trio) | 3 | ◐ |
 | S19 MODEL-ability-outcomes: what this button actually hits for | 3 | ◐ |

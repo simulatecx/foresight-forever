@@ -203,7 +203,7 @@ sharpen when both are installed.
 
 ---
 
-## Wago Addons automation (added 2026-11-08; RUN is the proven template)
+## Wago Addons automation (added 2026-11-08; LIVE since v0.65.1 - id nKWwP4KE in both TOCs, secret set)
 
 The release workflow ALREADY passes `WAGO_API_TOKEN` to the BigWigs packager
 (`.github/workflows/release.yml:44`) and the packager auto-detects both flavors - so Wago

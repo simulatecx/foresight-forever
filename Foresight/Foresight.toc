@@ -2,12 +2,13 @@
 ## Title: Foresight
 ## Notes: The layman's oracle for WoW: Forever - know in plain terms what every talent point, stat, item, and buff actually does for you.
 ## Author: SimulateCX
-## Version: 0.65.0
+## Version: 0.65.1
 ## SavedVariables: ForesightDB
 ## IconTexture: Interface\Icons\Spell_Nature_FarSight
 ## X-License: All Rights Reserved
 ## X-Website: https://github.com/simulatecx/foresight-forever
 ## X-Curse-Project-ID: 1744126
+## X-Wago-ID: nKWwP4KE
 
 core\guards.lua
 core\bridge_api.lua

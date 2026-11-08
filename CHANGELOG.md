@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.65.1 - 2026-11-08 (Wago Addons publishing goes live)
+
+- **Foresight now publishes to Wago Addons automatically** alongside CurseForge and
+  GitHub Releases: `## X-Wago-ID: nKWwP4KE` in both flavor TOCs (one Wago project,
+  multi-flavor - the same shape as the CurseForge project) + the `WAGO_API_TOKEN`
+  repo secret. Every `git tag vX.Y.Z` now ships to all three. No addon changes.
+- This closes the long-standing S12 "Wago publish" owner item (RUN's setup was the
+  proven template).
+
+*Features:* (publishing train only - no addon surface changed)
+
 ## 0.65.0 - 2026-11-06 (consolidation: one color helper, one net-swap fold)
 
 Internal simplification - no visible change, less to keep in sync.
