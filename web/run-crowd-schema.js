@@ -7,10 +7,10 @@ export const RUN_CROWD_SCHEMA = {
   collection: "rareKills",
   site: "https://wow-foresight.web.app/run.html",
   maxEvents: 100,
-  kinds: ["death", "slay", "sighting", "wipe"],
+  kinds: ["death", "slay", "sighting", "wipe", "calib"],
   fields: [
     { key: "v", tier: "anon", kind: "const", value: 1, required: true },
-    { key: "kinds", tier: "anon", kind: "list", maxSize: 4, of: ["death", "slay", "sighting", "wipe"], required: true },
+    { key: "kinds", tier: "anon", kind: "list", maxSize: 5, of: ["death", "slay", "sighting", "wipe", "calib"], required: true },
     { key: "events", tier: "anon", kind: "list", maxSize: 100, required: true },
     { key: "season", tier: "anon", kind: "string", maxSize: 8, matches: "[a-z0-9]+", required: true },
     { key: "clientId", tier: "anon", kind: "string", maxSize: 40, required: false },
@@ -68,10 +68,24 @@ export const RUN_CROWD_SCHEMA = {
       allow: ["k", "npc", "enc", "size", "mode", "season"],
       required: ["k", "mode", "season"],
     },
+    "calib": {
+      fields: [
+        { key: "k", kind: "const", value: "calib", required: true },
+        { key: "npc", kind: "number", min: 1, max: 10000000, required: true },
+        { key: "pl", kind: "number", min: 1, max: 100, required: true },
+        { key: "cl", kind: "number", min: -1, max: 103, required: true },
+        { key: "cls", kind: "string", maxSize: 10, of: ["normal", "elite", "rare", "rareelite", "worldboss", "trivial", "minus"], required: true },
+        { key: "p", kind: "number", min: 1, max: 99, required: true },
+        { key: "out", kind: "string", maxSize: 5, of: ["win", "death"], required: true },
+        { key: "season", kind: "string", maxSize: 8, required: true },
+      ],
+      allow: ["k", "npc", "pl", "cl", "cls", "p", "out", "season"],
+      required: ["k", "npc", "pl", "cl", "cls", "p", "out", "season"],
+    },
   },
   allow: ["v", "kinds", "events", "season", "clientId", "sum", "named", "handle", "armory"],
   forbidden: ["realm", "account", "guild", "name", "guid", "ip", "at"],
-  caps: {"kinds": 4, "events": 100, "season": 8, "clientId": 40, "handle": 24, "armory": 200},
+  caps: {"kinds": 5, "events": 100, "season": 8, "clientId": 40, "handle": 24, "armory": 200},
 };
 
 // Fletcher16, arithmetic (mirrors RUN.Deathping.fletcher16): payload.sum is

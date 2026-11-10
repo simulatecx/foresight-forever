@@ -25,7 +25,7 @@ const SLAYS_MAX_PER_SUB = 5;   // giantSlayer entries honoured per submission
 const KOFN_NAMES = 3;          // distinct clientIds before a sighted name publishes
 const NAME_CANDIDATES_MAX = 10; // name candidates tracked per npc (abuse bound)
 const NPC_MAX = 10000000;
-const KINDS = ["death", "slay", "sighting", "wipe"];
+const KINDS = ["death", "slay", "sighting", "wipe", "calib"];
 const MODES = ["pve", "pvp", "hc"];
 const SIGHTING_CLS = ["rare", "rareelite", "worldboss"];
 
@@ -149,7 +149,37 @@ function validWipe(e) {
     : { k: "wipe", enc, season: e.season };
 }
 
-const VALIDATORS = { death: validDeath, slay: validSlay, sighting: validSighting, wipe: validWipe };
+// Calibration pairs (RUN-P): recompute the predicted odds exactly as the
+// addon's coarse model does (RUN/model/odds.lua) - skull (cl -1) plays as
+// player+10; skull and worldboss floor to 0.01; trivial/minus carry no
+// penalty. The client's claimed p is kept ONLY as an advisory mean (sumPc);
+// every published number derives from THIS recomputation (server-trust law).
+const CAL_CLS = ["normal", "elite", "rare", "rareelite", "worldboss", "trivial", "minus"];
+
+function recomputeCalibOdds(pl, cl, cls) {
+  const creature = cl === -1 ? pl + 10 : cl;
+  const z = 1.1 - 0.28 * (creature - pl) - (CLS_PENALTY[cls] || 0);
+  let p = 1 / (1 + Math.exp(-z));
+  if (cl === -1 || cls === "worldboss") p = 0.01;
+  return p;
+}
+
+function validCalib(e) {
+  if (!hasOnly(e, ["k", "npc", "pl", "cl", "cls", "p", "out", "season"])) return null;
+  if (!plausibleNpc(e.npc) || !validSeason(e.season)) return null;
+  if (!Number.isInteger(e.pl) || e.pl < 1 || e.pl > 100) return null;
+  if (!Number.isInteger(e.cl) || e.cl < -1 || e.cl > 103) return null;
+  if (typeof e.cls !== "string" || !CAL_CLS.includes(e.cls)) return null;
+  if (!Number.isInteger(e.p) || e.p < 1 || e.p > 99) return null;
+  if (e.out !== "win" && e.out !== "death") return null;
+  return {
+    k: "calib", npc: e.npc, out: e.out, season: e.season,
+    p: recomputeCalibOdds(e.pl, e.cl, e.cls),   // trusted, recomputed
+    pc: e.p / 100,                              // client-claimed, advisory only
+  };
+}
+
+const VALIDATORS = { death: validDeath, slay: validSlay, sighting: validSighting, wipe: validWipe, calib: validCalib };
 
 // ---- rollup helpers -----------------------------------------------------------
 // Internal tallies live in `rareKillMeta` (no rules match block = default-deny =
@@ -167,10 +197,21 @@ function publicProjection(tally) {
   // ride even suppressed docs; totals stay behind the MIN_BUCKET floor.
   const named = (typeof tally.name === "string" && tally.name.length > 0)
     ? { name: tally.name } : {};
+  // Calibration rollup rides with its OWN bucket floor: only the derived rates
+  // publish (fights + win% vs predicted%), never anything per-player.
+  const cal = (tally.calib && (tally.calib.fights || 0) >= MIN_BUCKET)
+    ? {
+        calib: {
+          fights: tally.calib.fights,
+          winPct: Math.round((100 * tally.calib.wins) / tally.calib.fights),
+          predPct: Math.round((100 * tally.calib.sumP) / tally.calib.fights),
+        },
+      }
+    : {};
   if (Math.max(total, wipes) < MIN_BUCKET) {
-    return { ...base, ...named, low: true };  // suppressed: no totals below the floor
+    return { ...base, ...named, ...cal, low: true };  // suppressed: no totals below the floor
   }
-  return { ...base, ...named, counts, total, wipes };
+  return { ...base, ...named, ...cal, counts, total, wipes };
 }
 
 // Apply one submission's events for a single rollup key inside a transaction.
@@ -189,6 +230,15 @@ async function applyToKey(key, delta) {
     for (const m of MODES) counts[m] = (counts[m] || 0) + (delta.deaths[m] || 0);
     tally.counts = counts;
     tally.wipes = (tally.wipes || 0) + (delta.wipes || 0);
+
+    if (delta.calib && delta.calib.fights > 0) {
+      const cal = tally.calib || { fights: 0, wins: 0, sumP: 0, sumPc: 0 };
+      cal.fights += delta.calib.fights;
+      cal.wins += delta.calib.wins;
+      cal.sumP += delta.calib.sumP;
+      cal.sumPc += delta.calib.sumPc;
+      tally.calib = cal;
+    }
 
     // Sighted-name k-of-n: a normalized name publishes once >= KOFN_NAMES distinct
     // clientIds reported it for this npc. Candidate + voter sets are capped.
@@ -268,7 +318,10 @@ exports.rareKillsOnWrite = onDocumentCreated("rareKills/{id}", async (event) => 
   const deltas = new Map(); // key -> { npc?/enc?, season, deaths:{}, wipes, sightings:[] }
   const bucket = (key, seed) => {
     if (!deltas.has(key)) {
-      deltas.set(key, { ...seed, deaths: { pve: 0, pvp: 0, hc: 0 }, wipes: 0, sightings: [] });
+      deltas.set(key, {
+        ...seed, deaths: { pve: 0, pvp: 0, hc: 0 }, wipes: 0, sightings: [],
+        calib: { fights: 0, wins: 0, sumP: 0, sumPc: 0 },
+      });
     }
     return deltas.get(key);
   };
@@ -283,6 +336,12 @@ exports.rareKillsOnWrite = onDocumentCreated("rareKills/{id}", async (event) => 
     } else if (e.k === "sighting") {
       bucket(String(e.npc), { npc: e.npc, season: e.season })
         .sightings.push({ nm: e.nm, clientId: cid });
+    } else if (e.k === "calib") {
+      const cal = bucket(String(e.npc), { npc: e.npc, season: e.season }).calib;
+      cal.fights += 1;
+      if (e.out === "win") cal.wins += 1;
+      cal.sumP += e.p;
+      cal.sumPc += e.pc;
     } else if (e.k === "slay") {
       slays.push(e);
     }
@@ -290,6 +349,40 @@ exports.rareKillsOnWrite = onDocumentCreated("rareKills/{id}", async (event) => 
 
   for (const [key, delta] of deltas) {
     await applyToKey(key, delta);
+  }
+
+  // The season calibration CURVE: recomputed-p deciles -> { fights, wins, sumP },
+  // one doc per season in rareKillMeta (no rules match block = admin-only; the
+  // daily review reads it with owner credentials). Counts only - k-anonymous.
+  const curveBySeason = new Map();
+  for (const e of clean) {
+    if (e.k !== "calib") continue;
+    const dec = `d${Math.min(9, Math.floor(e.p * 10))}`;
+    if (!curveBySeason.has(e.season)) curveBySeason.set(e.season, {});
+    const inc = curveBySeason.get(e.season);
+    const slot = inc[dec] || { fights: 0, wins: 0, sumP: 0 };
+    slot.fights += 1;
+    if (e.out === "win") slot.wins += 1;
+    slot.sumP += e.p;
+    inc[dec] = slot;
+  }
+  for (const [season, inc] of curveBySeason) {
+    const curveRef = db.collection("rareKillMeta").doc(`calcurve-${season}`);
+    await db.runTransaction(async (tx) => {
+      const snapC = await tx.get(curveRef);
+      const cur = snapC.exists ? snapC.data() : { season, deciles: {} };
+      const deciles = cur.deciles || {};
+      for (const [dk, add] of Object.entries(inc)) {
+        const slot = deciles[dk] || { fights: 0, wins: 0, sumP: 0 };
+        slot.fights += add.fights;
+        slot.wins += add.wins;
+        slot.sumP += add.sumP;
+        deciles[dk] = slot;
+      }
+      cur.deciles = deciles;
+      cur.updated = FieldValue.serverTimestamp();
+      tx.set(curveRef, cur);
+    });
   }
 
   // Giant Slayers: ONLY the opt-in named tier, ONLY server-verified slays, and the
@@ -314,5 +407,6 @@ exports.rareKillsOnWrite = onDocumentCreated("rareKills/{id}", async (event) => 
   }
 
   console.log("[rareKills] processed", snap.id,
-    { events: clean.length, keys: deltas.size, slays: slays.length, named: !!handle });
+    { events: clean.length, keys: deltas.size, slays: slays.length, named: !!handle,
+      calib: clean.filter((e) => e.k === "calib").length });
 });
