@@ -67,6 +67,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S54 All-class investment insights: gear-alignment + single-lane converters + spec tags/honesty | 3 | ☑ |
 | S54b Spec hardening: hybrid naming/triplet + deterministic ties + the classic no-id capture fix | 3 | ☑ |
 | S55 Consolidation: color migration complete + Impact.foldStats (UI-CONSOLIDATION items 1-2) | 3 | ☑ |
+| S56 Cap & boss-frame derived insights (SinStats-inspired; roadmap item 1 groomed) | 3 | ☐ |
 
 ## Active / next
 
@@ -90,6 +91,45 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S56 - Cap & boss-frame derived insights (SinStats-inspired) ☐ (groomed 2026-11-10)
+Owner: "we downloaded SinStats - take inspiration from their tips/recommendations
+relevant to the character; build a plan to incorporate." Design record:
+`docs/SINSTATS-ANALYSIS.md` (mechanism extraction; SinStats is ARR - inspiration only,
+zero code reuse). This grooms S54 insight-roadmap item (1) cap/threshold distance.
+*Fit & Overlap - Category MODEL -> UI. Verdict: ENHANCE model/snapshot.lua (capture
+hit%/weapon-skill via Guards) + model/insights.lua (cap line) + Impact.rankStats
+(cap-aware marginals) + existing panel/tooltip rows (boss frame). Complements:
+gear-alignment (S54) and the future dead-investment story (roadmap 2). Touches the
+shared spines: snapshot stats shape + graph `stat.*` node ids (model/loadout.lua +
+graph/dimensions.lua + selftest fixtures move together). Avoid duplicating: NO new
+stat HUD (SinStats' niche; our surfaces are panel/Matrix/planner/insights); NO second
+stats table. Mobile: rides existing text surfaces; AC includes the 1280x720 @ 0.65
+readability pass. Languages: no i18n layer in this addon - strings follow the house
+display grammar (standing exception). Trust: display-only advice, confidence-tagged;
+cap facts stated as classic-presumed until Forever-verified. Data: no new data leaves
+the machine (snapshot-local reads via Guards; secret -> omit the line). Abuse: not
+externally reachable.*
+As a player, I want Foresight to tell me how far I am from the hit/crit caps vs
+same-level and boss targets - and which stat actually closes the gap - so my next
+point/item decision uses truths the stock UI hides.
+☐ SNAPSHOT: hit%/spell-hit%/weapon-skill captured through Guards (GetHitModifier /
+  C_SkillInfo.GetSkillLineInfoByID presence-detected; SinStats' shipped Forever port
+  is API-shape evidence). New `stat.*` graph nodes ride the existing spine.
+☐ CAPS MODEL: one data-located classic-mechanics table (miss vs same-level/+3 boss,
+  >10 skill-diff breakpoint, dual-wield base-miss penalty, spell-hit cap) - every
+  value confidence-tagged `classic-presumed`; selftests pin the MATH on fixtures
+  (rename-proof law), never live names/numbers.
+☐ CAP-DISTANCE INSIGHT: Insights.forCharacter line + first-run ("2% short of the boss
+  spell-hit cap - +Hit is your best Frostbolt stat until then"); the which-stat half
+  delegates to Impact.rankStats.
+☐ BOSS FRAME: chance stats + ability-hit lines framed vs same-level AND +3 boss on
+  the existing stats-panel/tooltip surfaces (no new window).
+☐ CAP-AWARE MARGINALS: rankStats zeroes/flags a stat past its cap ("+1% hit does
+  nothing - capped") - the differentiation layer; feeds roadmap item 2 later.
+☐ VERIFY: owner in-game pass vs the character sheet on Forever (beta-probe doctrine);
+  mobile-check the new lines; record loop (S56 ☑ + CHANGELOG + FEATURES MODEL-/UI-)
+  in the ship change.
 
 ### S55 - Consolidation: color migration complete + Impact.foldStats ☑ (2026-11-06) -> 0.65.0
 Owner: "lets finish the color migration + impact fold stats" (UI-CONSOLIDATION items 1-2).
@@ -151,7 +191,7 @@ no new data, selftest-pinned per gap.*
   gear-alignment both directions, Fire-mage spec note present / Frost absent.
 ☐ INSIGHT ROADMAP (research agent, 10 addons audited; prioritized for the suggest-only
   doctrine - each is a future story): (1) cap/threshold distance ("1% short of spell-hit
-  cap") - ECS shows numbers, nobody interprets; (2) dead/anti-synergy investment detection
+  cap") - ECS shows numbers, nobody interprets (GROOMED -> S56, docs/SINSTATS-ANALYSIS.md); (2) dead/anti-synergy investment detection
   ("5/5 melee-crit talent but your damage is spells") - nobody does this in-game, highest
   differentiation; (3) untrained-ability gap + training BUDGET with per-rank impact
   (What's Training 10.4M downloads proves demand; we add the WHY); (4) next-talent-point
