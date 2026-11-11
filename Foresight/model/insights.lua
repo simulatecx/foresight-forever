@@ -122,6 +122,16 @@ function Insights.forCharacter(loadout)
     local okGear, gearLine = pcall(Insights.gearAlignment, loadout)
     if okGear and gearLine then add(gearLine, "body") end
 
+    -- 4b) CHANCE CHECK (S56, the caps layer - docs/SINSTATS-ANALYSIS.md): miss and
+    -- cap distance framed vs same-level AND +3 bosses on the build's primary lane,
+    -- plus the weapon-skill shortfall when it bites. Display-only, (p)-tagged.
+    if HM.Caps and HM.Caps.linesFor then
+        local okCaps, capLines = pcall(HM.Caps.linesFor, loadout, primary)
+        if okCaps and capLines then
+            for _, l in ipairs(capLines) do add(l.text, l.tone) end
+        end
+    end
+
     -- 5) The hidden synergy your class can exploit (multi-lane hybrid OR the simpler
     -- single-converter "this stat counts twice" - every class with a converter gets one).
     if HM.Synergy and HM.Synergy.crossTreeInsights then

@@ -9,7 +9,7 @@ _G.Foresight = HM
 -- Kept in sync with Foresight.toc by the ship gate (run_tests.py reds on drift -
 -- incident 2026-10-11: this constant sat at 0.10.0 for three releases and made a
 -- harvest mis-diagnose a live-client state). Collect journals this stamp.
-HM.version = "0.65.1"
+HM.version = "0.66.0"
 
 -- Provenance stamp for generated content: everything in data/generated came straight
 -- from the real Forever client DB2 at this build, so it is CLIENT-VERIFIED (distinct
@@ -216,7 +216,7 @@ local function onSlash(input)
         else
             printMsg("understanding your character:")
             for _, l in ipairs(out) do printMsg("  " .. l) end
-            printMsg("  more: /foresight planner (plan a build) · the Matrix (character tab)")
+            printMsg("  more: /foresight planner (plan a build) Â· the Matrix (character tab)")
         end
     elseif cmd == "build" or cmd == "playstyle" then
         local snapshot = HM.Snapshot and HM.Snapshot.capture()

@@ -1827,6 +1827,60 @@ function HM.runSelftest(out)
         local good = HM.Insights.gearAlignment(lo, { Strength = 40 })
         return good ~= nil and good:find("agree", 1, true) ~= nil, tostring(good)
     end)())
+    check("caps: the classic miss tables (single/dual/breakpoint/boss frame)", (function()
+        -- S56 (SinStats-inspired; docs/SINSTATS-ANALYSIS.md). Fixture math only -
+        -- rename-proof, no live names/numbers. The level-60 shapes: same-level 5%,
+        -- +3 boss 9% (the known boss number), dual-wield 24/28, the >10 skill-diff
+        -- breakpoint where miss grows 4x faster, +hit subtraction clamped at 0.
+        local C = HM.Caps
+        if not (C and C.meleeMiss and C.forSnapshot) then return false, "no Caps" end
+        if C.meleeMiss(300, 300, false, 0) ~= 5 then return false, "same-level base" end
+        if C.meleeMiss(300, 315, false, 0) ~= 9 then return false, "boss 9" end
+        if C.meleeMiss(300, 300, true, 0) ~= 24 then return false, "dual base" end
+        if C.meleeMiss(300, 315, true, 0) ~= 28 then return false, "dual boss" end
+        if math.abs(C.meleeMiss(290, 300, false, 0) - 6) > 0.001 then return false, "diff 10" end
+        if math.abs(C.meleeMiss(289, 300, false, 0) - 7.4) > 0.001 then return false, "breakpoint" end
+        if C.meleeMiss(300, 300, false, 6) ~= 0 then return false, "hit clamps at 0" end
+        if C.spellMiss("same", 0) ~= 3 or C.spellMiss("boss", 0) ~= 16 then return false, "spell floors" end
+        if C.spellMiss("boss", 20) ~= 0 then return false, "spell clamp" end
+        if math.abs(C.critVs(10, 3) - 5.2) > 0.001 then return false, "crit boss frame" end
+        if C.critVs(1, 3) ~= 0 then return false, "crit floor" end
+        -- the white crit ceiling moves the right way: more hit -> higher ceiling
+        if not (C.whiteCritCap(60, 300, false, 6) > C.whiteCritCap(60, 300, false, 0)) then
+            return false, "crit cap vs hit"
+        end
+        return true
+    end)())
+    check("caps: snapshot bundle + lane-aware insight lines (capped phrasing, healing silent)", (function()
+        local C = HM.Caps
+        if not (C and C.linesFor) then return false, "no Caps.linesFor" end
+        local snap = testSnapshot()
+        snap.classToken = "WARRIOR"
+        snap.weaponSkill = 295
+        snap.dualWield = true
+        snap.stats.hitPct = 2
+        local b = C.forSnapshot(snap)
+        -- dual, skill 295 vs same-level defense 300: 24 + 5*0.1 - 2 = 22.5
+        if not (b and math.abs(b.melee.same - 22.5) <= 0.001) then
+            return false, "melee same " .. tostring(b and b.melee.same)
+        end
+        -- the skill shortfall ALONE: miss(295) - miss(300) = 0.5
+        if math.abs(b.melee.skillGapPct - 0.5) > 0.001 then return false, "skill gap" end
+        local lo = HM.Loadout.fromSnapshot(snap)
+        local lines = C.linesFor(lo, "meleeDps")
+        if not (lines and lines[1] and lines[1].text:find("Chance check", 1, true)) then
+            return false, "no melee chance line"
+        end
+        local snap2 = testSnapshot()
+        snap2.stats.spellHitPct = 5
+        local lo2 = HM.Loadout.fromSnapshot(snap2)
+        local l2 = C.linesFor(lo2, "spellcasting")
+        if not (l2 and l2[1] and l2[1].text:find("capped vs same%-level")) then
+            return false, "no capped spell line"
+        end
+        -- heals don't miss: the healing lane stays silent
+        return C.linesFor(lo, "healing") == nil
+    end)())
     check("spec honesty note: a tree with no curated engine says so (Fire mage)", (function()
         -- S54: a MAGE invested in Fire sees the Frost Shatter loop WITH the note; a
         -- Frost-invested mage sees it without. Data-located Fire/Frost talents.

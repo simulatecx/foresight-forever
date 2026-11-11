@@ -302,9 +302,17 @@ function Tooltips.nodeImpactLines(nodeId, loadout)
         end
         local st = loadout.snapshot and loadout.snapshot.stats
         if hasCrit and st then
+            -- The boss frame (S56): the same crit as it lands on a +3 boss (level
+            -- penalty + the 1.8 suppression) - the number raid talk is about.
+            local bossNote = ""
+            if HM.Caps and HM.Caps.critVs then
+                bossNote = (" (vs +3 boss ~%.1f%%/%.1f%%) (p)"):format(
+                    HM.Caps.critVs(st.meleeCritPct or 0, 3),
+                    HM.Caps.critVs(st.spellCritPct or 0, 3))
+            end
             lines[#lines + 1] = {
-                text = ("Your crit now: %.1f%% melee, %.1f%% spell"):format(
-                    st.meleeCritPct or 0, st.spellCritPct or 0),
+                text = ("Your crit now: %.1f%% melee, %.1f%% spell%s"):format(
+                    st.meleeCritPct or 0, st.spellCritPct or 0, bossNote),
                 r = GREY.r, g = GREY.g, b = GREY.b, wrap = true, detail = true,
             }
         end

@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.66.0 - 2026-11-10 (chance caps & the boss frame)
+
+What the stock UI hides about your chances, interpreted (S56; the tables learned
+from the SinStats stats addon - design record `docs/SINSTATS-ANALYSIS.md`; our own
+implementation, their addon is ARR). Foresight stays the interpreter: these are
+insight lines on existing surfaces, not a stats HUD.
+
+- **Chance check in your insights.** `/foresight insights` (and first-run) now tells
+  melee builds how often their swings miss vs same-level targets AND vs +3 bosses
+  (dual-wield white-swing penalty named), how much +hit caps the frame, when the
+  weapon-skill shortfall alone costs extra miss ("it trains by attacking - the
+  cheapest hit you own"), and the white-swing crit ceiling once your crit nears it.
+  Casters get the spell version (3%/16% miss floors). The healing lens stays
+  silent - heals don't miss. Every line carries (p) until verified in-game.
+- **The boss frame on crit tooltips.** The Shift-depth "Your crit now" baseline on
+  crit talents additionally shows how that crit lands on a +3 boss (level penalty +
+  the 1.8 suppression).
+- **One home for the chance tables**: new `model/caps.lua` (white miss with the >10
+  skill-diff breakpoint, dual-wield bases, spell floors, crit-vs-boss, white crit
+  ceiling), pure + fixture-pinned on both flavors. The snapshot now captures +hit,
+  spell +hit, equipped weapon skill (presence-detected; druid forms normalize) and
+  dual-wield - all through Guards, secret-safe.
+- Ship gate: Forever 324/324, Classic 278/278.
+
+*Features:* MODEL-caps, UI-insights
+
 ## 0.65.1 - 2026-11-08 (Wago Addons publishing goes live)
 
 - **Foresight now publishes to Wago Addons automatically** alongside CurseForge and

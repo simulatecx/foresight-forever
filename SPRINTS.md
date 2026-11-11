@@ -67,7 +67,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S54 All-class investment insights: gear-alignment + single-lane converters + spec tags/honesty | 3 | ☑ |
 | S54b Spec hardening: hybrid naming/triplet + deterministic ties + the classic no-id capture fix | 3 | ☑ |
 | S55 Consolidation: color migration complete + Impact.foldStats (UI-CONSOLIDATION items 1-2) | 3 | ☑ |
-| S56 Cap & boss-frame derived insights (SinStats-inspired; roadmap item 1 groomed) | 3 | ☐ |
+| S56 Cap & boss-frame derived insights (SinStats-inspired; roadmap item 1) | 3 | ☑ |
 
 ## Active / next
 
@@ -92,7 +92,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
 
-### S56 - Cap & boss-frame derived insights (SinStats-inspired) ☐ (groomed 2026-11-10)
+### S56 - Cap & boss-frame derived insights (SinStats-inspired) ☑ (2026-11-10) -> 0.66.0
 Owner: "we downloaded SinStats - take inspiration from their tips/recommendations
 relevant to the character; build a plan to incorporate." Design record:
 `docs/SINSTATS-ANALYSIS.md` (mechanism extraction; SinStats is ARR - inspiration only,
@@ -113,23 +113,36 @@ externally reachable.*
 As a player, I want Foresight to tell me how far I am from the hit/crit caps vs
 same-level and boss targets - and which stat actually closes the gap - so my next
 point/item decision uses truths the stock UI hides.
-☐ SNAPSHOT: hit%/spell-hit%/weapon-skill captured through Guards (GetHitModifier /
-  C_SkillInfo.GetSkillLineInfoByID presence-detected; SinStats' shipped Forever port
-  is API-shape evidence). New `stat.*` graph nodes ride the existing spine.
-☐ CAPS MODEL: one data-located classic-mechanics table (miss vs same-level/+3 boss,
-  >10 skill-diff breakpoint, dual-wield base-miss penalty, spell-hit cap) - every
-  value confidence-tagged `classic-presumed`; selftests pin the MATH on fixtures
-  (rename-proof law), never live names/numbers.
-☐ CAP-DISTANCE INSIGHT: Insights.forCharacter line + first-run ("2% short of the boss
-  spell-hit cap - +Hit is your best Frostbolt stat until then"); the which-stat half
-  delegates to Impact.rankStats.
-☐ BOSS FRAME: chance stats + ability-hit lines framed vs same-level AND +3 boss on
-  the existing stats-panel/tooltip surfaces (no new window).
-☐ CAP-AWARE MARGINALS: rankStats zeroes/flags a stat past its cap ("+1% hit does
-  nothing - capped") - the differentiation layer; feeds roadmap item 2 later.
-☐ VERIFY: owner in-game pass vs the character sheet on Forever (beta-probe doctrine);
-  mobile-check the new lines; record loop (S56 ☑ + CHANGELOG + FEATURES MODEL-/UI-)
-  in the ship change.
+☑ SNAPSHOT: hitPct/spellHitPct in stats (GetHitModifier/GetSpellHitModifier via
+  Guards, secret -> 0 = base-table pessimism, never an error) + snapshot.weaponSkill
+  (C_SkillInfo presence-detected; druid IN FORM normalizes to the level cap -
+  reproduces the known flat 5/9 through the same table; absent API = trained-to-cap
+  fallback so the train-your-weapon insight can never fire falsely) + dualWield
+  (off-hand WEAPON, not shield). Graph `stat.*` nodes deliberately NOT added - see
+  the marginals deferral below.
+☑ CAPS MODEL: `model/caps.lua` (both TOCs) - the tables in ONE home (white miss 5/7
+  bases + dual 24/26 with the >10 breakpoint at 0.4/pt, spell floors 3/16,
+  crit-vs-boss = level penalty + 1.8 suppression at +3, white crit ceiling incl.
+  glancing 40 + extra-skill clawback), pure functions, every line (p)-tagged.
+  Selftests pin the fixture math both flavors (same-level 5, boss 9, dual 24/28,
+  breakpoint 6->7.4, clamps, crit 10->5.2 vs +3).
+☑ CAP-DISTANCE INSIGHT: Caps.linesFor rides Insights.forCharacter (section 4b) on
+  the primary lane - miss both frames, +hit-to-cap, the weapon-skill shortfall line
+  when it costs >=1% ("it trains by attacking - the cheapest hit you own"), the
+  white crit ceiling when crit is within 5 pts; healing lane silent (heals don't
+  miss). On /foresight insights + first-run.
+☑ BOSS FRAME: the Shift-depth "Your crit now" baseline on crit talents gains
+  "(vs +3 boss ~X%/Y%) (p)" via Caps.critVs; insight lines carry both frames.
+☐ CAP-AWARE MARGINALS (DEFERRED, recorded): rankStats ranks the graph's primary
+  stats and +hit is not a graph-ranked stat today (no shipped talent/item delta
+  folds hit) - zeroing past-cap has no real consumer yet. Becomes real when +hit
+  enters the fold set; the insight line states the cap truth meanwhile. Feeds
+  roadmap item 2 (dead investment) later.
+◐ VERIFY: gate green both flavors (324/324 + 278/278), deployed; the owner in-game
+  pass vs the character sheet on Forever (and the 1280x720 @ 0.65 readability look)
+  is the remaining ◐ - shipped on gate-green per house precedent, every line
+  (p)-tagged until that pass. Record loop closed in the ship change (CHANGELOG
+  0.66.0 + FEATURES MODEL-caps/UI-insights).
 
 ### S55 - Consolidation: color migration complete + Impact.foldStats ☑ (2026-11-06) -> 0.65.0
 Owner: "lets finish the color migration + impact fold stats" (UI-CONSOLIDATION items 1-2).

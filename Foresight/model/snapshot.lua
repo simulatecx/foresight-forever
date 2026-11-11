@@ -71,6 +71,10 @@ function Snapshot.capture()
             meleeCritPct = Guards.number(Guards.call(_G.GetCritChance)) or 0,
             rangedCritPct = Guards.number(Guards.call(_G.GetRangedCritChance)) or 0,
             hastePct = Guards.number(Guards.call(_G.GetHaste)) or 0,
+            -- Chance caps (S56): +hit from gear/talents. Secret/absent -> 0, so the
+            -- caps math degrades to the BASE tables (never an error, maybe pessimistic).
+            hitPct = Guards.number(Guards.call(_G.GetHitModifier)) or 0,
+            spellHitPct = Guards.number(Guards.call(_G.GetSpellHitModifier)) or 0,
             -- effectiveArmor is return #2 on both the classic and mainline UnitArmor
             -- shapes; #3 exists only on classic (live-verified: #3 read 0 on Forever).
             armor = Guards.number(Guards.select(2, _G.UnitArmor, "player")) or 0,
@@ -110,8 +114,60 @@ function Snapshot.capture()
             snapshot.weaponType = (subclassID == 15 and "dagger")
                 or (equipLoc == "INVTYPE_2HWEAPON" and "twoHand") or "oneHand"
         end
+        -- Weapon skill for the chance caps (S56). The equipped main-hand's skill
+        -- line via C_SkillInfo (presence-detected; a shipped Forever stats addon is
+        -- the API evidence - docs/SINSTATS-ANALYSIS.md). Druid IN FORM normalizes to
+        -- the level cap (reproduces the known flat 5/9 form miss through the same
+        -- table). Absent/unreadable -> assume trained to cap: the miss math then
+        -- shows BASE miss and the train-your-weapon insight can never fire falsely.
+        snapshot.weaponSkill = Snapshot.captureWeaponSkill(classToken, subclassID)
+    end
+    -- Dual-wield flag (white-swing miss penalty): an off-hand WEAPON, not a shield.
+    local ohId = Guards.number(Guards.call(_G.GetInventoryItemID, "player", 17))
+    if ohId and HM.Client then
+        local ohClass = Guards.number(Guards.select(12, HM.Client.getItemInfo, ohId))
+        snapshot.dualWield = (ohClass == 2) or nil
     end
     return snapshot
+end
+
+-- SkillLine ids per weapon subclass (game data; Enum.ItemWeaponSubclass order).
+local WEAPON_SKILL_LINE = {
+    [0] = 44,   -- 1H axe
+    [1] = 172,  -- 2H axe
+    [2] = 45,   -- bows
+    [3] = 46,   -- guns
+    [4] = 54,   -- 1H mace
+    [5] = 160,  -- 2H mace
+    [6] = 229,  -- polearm
+    [7] = 43,   -- 1H sword
+    [8] = 55,   -- 2H sword
+    [10] = 136, -- staff
+    [13] = 162, -- fist/unarmed
+    [15] = 173, -- dagger
+    [16] = 176, -- thrown
+    [18] = 226, -- crossbow
+    [19] = 228, -- wand
+}
+local UNARMED_LINE = 162
+
+function Snapshot.captureWeaponSkill(classToken, subclassID)
+    local getLine = _G.C_SkillInfo and _G.C_SkillInfo.GetSkillLineInfoByID
+    local level = Guards.number(Guards.call(_G.UnitLevel, "player")) or 60
+    local cap = level * 5
+    if not getLine then return cap end
+    local lineId = WEAPON_SKILL_LINE[subclassID] or UNARMED_LINE
+    if classToken == "DRUID" then
+        local form = Guards.number(Guards.call(_G.GetShapeshiftForm)) or 0
+        if form > 0 then return cap end -- form attacks normalize (flat 5/9)
+    end
+    local info = Guards.call(getLine, lineId)
+    if type(info) == "table" then
+        local rank = Guards.number(info.rank) or 0
+        local mod = Guards.number(info.modifier) or 0
+        if rank > 0 then return rank + mod end
+    end
+    return cap
 end
 
 -- Active consumable buffs we know (CONSUME-buffs, secret-safe): spellId is NeverSecret,
