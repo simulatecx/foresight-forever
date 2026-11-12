@@ -55,6 +55,49 @@ Recorded follow-ups (SPRINTS S57), not built:
   hovered slot's equipped item; weaker-of-two ring/trinket selection is a real
   correctness upgrade for `equippedCompareStats` - its own story.
 
+## The arrow recipe (2026-11-12 deep read of Gear/Bags.lua - for the build story)
+
+Their implementation choices, verified from source, worth copying verbatim:
+- **Anchor on the client's own unused `UpgradeIcon` position** (item button
+  top-left) at OVERLAY sublevel 3 - over the icon overlays (1-2), UNDER the
+  search overlay (4), so a bag search dims the arrow with the icon.
+- **Stock bags**: post-hook `UpdateItems` PER CONTAINER FRAME (the mixin's
+  functions are COPIED onto each frame as it's made - a hook on the mixin
+  misses them); frames = `ContainerFrameContainer.ContainerFrames` + the
+  combined backpack. Forever loads the Mainline ContainerFrame code.
+- **Baganator**: its corner-widget API, "the way Baganator shows Pawn's arrow"
+  (registered at load or when Baganator loads). EllesmereUI Bags: its
+  registered painter API (`RegisterItemOverlayIcon`).
+- **No table pollution**: arrows tracked in the addon's own by-button map,
+  never written into the button - taint-clean.
+- **Empty-slot fills get the arrow too** (no-loss items for an empty slot).
+- **`hideForPawn`**: a courtesy toggle that yields the surface when Pawn is
+  installed. Ours would be "hide when another arrow addon is detected".
+- Our verdict source is already spec-aware end-to-end: arrow = `itemVerdict`
+  direction=="upgrade" for `Impact.goalDimension` - a prot warrior's arrows
+  mark tank upgrades with ZERO extra plumbing.
+
+## Second-wave verdicts (QoL deep read, same date)
+
+- **"Worth wearing" nudge (TAKE, reshaped advice-only)**: their Wear.lua offers
+  each NEW bag upgrade once - "Wear it / Not this one", per-item dismissal
+  memory, never items held at login, never kept/junk items, offer withdrawn if
+  it stops being an upgrade. The CONSENT + dismissal grammar is excellent; the
+  equip BUTTON is not ours to take (display-and-advice doctrine: the compliance
+  gate bans item-use calls, and we never weaken it). Foresight's version: one
+  advice line/banner "X in your bags beats your equipped Y (+2.1% Tankability)"
+  with the same new-copies-only + remembered-dismissal discipline; the player
+  drags it on themselves.
+- **Auto-equip quest rewards (REJECT)**: QoL/Equip.lua equips picked rewards
+  automatically (default off, never in combat). Legal for addons, but
+  automation is outside Foresight's doctrine - rejected on record.
+- **minLevel honesty (TAKE, cheap)**: their IsUpgrade requires wearable-NOW;
+  the arrow never lies about an item you can't wear. Our verdict line on a
+  too-high-level item should say "(wearable at level N)" so a +4% verdict
+  doesn't read as equip-now advice.
+- **Spec-override judging (SKIP)**: their manual spec setting is covered by our
+  gear-goal setting + the planner's plan-relevance line; nothing to add.
+
 ## The honesty difference (why ours is not a Polestar clone)
 
 Polestar scores items with authored per-spec WEIGHT BANDS (SpecData.lua, Pawn
