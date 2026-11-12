@@ -2006,6 +2006,67 @@ function HM.runSelftest(out)
         local m = PM.matrixModel(lo)
         return m and m.eco and m.eco.id == "arms", m and m.eco and ("loop=" .. tostring(m.eco.id))
     end)())
+    check("Protection guidance follows the respec (S57): loop + goal + verdict", (function()
+        -- Owner report 2026-11-12: talents moved to Protection but the FS surfaces
+        -- kept coaching Arms - there WAS no prot engine, and the auto goal stayed on
+        -- the output lens. Pin the whole chain, data-located from the warrior's tabs.
+        local PM, TB = HM.PanelModel, HM.TalentBuild
+        if not (PM and PM.matrixModel and TB) then return false, "modules missing" end
+        local l = HM.loopById and HM.loopById("protwall")
+        if not (l and l.specTab == "Protection") then return false, "no protwall loop" end
+        local okc, clines = pcall(l.compute, base)
+        if not (okc and type(clines) == "table" and #clines > 0) then return false, "compute" end
+        local cid = TB.classIdFor and TB.classIdFor("WARRIOR")
+        local protTab
+        for _, tid in ipairs((cid and TB.tabsForClass and TB.tabsForClass(cid)) or {}) do
+            local tab = HM.gen.talentTabs and HM.gen.talentTabs[tid]
+            if tab and tab.name == "Protection" then protTab = tid; break end
+        end
+        if not protTab then return false, "no warrior Protection tab" end
+        local grid = gen.foreverTalents or gen.talents
+        local protTalent
+        for id, def in pairs(grid) do
+            if type(def) == "table" and def.tab == protTab then protTalent = id; break end
+        end
+        if not protTalent then return false, "no Protection-tab talent in data" end
+        local snap = testSnapshot()
+        snap.classToken = "WARRIOR"
+        snap.talents = { { nodeId = protTalent, rank = 5 } }
+        local lo = HM.Loadout.fromSnapshot(snap)
+        local prof = PM.specProfile(lo)
+        if not (prof and prof.primary == "Protection") then
+            return false, "profile not Protection"
+        end
+        local m = PM.matrixModel(lo)
+        if not (m and m.eco and m.eco.id == "protwall") then
+            return false, "loop=" .. tostring(m and m.eco and m.eco.id)
+        end
+        -- the auto goal follows the tank tree...
+        if HM.Impact.goalDimension(lo) ~= "tankability" then
+            return false, "goal not tankability"
+        end
+        local v = HM.Impact.itemVerdict(lo, { stamina = 10 }, nil, "auto")
+        if not (v and v.dim == "tankability") then
+            return false, "verdict dim " .. tostring(v and v.dim)
+        end
+        -- ...and a non-tank build keeps its output lens (no regression)
+        if HM.Impact.goalDimension(base) == "tankability" then
+            return false, "mage goal corrupted"
+        end
+        return true
+    end)())
+    check("quest best-pick ranking is deterministic (S57, the Polestar tie law)", (function()
+        local R = HM.Tooltips and HM.Tooltips.rankQuestChoices
+        if not R then return false, "no ranker" end
+        local b = R({ { index = 1, id = 9, pct = 1.0 }, { index = 2, id = 5, pct = 3.2 } })
+        if not (b and b.index == 2) then return false, "higher pct should win" end
+        b = R({ { index = 1, id = 9, pct = 2.0 }, { index = 2, id = 5, pct = 2.0 } })
+        if not (b and b.id == 5) then return false, "pct tie should go to the lower id" end
+        b = R({ { index = 2, id = 5, pct = 2.0 }, { index = 1, id = 5, pct = 2.0 },
+                { index = 3, id = 1 } })
+        if not (b and b.index == 1) then return false, "id tie should go to the earlier choice" end
+        return R({}) == nil and R(nil) == nil
+    end)())
     -- One trait node with exactly one +damage% op touching Fireball(133), found from
     -- the shipped data (never hardcoded), backs the spellmod/delta/hover checks.
     local dmgNodeId, dmgNodeOp

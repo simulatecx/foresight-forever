@@ -694,6 +694,12 @@ function PanelModel.radarModel(loadout, plan)
     local goal = HM.gearGoal and HM.gearGoal() or "auto"
     local goalDim = (type(goal) == "string" and goal ~= "auto"
         and not goal:find("^ability:")) and goal or nil
+    -- Spec-aware AUTO (S57): with no explicit goal, mark the lens the verdicts
+    -- actually judge by - a Protection build highlights Tankability, not meleeDps.
+    if not goalDim and HM.Impact and HM.Impact.goalDimension then
+        local okg, g = pcall(HM.Impact.goalDimension, loadout)
+        if okg then goalDim = g end
+    end
     local axes = {}
     for _, dim in ipairs(HM.dimensions.list) do
         local cur = results[dim.id] and results[dim.id].score

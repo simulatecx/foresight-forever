@@ -636,9 +636,17 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
     local equipped = ctx and ctx.equipped
     local ok, _, changes = pcall(Tooltips._itemDims, loadout, mapped)
     local lines = {}
+    -- Spec-labeled header (S57, the Polestar framing law: say WHOSE verdict this
+    -- is). The label comes from the live spec profile, so a respec re-brands
+    -- every tooltip on the next hover - guidance visibly follows the talents.
+    local who = "your character"
+    if HM.PanelModel and HM.PanelModel.specProfile then
+        local okp, prof = pcall(HM.PanelModel.specProfile, loadout)
+        if okp and prof and prof.label then who = "your " .. prof.label end
+    end
     lines[#lines + 1] = {
         kind = "double", left = "Foresight",
-        right = equipped and "equipped - your baseline" or "(p) for your character",
+        right = equipped and "equipped - your baseline" or ("(p) for " .. who),
         r = BRAND.r, g = BRAND.g, b = BRAND.b, r2 = GREY.r, g2 = GREY.g, b2 = GREY.b,
     }
     if equipped then
@@ -1447,6 +1455,67 @@ local function journalUnknownStatKeys(unknown)
     end
 end
 
+-- Quest-reward BEST PICK (S57, the Polestar determinism law re-judged by OUR
+-- net-swap verdict, never static weights). Pure ranker: entries carry
+-- { index, id, pct }; ties break to the higher pct, then the LOWER item id,
+-- then the earlier choice - stable across clients and sessions.
+function Tooltips.rankQuestChoices(entries)
+    local best
+    for _, e in ipairs(entries or {}) do
+        if type(e) == "table" and type(e.pct) == "number" then
+            if not best or e.pct > best.pct + 0.001 then
+                best = e
+            elseif math.abs(e.pct - best.pct) <= 0.001 then
+                if (e.id or 0) < (best.id or 0)
+                    or ((e.id or 0) == (best.id or 0) and (e.index or 0) < (best.index or 0)) then
+                    best = e
+                end
+            end
+        end
+    end
+    return best
+end
+
+-- Live gather: when the hovered item IS one of the open quest's reward choices,
+-- judge every choice through the SAME verdict pipeline and name the pick.
+-- Presence-detected (GetNumQuestChoices/GetQuestItemLink), pcall'd per choice,
+-- capped at 6 - absent APIs or no open quest = no line (degrade law).
+local function questPickLine(link, loadout)
+    local num = _G.GetNumQuestChoices and _G.GetNumQuestChoices()
+    if not (type(num) == "number" and num >= 2 and _G.GetQuestItemLink) then return nil end
+    local goal = HM.gearGoal and HM.gearGoal() or "auto"
+    local entries, hovered = {}, nil
+    for i = 1, math.min(num, 6) do
+        local okl, l = pcall(_G.GetQuestItemLink, "choice", i)
+        if okl and type(l) == "string" then
+            local e = { index = i, id = tonumber(l:match("item:(%d+)")) }
+            e.name = select(1, getItemInfo(l))
+            local okm, mapped = pcall(function()
+                return Tooltips.mapItemStats(resolveItemStats(l))
+            end)
+            if okm and mapped then
+                local okc, cmp = pcall(equippedCompareStats, l)
+                local okv, v = pcall(HM.Impact.itemVerdict, loadout, mapped,
+                    okc and cmp or nil, goal)
+                if okv and v then e.pct = v.pct end
+            end
+            entries[#entries + 1] = e
+            if sameItem(l, link) then hovered = e end
+        end
+    end
+    if not (hovered and hovered.pct) then return nil end
+    local best = Tooltips.rankQuestChoices(entries)
+    if not best then return nil end
+    if best == hovered then
+        return { text = gainOpen .. "Best pick of this quest's rewards|r "
+            .. "|cff9d9d9d(for the same goal as the verdict above) (p)|r",
+            r = BODY.r, g = BODY.g, b = BODY.b, wrap = true }
+    end
+    return { text = ("This quest offers a better pick: %s (%+.1f%% vs your %+.1f%%) (p)")
+        :format(best.name or ("choice " .. best.index), best.pct, hovered.pct),
+        r = BODY.r, g = BODY.g, b = BODY.b, wrap = true }
+end
+
 local function injectItem(tip)
     if injectedTips[tip] then return end
     if type(tip.GetItem) ~= "function" then return end
@@ -1510,6 +1579,12 @@ local function injectItem(tip)
             lines = Tooltips.buffLines(itemId, loadout)
             journalConsumableTip(itemId, link, lines ~= nil)
         end
+    end
+    -- Quest-reward BEST PICK (S57): hovering one of an open quest's choices says
+    -- whether THIS is the one to take - the same verdict judges all of them.
+    if lines and loadout and not (ctx and ctx.equipped) then
+        local okq, qline = pcall(questPickLine, link, loadout)
+        if okq and qline then lines[#lines + 1] = qline end
     end
     -- Provenance: if this item is in our client-decoded catalog, stamp it so the player
     -- knows the data is real Forever content at a known patch, not a datamined guess.

@@ -152,6 +152,34 @@ HM.loops = {
         end,
     },
     {
+        -- Protection (S57, owner report 2026-11-12: a respec to Protection kept showing
+        -- Arms guidance - there WAS no prot engine to lead with; the S53 follow-up
+        -- "Arms/Fury/Prot loops" closes here). Avoidance feeds Revenge; Sunder holds
+        -- the target; deep Protection pays off in Shield Slam.
+        id = "protwall", classToken = "WARRIOR", name = "The Shield Wall Engine (Protection)",
+        specTab = "Protection",  -- the Matrix leads with this once you've invested in Protection
+        confidence = "classic-presumed",
+        enablers = { "Sunder Armor", "Shield Block" },
+        engine = { "Revenge", "Defiance" },
+        payoffs = { "Shield Slam", "Last Stand" },
+        insight = "Protection path: Shield Block forces blocks, and every block, dodge, or "
+            .. "parry lights up Revenge - your cheapest, highest-threat strike - while "
+            .. "stacked Sunder Armor keeps the enemy glued to you. Deep Protection pays "
+            .. "off in Shield Slam.",
+        compute = function(loadout)
+            local lines = loopCompute({ "Shield Slam", "Revenge" })(loadout)
+            -- Avoidance -> Revenge: the real prot scaling relationship (Revenge needs a
+            -- block/dodge/parry first). Rate-of-proc is not decoded - no EV is claimed,
+            -- the relationship is what we describe (honest-gap law, the Deep Wounds shape).
+            local st = loadout.snapshot and loadout.snapshot.stats
+            if st and (st.avoidancePct or 0) > 0 then
+                lines[#lines + 1] = ("Avoidance feeds Revenge: ~%.0f%% dodge+parry now - every avoided swing opens a Revenge window (p)")
+                    :format(st.avoidancePct)
+            end
+            return lines
+        end,
+    },
+    {
         id = "combo", classToken = "ROGUE", name = "The Combo Engine",
         specTab = "Assassination",  -- data-located: this loop's talents live in Assassination (S54 spec-aware default)
         confidence = "classic-presumed",

@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.67.0 - 2026-11-12 (guidance follows your talents + the quest best pick)
+
+The Prot-warrior report, fixed at the root (S57; presentation grammar learned from
+the Polestar leveling suite - design record `docs/POLESTAR-ANALYSIS.md`; our model,
+their framing):
+
+- **Respec to Protection and Foresight now coaches Protection.** A new warrior
+  engine - "The Shield Wall Engine" (Shield Block/Sunder enablers, Revenge +
+  Defiance, Shield Slam/Last Stand payoffs, the avoidance->Revenge relationship
+  stated honestly) - leads the Matrix for Protection-dominant builds instead of
+  falling back to Arms with a footnote.
+- **The auto gearing goal is spec-aware.** A build whose dominant tree is a tank
+  tree (warrior/paladin Protection) judges gear, next points, and stat rankings by
+  Tankability instead of whichever output number is loudest; the Matrix radar marks
+  the lens the verdicts actually use. Feral stays unmapped on purpose (dual-role).
+- **Tooltips say WHOSE verdict it is.** The Foresight header now reads
+  "(p) for your Protection (0/5/41)" from your live spec profile - a respec
+  re-brands every tooltip on the next hover.
+- **Quest-reward Best pick.** Hover a quest reward choice and Foresight judges ALL
+  the offered choices with the same net-swap verdict: "Best pick of this quest's
+  rewards" - or names the better one. Deterministic ties (higher %, lower item id,
+  earlier choice); silent when no quest is open.
+- Ship gate: Forever 326/326, Classic 280/280.
+
+*Features:* SIM-engine, MODEL-impact-diff, DATA-items
+
 ## 0.66.0 - 2026-11-10 (chance caps & the boss frame)
 
 What the stock UI hides about your chances, interpreted (S56; the tables learned

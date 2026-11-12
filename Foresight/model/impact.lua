@@ -167,7 +167,7 @@ end
 -- 18-27 -> 34-52 weapon "+4.7%"). Still the ONE judge; other goals keep the lens math.
 function Impact.itemVerdict(loadout, mapped, comparedStats, goalId, weaponSwap)
     local goal = goalId
-    if not goal or goal == "auto" then goal = Impact.primaryDimension(loadout) end
+    if not goal or goal == "auto" then goal = Impact.goalDimension(loadout) end
     -- S28a: ability-level goals judge by the NET-SWAP effect on abilityHit (the one
     -- delta path, baseline law intact). Un-composable -> honest fallback note, never
     -- a silent wrong judge.
@@ -189,7 +189,7 @@ function Impact.itemVerdict(loadout, mapped, comparedStats, goalId, weaponSwap)
                          abilityGoal = true }
             end
         end
-        goal = Impact.primaryDimension(loadout)
+        goal = Impact.goalDimension(loadout)
         local sp = HM.gen and HM.gen.spells and HM.gen.spells[abilitySid]
         fallbackNote = ("your '%s' goal isn't judgeable here - judged for %s instead")
             :format((sp and sp.name) or "ability", goal)
@@ -237,11 +237,35 @@ function Impact.primaryDimension(loadout)
     return bestId or "spellcasting", results
 end
 
+-- The gearing goal when the player says "auto" (S57, the Prot-warrior report
+-- 2026-11-12: a respec to Protection kept Arms/meleeDps guidance). Spec-aware:
+-- a build whose DOMINANT TREE is a tank tree judges gear and next points by
+-- tankability, not by whichever output number happens to score highest. Keyed
+-- by the tab NAME from the player's own spec profile; an unknown/renamed tab
+-- simply degrades to the output lens (never an error). Warrior and Paladin
+-- share the "Protection" tab name, so both get it; Druid's Feral Combat is
+-- deliberately NOT mapped (it is both a dps and a tank tree - guessing would
+-- be wrong half the time).
+local TANK_TABS = { Protection = "tankability" }
+function Impact.goalDimension(loadout)
+    if HM.PanelModel and HM.PanelModel.specProfile then
+        local ok, prof = pcall(HM.PanelModel.specProfile, loadout)
+        local lens = ok and prof and TANK_TABS[prof.primary]
+        if lens and HM.dimensions and HM.dimensions.byId and HM.dimensions.byId(lens) then
+            return lens
+        end
+    end
+    return (Impact.primaryDimension(loadout))
+end
+
 -- Rank stats for a loadout. Returns ordered list of
 -- { stat, focusPct, bestPct, bestLabel } plus the focus dimension id.
 function Impact.rankStats(loadout, stats, focusDimId)
     stats = stats or DEFAULT_STATS
-    local focus = focusDimId or Impact.primaryDimension(loadout)
+    -- Default focus is the spec-aware GOAL (S57): a Protection build's "what
+    -- moves me" ranks against tankability. Callers with an explicit lens
+    -- (insights coaching passes the output primary) are untouched.
+    local focus = focusDimId or Impact.goalDimension(loadout)
     local ranked = {}
     for _, stat in ipairs(stats) do
         local _, changes = Impact.explainStatDelta(loadout, stat, 1)

@@ -1,11 +1,11 @@
-## 0.66.0 - chance caps & the boss frame
+## 0.67.0 - guidance follows your talents + the quest best pick
 
-Foresight now interprets the chances the stock UI hides. Your insights
-(`/foresight insights`) tell melee builds how often their swings miss vs
-same-level targets AND vs +3 bosses (dual-wield penalty included), how much
-+hit caps it, when a weapon-skill shortfall is quietly costing extra miss -
-and casters get the spell version (the 3%/16% floors). Crit-talent tooltips
-now also show your crit as it lands on a +3 boss. Advice lines, not a stats
-HUD - and every number is tagged presumed until verified in-game on Forever.
+Respec and Foresight respecs with you: a new Protection warrior engine ("The
+Shield Wall Engine") leads the Matrix for prot builds, the auto gearing goal
+turns tank-aware (Protection builds judge gear and next points by Tankability),
+and every item tooltip now says WHOSE verdict it is - "(p) for your Protection
+(0/5/41)" - straight from your live talents. Plus: hover a quest reward and
+Foresight names the best pick of the offered choices, judged by the same honest
+net-swap verdict.
 
-Ship gate: Forever 324 checks, Classic 278. Display-and-advice only, official APIs only.
+Ship gate: Forever 326 checks, Classic 280. Display-and-advice only, official APIs only.

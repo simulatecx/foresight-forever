@@ -68,6 +68,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S54b Spec hardening: hybrid naming/triplet + deterministic ties + the classic no-id capture fix | 3 | ☑ |
 | S55 Consolidation: color migration complete + Impact.foldStats (UI-CONSOLIDATION items 1-2) | 3 | ☑ |
 | S56 Cap & boss-frame derived insights (SinStats-inspired; roadmap item 1) | 3 | ☑ |
+| S57 Spec-reactive guidance (Prot loop + spec-aware auto goal) + Polestar upgrade framing | 3 | ☑ |
 
 ## Active / next
 
@@ -91,6 +92,48 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S57 - Spec-reactive guidance + the Polestar upgrade framing ☑ (2026-11-12) -> 0.67.0
+Owner: "run an audit of how Polestar presents upgrades - take some inspiration for
+upgrade - also we changed talents to Protection and the character sheet FS stayed
+static with Arms; it should provide prot guidance." Design record:
+`docs/POLESTAR-ANALYSIS.md` (mechanisms learned; our model, never their weights).
+*Fit & Overlap - Category SIM/MODEL -> UI. Verdict: ENHANCE data/loops.lua (the
+missing Protection engine - the ROOT of "static with Arms": matrixModel fell back to
+loops[1]=Arms) + model/impact.lua (Impact.goalDimension: spec-aware auto goal) +
+ui/tooltips.lua (spec-labeled header + quest best pick). No new window, no new data
+leaves the machine. Avoid duplicating: verdicts stay impact-model-driven (never
+Polestar-style authored weight bands). Mobile: text lines on existing surfaces.
+Abuse: not externally reachable.*
+☑ ROOT-CAUSE READ (the "static" report): talent events WERE wired and every surface
+  re-captures - the guidance stayed Arms because no Protection loop existed and the
+  auto goal always chased the loudest OUTPUT lens. Fixed at the model, not the event
+  plumbing.
+☑ PROTECTION LOOP (data/loops.lua "protwall", specTab Protection): Shield Block/
+  Sunder Armor enablers -> Revenge + Defiance engine -> Shield Slam/Last Stand
+  payoffs; avoidance->Revenge relationship stated with NO invented proc EV
+  (honest-gap). Member names resolve in BOTH flavors (validateLoops gate).
+☑ SPEC-AWARE AUTO GOAL: `Impact.goalDimension` - dominant tank tree (tab-name keyed:
+  Protection = warrior+paladin; Feral deliberately unmapped, dual-role) -> gear
+  verdicts, ability fallback judge, default rankStats focus, and the Matrix radar
+  marker all judge by tankability; unknown tab degrades to the output lens.
+☑ SPEC-LABELED TOOLTIP HEADER (the Polestar framing law): "(p) for your Protection
+  (0/5/41)" from the live specProfile - a respec re-brands every tooltip on the
+  next hover.
+☑ QUEST-REWARD BEST PICK: all offered choices judged through the ONE verdict
+  pipeline; `Tooltips.rankQuestChoices` ties break pct > lower item id > earlier
+  choice (the Polestar determinism law, selftest-pinned); presence-detected quest
+  APIs, pcall'd per choice, silent without an open quest.
+☑ Selftests (+2, dual 326/326 + 280/280): the whole Protection chain (profile ->
+  protwall loop -> tankability goal -> verdict dim; mage regression pinned) + the
+  tie law.
+☐ FOLLOW-UPS (recorded, not built): bag-slot upgrade glyphs + reward-panel marks
+  (overlay UI - needs the ElvUI/Bagnon coexistence pass); replace-aware ring/
+  trinket weaker-of-two compare in equippedCompareStats; prot-style loops for the
+  other tank-capable classes.
+◐ VERIFY: shipped on gate-green; the owner in-game pass = respec Protection ->
+  Matrix leads Shield Wall + radar marks Tankability + tooltip header re-brands +
+  a quest reward shows the pick (and the 1280x720 @ 0.65 look).
 
 ### S56 - Cap & boss-frame derived insights (SinStats-inspired) ☑ (2026-11-10) -> 0.66.0
 Owner: "we downloaded SinStats - take inspiration from their tips/recommendations
