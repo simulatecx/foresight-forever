@@ -2,7 +2,7 @@
 ## Title: Foresight
 ## Notes: The layman's oracle for Classic Era - know in plain terms what every talent point, stat, item, and buff actually does for you.
 ## Author: SimulateCX
-## Version: 0.67.0
+## Version: 0.68.0
 ## SavedVariables: ForesightDB
 ## IconTexture: Interface\Icons\Spell_Nature_FarSight
 ## X-License: All Rights Reserved
@@ -67,6 +67,7 @@ ui\talent_tree.lua
 ui\options_panel.lua
 ui\export.lua
 ui\tooltips.lua
+ui\bag_arrows.lua
 ui\synergy_highlight.lua
 selftest.lua
 core\init.lua

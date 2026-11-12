@@ -69,6 +69,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S55 Consolidation: color migration complete + Impact.foldStats (UI-CONSOLIDATION items 1-2) | 3 | ☑ |
 | S56 Cap & boss-frame derived insights (SinStats-inspired; roadmap item 1) | 3 | ☑ |
 | S57 Spec-reactive guidance (Prot loop + spec-aware auto goal) + Polestar upgrade framing | 3 | ☑ |
+| S58 Bag upgrade arrows + worth-wearing nudge + too-high-level honesty (tag held: in-game pass) | 3 | ◐ |
 
 ## Active / next
 
@@ -92,6 +93,44 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > im logging out"). v0.54.0 now ALSO carries the 174/175 converter decode fix (caught
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
+
+### S58 - Bag arrows + worth-wearing nudge + too-high honesty ◐ (built 2026-11-12) -> 0.68.0 TAG HELD
+Owner: "i like the story - do that; we want the weight bands, and i like our verdict
+for too-high-level showing impact, but that it's too high of a level." Weight-band
+interpretation ON RECORD: no authored per-level weight tables (the live model IS the
+band - it re-weighs continuously with your level); what we took is the band OUTCOME =
+level-aware verdicts. If the owner meant literal band data, reopen.
+*Fit & Overlap - Category UI (DATA-items surface). Verdict: NET-NEW ui/bag_arrows.lua
+riding the EXISTING verdict pipeline (Tooltips._resolveItemStats/_equippedCompareStats
+-> Impact.itemVerdict, exported so the arrow can never disagree with the hover) +
+ENHANCE tooltips (too-high line) + settings spine (bagArrows/wearNudge toggles).
+Avoid duplicating: no second judging path, no equip automation (compliance doctrine).
+Mobile: 13px arrow at the client's own UpgradeIcon spot. Abuse: not externally
+reachable; nothing leaves the machine.*
+☑ BAG ARROWS (the Polestar recipe, docs/POLESTAR-ANALYSIS.md): per-frame
+  UpdateItems hooks on Forever's Mainline container frames (mixin functions are
+  COPIED per frame - the deep-read trap) + the classic ContainerFrame_Update path;
+  atlas bags-greenarrow with a classic-safe texture fallback; arrows in OUR weak
+  by-button map, never written into Blizzard's buttons; OVERLAY sublevel 3 (search
+  overlay dims it). SPEC-AWARE FOR FREE: verdict = itemVerdict on goalDimension -
+  a Protection build marks tank upgrades. Wearable-now law: too-high items never
+  arrow. Spec/gear/level events invalidate the verdict cache (the Polestar law).
+☑ WORTH-WEARING NUDGE (advice-only; their Wear.lua consent grammar, equip button
+  REJECTED on doctrine): one chat line when a NEW copy of an upgrade reaches the
+  bags; held-at-login never nudges (login seed + race guard), one nudge per scan,
+  per-item memory in db.wearNoted. Foresight never equips.
+☑ TOO-HIGH HONESTY: the tooltip verdict STAYS (impact for your build as it is now)
+  + "Too high for you yet - wearable at level N"; minLevel read live.
+☑ Toggles: bagArrows / wearNudge (settings spine, both default on). Selftest (+1
+  dual): wearable-now law (same pct, arrow refused), new-copy diff law, the
+  tooltip note+verdict coexistence. Gate 327/327 + 281/281.
+☐ FOLLOW-UPS: Bagnon/Baganator/ElvUI bag views (corner-widget/painter APIs - needs
+  their API shapes verified in-game); reward-panel marks; proficiency-aware
+  wearability (level-only today).
+◐ VERIFY (THE TAG GATE): owner in-game pass - arrows appear in stock bags on both
+  flavors, search dims them, respec flips which items arrow, a looted upgrade
+  nudges once, too-high items show impact + the level line, 1280x720 @ 0.65. Tag
+  v0.68.0 only after this pass (overlay UI - never gate-green-only).
 
 ### S57 - Spec-reactive guidance + the Polestar upgrade framing ☑ (2026-11-12) -> 0.67.0
 Owner: "run an audit of how Polestar presents upgrades - take some inspiration for

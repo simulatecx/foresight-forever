@@ -2055,6 +2055,38 @@ function HM.runSelftest(out)
         end
         return true
     end)())
+    check("bag arrows: wearable-now law, new-copy diff, too-high tooltip line (S58)", (function()
+        local A = HM.BagArrows
+        if not (A and A.judge and A.newCopies) then return false, "no BagArrows" end
+        local lo = HM.Loadout.fromSnapshot(testSnapshot())
+        -- a clear stat gain judges as the arrow-worthy upgrade...
+        local up = A.judge(lo, { Intellect = 30 }, nil, nil, 60)
+        if not (up and up.upgrade == true and up.tooHigh == false) then
+            return false, "upgrade not recognized"
+        end
+        -- ...and the SAME item above your level keeps its impact but NEVER arrows
+        local hi = A.judge(lo, { Intellect = 30 }, nil, 63, 60)
+        if not (hi and hi.upgrade == false and hi.tooHigh == true
+                and math.abs(hi.pct - up.pct) < 0.001) then
+            return false, "wearable-now law broken"
+        end
+        -- the new-copy law: only count INCREASES qualify; held/removed never do
+        local fresh = A.newCopies({ [5] = 1, [7] = 2 }, { [5] = 2, [7] = 1, [9] = 1 })
+        if not (fresh[5] == true and fresh[9] == true and fresh[7] == nil) then
+            return false, "new-copy diff"
+        end
+        if next(A.newCopies(nil, {})) ~= nil then return false, "empty diff" end
+        -- the tooltip carries the too-high honesty line with the impact kept
+        local tl = HM.Tooltips.itemLines({ Intellect = 30 }, lo, nil, { tooHighLevel = 63 })
+        if not tl then return false, "no tooltip lines" end
+        local sawNote, sawVerdict = false, false
+        for _, l in ipairs(tl) do
+            local t = l.text or ""
+            if t:find("wearable at level 63", 1, true) then sawNote = true end
+            if t:find("grade", 1, true) then sawVerdict = true end
+        end
+        return sawNote and sawVerdict, "note=" .. tostring(sawNote) .. " verdict=" .. tostring(sawVerdict)
+    end)())
     check("quest best-pick ranking is deterministic (S57, the Polestar tie law)", (function()
         local R = HM.Tooltips and HM.Tooltips.rankQuestChoices
         if not R then return false, "no ranker" end

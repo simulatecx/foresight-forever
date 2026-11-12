@@ -30,6 +30,16 @@ Settings.KEYS = {
         label = "Show which spells an item lifts",
         desc = "On an item tooltip, list the few of YOUR top abilities this item changes the most, ranked (e.g. 'Frostbolt +3.2%'). Works for gear and weapons alike. Off = just the dimension verdict.",
     },
+    bagArrows = {
+        group = "General", type = "toggle", default = true,
+        label = "Show bag upgrade arrows",
+        desc = "Mark items in your bags that upgrade your current goal with a small arrow - spec-aware, so a Protection build marks tank upgrades. Items above your level never get the arrow.",
+    },
+    wearNudge = {
+        group = "General", type = "toggle", default = true,
+        label = "Suggest new bag upgrades",
+        desc = "When a NEW item that beats your equipped gear reaches your bags, say so once in chat. Foresight never equips anything for you - you drag it on yourself.",
+    },
     panelAlpha = {
         group = "Layout", type = "slider", default = 0.92, min = 0.2, max = 1.0,
         label = "Panel opacity",

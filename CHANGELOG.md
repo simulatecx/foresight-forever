@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.68.0 - 2026-11-12 (bag arrows + the worth-wearing nudge) [BUILT; tag held for the in-game pass]
+
+The at-a-glance layer (S58; the arrow recipe from the Polestar deep read -
+`docs/POLESTAR-ANALYSIS.md`):
+
+- **Bag upgrade arrows.** Items in your bags that upgrade your current goal get a
+  small arrow on the slot - judged by the SAME net-swap verdict as the tooltip, so
+  the two can never disagree, and spec-aware for free: a Protection build marks
+  tank upgrades. Items above your level never arrow (the wearable-now law); a bag
+  search dims the arrow with the item. Toggle: `bagArrows`.
+- **The worth-wearing nudge (advice only).** When a NEW item that beats your
+  equipped gear reaches your bags, one chat line says so - once per item, never
+  for things you already held at login. Foresight never equips anything for you.
+  Toggle: `wearNudge`.
+- **Too-high items stay honest.** The tooltip keeps the full impact verdict -
+  judged for your build as it is now - plus "Too high for you yet - wearable at
+  level N", so a +4% never reads as equip-now advice.
+- Weight bands, on record: no authored per-level weight tables - the live model
+  re-weighs continuously with your level; these three surfaces are the band
+  outcome (level-aware verdicts) without the static data.
+- Ship gate: Forever 327/327, Classic 281/281.
+
+*Features:* DATA-items, CORE-options
+
 ## 0.67.0 - 2026-11-12 (guidance follows your talents + the quest best pick)
 
 The Prot-warrior report, fixed at the root (S57; presentation grammar learned from

@@ -684,6 +684,17 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
                     r = BODY.r, g = BODY.g, b = BODY.b, wrap = true }
             end
         end
+        -- Too-high-level honesty (S58, owner: "show the impact, but that it's too
+        -- high of a level"): the verdict above STAYS - judged for your build as it
+        -- is now - and this line keeps it from reading as equip-now advice. The
+        -- bag arrow never marks these (the wearable-now law).
+        if ctx and ctx.tooHighLevel then
+            lines[#lines + 1] = {
+                text = ("Too high for you yet - wearable at level %d (the numbers above are for your current build) (p)")
+                    :format(ctx.tooHighLevel),
+                r = GREY.r, g = GREY.g, b = GREY.b, wrap = true,
+            }
+        end
         -- Weapon-swap rows (the honest A->B of equipping this weapon): from -> to in
         -- real units, red when it's a loss - base ranges from both tooltips + your AP
         -- through Sim.weaponSwap. A weapon hover that CAN'T compare says why, never
@@ -1552,6 +1563,13 @@ local function injectItem(tip)
         ctx = ctx or {}
         ctx.configChange = { removedOffhand = offRemoved }
     end
+    -- Too-high-level honesty (S58): the item's minLevel vs the live character.
+    local okMin, minLevel = pcall(function() return (select(5, getItemInfo(link))) end)
+    local lvl = loadout and loadout.snapshot and tonumber(loadout.snapshot.level)
+    if okMin and tonumber(minLevel) and lvl and tonumber(minLevel) > lvl then
+        ctx = ctx or {}
+        ctx.tooHighLevel = tonumber(minLevel)
+    end
     -- BASELINE LAW: hovering an item you're WEARING switches to baseline mode - its
     -- stats are already inside every number, so no verdict/% is ever claimed for it.
     -- Identity by itemKey, never raw link equality (live catch: linkLevel drift made
@@ -1955,5 +1973,11 @@ if _G.CreateFrame then
     Tooltips.installSpells()
     Tooltips.installTraitTooltips()
 end
+
+-- S58 (bag arrows): the arrow verdict rides the SAME stat-resolution and
+-- equipped-compare pipeline the hover uses - exported so ui/bag_arrows.lua can
+-- never disagree with what the tooltip says about the same item.
+Tooltips._resolveItemStats = resolveItemStats
+Tooltips._equippedCompareStats = equippedCompareStats
 
 return Tooltips
