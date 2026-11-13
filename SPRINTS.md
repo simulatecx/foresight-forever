@@ -69,7 +69,7 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 | S55 Consolidation: color migration complete + Impact.foldStats (UI-CONSOLIDATION items 1-2) | 3 | ☑ |
 | S56 Cap & boss-frame derived insights (SinStats-inspired; roadmap item 1) | 3 | ☑ |
 | S57 Spec-reactive guidance (Prot loop + spec-aware auto goal) + Polestar upgrade framing | 3 | ☑ |
-| S58 Bag upgrade arrows + worth-wearing nudge + too-high-level honesty (tag held: in-game pass) | 3 | ◐ |
+| S58 Bag arrows + wear nudge + too-high honesty + model fixes (hp5/schools/defense/why) | 3 | ☑ |
 
 ## Active / next
 
@@ -94,7 +94,13 @@ Three pillars shipped, verified on Forever, and published to CurseForge/Wago/Git
 > via the first single-aura converters) + planner EXAMPLE BUILDS (S48). Dual gate
 > 305/305 + 260/260. SHIPPING v0.54.0 as the day-1 patch (tag + CurseForge/GitHub).
 
-### S58 - Bag arrows + worth-wearing nudge + too-high honesty ◐ (built 2026-11-12) -> 0.68.0 TAG HELD
+### S58 - Bag arrows + worth-wearing nudge + too-high honesty ☑ (2026-11-12) -> 0.68.0
+SHIP NOTE: owner-authorized tag WITHOUT the in-game pass ("do the curse deployment
+since i'll be offline - new downloads should get the change") - the school-damage
+fix matters for published users; the owner's checks run later against the LOCAL
+deploy. OWNER INSTALL MODEL CHANGE (2026-11-12): Foresight UNINSTALLED from the
+Curse app on the owner's machine - their installs are now managed ONLY by
+pipeline/deploy.py (manual/local); CF releases serve the public.
 Owner: "i like the story - do that; we want the weight bands, and i like our verdict
 for too-high-level showing impact, but that it's too high of a level." Weight-band
 interpretation ON RECORD: no authored per-level weight tables (the live model IS the

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.68.0 - 2026-11-12 (bag arrows + the worth-wearing nudge) [BUILT; tag held for the in-game pass]
+## 0.68.0 - 2026-11-12 (bag arrows + the worth-wearing nudge)
 
 The at-a-glance layer (S58; the arrow recipe from the Polestar deep read -
 `docs/POLESTAR-ANALYSIS.md`):
