@@ -20,7 +20,17 @@ The at-a-glance layer (S58; the arrow recipe from the Polestar deep read -
 - Weight bands, on record: no authored per-level weight tables - the live model
   re-weighs continuously with your level; these three surfaces are the band
   outcome (level-aware verdicts) without the static data.
-- Ship gate: Forever 327/327, Classic 281/281.
+- **"Restores X per 5 sec" now counts (the Subterranean Cape field catch).**
+  Health-per-5 and mana-per-5 equip effects were journaled as unknown keys and
+  silently missing from verdicts - a +5 hp5 cape judged as if the regen didn't
+  exist (while Polestar's leveling weight band called it +77%). They now map,
+  display in the stat list, and fold into the model at the 2-second regen tick
+  (x2/5, classic-presumed): hp5 feeds Survivability (+60 index per 5 hp5), mp5
+  feeds Mana sustain (+48/min per 4 mp5). The cape's honest answer: still a
+  small Tankability loss (armor + stamina), now a clear Survivability GAIN -
+  both rows shown, you pick the lens. Per-school spell damage on items (frost
+  etc.) already folded into each school's spells via the S25 pool law.
+- Ship gate: Forever 328/328, Classic 282/282.
 
 *Features:* DATA-items, CORE-options
 

@@ -124,9 +124,22 @@ reachable; nothing leaves the machine.*
 ☑ Toggles: bagArrows / wearNudge (settings spine, both default on). Selftest (+1
   dual): wearable-now law (same pct, arrow refused), new-copy diff law, the
   tooltip note+verdict coexistence. Gate 327/327 + 281/281.
+☑ S58b REGEN-PER-5 FOLD (field catch during this story's verify pass - the
+  Subterranean Cape: +5 hp5 judged as if absent; the unknownItemStats journal HAD
+  the key, nobody had promoted it): ITEM_MOD health/mana regen keys (both shapes)
+  -> healthPer5/manaPer5 display stats -> stat nodes (base 0; net-swap deltas stay
+  exact) -> the 2s tick (x0.4, classic-presumed) -> Survivability regen term +
+  Mana sustain. Selftest pins the exact deltas (+60 surv per 5 hp5, +48 sustain
+  per 4 mp5) AND the field cape shape netting survivability POSITIVE. Polestar
+  said +77% (their leveling band); our honest answer = small Tankability loss,
+  clear Survivability gain, both rows shown. Frost-school item damage (the
+  owner's other example) was ALREADY folded per the S25 school-pool law.
 ☐ FOLLOW-UPS: Bagnon/Baganator/ElvUI bag views (corner-widget/painter APIs - needs
   their API shapes verified in-game); reward-panel marks; proficiency-aware
-  wearability (level-only today).
+  wearability (level-only today); SWEEP db.collect.unknownItemStats on every field
+  pass (the tripwire fired here and sat unread - make the sweep a verify-pass
+  checklist item); conditional equip effects (AP vs Beasts) as display-only
+  callouts.
 ◐ VERIFY (THE TAG GATE): owner in-game pass - arrows appear in stock bags on both
   flavors, search dims them, respec flips which items arrow, a looted upgrade
   nudges once, too-high items show impact + the level line, 1280x720 @ 0.65. Tag

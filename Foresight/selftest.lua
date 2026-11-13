@@ -2087,6 +2087,36 @@ function HM.runSelftest(out)
         end
         return sawNote and sawVerdict, "note=" .. tostring(sawNote) .. " verdict=" .. tostring(sawVerdict)
     end)())
+    check("regen-per-5 items fold (S58b, the Subterranean Cape field catch)", (function()
+        -- Owner report 2026-11-12: a +5 hp5 cape judged as if the regen didn't
+        -- exist (the key was journaled unknown). Pin the whole chain: key map ->
+        -- stat node -> the 2s tick (x*0.4) -> survivability/sustain scores.
+        local mapped = HM.Tooltips.mapItemStats({ ITEM_MOD_HEALTH_REGEN_SHORT = 5,
+                                                  ITEM_MOD_POWER_REGEN0_SHORT = 4 })
+        if not (mapped.healthPer5 == 5 and mapped.manaPer5 == 4) then
+            return false, "key map"
+        end
+        local lo = HM.Loadout.fromSnapshot(testSnapshot())
+        -- hp5 -> survivability: +5 hp5 = +2/tick = +60 on the regen*30 term, exactly
+        local base = HM.Impact.evaluate(lo)
+        local withHp5 = HM.Impact.evaluate(lo:withStatDelta("healthPer5", 5, "test"))
+        local dSurv = withHp5.survivability.score - base.survivability.score
+        if math.abs(dSurv - 60) > 0.01 then return false, "surv delta " .. tostring(dSurv) end
+        -- mp5 -> sustain: +4 mp5 = +1.6/tick = +48 mana/min, exactly
+        local withMp5 = HM.Impact.evaluate(lo:withStatDelta("manaPer5", 4, "test"))
+        local dSus = withMp5.sustain.score - base.sustain.score
+        if math.abs(dSus - 48) > 0.01 then return false, "sustain delta " .. tostring(dSus) end
+        -- the field shape end-to-end: the cape swap (+3 Str +5 hp5 / -10 AP -2 Sta
+        -- -5 armor) must show a POSITIVE survivability net row now
+        local rows = HM.Impact.compareItems(lo,
+            { Strength = 3, armor = 17, healthPer5 = 5 },
+            { Stamina = 2, armor = 22, attackPower = 10 })
+        local surv
+        for _, r in ipairs(rows) do if r.id == "survivability" then surv = r.net end end
+        -- (the exact +60/+48 deltas above already prove the nodes exist - an
+        -- unknown stat node would no-op the fold and zero them)
+        return surv ~= nil and surv > 0, "cape survivability " .. tostring(surv)
+    end)())
     check("quest best-pick ranking is deterministic (S57, the Polestar tie law)", (function()
         local R = HM.Tooltips and HM.Tooltips.rankQuestChoices
         if not R then return false, "no ranker" end

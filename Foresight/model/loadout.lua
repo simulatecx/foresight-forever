@@ -240,6 +240,13 @@ function Loadout:build()
         baseStats[node] = (type(sd) == "table" and (sd[name] or 0))
             or s.stats.spellDamage or 0
     end
+    -- Regen-per-5 stats (S58b, the Subterranean Cape field catch 2026-11-12: a
+    -- +5 hp5 cape judged as if the regen didn't exist). Base 0 - the character
+    -- sheet exposes no hp5/mp5 read, and every verdict is a NET-SWAP delta, so
+    -- folding both sides' per-5 values gives the right relative answer even
+    -- though the absolute baseline understates worn regen gear.
+    baseStats["stat.healthPer5"] = 0
+    baseStats["stat.manaPer5"] = 0
     for id in pairs(baseStats) do
         g:addNode{ id = id, kind = id:find("^agg") and "aggregate" or "stat" }
     end
@@ -293,13 +300,22 @@ function Loadout:build()
                        + (liveIntPerCrit and (get("stat.intellect") - snapInt) / liveIntPerCrit or 0)
                end }
 
-    -- Mechanic + outcome nodes (formula-driven).
+    -- Mechanic + outcome nodes (formula-driven). The per-5 item stats fold in at
+    -- the 2s regen tick (x * 2/5, classic-presumed) - "Restores X per 5 sec"
+    -- equip effects tick regardless of the 5-second rule, so they add to the
+    -- tick unconditionally (S58b).
     local manaFn = (F.manaRegenTick.byClass or {})[s.classToken]
     g:addNode{ id = "mech.manaPerTick", kind = "mechanic",
-               formula = function(get) return manaFn and manaFn(get("stat.spirit")) or 0 end }
+               formula = function(get)
+                   return (manaFn and manaFn(get("stat.spirit")) or 0)
+                       + get("stat.manaPer5") * 0.4
+               end }
     local healthFn = (F.healthRegenTick.byClass or {})[s.classToken]
     g:addNode{ id = "mech.healthPerTick", kind = "mechanic",
-               formula = function(get) return healthFn and healthFn(get("stat.spirit")) or 0 end }
+               formula = function(get)
+                   return (healthFn and healthFn(get("stat.spirit")) or 0)
+                       + get("stat.healthPer5") * 0.4
+               end }
     g:addNode{ id = "mech.swingTime", kind = "mechanic",
                formula = function(get) return F.swingTime.fn(s.weaponSpeed or 2.0, get("stat.hastePct")) end }
     -- Real white DPS on the live weapon (v0.34.0 lens fix): the sheet range already

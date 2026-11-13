@@ -418,6 +418,13 @@ local ITEM_STAT_MAP = {
     ITEM_MOD_RANGED_ATTACK_POWER_SHORT = "rangedAttackPower",
     ITEM_MOD_MANA_SHORT = "maxMana",
     ITEM_MOD_HEALTH_SHORT = "maxHealth",
+    -- Regen-per-5 equip effects (S58b, the Subterranean Cape field catch: "+5
+    -- Health per 5 sec" was journaled unknown and silently missing from the
+    -- verdict). Both key shapes mapped defensively per the resist-twin lesson.
+    ITEM_MOD_HEALTH_REGEN_SHORT = "healthPer5",
+    ITEM_MOD_HEALTH_REGENERATION_SHORT = "healthPer5",
+    ITEM_MOD_POWER_REGEN0_SHORT = "manaPer5",
+    ITEM_MOD_MANA_REGENERATION_SHORT = "manaPer5",
     RESISTANCE0_NAME = "armor", -- physical resistance index 0 = armor (classic shape)
 }
 local DISPLAY_STAT = {
@@ -425,6 +432,7 @@ local DISPLAY_STAT = {
     spellDamage = "Spell Damage", healingPower = "Healing Power",
     attackPower = "Attack Power", rangedAttackPower = "Ranged Attack Power",
     maxMana = "Mana", maxHealth = "Health", armor = "Armor",
+    healthPer5 = "Health per 5 sec", manaPer5 = "Mana per 5 sec",
     ["school.holy"] = "Holy Spell Damage", ["school.fire"] = "Fire Spell Damage",
     ["school.nature"] = "Nature Spell Damage", ["school.frost"] = "Frost Spell Damage",
     ["school.shadow"] = "Shadow Spell Damage", ["school.arcane"] = "Arcane Spell Damage",
@@ -434,7 +442,7 @@ local DISPLAY_STAT = {
 }
 local STAT_ORDER = { "Strength", "Agility", "Stamina", "Intellect", "Spirit",
                      "spellPower", "spellDamage", "healingPower", "attackPower", "rangedAttackPower", "weaponDps",
-                     "maxMana", "maxHealth", "armor",
+                     "maxMana", "maxHealth", "healthPer5", "manaPer5", "armor",
                      "school.holy", "school.fire", "school.nature", "school.frost",
                      "school.shadow", "school.arcane",
                      "resist.holy", "resist.fire", "resist.nature", "resist.frost",
