@@ -41,7 +41,16 @@ The at-a-glance layer (S58; the arrow recipe from the Polestar deep read -
   AP ("vs Beasts" - shown with its condition, never folded unconditionally),
   and weapon/profession skills. Display-only stats are selftest-proven to
   never move a verdict.
-- Ship gate: Forever 330/330, Classic 284/284.
+- **Tank verdicts explain themselves (the mail-vs-cloth question).** When a
+  Tankability verdict is decided by an armor-vs-health tension, the tooltip now
+  says why, both sides in effective HP from the same model: "health side +58,
+  armor side -25 - the bigger side decides, and armor's per-point value shrinks
+  as it stacks". The underlying math was already the real classic curve
+  (armor/(armor+400+85xL), at-level attacker - the dimension label wrongly said
+  lv60 and is now honest); at leveling armor totals stamina genuinely out-values
+  armor per point, which is why a +4 Stamina cloth piece can honestly beat a
+  mail piece for raw effective HP.
+- Ship gate: Forever 331/331, Classic 285/285.
 
 *Features:* DATA-items, CORE-options
 

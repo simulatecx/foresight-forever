@@ -63,7 +63,9 @@ D.list = {
     {
         id = "tankability",
         label = "Tankability",
-        unit = "effective HP vs lv60 physical",
+        -- S58d label honesty: the mitigation formula judges vs an AT-LEVEL
+        -- attacker (F.armorMitigation gets s.level), not a fixed lv60.
+        unit = "effective HP vs at-level physical (p)",
         score = function(get)
             return get("outcome.effectiveHealth")
         end,

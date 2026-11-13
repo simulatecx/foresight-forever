@@ -149,12 +149,25 @@ reachable; nothing leaves the machine.*
   unconditionally), weapon/profession skills (equipped skill already lives in
   the live C_SkillInfo read). LESSON: the tripwire journal is a PROMOTION QUEUE,
   not a log - sweep it every field pass.
+☑ S58d TANK-TRADE WHY LINE (the Sanguine Cuffs field question: mail -> cloth
+  judged "Upgrade for Tankability +1.3%" - owner suspected stat weighting): the
+  MATH WAS RIGHT (F.armorMitigation = the real classic curve armor/(armor+400+
+  85L) vs an AT-LEVEL attacker; at leveling armor totals 1 Sta ~ 14-15 EHP vs
+  1 armor ~ 0.4 - stamina legitimately wins; Polestar's -34% = their armor-heavy
+  band, not math) but TWO honesty gaps fixed: the dimension unit said "vs lv60"
+  while the code judges at-level (label now honest), and the verdict didn't
+  EXPLAIN itself - new Tooltips._tankTradeLine fires only on a tank-lens verdict
+  with an armor-vs-health TENSION: both sides stated in effective HP from the
+  same graph ("health side +58, armor side -25 - the bigger side decides; armor's
+  per-point value shrinks as it stacks"). Aligned swaps stay silent. Selftest
+  pins fire + signs + silence.
 ☐ FOLLOW-UPS: Bagnon/Baganator/ElvUI bag views (corner-widget/painter APIs - needs
   their API shapes verified in-game); reward-panel marks; proficiency-aware
   wearability (level-only today); SWEEP db.collect.unknownItemStats on every field
   pass (the tripwire fired here and sat unread - make the sweep a verify-pass
   checklist item); hit%-to-white-damage fold (caps-aware); block model; spell-pen
-  vs resistance model.
+  vs resistance model; TANKABILITY candidates: fold avoidance/block into the tank
+  lens or keep it pure EHP (owner call - today avoidance lives in Survivability).
 ◐ VERIFY (THE TAG GATE): owner in-game pass - arrows appear in stock bags on both
   flavors, search dims them, respec flips which items arrow, a looted upgrade
   nudges once, too-high items show impact + the level line, 1280x720 @ 0.65. Tag

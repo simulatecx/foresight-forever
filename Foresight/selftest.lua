@@ -2171,6 +2171,29 @@ function HM.runSelftest(out)
         end
         return true
     end)())
+    check("tank-trade why line: tension explained, alignment silent (S58d)", (function()
+        -- The Sanguine Cuffs field question: cloth (+4 Sta) over mail (-63 armor)
+        -- judged an Upgrade for Tankability - real classic-curve math (stamina's
+        -- EHP beats armor's at leveling armor totals), but it must EXPLAIN itself.
+        local T = HM.Tooltips
+        if not T._tankTradeLine then return false, "no _tankTradeLine" end
+        local lo = HM.Loadout.fromSnapshot(testSnapshot())
+        -- the cuffs shape: health side up, armor side down -> the why fires
+        local why = T._tankTradeLine(lo, { Stamina = 4, armor = 17 },
+            { Strength = 5, armor = 80 })
+        if not (why and why:find("health side", 1, true)
+                and why:find("armor side", 1, true)) then
+            return false, "no why on tension: " .. tostring(why)
+        end
+        -- both terms carry the right signs (health +, armor -)
+        local h, a = why:match("health side is %+(%d+)"), why:match("armor side %-(%d+)")
+        if not (h and a) then return false, "sign shape: " .. why end
+        -- aligned swap (both sides gain): silent - no lecture without a tension
+        if T._tankTradeLine(lo, { Stamina = 4, armor = 80 }, { armor = 17 }) ~= nil then
+            return false, "aligned swap should stay silent"
+        end
+        return true
+    end)())
     check("quest best-pick ranking is deterministic (S57, the Polestar tie law)", (function()
         local R = HM.Tooltips and HM.Tooltips.rankQuestChoices
         if not R then return false, "no ranker" end

@@ -665,6 +665,32 @@ function Tooltips.windfuryWeaponLine(snapshot, imbueEntry, hoverSpeedSec)
     return nil
 end
 
+-- S58d (the Sanguine Cuffs field question: mail bracers -> cloth cuffs judged an
+-- UPGRADE for Tankability): when a tank verdict is decided by a stamina-vs-armor
+-- TENSION, show the why in effective HP - both sides from the same graph, so
+-- "cloth beats mail here" reads as the classic curve working, not a weighting
+-- opinion. Returns a line or nil (no tension = no lecture).
+function Tooltips._tankTradeLine(loadout, mapped, compared)
+    local dArmor = (mapped.armor or 0) - ((compared and compared.armor) or 0)
+    local dSta = (mapped.Stamina or 0) - ((compared and compared.Stamina) or 0)
+    local dHpFlat = (mapped.maxHealth or 0) - ((compared and compared.maxHealth) or 0)
+    if dArmor == 0 or (dSta == 0 and dHpFlat == 0) then return nil end
+    local healthSign = (dSta * 10 + dHpFlat) > 0
+    if (dArmor > 0) == healthSign then return nil end -- aligned: nothing to explain
+    local base = HM.Impact.evaluate(loadout).tankability
+    if not (base and base.score and base.score > 0) then return nil end
+    local armorSide = HM.Impact.evaluate(
+        loadout:withStatDelta("armor", dArmor, "why:armor")).tankability
+    local healthLo = loadout:withStatDelta("Stamina", dSta, "why:stamina")
+    if dHpFlat ~= 0 then healthLo = healthLo:withStatDelta("maxHealth", dHpFlat, "why:hp") end
+    local healthSide = HM.Impact.evaluate(healthLo).tankability
+    if not (armorSide and healthSide) then return nil end
+    local dA = armorSide.score - base.score
+    local dH = healthSide.score - base.score
+    return ("Why: the health side is %+.0f effective HP, the armor side %+.0f - the bigger side decides, and armor's per-point value shrinks as it stacks (p)")
+        :format(dH, dA)
+end
+
 -- Build the injected block for an item's mapped stats. Returns line list or nil.
 -- comparedStats (optional): the equipped item's mapped stats, for a "vs equipped" block.
 -- ctx (optional): { itemId, speedMs, wfImbue } - offline weapon context for the
@@ -725,6 +751,16 @@ function Tooltips.itemLines(mapped, loadout, comparedStats, ctx)
             if verdict.note then
                 lines[#lines + 1] = { text = verdict.note,
                     r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
+            end
+            -- The tank-trade why (S58d): only on a tank-lens verdict with an
+            -- actual armor-vs-health tension in the swap.
+            if verdict.dim == "tankability" and comparedStats then
+                local okW, why = pcall(Tooltips._tankTradeLine, loadout, mapped,
+                    comparedStats)
+                if okW and why then
+                    lines[#lines + 1] = { text = why,
+                        r = GREY.r, g = GREY.g, b = GREY.b, wrap = true }
+                end
             end
             -- S28b: ONE plan-relevance line - a world drop that serves a saved plan
             -- goal says so in concrete units, never on equipped gear (baseline law).
