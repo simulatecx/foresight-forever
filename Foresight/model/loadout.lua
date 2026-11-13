@@ -409,10 +409,26 @@ function Loadout:build()
                 g:addModifier{ target = "stat.healingPower", op = "flat",
                                value = d.amount,
                                source = d.label or "delta:spellPower" }
-            elseif d.stat == "weaponDps" or d.stat:find("^resist%.") then
+            elseif d.stat == "defense" then
+                -- S58c (journal x1388): +Defense raises the chance to dodge AND
+                -- parry by 0.04%/point vs same-level (classic-presumed) - the two
+                -- lanes agg.avoidancePct actually carries, so Survivability moves.
+                -- The miss/block/crit-reduction lanes are NOT modeled yet (noted
+                -- in the design record), so this understates defense honestly.
+                g:addModifier{ target = "agg.avoidancePct", op = "flat",
+                               value = d.amount * 0.08,
+                               source = d.label or "delta:defense" }
+            elseif d.stat == "weaponDps" or d.stat:find("^resist%.")
+                or d.stat:find("^ap%.vs%.") or d.stat:find("^skill%.")
+                or d.stat == "spellPen" or d.stat == "blockValue"
+                or d.stat == "blockPct" or d.stat == "hitPct" then
                 -- Display-only item stats (no graph node by design): the weapon-swap
-                -- compare owns weapon DPS; resistances model no mitigation yet.
-                -- Silently skip, never a note.
+                -- compare owns weapon DPS; resistances/spell-pen/block model no
+                -- mitigation yet; conditional AP is target-type gated (folding it
+                -- unconditionally would overclaim); equipped weapon/profession
+                -- skill already lives inside the live C_SkillInfo read; +hit% is
+                -- displayed and the caps model contextualizes it (folding into
+                -- white damage is the recorded S57 follow-up). Silently skip.
                 local _ = nil
             else
                 local node = STAT_NODE[d.stat] or ("stat." .. d.stat)

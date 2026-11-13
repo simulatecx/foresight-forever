@@ -425,6 +425,19 @@ local ITEM_STAT_MAP = {
     ITEM_MOD_HEALTH_REGENERATION_SHORT = "healthPer5",
     ITEM_MOD_POWER_REGEN0_SHORT = "manaPer5",
     ITEM_MOD_MANA_REGENERATION_SHORT = "manaPer5",
+    -- S58c: the owner's live unknownItemStats journal, promoted wholesale (the
+    -- counts are real Forever sightings). Defense FOLDS (avoidance, classic-
+    -- presumed); crit% folds into the existing crit node; the rest display
+    -- honestly and skip the fold (loadout.lua documents each reason).
+    ITEM_MOD_DEFENSE_SKILL_RATING_SHORT = "defense",     -- x1388
+    ITEM_MOD_CRIT_RATING_SHORT = "meleeCritPct",         -- x21 (classic "+1% crit")
+    ITEM_MOD_HIT_RATING_SHORT = "hitPct",                -- x35 (classic "+1% hit")
+    ITEM_MOD_SPELL_PENETRATION_SHORT = "spellPen",       -- x895
+    ITEM_MOD_BLOCK_RATING_SHORT = "blockPct",            -- x5
+    ITEM_MOD_BLOCK_VALUE_SHORT = "blockValue",           -- x7
+    ITEM_MOD_FISHING_SHORT = "skill.fishing",            -- x20
+    ITEM_MOD_HERBALISM_SHORT = "skill.herbalism",        -- x7
+    ITEM_MOD_MACES_SHORT = "skill.maces",                -- x5
     RESISTANCE0_NAME = "armor", -- physical resistance index 0 = armor (classic shape)
 }
 local DISPLAY_STAT = {
@@ -433,6 +446,16 @@ local DISPLAY_STAT = {
     attackPower = "Attack Power", rangedAttackPower = "Ranged Attack Power",
     maxMana = "Mana", maxHealth = "Health", armor = "Armor",
     healthPer5 = "Health per 5 sec", manaPer5 = "Mana per 5 sec",
+    defense = "Defense", meleeCritPct = "Crit Chance %", hitPct = "Chance to Hit %",
+    spellPen = "Spell Penetration", blockValue = "Block Value", blockPct = "Block Chance %",
+    ["ap.vs.beast"] = "Attack Power vs Beasts",
+    ["ap.vs.undead"] = "Attack Power vs Undead",
+    ["ap.vs.humanoid"] = "Attack Power vs Humanoids",
+    ["ap.vs.demon"] = "Attack Power vs Demons",
+    ["ap.vs.elemental"] = "Attack Power vs Elementals",
+    ["ap.vs.dragon"] = "Attack Power vs Dragonkin",
+    ["skill.fishing"] = "Fishing", ["skill.herbalism"] = "Herbalism",
+    ["skill.maces"] = "Mace Skill",
     ["school.holy"] = "Holy Spell Damage", ["school.fire"] = "Fire Spell Damage",
     ["school.nature"] = "Nature Spell Damage", ["school.frost"] = "Frost Spell Damage",
     ["school.shadow"] = "Shadow Spell Damage", ["school.arcane"] = "Arcane Spell Damage",
@@ -443,6 +466,11 @@ local DISPLAY_STAT = {
 local STAT_ORDER = { "Strength", "Agility", "Stamina", "Intellect", "Spirit",
                      "spellPower", "spellDamage", "healingPower", "attackPower", "rangedAttackPower", "weaponDps",
                      "maxMana", "maxHealth", "healthPer5", "manaPer5", "armor",
+                     "defense", "meleeCritPct", "hitPct", "blockValue", "blockPct",
+                     "spellPen",
+                     "ap.vs.beast", "ap.vs.undead", "ap.vs.humanoid",
+                     "ap.vs.demon", "ap.vs.elemental", "ap.vs.dragon",
+                     "skill.fishing", "skill.herbalism", "skill.maces",
                      "school.holy", "school.fire", "school.nature", "school.frost",
                      "school.shadow", "school.arcane",
                      "resist.holy", "resist.fire", "resist.nature", "resist.frost",
@@ -482,6 +510,21 @@ function Tooltips.mapItemStats(raw)
             local school = key:match("^ITEM_MOD_(%u+)_SPELL_DAMAGE")
             if school and SCHOOL_KEY_NAMES[school] then
                 name = "school." .. SCHOOL_KEY_NAMES[school]
+            end
+            if not name then
+                -- S58c LIVE-SHAPE CATCH (owner journal, x98-x303 per school): the
+                -- Forever client emits per-school item damage as
+                -- ITEM_MOD_<SCHOOL>_DAMAGE_DONE_SHORT - school items were dropped.
+                local school2 = key:match("^ITEM_MOD_(%u+)_DAMAGE_DONE")
+                if school2 and SCHOOL_KEY_NAMES[school2] then
+                    name = "school." .. SCHOOL_KEY_NAMES[school2]
+                end
+            end
+            if not name then
+                -- Conditional AP ("+9 Attack Power against Beasts"): displayed with
+                -- its condition named, never folded into an unconditional verdict.
+                local vs = key:match("^ITEM_MOD_ATTACK_POWER_VS_(%u+)_SHORT$")
+                if vs then name = "ap.vs." .. vs:lower() end
             end
             if not name then
                 local rschool = key:match("^ITEM_MOD_(%u+)_RESISTANCE")

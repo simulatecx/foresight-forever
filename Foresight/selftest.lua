@@ -2117,6 +2117,60 @@ function HM.runSelftest(out)
         -- unknown stat node would no-op the fold and zero them)
         return surv ~= nil and surv > 0, "cape survivability " .. tostring(surv)
     end)())
+    check("every school's item damage reaches its pool - LIVE key shapes (S58c)", (function()
+        -- The owner's journal catch: Forever emits ITEM_MOD_<SCHOOL>_DAMAGE_DONE_SHORT
+        -- (x98-x303 per school) and the old pattern only knew _SPELL_DAMAGE - school
+        -- items were silently dropped. Pin ALL SIX schools end-to-end: live key ->
+        -- school.X -> the pool node moves by exactly that amount.
+        local schools = { "HOLY", "FIRE", "NATURE", "FROST", "SHADOW", "ARCANE" }
+        local lo = HM.Loadout.fromSnapshot(testSnapshot())
+        for _, S in ipairs(schools) do
+            local raw = {}
+            raw["ITEM_MOD_" .. S .. "_DAMAGE_DONE_SHORT"] = 10
+            local mapped = HM.Tooltips.mapItemStats(raw)
+            local key = "school." .. S:lower()
+            if mapped[key] ~= 10 then return false, S .. " not mapped" end
+            local built = lo:withStatDelta(key, 10, "test"):build()
+            local base = lo:build()
+            local d = built.graph:value("stat." .. key, built.ctx)
+                - base.graph:value("stat." .. key, base.ctx)
+            if math.abs(d - 10) > 0.001 then return false, S .. " pool delta " .. tostring(d) end
+        end
+        return true
+    end)())
+    check("journal promotion wave: defense folds, display-only stats never leak or error (S58c)", (function()
+        local lo = HM.Loadout.fromSnapshot(testSnapshot())
+        -- defense -> avoidance (0.08/pt) -> survivability = ehp*(1+avoid/100)+regen:
+        -- +10 defense = +0.8 avoidance = ehp * 0.008, exactly
+        local base = HM.Impact.evaluate(lo)
+        local withDef = HM.Impact.evaluate(lo:withStatDelta("defense", 10, "test"))
+        local dSurv = withDef.survivability.score - base.survivability.score
+        local expect = base.tankability.score * 0.008
+        if math.abs(dSurv - expect) > 0.01 then
+            return false, ("defense fold %s vs %s"):format(dSurv, expect)
+        end
+        -- crit% items fold through the EXISTING crit node
+        local mapped = HM.Tooltips.mapItemStats({ ITEM_MOD_CRIT_RATING_SHORT = 1,
+            ITEM_MOD_DEFENSE_SKILL_RATING_SHORT = 10,
+            ITEM_MOD_ATTACK_POWER_VS_BEAST_SHORT = 9,
+            ITEM_MOD_SPELL_PENETRATION_SHORT = 8, ITEM_MOD_MACES_SHORT = 5 })
+        if not (mapped.meleeCritPct == 1 and mapped.defense == 10
+                and mapped["ap.vs.beast"] == 9 and mapped.spellPen == 8
+                and mapped["skill.maces"] == 5) then
+            return false, "journal keys not mapped"
+        end
+        -- the display-only set folds to NO change and NO error
+        local folded = HM.Impact.foldStats(lo,
+            { ["ap.vs.beast"] = 9, spellPen = 8, ["skill.maces"] = 5,
+              blockValue = 7, blockPct = 2, hitPct = 1 }, 1)
+        local after = HM.Impact.evaluate(folded)
+        for id, r in pairs(base) do
+            if after[id] and math.abs((after[id].score or 0) - (r.score or 0)) > 0.001 then
+                return false, "display-only stat moved " .. id
+            end
+        end
+        return true
+    end)())
     check("quest best-pick ranking is deterministic (S57, the Polestar tie law)", (function()
         local R = HM.Tooltips and HM.Tooltips.rankQuestChoices
         if not R then return false, "no ranker" end

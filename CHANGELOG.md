@@ -28,9 +28,20 @@ The at-a-glance layer (S58; the arrow recipe from the Polestar deep read -
   (x2/5, classic-presumed): hp5 feeds Survivability (+60 index per 5 hp5), mp5
   feeds Mana sustain (+48/min per 4 mp5). The cape's honest answer: still a
   small Tankability loss (armor + stamina), now a clear Survivability GAIN -
-  both rows shown, you pick the lens. Per-school spell damage on items (frost
-  etc.) already folded into each school's spells via the S25 pool law.
-- Ship gate: Forever 328/328, Classic 282/282.
+  both rows shown, you pick the lens.
+- **Every school now counts on LIVE items (the journal promotion wave).** The
+  owner's unknown-keys journal revealed Forever emits per-school item damage as
+  `_DAMAGE_DONE_` keys (frost/shadow/fire/arcane/holy, 98-303 sightings each) -
+  a shape our school pattern missed, so school items were silently dropped on
+  the live client. All six schools now map and reach their spells
+  (selftest-pinned per school). Promoted from the same journal: **+Defense**
+  (1,388 sightings - folds into dodge+parry avoidance and Survivability,
+  classic-presumed), **+Crit%** (folds through the existing crit node), and
+  honest display for +Hit%, Spell Penetration, Block Value/Chance, conditional
+  AP ("vs Beasts" - shown with its condition, never folded unconditionally),
+  and weapon/profession skills. Display-only stats are selftest-proven to
+  never move a verdict.
+- Ship gate: Forever 330/330, Classic 284/284.
 
 *Features:* DATA-items, CORE-options
 

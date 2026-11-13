@@ -134,12 +134,27 @@ reachable; nothing leaves the machine.*
   said +77% (their leveling band); our honest answer = small Tankability loss,
   clear Survivability gain, both rows shown. Frost-school item damage (the
   owner's other example) was ALREADY folded per the S25 school-pool law.
+☑ S58c JOURNAL PROMOTION WAVE (owner: "ensure frost, shadow, fire - how everything
+  influences stats - is included"; the live unknownItemStats journal promoted
+  WHOLESALE): (1) LIVE-SHAPE CATCH - Forever emits school item damage as
+  ITEM_MOD_<SCHOOL>_DAMAGE_DONE_SHORT (x98-x303/school); the pattern only knew
+  _SPELL_DAMAGE -> school items were DROPPED on the live client; all six schools
+  now map -> pool nodes, roster-pinned per school. (2) DEFENSE x1388 folds ->
+  agg.avoidancePct at 0.04 dodge + 0.04 parry/pt (classic-presumed; miss/block/
+  crit-reduction lanes NOT modeled - understates honestly); exact-delta selftest.
+  (3) CRIT% folds through stat.meleeCritPct. (4) DISPLAY-ONLY with documented
+  reasons (skip-listed in the fold, selftest-proven inert): hitPct (caps model
+  contextualizes; white-dmg fold = the S57 follow-up), spellPen/block (no
+  mitigation model), ap.vs.<type> conditional AP (condition NAMED, never folded
+  unconditionally), weapon/profession skills (equipped skill already lives in
+  the live C_SkillInfo read). LESSON: the tripwire journal is a PROMOTION QUEUE,
+  not a log - sweep it every field pass.
 ☐ FOLLOW-UPS: Bagnon/Baganator/ElvUI bag views (corner-widget/painter APIs - needs
   their API shapes verified in-game); reward-panel marks; proficiency-aware
   wearability (level-only today); SWEEP db.collect.unknownItemStats on every field
   pass (the tripwire fired here and sat unread - make the sweep a verify-pass
-  checklist item); conditional equip effects (AP vs Beasts) as display-only
-  callouts.
+  checklist item); hit%-to-white-damage fold (caps-aware); block model; spell-pen
+  vs resistance model.
 ◐ VERIFY (THE TAG GATE): owner in-game pass - arrows appear in stock bags on both
   flavors, search dims them, respec flips which items arrow, a looted upgrade
   nudges once, too-high items show impact + the level line, 1280x720 @ 0.65. Tag
